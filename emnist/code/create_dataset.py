@@ -390,10 +390,6 @@ def gen_samples(job_id, range_start, range_stop, examples, storage_dir,
     images, labels, total_bins, LETTER_SIZE, IMAGE_SIZE = load_raw_data(
         emnist_preprocess)
 
-    storage_disk = not storage_type == 'mem'
-    if not storage_disk:
-        memsamples = []
-
     aug_data = None
     is_train = ds_type == 'train'
     if is_train:
@@ -446,14 +442,23 @@ def gen_samples(job_id, range_start, range_stop, examples, storage_dir,
             rel_id += 1
 
     print('%s: Done' % (datetime.datetime.now()))
-    if not storage_disk:
-        return memsamples
-    else:
-        return
+    return
 
 
 # %% main
 def main():
+    '''
+    The main function of create dataset. Parsing arguments by argparse
+
+            Parameters:
+                    None
+
+            Doing:
+                    Downloading files
+
+            Returns:
+                    None
+    '''
     cmd_args = parser.parse_args()
     njobs = cmd_args.threads
     storage_type = 'pytorch'
@@ -461,31 +466,26 @@ def main():
     local_multiprocess = njobs > 1
     # each 'job' processes several chunks. Each chunk is of 'storage_batch_size' samples
     job_chunk_size = 1000
-    storage_disk = True
 
     data_dir = cmd_args.data_dir
     emnist_dir = os.path.join(data_dir, 'emnist')
     # split the generated data set to 1000 files per folder
     folder_split = True
     folder_size = 1000
-    if storage_disk:
-        # the name of the dataset to create
-        base_storage_dir = '%d_' % cmd_args.nchars
-        if cmd_args.extended:
-            base_storage_dir += 'extended'
-        else:
-            base_storage_dir += 'sufficient'
-        if storage_type == 'pytorch':
-            new_emnist_dir = os.path.join(emnist_dir, 'samples')
-            base_samples_dir = os.path.join(new_emnist_dir, base_storage_dir)
-            if not os.path.exists(base_samples_dir):
-                os.makedirs(base_samples_dir, exist_ok=True)
-            storage_dir = base_samples_dir
-
-        data_fname = os.path.join(storage_dir, 'conf')
+    # the name of the dataset to create
+    base_storage_dir = '%d_' % cmd_args.nchars
+    if cmd_args.extended:
+        base_storage_dir += 'extended'
     else:
-        storage_dir = None
+        base_storage_dir += 'sufficient'
+    if storage_type == 'pytorch':
+        new_emnist_dir = os.path.join(emnist_dir, 'samples')
+        base_samples_dir = os.path.join(new_emnist_dir, base_storage_dir)
+        if not os.path.exists(base_samples_dir):
+            os.makedirs(base_samples_dir, exist_ok=True)
+        storage_dir = base_samples_dir
 
+    data_fname = os.path.join(storage_dir, 'conf')
     augment_sample = True
 
     # obtain the EMNIST dataset
@@ -521,6 +521,12 @@ def main():
     obj_per_row = 6
     sample_nchars = cmd_args.nchars
     nsamples_test = 2000
+
+
+
+    
+    # End of argument section
+    
 
     if sample_nchars == 24:
         # Generate 'ngenerate' examples from each image for a left-of query and the same for a right-of query
@@ -581,25 +587,29 @@ def main():
 
     image_ids = set()
 
-    ds_types = ['test', 'train']
+    dataset_types = ['test', 'train']
     nexamples_vec = [nsamples_test, nsamples_train]
+
+
+
+
 
     if add_non_gen:
         nsamples_val = nsamples_test
         nexamples_vec.append(nsamples_val)
-        ds_types.append('val')
+        dataset_types.append('val')
     else:
         nsamples_val = 0
-    if not storage_disk:
-        memsamples = [[] for _ in range(len(ds_types))]
 
-    if generalize:
+
+    # combinatorial generalization :
         # Exclude part of the training data. Validation set is from the train ditribution. Test is only the excluded data (combinatorial generalization)
-
         # How many strings (of nsample_chars) to exclude from training
         # For 24 characters, 1 string excludes about 2.4% pairs of consequtive characters, 4 strings: 9.3%, 23 strings: 42%, 37: 52%
         # For 6 characters, 1 string excludes about 0.6% pairs of consequtive characters, 77 strings: 48%, 120: 63%, 379: 90%
         # (these numbers were simply selected in order to achieve a certain percentage)
+
+    if generalize:
         ntest_strings = 1
 
         nsamples_test = 500
@@ -634,7 +644,7 @@ def main():
     # %% create train/test/val sets
     # first create all the examples, which are lightweight (without the actual images), then send them to parallel jobs
     # in order to create samples from them
-    for k, (ds_type, cur_nexamples) in enumerate(zip(ds_types, nexamples_vec)):
+    for k, (ds_type, cur_nexamples) in enumerate(zip(dataset_types, nexamples_vec)):
         prng = np.random.RandomState(k)
         is_train = ds_type == 'train'
         is_val = ds_type == 'val'
@@ -784,8 +794,6 @@ def main():
             all_args.append(args)
             if not local_multiprocess:
                 cur_memsamples = gen_samples(*args)
-                if not storage_disk:
-                    memsamples[k].extend(cur_memsamples)
 
         if local_multiprocess:
             from multiprocessing import Pool
@@ -794,23 +802,20 @@ def main():
 
     print('done')
     cl2let = get_cl2let(emnist_preprocess)
-    if not local_multiprocess and not storage_disk:
-        return memsamples
 
     # store general configuration
-    if storage_disk:
-        with open(data_fname, "wb") as new_data_file:
-            pickle.dump(
-                (nsamples_train, nsamples_test, nsamples_val,
-                 nclasses_existence, img_channels, LETTER_SIZE, IMAGE_SIZE,
-                 ntypes, edge_class, not_available_class, total_rows,
-                 obj_per_row, sample_nchars, ngenerate, ndirections,
-                 exclude_percentage, valid_classes, cl2let), new_data_file)
+    with open(data_fname, "wb") as new_data_file:
+        pickle.dump(
+            (nsamples_train, nsamples_test, nsamples_val,
+             nclasses_existence, img_channels, LETTER_SIZE, IMAGE_SIZE,
+             ntypes, edge_class, not_available_class, total_rows,
+             obj_per_row, sample_nchars, ngenerate, ndirections,
+             exclude_percentage, valid_classes, cl2let), new_data_file)
 
-        # copy the generating script
-        script_fname = mainmod.__file__
-        dst = shutil.copy(script_fname, storage_dir)
-        return None
+    # copy the generating script
+    script_fname = mainmod.__file__
+    dst = shutil.copy(script_fname, storage_dir)
+    return None
 
 
 # %%
