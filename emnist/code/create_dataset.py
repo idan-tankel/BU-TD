@@ -385,7 +385,7 @@ def gen_sample(sample_id, is_train, aug_data, grayscale_as_rgb, images_raw,
 def gen_samples(job_id, range_start, range_stop, examples, storage_dir,
                 ds_type, nclasses, storage_type, job_chunk_size, edge_class,
                 img_channels, grayscale_as_rgb, augment_sample,
-                not_available_class, sanity, folder_split, folder_size,
+                not_available_class, folder_split, folder_size,
                 emnist_preprocess):
     images, labels, total_bins, LETTER_SIZE, IMAGE_SIZE = load_raw_data(
         emnist_preprocess)
@@ -461,13 +461,7 @@ def main():
     local_multiprocess = njobs > 1
     # each 'job' processes several chunks. Each chunk is of 'storage_batch_size' samples
     job_chunk_size = 1000
-
-    sanity = 0  # for debugging
-    if sanity:
-        storage_type = 'mem'
-        local_multiprocess = False
-
-    storage_disk = not storage_type == 'mem'
+    storage_disk = True
 
     data_dir = cmd_args.data_dir
     emnist_dir = os.path.join(data_dir, 'emnist')
@@ -550,13 +544,6 @@ def main():
         else:
             # sufficient
             nsamples_train = 2000
-
-    if sanity:
-        train_val_ratio = .95
-        nsamples = 100
-        nsamples_train = int(train_val_ratio * nsamples)
-        nsamples_test = nsamples - nsamples_train
-        ngenerate = 2
 
     generalize = True
     add_non_gen = True
@@ -784,10 +771,7 @@ def main():
         # in case there are fewer ranges than jobs
         ranges = np.unique(ranges)
         all_args = []
-        if sanity:
-            jobs_range = [0]
-        else:
-            jobs_range = range(len(ranges) - 1)
+        jobs_range = range(len(ranges) - 1)
         for job_id in jobs_range:
             range_start = ranges[job_id]
             range_stop = ranges[job_id + 1]
@@ -795,7 +779,7 @@ def main():
                     examples[range_start:range_stop], storage_dir, ds_type,
                     nclasses_existence, storage_type, job_chunk_size,
                     edge_class, img_channels, grayscale_as_rgb, augment_sample,
-                    not_available_class, sanity, folder_split, folder_size,
+                    not_available_class, folder_split, folder_size,
                     emnist_preprocess)
             all_args.append(args)
             if not local_multiprocess:
