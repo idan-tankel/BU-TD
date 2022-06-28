@@ -40,6 +40,18 @@ parser.add_argument('-n',
 
 # %% augmentation
 def get_batch_base(imdb, batch_range, opts):
+    '''
+    Returns the sum of two decimal numbers in binary digits.
+
+            Parameters:
+            ---
+                    `imdb` (Seperate Class): Class for segmentations, image labels... - image database
+                    batch_range (int): Another decimal integer
+
+            Returns:
+            ---
+                    binary_sum (str): Binary string of the sum of a and b
+    '''
     batch_images = imdb.images[batch_range]
     batch_labels = imdb.labels[batch_range]
     batch_segs = imdb.segs[batch_range]
@@ -73,7 +85,6 @@ def get_batch_base(imdb, batch_range, opts):
                 batch_segs = batch_segs_with_add_color
 
             aug_data.aug_seed += 1
-
     result = SimpleNamespace()
     result.images = batch_images
     result.labels = batch_labels
@@ -489,6 +500,7 @@ def main():
     augment_sample = True
 
     # obtain the EMNIST dataset
+    # TBD change this to Different datasets support (be robust)
     emnist_preprocess = SimpleNamespace()
     emnist_preprocess.convertor = 'pytorch'
     if emnist_preprocess.convertor == 'pytorch':
@@ -499,10 +511,9 @@ def main():
         raw_data_fname = os.path.join(emnist_dir, 'emnist-tf.pkl')
     emnist_preprocess.data_fname = raw_data_fname
     emnist_preprocess.download_dir = download_dir
-    emnist_preprocess.mapping_fname = os.path.join(
+    emnist_preprocess.mapping_fname = os.path.join( 
         emnist_dir, "emnist-balanced-mapping.txt")
-    _, labels, total_bins, LETTER_SIZE, IMAGE_SIZE = load_raw_data(
-        emnist_preprocess)
+    _, labels, total_bins, LETTER_SIZE, IMAGE_SIZE = load_raw_data(emnist_preprocess)
 
     grayscale_as_rgb = True
     img_channels = 3
@@ -522,9 +533,6 @@ def main():
     sample_nchars = cmd_args.nchars
     nsamples_test = 2000
 
-
-
-    
     # End of argument section
     
 
@@ -572,10 +580,8 @@ def main():
     # We don't exclude (char,border) or (border,char) pairs as this drastically limits the available valid training examples
     # Therefore, do not query near borders
     valid_queries = np.arange(sample_nchars)
-    near_border = np.arange(obj_per_row - 1, sample_nchars, obj_per_row)
-    valid_queries_right = np.setdiff1d(valid_queries, near_border)
-    valid_queries = np.arange(sample_nchars)
     near_border = np.arange(0, sample_nchars, obj_per_row)
+    valid_queries_right = np.setdiff1d(valid_queries, near_border)
     valid_queries_left = np.setdiff1d(valid_queries, near_border)
 
     ndirections = 2
@@ -590,17 +596,12 @@ def main():
     dataset_types = ['test', 'train']
     nexamples_vec = [nsamples_test, nsamples_train]
 
-
-
-
-
     if add_non_gen:
         nsamples_val = nsamples_test
         nexamples_vec.append(nsamples_val)
         dataset_types.append('val')
     else:
         nsamples_val = 0
-
 
     # combinatorial generalization :
         # Exclude part of the training data. Validation set is from the train ditribution. Test is only the excluded data (combinatorial generalization)
@@ -610,6 +611,7 @@ def main():
         # (these numbers were simply selected in order to achieve a certain percentage)
 
     if generalize:
+        # TBD
         ntest_strings = 1
 
         nsamples_test = 500
@@ -641,15 +643,16 @@ def main():
         print('Excluding %d strings, %f percentage of pairs' %
               (ntest_strings, exclude_percentage))
 
-    # %% create train/test/val sets
+    # %%create train/test/val sets
     # first create all the examples, which are lightweight (without the actual images), then send them to parallel jobs
     # in order to create samples from them
     for k, (ds_type, cur_nexamples) in enumerate(zip(dataset_types, nexamples_vec)):
         prng = np.random.RandomState(k)
-        is_train = ds_type == 'train'
-        is_val = ds_type == 'val'
-        is_test = ds_type == 'test'
-        not_test = not is_test
+        # some flags
+        is_train = (ds_type == 'train')
+        is_val = (ds_type == 'val')
+        is_test = (ds_type == 'test')
+        not_test = (not is_test)
 
         # create lightweight examples information
         examples = []
