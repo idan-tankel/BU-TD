@@ -21,3 +21,4 @@ emnist/data/emnist/emnist_raw/
 emnist/data/emnist/samples/
 emnist/data/results/
 *.pkl
+data

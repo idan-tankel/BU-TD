@@ -66,3 +66,14 @@ If you find our work useful in your research or publication, please cite our wor
 [Image interpretation by iterative bottom-up top-down processing](https://arxiv.org/abs/2105.05592)
 
 Shimon Ullman, Liav Assif, Alona Strugatski, Ben-Zion Vatashsky, Hila Levi, Aviv Netanyahu, Adam Yaari
+
+
+
+
+## TODO 
+- change the design of `create_dataset` to be one big file with plugins to each dataset 
+    - mnist
+    - persons
+    - clevr
+- change the `create_dataset` file to be idempotent - namely, when running the file after the dataset is cretaed it won't be downloaded again 
+- change the behaviour of the download function path to not be relative
