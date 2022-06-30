@@ -18,10 +18,7 @@ import shutil
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 import imgaug as ia
-
-
-
-# %% command line options
+#%% command line options
 parser = argparse.ArgumentParser()
 parser.add_argument(
     '--data-dir',
@@ -137,12 +134,19 @@ def get_aug_data(IMAGE_SIZE):
 
 
 # %% storage
-def store_sample_memory(sample, samples):
-    samples.append(sample)
-
 
 def store_sample_disk_pytorch(sample, cur_samples_dir, folder_split,
                               folder_size):
+    '''
+    Store the sample given by `sample` in a current sample dir with limits of `folder_split`,`folder_size`
+
+            Parameters:
+                    a (int): A decimal integer
+                    b (int): Another decimal integer
+
+            Returns:
+                    None: saving all to files
+    '''
     samples_dir = cur_samples_dir
     i = sample.id
     if folder_split:
@@ -218,13 +222,22 @@ def load_raw_data(emnist_preprocess):
 
 # class to letter dictionary
 def get_cl2let(emnist_preprocess):
+    '''
+    Returns A dictionary which represent the classes as a dictionary
+
+            Parameters:
+                    emnist_preprocess (): An emnist preprocess object built under the main method
+
+            Returns:
+                    cl2let (dict): Dictionaty of classes and descriptions, the ones from emnist itself, border and N/A class
+    '''
     # the mapping file is provided with the EMNIST dataset
     with open(emnist_preprocess.mapping_fname, "r") as text_file:
         lines = text_file.read().split('\n')
     cl2letmap = [line.split() for line in lines]
     cl2letmap = cl2letmap[:-1]
     cl2let = {int(mapi[0]): chr(int(mapi[1])) for mapi in cl2letmap}
-    cl2let[47] = 'Border'
+    cl2let[47] = 'Border' # TBD change this to 'append' in order to support another length
     cl2let[48] = 'NA'
     return cl2let
 
@@ -234,6 +247,16 @@ def get_cl2let(emnist_preprocess):
 def gen_sample(sample_id, is_train, aug_data, grayscale_as_rgb, images_raw,
                labels_raw, nclasses, PERSON_SIZE, IMAGE_SIZE, edge_class,
                example, augment_sample, not_available_class):
+    '''
+    The main function here to generate new samples and to store them
+
+            Parameters:
+                    `sample_id` (int): sample_id in the enumeration of 
+                    b (int): Another decimal integer
+
+            Returns:
+                    binary_sum (str): Binary string of the sum of a and b
+    '''
     # start by creating the image background
     image = 0 * np.ones(IMAGE_SIZE, dtype=np.float32)
 
@@ -252,7 +275,8 @@ def gen_sample(sample_id, is_train, aug_data, grayscale_as_rgb, images_raw,
         sz = scale * np.array([PERSON_SIZE, PERSON_SIZE])
         sz = sz.astype(np.int)
         h, w = sz
-        im = skimage.transform.resize(im, sz, mode='constant')
+        im = skimage.transform.resize(
+            image=im, output_shape=sz, mode='constant')
         stx = char.location_x
         endx = stx + w
         sty = char.location_y
@@ -265,6 +289,7 @@ def gen_sample(sample_id, is_train, aug_data, grayscale_as_rgb, images_raw,
         mask[mask < 1] = 0
         rng = mask > 0
         part[rng] = mask[rng] * im[rng] + (1 - mask[rng]) * part[rng]
+        # TBD
         info = SimpleNamespace()
         info.char_id = char_id
         info.s_id = s_id
@@ -359,6 +384,7 @@ def gen_sample(sample_id, is_train, aug_data, grayscale_as_rgb, images_raw,
         image = batch_data.images[0]
         seg = batch_data.segs[0]
 
+    # TBD - create class `sample` and to test if this hurts the performence
     sample.infos = infos
     sample.image = image
     sample.id = sample_id
@@ -421,8 +447,8 @@ def gen_samples(job_id, range_start, range_stop, examples, storage_dir,
             if sample is None:
                 continue
 
-            if storage_type == 'pytorch':
-                store_sample_disk_pytorch(sample, cur_samples_dir,
+            
+            store_sample_disk_pytorch(sample, cur_samples_dir,
                                           folder_split, folder_size)
 
             rel_id += 1
@@ -430,6 +456,21 @@ def gen_samples(job_id, range_start, range_stop, examples, storage_dir,
     print('%s: Done' % (datetime.datetime.now()))
     return
 
+
+
+# Added function as a project TBD = parameters handler to all the general process
+def handle_parameters():
+    '''
+    Returns the sum of two decimal numbers in binary digits.
+
+            Parameters:
+                    a (int): A decimal integer
+                    b (int): Another decimal integer
+
+            Returns:
+                    binary_sum (str): Binary string of the sum of a and b
+    '''
+    pass
 
 # %% main
 def main():
@@ -441,13 +482,14 @@ def main():
 
             Doing:
                     Downloading files
+                    Augmentations
+                    Calling a Dataset manner
 
             Returns:
                     None
     '''
     cmd_args = parser.parse_args()
     njobs = cmd_args.threads
-    storage_type = 'pytorch'
     # Use multiprocessing on this machine
     local_multiprocess = njobs > 1
     # each 'job' processes several chunks. Each chunk is of 'storage_batch_size' samples
@@ -464,15 +506,21 @@ def main():
         base_storage_dir += 'extended'
     else:
         base_storage_dir += 'sufficient'
-    if storage_type == 'pytorch':
-        new_emnist_dir = os.path.join(emnist_dir, 'samples')
-        base_samples_dir = os.path.join(new_emnist_dir, base_storage_dir)
-        if not os.path.exists(base_samples_dir):
-            os.makedirs(base_samples_dir, exist_ok=True)
-        storage_dir = base_samples_dir
+    
+    new_emnist_dir = os.path.join(emnist_dir, 'samples')
+    base_samples_dir = os.path.join(new_emnist_dir, base_storage_dir)
+    if not os.path.exists(base_samples_dir):
+        os.makedirs(base_samples_dir, exist_ok=True)
+    storage_dir = base_samples_dir
 
     data_fname = os.path.join(storage_dir, 'conf')
     augment_sample = True
+
+
+    parameters = handle_parameters()
+
+
+
 
     # obtain the EMNIST dataset
     # TBD change this to Different datasets support (be robust)
@@ -761,7 +809,7 @@ def main():
             range_stop = ranges[job_id + 1]
             args = (job_id, range_start, range_stop,
                     examples[range_start:range_stop], storage_dir, ds_type,
-                    nclasses_existence, storage_type, job_chunk_size,
+                    nclasses_existence, job_chunk_size,
                     edge_class, img_channels, grayscale_as_rgb, augment_sample,
                     not_available_class, folder_split, folder_size,
                     emnist_preprocess)
@@ -786,9 +834,6 @@ def main():
              obj_per_row, sample_nchars, ngenerate, ndirections,
              exclude_percentage, valid_classes, cl2let), new_data_file)
 
-    # copy the generating script
-    script_fname = mainmod.__file__
-    dst = shutil.copy(script_fname, storage_dir)
     return None
 
 
