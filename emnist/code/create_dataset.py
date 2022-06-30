@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 import os
+from os.path import dirname as up
 import sys
 import skimage.transform
 from skimage import color
@@ -12,14 +13,21 @@ import argparse
 import __main__ as mainmod
 import shutil
 
-#%% command line options
+
+# augmentation init
+from imgaug import augmenters as iaa
+from imgaug import parameters as iap
+import imgaug as ia
+
+
+
+# %% command line options
 parser = argparse.ArgumentParser()
 parser.add_argument(
     '--data-dir',
     default='../data',
     type=str,
-    help=
-    'root dir for dataset generation and location of the input Avatars Raw file'
+    help='root dir for dataset generation and location of the input Avatars Raw file'
 )
 parser.add_argument('-t',
                     '--threads',
@@ -96,12 +104,8 @@ def get_batch_base(imdb, batch_range, opts):
 def get_aug_data(IMAGE_SIZE):
     aug_data = SimpleNamespace()
     aug_data.aug_seed = 0
-    # augmentation init
-    from imgaug import augmenters as iaa
-    from imgaug import parameters as iap
-    import imgaug as ia
     color_add_range = int(0.2 * 255)
-    rotate_deg = 2
+    rotate_degree = 2
     aug = iaa.Sequential(
         [
             iaa.Affine(
@@ -109,7 +113,7 @@ def get_aug_data(IMAGE_SIZE):
                     "x": (-0.1, 0.1),
                     "y": (-0.05, 0.05)
                 },
-                rotate=(-rotate_deg, rotate_deg),
+                rotate=(-rotate_degree, rotate_degree),
                 mode='edge',
                 name='affine'),  # translate by -20 to +20 percent (per axis))
         ],
@@ -161,28 +165,6 @@ def store_sample_disk_pytorch(sample, cur_samples_dir, folder_split,
 
 # %% EMNIST dataset
 # This is the dataset used in the paper. It is most likely similar although not identical to the PyTorch version
-def convert_raw_data_tensorflow(emnist_preprocess):
-    emnist_download_dir = emnist_preprocess.download_dir
-    if not os.path.exists(emnist_download_dir):
-        print(
-            'Note that this worked using an older version of Tensorflow (1.x). Most likely it doesn\'t work now. Use the PyTorch function instead'
-        )
-        print(
-            'For Tensorflow you should manually download and extract EMNIST from https://www.nist.gov/itl/products-and-services/emnist-dataset'
-        )
-        print('Extract it into %s' % emnist_download_dir)
-        sys.exit(-1)
-    else:
-        from tensorflow.examples.tutorials.mnist import input_data
-        mnist = input_data.read_data_sets(emnist_download_dir, one_hot=False)
-        images_train = mnist.train.images
-        images_test = mnist.test.images
-        labels_train = mnist.train.labels
-        labels_test = mnist.test.labels
-
-        with open(emnist_preprocess.data_fname, "wb") as new_data_file:
-            pickle.dump((images_train, images_test, labels_train, labels_test),
-                        new_data_file)
 
 
 def convert_raw_data_pytorch(emnist_preprocess):
@@ -216,8 +198,6 @@ def load_raw_data(emnist_preprocess):
               emnist_preprocess.convertor)
         if emnist_preprocess.convertor == 'pytorch':
             convert_raw_data_pytorch(emnist_preprocess)
-        else:
-            convert_raw_data_tensorflow(emnist_preprocess)
         print('Done converting EMNIST raw data')
 
     with open(data_fname, "rb") as new_data_file:
@@ -241,12 +221,12 @@ def get_cl2let(emnist_preprocess):
     # the mapping file is provided with the EMNIST dataset
     with open(emnist_preprocess.mapping_fname, "r") as text_file:
         lines = text_file.read().split('\n')
-        cl2letmap = [line.split() for line in lines]
-        cl2letmap = cl2letmap[:-1]
-        cl2let = {int(mapi[0]): chr(int(mapi[1])) for mapi in cl2letmap}
-        cl2let[47] = 'Border'
-        cl2let[48] = 'NA'
-        return cl2let
+    cl2letmap = [line.split() for line in lines]
+    cl2letmap = cl2letmap[:-1]
+    cl2let = {int(mapi[0]): chr(int(mapi[1])) for mapi in cl2letmap}
+    cl2let[47] = 'Border'
+    cl2let[48] = 'NA'
+    return cl2let
 
 
 # %% create samples
@@ -404,15 +384,12 @@ def gen_samples(job_id, range_start, range_stop, examples, storage_dir,
     aug_data = None
     is_train = ds_type == 'train'
     if is_train:
-        rnd_shift = 0
         if augment_sample:
             # create a separate augmentation per job since we always update aug_data.aug_seed
             aug_data = get_aug_data(IMAGE_SIZE)
             aug_data.aug_seed = range_start
             aug_data.augment = True
-    else:
-        # both validation and training use the same job id. make the random generator different
-        rnd_shift = 100000
+        # both generalize and training use the same job id. make the random generator different
 
     # divide the job into several smaller parts and run them sequentially
     nbatches = np.ceil((range_stop - range_start) / job_chunk_size)
@@ -447,8 +424,6 @@ def gen_samples(job_id, range_start, range_stop, examples, storage_dir,
             if storage_type == 'pytorch':
                 store_sample_disk_pytorch(sample, cur_samples_dir,
                                           folder_split, folder_size)
-            elif storage_type == 'mem':
-                store_sample_memory(sample, memsamples)
 
             rel_id += 1
 
@@ -501,19 +476,19 @@ def main():
 
     # obtain the EMNIST dataset
     # TBD change this to Different datasets support (be robust)
+    current_dir = up(up(__file__))
+    # this is changed since '..' is problematic when running form debugger...
     emnist_preprocess = SimpleNamespace()
     emnist_preprocess.convertor = 'pytorch'
-    if emnist_preprocess.convertor == 'pytorch':
-        download_dir = os.path.join(emnist_dir, 'emnist_raw')
-        raw_data_fname = os.path.join(emnist_dir, 'emnist-pyt.pkl')
-    else:
-        download_dir = '../data/emnist/gzip'
-        raw_data_fname = os.path.join(emnist_dir, 'emnist-tf.pkl')
+    # download_dir = os.path.join(emnist_dir, 'emnist_raw')
+    download_dir = '{}/data/emnist/gzip'.format(current_dir)
+    raw_data_fname = os.path.join(emnist_dir, 'emnist-pyt.pkl')
     emnist_preprocess.data_fname = raw_data_fname
     emnist_preprocess.download_dir = download_dir
-    emnist_preprocess.mapping_fname = os.path.join( 
-        emnist_dir, "emnist-balanced-mapping.txt")
-    _, labels, total_bins, LETTER_SIZE, IMAGE_SIZE = load_raw_data(emnist_preprocess)
+    emnist_preprocess.mapping_fname = os.path.join(
+        current_dir, "data/emnist/emnist-balanced-mapping.txt")
+    _, labels, total_bins, LETTER_SIZE, IMAGE_SIZE = load_raw_data(
+        emnist_preprocess)
 
     grayscale_as_rgb = True
     img_channels = 3
@@ -534,7 +509,6 @@ def main():
     nsamples_test = 2000
 
     # End of argument section
-    
 
     if sample_nchars == 24:
         # Generate 'ngenerate' examples from each image for a left-of query and the same for a right-of query
@@ -560,9 +534,6 @@ def main():
             nsamples_train = 2000
 
     generalize = True
-    add_non_gen = True
-    if not generalize:
-        add_non_gen = False
 
     use_only_valid_classes = True
     if use_only_valid_classes:
@@ -596,7 +567,7 @@ def main():
     dataset_types = ['test', 'train']
     nexamples_vec = [nsamples_test, nsamples_train]
 
-    if add_non_gen:
+    if generalize:
         nsamples_val = nsamples_test
         nexamples_vec.append(nsamples_val)
         dataset_types.append('val')
@@ -604,7 +575,7 @@ def main():
         nsamples_val = 0
 
     # combinatorial generalization :
-        # Exclude part of the training data. Validation set is from the train ditribution. Test is only the excluded data (combinatorial generalization)
+        # Exclude part of the training data. generalize set is from the train ditribution. Test is only the excluded data (combinatorial generalization)
         # How many strings (of nsample_chars) to exclude from training
         # For 24 characters, 1 string excludes about 2.4% pairs of consequtive characters, 4 strings: 9.3%, 23 strings: 42%, 37: 52%
         # For 6 characters, 1 string excludes about 0.6% pairs of consequtive characters, 77 strings: 48%, 120: 63%, 379: 90%
