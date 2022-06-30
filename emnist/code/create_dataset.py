@@ -400,7 +400,7 @@ def gen_sample(sample_id, is_train, aug_data, grayscale_as_rgb, images_raw,
 
 # Create several samples from lightweight examples. This function can be considered as a 'job' which can run in parallel
 def gen_samples(job_id, range_start, range_stop, examples, storage_dir,
-                ds_type, nclasses, storage_type, job_chunk_size, edge_class,
+                ds_type, nclasses, job_chunk_size, edge_class,
                 img_channels, grayscale_as_rgb, augment_sample,
                 not_available_class, folder_split, folder_size,
                 emnist_preprocess):
@@ -430,12 +430,12 @@ def gen_samples(job_id, range_start, range_stop, examples, storage_dir,
         print('%s: job %d. processing: %s-%d-%d' %
               (datetime.datetime.now(), job_id, ds_type, range_start,
                range_stop - 1))
-        if storage_type == 'pytorch':
-            cur_samples_dir = os.path.join(storage_dir, ds_type)
-            if not os.path.exists(cur_samples_dir):
-                os.makedirs(cur_samples_dir, exist_ok=True)
-            print('%s: storing in: %s' %
-                  (datetime.datetime.now(), cur_samples_dir))
+        
+        cur_samples_dir = os.path.join(storage_dir, ds_type)
+        if not os.path.exists(cur_samples_dir):
+            os.makedirs(cur_samples_dir, exist_ok=True)
+        print('%s: storing in: %s' %
+                (datetime.datetime.now(), cur_samples_dir))
 
         sys.stdout.flush()
 
