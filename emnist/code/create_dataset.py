@@ -273,7 +273,7 @@ def gen_sample(sample_id, is_train, aug_data, grayscale_as_rgb, images_raw,
         label = lbs[s_id]
         scale = char.scale
         sz = scale * np.array([PERSON_SIZE, PERSON_SIZE])
-        sz = sz.astype(np.int)
+        sz = sz.astype(np.int32)
         h, w = sz
         im = skimage.transform.resize(
             image=im, output_shape=sz, mode='constant')
@@ -388,7 +388,7 @@ def gen_sample(sample_id, is_train, aug_data, grayscale_as_rgb, images_raw,
     sample.infos = infos
     sample.image = image
     sample.id = sample_id
-    sample.label_existence = label_existence.astype(np.int)
+    sample.label_existence = label_existence.astype(np.int32)
     sample.label_ordered = label_ordered
     sample.query_part_id = query_part_id
     sample.seg = seg
@@ -524,7 +524,7 @@ def main():
 
     # obtain the EMNIST dataset
     # TBD change this to Different datasets support (be robust)
-    current_dir = up(up(__file__))
+    current_dir = up(up(up(__file__)))
     # this is changed since '..' is problematic when running form debugger...
     emnist_preprocess = SimpleNamespace()
     emnist_preprocess.convertor = 'pytorch'
@@ -737,7 +737,7 @@ def main():
                 char.id = sample_chars[samplei]
                 char.scale = scale
                 shift = prng.rand(2) * (maxshift - minshift) + minshift
-                y, x = shift.astype(np.int)
+                y, x = shift.astype(np.int32)
                 origr, origc = np.unravel_index(samplei,
                                                 [total_rows, obj_per_row])
                 c = origc + 1  # start from column 1 instead of 0
