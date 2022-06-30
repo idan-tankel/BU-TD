@@ -6,20 +6,25 @@ from skimage import color
 import numpy as np
 import pickle
 from PIL import Image
+import imageio
 import datetime
 import argparse
 # for copying the generating script
 import __main__ as mainmod
 import shutil
 
-#%% command line options
+
+# augmentation init
+from imgaug import augmenters as iaa
+from imgaug import parameters as iap
+import imgaug as ia
+# %% command line options
 parser = argparse.ArgumentParser()
 parser.add_argument(
     '--data-dir',
     default='../data',
     type=str,
-    help=
-    'root dir for dataset generation and location of the input Avatars Raw file'
+    help='root dir for dataset generation and location of the input Avatars Raw file'
 )
 parser.add_argument('-t',
                     '--threads',
@@ -35,6 +40,18 @@ parser.add_argument(
 
 # %% augmentation
 def get_batch_base(imdb, batch_range, opts):
+    '''
+    Returns the sum of two decimal numbers in binary digits.
+
+            Parameters:
+            ---
+                    `imdb` (Seperate Class): Class for segmentations, image labels... - image database
+                    batch_range (int): Another decimal integer
+
+            Returns:
+            ---
+                    binary_sum (str): Binary string of the sum of a and b
+    '''
     batch_images = imdb.images[batch_range]
     batch_labels = imdb.labels[batch_range]
     batch_segs = imdb.segs[batch_range]
@@ -80,10 +97,6 @@ def get_batch_base(imdb, batch_range, opts):
 def get_aug_data(IMAGE_SIZE):
     aug_data = SimpleNamespace()
     aug_data.aug_seed = 0
-    # augmentation init
-    from imgaug import augmenters as iaa
-    from imgaug import parameters as iap
-    import imgaug as ia
     color_add_range = int(0.2 * 255)
     rotate_deg = 10
     aug = iaa.Sequential(
@@ -335,7 +348,6 @@ def gen_samples(job_id, range_start, range_stop, examples, storage_dir,
     aug_data = None
     is_train = ds_type == 'train'
     if is_train:
-        rnd_shift = 0
         if augment_sample:
             # create a separate augmentation per job since we always update aug_data.aug_seed
             aug_data = get_aug_data(IMAGE_SIZE)
@@ -343,7 +355,6 @@ def gen_samples(job_id, range_start, range_stop, examples, storage_dir,
             aug_data.augment = True
     else:
         # both validation and training use the same job id. make the random generator different
-        rnd_shift = 100000
 
     # divide the job into several smaller parts and run them sequentially
     nbatches = np.ceil((range_stop - range_start) / job_chunk_size)
@@ -377,11 +388,9 @@ def gen_samples(job_id, range_start, range_stop, examples, storage_dir,
             if sample is None:
                 continue
 
-            if storage_type == 'pytorch':
-                store_sample_disk_pytorch(sample, cur_samples_dir,
+            
+            store_sample_disk_pytorch(sample, cur_samples_dir,
                                           folder_split, folder_size)
-            elif storage_type == 'mem':
-                store_sample_memory(sample, memsamples)
 
             rel_id += 1
 
@@ -394,20 +403,26 @@ def gen_samples(job_id, range_start, range_stop, examples, storage_dir,
 
 # %% main
 def main():
+    '''
+    The main function of create dataset. Parsing arguments by argparse
+
+            Parameters:
+                    None
+
+            Doing:
+                    Downloading files
+                    Augmentations
+                    Calling a Dataset manner
+
+            Returns:
+                    None
+    '''
     cmd_args = parser.parse_args()
     njobs = cmd_args.threads
-    storage_type = 'pytorch'
     # Use multiprocessing on this machine
     local_multiprocess = njobs > 1
     # each 'job' processes several chunks. Each chunk is of 'storage_batch_size' samples
     job_chunk_size = 1000
-
-    sanity = 0  # for debugging
-    if sanity:
-        storage_type = 'mem'
-        local_multiprocess = False
-
-    storage_disk = not storage_type == 'mem'
 
     data_dir = cmd_args.data_dir
     avatars_dir = os.path.join(data_dir, 'avatars')
@@ -415,23 +430,19 @@ def main():
     # split the generated data set to 1000 files per folder
     folder_split = True
     folder_size = 1000
-    if storage_disk:
-        # the name of the dataset to create
-        if cmd_args.extended:
-            base_storage_dir = 'extended'
-        else:
-            base_storage_dir = 'sufficient'
-        if storage_type == 'pytorch':
-            new_avatars_dir = os.path.join(avatars_dir, 'samples')
-            base_samples_dir = os.path.join(new_avatars_dir, base_storage_dir)
-            if not os.path.exists(base_samples_dir):
-                os.makedirs(base_samples_dir, exist_ok=True)
-            storage_dir = base_samples_dir
-
-        data_fname = os.path.join(storage_dir, 'conf')
+    # the name of the dataset to create
+    base_storage_dir = '%d_' % cmd_args.nchars
+    if cmd_args.extended:
+        base_storage_dir += 'extended'
     else:
-        storage_dir = None
+        base_storage_dir += 'sufficient'
 
+    base_samples_dir = os.path.join(new_emnist_dir, base_storage_dir)
+    if not os.path.exists(base_samples_dir):
+        os.makedirs(base_samples_dir, exist_ok=True)
+    storage_dir = base_samples_dir
+
+    data_fname = os.path.join(storage_dir, 'conf')
     augment_sample = True
 
     _, _, labels_raw, npersons, total_bins, PERSON_SIZE, IMAGE_SIZE = load_raw_data(
@@ -453,26 +464,28 @@ def main():
             filenames = [os.path.join(folder, f) for f in os.listdir(folder)]
             bg_fnames.extend(filenames)
 
-        if sanity:
-            # for quick loading
-            bg_fnames = bg_fnames[:10]
 
     same_max_value = True  # use the same value as the maximum for all features
     npersons_per_example = 2
-    generalize = True  # if True exclude 7% of the training data and test only the excluded data (combinatorial generalization)
-    gen_hide_many = False  # if True exclude 40% of the training data (combinatorial generalization)
+    # if True exclude 7% of the training data and test only the excluded data (combinatorial generalization)
+    generalize = True
+    # if True exclude 40% of the training data (combinatorial generalization)
+    gen_hide_many = False
     add_non_gen = True  # add validation set
     if not generalize:
         add_non_gen = False
 
     # if True, generate multiple examples (image,label) pairs from each image, else generate a single example
     single_feat_to_generate = False
-    query_npersons = 2  # if single_feat_to_generate is False then query only query_npersons from the image
+    # if single_feat_to_generate is False then query only query_npersons from the image
+    query_npersons = 2
 
     if cmd_args.extended:
-        nsamples = 6000  # from each sample multiple examples (images/labels) are created
+        # from each sample multiple examples (images/labels) are created
+        nsamples = 6000
     else:
-        nsamples = 2000  # from each sample multiple examples (images/labels) are created
+        # from each sample multiple examples (images/labels) are created
+        nsamples = 2000
     train_val_ratio = .8
     use_constant_ntest = True
     nsamples_train = int(train_val_ratio * nsamples)
@@ -483,9 +496,6 @@ def main():
             nsamples_test = 590
         else:
             nsamples_test = nsamples - nsamples_train
-    if sanity:
-        nsamples_train = 80
-        nsamples_test = 20
 
     max_value_features = np.max(labels_raw,
                                 axis=0)  # the maximum value of each feature
@@ -502,7 +512,7 @@ def main():
 
     valid_features = [
         1, 3, 4, 5, 6
-    ]  #ignore ID and background. background is not used in the dataset
+    ]  # ignore ID and background. background is not used in the dataset
 
     image_ids = set()
 
@@ -515,8 +525,6 @@ def main():
         ds_types.append('val')
     else:
         nsamples_val = 0
-    if not storage_disk:
-        memsamples = [[] for _ in range(len(ds_types))]
 
     if generalize:
         # Exclude part of the training data. Validation set is from the train ditribution. Test is only the excluded data (combinatorial generalization)
@@ -670,7 +678,7 @@ def main():
                     row = rows[idx]
                     col = cols[idx]
                     #from save_image import save_image
-                    #save_image(valid_location_map.astype(np.int8),'a4.png')
+                    # save_image(valid_location_map.astype(np.int8),'a4.png')
                     scale = prng.rand() * (maxscale - minscale) + minscale
                     cur_stx = int(col - scale * PERSON_SIZE / 2)
                     cur_endx = int(col + scale * PERSON_SIZE / 2)
@@ -748,24 +756,19 @@ def main():
         # in case there are fewer ranges than jobs
         ranges = np.unique(ranges)
         all_args = []
-        if sanity:
-            jobs_range = [0]
-        else:
-            jobs_range = range(len(ranges) - 1)
+        jobs_range = range(len(ranges) - 1)
         for job_id in jobs_range:
             range_start = ranges[job_id]
             range_stop = ranges[job_id + 1]
             args = (job_id, range_start, range_stop,
                     examples[range_start:range_stop], storage_dir, ds_type,
-                    storage_type, raw_data_fname, job_chunk_size, img_channels,
+                    raw_data_fname, job_chunk_size, img_channels,
                     augment_sample, max_value_features, grayscale,
                     use_natural_background, bg_fnames, grayscale_as_rgb,
                     folder_split, folder_size)
             all_args.append(args)
             if not local_multiprocess:
                 cur_memsamples = gen_samples(*args)
-                if not storage_disk:
-                    memsamples[k].extend(cur_memsamples)
 
         if local_multiprocess:
             from multiprocessing import Pool
@@ -773,15 +776,14 @@ def main():
                 p.starmap(gen_samples, all_args)
 
     # store general configuration
-    if storage_disk:
-        with open(data_fname, "wb") as new_data_file:
-            pickle.dump((nsamples_train, nsamples_test, nsamples_val,
-                         nfeatures, nclasses, nclasses_existence, ntypes,
-                         img_channels, IMAGE_SIZE), new_data_file)
+    with open(data_fname, "wb") as new_data_file:
+        pickle.dump((nsamples_train, nsamples_test, nsamples_val,
+                     nfeatures, nclasses, nclasses_existence, ntypes,
+                     img_channels, IMAGE_SIZE), new_data_file)
 
-        # copy the generating script
-        script_fname = mainmod.__file__
-        dst = shutil.copy(script_fname, storage_dir)
+    # copy the generating script
+    script_fname = mainmod.__file__
+    dst = shutil.copy(script_fname, storage_dir)
 
     print('done')
 
