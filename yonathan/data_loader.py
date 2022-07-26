@@ -109,7 +109,7 @@ def gen_samples(parser,Omniglot_loader, job_id, range_start, range_stop, example
 
 
 
-from emnist_dataset import *
+from yonathan.emnist_dataset import *
 
 def main(language_list:list)->None:
   #  cmd_args = parser.parse_args()
