@@ -22,3 +22,5 @@ emnist/data/emnist/samples/
 emnist/data/results/
 *.pkl
 data
+*ubyte
+*zip
