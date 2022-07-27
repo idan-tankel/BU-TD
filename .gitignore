@@ -10,6 +10,9 @@ ipython_config.py
 # pyenv
 .python-version
 
+
+
+
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -21,6 +24,15 @@ emnist/data/emnist/emnist_raw/
 emnist/data/emnist/samples/
 emnist/data/results/
 *.pkl
-data
+data*
 *ubyte
 *zip
+*data_dir
+
+# python workspaces for PyCharm and VSCode
+*.vscode
+*.idea
+
+# azuer workspace
+*.amlignore
+*.amlignore.amltmp
