@@ -1,8 +1,8 @@
 import torch.nn as nn
 import torch
 import numpy as np
-from supp.general_functions import *
-from supp.FlagAt import *
+from general_functions import *
+from FlagAt import *
 
 
 class ChannelModulation(nn.Module):
@@ -154,19 +154,22 @@ class Modulation(nn.Module):  # Modulation layer.
 
 
 class BasicBlockBUShared(nn.Module):
-    # Basic block of the shared part between BU1,BU2.
-    # Based at most on the ResNet pytorch's implementation.
     expansion = 1
 
     def __init__(self, in_channels: int, out_channels: int, stride: int, use_lateral: bool,idx:int=0) -> None:
         """
+        Basic block of the shared part between BU1,BU2.
+        The conv layers of BU1 and BU2 are shared (with the same weights)
+        Based at most on the ResNet pytorch's implementation.
 
-        :param in_channels: in channel from the previous block.
-        :param out_channels: out channel of the block for the Next block
-        :param stride: stride to perform
-        :param use_lateral: whether to perform the lateral connection from the previous stream.
-        :param idx : The block index.
-        """
+
+        Args:
+            in_channels (int): number of input channels
+            out_channels (int): number of out channels
+            stride (int): the stride of the conv layer
+            use_lateral (bool): use lateral connections between BU1 to BU2
+            idx (int, optional): _description_. Defaults to 0.
+        """        
         super(BasicBlockBUShared, self).__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels  # storing variables.
