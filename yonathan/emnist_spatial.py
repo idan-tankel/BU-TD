@@ -2,16 +2,22 @@ import os
 import argparse
 import torch.backends.cudnn as cudnn
 from torch.utils.data import DataLoader
+import sys
+sys.path.append("..")
+# import supplmentery
+from supplmentery import *
+from supplmentery.Parser import *
+from supplmentery.FlagAt import FlagAt
 # from utils.funcs import *
-from supp.Parser import *
-from supp.get_dataset import *
-from supp.create_model import *
-from supp.FlagAt import *
-from supp.emnist_dataset import inputs_to_struct as inputs_to_struct
-from supp.logger import *
-from supp.data_functions import *
-from supp.loss_and_accuracy import *
-from supp.visuialize_predctions import *
+# from supplementery.Parser import *
+# from supplementery.get_dataset import *
+# from supplementery.create_model import *
+# from supplementery.FlagAt import *
+# from supplementery.emnist_dataset import inputs_to_struct as inputs_to_struct
+# from supplementery.logger import *
+# from supplementery.data_functions import *
+# from supplementery.loss_and_accuracy import *
+# from supplementery.visuialize_predctions import *
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
