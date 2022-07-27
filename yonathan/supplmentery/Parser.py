@@ -1,8 +1,12 @@
-from FlagAt import *
-from batch_norm import *
-from loss_and_accuracy import *
+import supplmentery.FlagAt as FlagAt
+import supplmentery.batch_norm
+from supplmentery.models import *
+from .batch_norm import *
+from supplmentery.models import *
+from supplmentery.blocks import *
+from supplmentery.loss_and_accuracy import *
+from supplmentery.emnist_dataset import *
 from emnist_dataset import *
-from models import *
 import os
 from datetime import datetime
 # from general_functions import create_dict
@@ -105,12 +109,12 @@ def GetParser(model_flag, processed_data, embedding_idx, results_dir, checkpoint
     parser.add_argument('--bu_block_type', default=BasicBlockBU, type=nn.Module, help='Basic BU block')
     parser.add_argument('--bu_shared_block_type', default=BasicBlockBUShared, type=nn.Module,
                         help='Basic shared BU block')
-    parser.add_argument('--bu1_loss', default=nn.BCEWithLogitsLoss(reduction='mean').to(dev), type=nn.Module,
-                        help='The loss used at the end of the bu1 stream')
-    parser.add_argument('--td_loss', default=nn.MSELoss(reduction='mean').to(dev), type=nn.Module,
-                        help='The loss used at the end of the td stream')
-    parser.add_argument('--bu2_classification_loss', default=nn.CrossEntropyLoss(reduction='none').to(dev),
-                        type=nn.Module, help='The loss used at the end of the bu2 stream')
+    # parser.add_argument('--bu1_loss', default=nn.BCEWithLogitsLoss(reduction='mean').to(dev), type=nn.Module,
+                        #help='The loss used at the end of the bu1 stream')
+    #parser.add_argument('--td_loss', default=nn.MSELoss(reduction='mean').to(dev), type=nn.Module,
+     #                   help='The loss used at the end of the td stream')
+    #parser.add_argument('--bu2_classification_loss', default=nn.CrossEntropyLoss(reduction='none').to(dev),
+      #                  type=nn.Module, help='The loss used at the end of the bu2 stream')
     parser.add_argument('--loss_fun', default=UnifiedLossFun(parser.parse_args()), type=Callable,
                         help='The unified loss function of all training')
     parser.add_argument('--model', default=create_model(parser.parse_args()), type=nn.Module,
