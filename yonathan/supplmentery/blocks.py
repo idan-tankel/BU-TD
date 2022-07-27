@@ -2,8 +2,8 @@ import torch.nn as nn
 import torch
 import torch._C
 import numpy as np
-from general_functions import flag_to_task, conv3x3, conv1x1, get_laterals, conv3x3up
-import FlagAt as FlagAt
+from supplmentery.general_functions import flag_to_task, conv3x3, conv1x1, get_laterals, conv3x3up
+from supplmentery.FlagAt import FlagAt
 import argparse
 
 

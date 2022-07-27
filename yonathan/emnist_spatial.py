@@ -2,8 +2,6 @@ import os
 import argparse
 import torch.backends.cudnn as cudnn
 from torch.utils.data import DataLoader
-import sys
-sys.path.append("..")
 # import supplmentery
 from supplmentery import *
 from supplmentery.Parser import *
