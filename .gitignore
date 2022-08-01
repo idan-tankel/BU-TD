@@ -36,3 +36,4 @@ data*
 # azuer workspace
 *.amlignore
 *.amlignore.amltmp
+.vscode/settings.json

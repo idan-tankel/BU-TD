@@ -1,15 +1,11 @@
-import torch.utils.data as data
 import os
-import torch
-from skimage import io
 import numpy as np
 import skimage.transform
-from skimage import color
 from PIL import Image
 import pickle
-import imgaug as ia
 from Raw_data_loaders import *
 from Create_dataset_classes import *
+from Create_dataset_classes import ExampleClass
 
 
 def Get_label_ordered(infos:list)->np.array:
