@@ -65,7 +65,7 @@ def vis_keypoints(image, keypoints, color=KEYPOINT_COLOR, diameter=1):
     for (x, y) in keypoints:
         cv2.circle(image, (int(x), int(y)), radius = 1, color = color)
 
-    plt.figure(figsize=(10,10))
+    plt.figure(figsize=(112,224))
     plt.axis('off')
 
     plt.imshow(image.astype(np.uint8))
@@ -95,7 +95,7 @@ def store_sample_disk(sample:Sample, store_dir:str, folder_split:bool,folder_siz
     if False:
      image = cv2.imread(img_fname)
      image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-     keypoints = [sample.keypoint]
+     keypoints = sample.keypoints
      vis_keypoints(image, keypoints, color=KEYPOINT_COLOR, diameter=1)
   #  del sample.image, sample.infos
 

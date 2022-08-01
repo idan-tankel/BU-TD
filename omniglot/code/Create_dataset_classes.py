@@ -37,7 +37,7 @@ class CharInfo:
 
 class Sample:
     #Class containing all information about the sample, including the image, the flags, the label task.
-    def __init__(self, infos, image, sample_id, label_existence, label_ordered, query_part_id, label_task, flag, is_train,keypoint):
+    def __init__(self, infos, image, label_existence, label_ordered,sample_id, query_part_id,flag, label_task, keypoints):
         """
         #Class containing all information about the sample, including the image, the flags, the label task.
         Args:
@@ -59,8 +59,7 @@ class Sample:
         self.query_part_id = query_part_id
         self.label_task = label_task
         self.flag = flag
-        self.is_train = is_train 
-        self.keypoint = keypoint
+        self.keypoints = keypoints
 
 class ExampleClass:
     def __init__(self,sample:Sample,query_part_id:int,adj_type:int,chars:list):

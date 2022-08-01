@@ -325,7 +325,7 @@ def Get_data_dir(parser, store_folder,language_list):
     :return: 
     """
     base_storage_dir = '%d_' % (parser.nchars_per_row *parser.num_rows_in_the_image)
-    base_storage_dir += 'extended_' + str(language_list)
+    base_storage_dir += 'extended_' + "Digits"
     store_dir = os.path.join(store_folder, 'new_samples')
     base_samples_dir = os.path.join(store_dir, base_storage_dir)
     if not os.path.exists(base_samples_dir):
