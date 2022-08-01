@@ -258,24 +258,38 @@ class OmniglotDatasetLabelSingleTaskRight(OmniglotDataSetBase):
         obj_per_row = 6
         edge_class = self.nclasses_existence
         r,c = (label_all == char).nonzero()
-
+        (r,c) = (r[0], c[0])
         if adj_type == 0:
             # right
             if c == (obj_per_row - 1):
-                label_task = edge_class
+                label_task = [224//4,112//4]
             else:
-                label_task = label_all[r, c + 1]
+                label_task = sample.keypoints[c+1]
         if adj_type == 1:
             # left
             if c == 0:
-                label_task = edge_class
+                label_task = [0,0]
             else:
-                label_task = label_all[r, c - 1]
-        c = c[0]
+                label_task = sample.keypoints[c+1]
         label_existence, label_all, label_task, id = map(torch.tensor, (label_existence, label_all, label_task, id))
         label_existence = label_existence.float()
-     #   label_task = torch.tensor(label_task).view(-1)
-        label_task = label_task.view([-1])
-        label_task = torch.tensor(sample.keypoints[c]).type(torch.LongTensor)//4
-       # label_task = torch.tensor(sample.keypoint)
-        return img, label_all, label_existence, label_task, flag
+        #
+        flag_stage_1 = torch.nn.functional.one_hot(torch.tensor(char),self.nclasses_existence )
+        label_task_stage_1 = torch.tensor(sample.keypoints[c]).astype(Torch.Long)
+        #
+        lan_type_ohe = torch.nn.functional.one_hot(task_emb_id, self.num_languages)
+        (x,y) = sample.keypoints[c]
+        flag_stage_2_x = torch.nn.functional.one_hot(x, 224//4)
+        flag_stage_2_y = torch.nn.functional.one_hot(y, 224 // 4)
+        flag_stage_2 = torch.concat([lan_type_ohe, flag_stage_2_x, flag_stage_2_y], dim=0).float()
+        label_task_stage_2 = torch.tensor(label_task).astype(Torch.Long)
+        #
+        (x_tar, y_tar) = label_task
+        flag_stage_3_x = torch.nn.functional.one_hot(x_tar, 224 // 4)
+        flag_stage_3_y = torch.nn.functional.one_hot(y_tar, 224 // 4)
+        flag_stage_3 = torch.concat([ flag_stage_3_x, flag_stage_3_y], dim=0).float()
+        label_task_stage_3 = label_all[r,c+1]
+        #
+        
+        #
+        return  img, label_all, label_existence, flag_stage_1, flag_stage_2, flag_stage_3 ,label_task_stage_1, label_task_stage_2, label_task_stage_3
