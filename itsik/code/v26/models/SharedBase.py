@@ -1,9 +1,9 @@
 import numpy as np
 from torch import nn
 
-from persons.code.v26.funcs import orig_relus
-from persons.code.v26.functions.convs import conv3x3, conv1x1, conv2d_fun
-from persons.code.v26.models.SideAndComb import SideAndCombSharedBase, SideAndCombShared
+from v26.funcs import orig_relus
+from v26.functions.convs import conv3x3, conv1x1, conv2d_fun
+from v26.models.SideAndComb import SideAndCombSharedBase, SideAndCombShared
 
 
 class BasicBlockLatSharedBase():

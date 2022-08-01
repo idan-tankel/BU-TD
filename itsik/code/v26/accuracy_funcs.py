@@ -1,6 +1,5 @@
 import torch
-
-from persons.code.v26.ConstantsBuTd import *
+from v26.ConstantsBuTd import dev
 
 
 def get_bounding_box(mask):

@@ -1,7 +1,7 @@
 import numpy as np
 
-from persons.code.v26.models.FlagAt import FlagAt
-from persons.code.vae.StoreForVae import *
+from v26.models.FlagAt import FlagAt
+from vae.StoreForVae import *
 
 np.set_printoptions(precision=6)
 np.set_printoptions(suppress=True)

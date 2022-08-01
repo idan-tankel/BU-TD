@@ -1,11 +1,11 @@
 import torch
 from torch import nn
 
-from persons.code.v26.funcs import instruct, init_module_weights, get_laterals
-from persons.code.v26.functions.convs import conv1x1, conv2d_fun
-from persons.code.v26.models.BasicBlock import BasicBlockTDLat
-from persons.code.v26.models.SharedBase import BasicBlockLatShared
-from persons.code.v26.models.SideAndComb import SideAndCombShared, SideAndComb
+from v26.funcs import instruct, init_module_weights, get_laterals
+from v26.functions.convs import conv1x1, conv2d_fun
+from v26.models.BasicBlock import BasicBlockTDLat
+from v26.models.SharedBase import BasicBlockLatShared
+from v26.models.SideAndComb import SideAndCombShared, SideAndComb
 
 
 class ResNet(nn.Module):

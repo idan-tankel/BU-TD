@@ -2,8 +2,8 @@ import time
 
 import torch
 
-from persons.code.v26.funcs import train_step, test_step, logger
-from persons.code.vae.StoreForVae import StoreForVae
+from v26.funcs import train_step, test_step, logger
+from vae.StoreForVae import StoreForVae
 
 
 class DatasetInfo():

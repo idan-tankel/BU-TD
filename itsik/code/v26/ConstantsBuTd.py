@@ -18,7 +18,6 @@ def get_dev():
 
 def set_model(model):
     Constants.__model = model
-*.amlignore
 
 def get_model():
     if Constants.__model is None:

@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from persons.code.v26.functions.convs import conv3x3up
+from v26.functions.convs import conv3x3up
 
 
 class ImageHead(nn.Module):

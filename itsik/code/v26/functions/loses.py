@@ -1,9 +1,9 @@
 import numpy as np
 from torch import nn
 
-from persons.code.v26.ConstantsBuTd import *
-from persons.code.v26.funcs import activated_tasks
-from persons.code.v26.models.Measurements import get_model_outs
+from v26.ConstantsBuTd import *
+from v26.funcs import activated_tasks
+from v26.models.Measurements import get_model_outs
 
 loss_task_multi_label = nn.CrossEntropyLoss(reduction='none').to(dev)
 loss_occurrence = torch.nn.BCEWithLogitsLoss(reduction='mean').to(dev)

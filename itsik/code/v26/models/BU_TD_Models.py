@@ -2,11 +2,11 @@ from types import SimpleNamespace
 
 from torch import nn
 
-from persons.code.v26.funcs import activated_tasks
-from persons.code.v26.models.BasicBlock import BasicBlock
-from persons.code.v26.models.Heads import OccurrenceHead, MultiLabelHead, ImageHead, MultiLabelHeadOnlyTask
-from persons.code.v26.models.ResNet import ResNetLatShared, ResNetTDLat, ResNet
-from persons.code.v26.models.SharedBase import ResNetLatSharedBase
+from v26.funcs import activated_tasks
+from v26.models.BasicBlock import BasicBlock
+from v26.models.Heads import OccurrenceHead, MultiLabelHead, ImageHead, MultiLabelHeadOnlyTask
+from v26.models.ResNet import ResNetLatShared, ResNetTDLat, ResNet
+from v26.models.SharedBase import ResNetLatSharedBase
 
 
 class BUModel(nn.Module):

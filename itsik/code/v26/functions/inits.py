@@ -3,10 +3,10 @@ from types import SimpleNamespace
 import numpy as np
 from torch import nn
 
-from persons.code.v26.Configs.Config import Config
-from persons.code.v26.funcs import setup_flag
-from persons.code.v26.models.FlagAt import FlagAt
-from persons.code.vae.StoreForVae import StoreForVae
+from v26.Configs.Config import Config
+from v26.funcs import setup_flag
+from v26.models.FlagAt import FlagAt
+from vae.StoreForVae import StoreForVae
 
 
 def add_arguments_to_parser(parser):

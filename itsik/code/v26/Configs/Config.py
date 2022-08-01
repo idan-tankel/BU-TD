@@ -4,13 +4,13 @@ from typing import List
 import yaml
 
 # configuration class
-from persons.code.v26.models.FlagAt import FlagAt
+from v26.models.FlagAt import FlagAt
 
 
 class Config:
     def __init__(self):
         path = "config.yaml"
-        full_path = os.path.join(os.getcwd(), 'v26', 'Configs', path)
+        full_path = os.path.join(os.getcwd(),'itsik','code','v26', 'Configs', path)
         with open(full_path, 'r') as stream:
             self.__config = yaml.safe_load(stream)
         self.Visibility = Visibility(self.__config['Visibility'])

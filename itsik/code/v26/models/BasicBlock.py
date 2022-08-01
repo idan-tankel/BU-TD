@@ -1,8 +1,8 @@
 from torch import nn
 
-from persons.code.v26.funcs import orig_relus
-from persons.code.v26.functions.convs import conv3x3, conv3x3up, conv1x1
-from persons.code.v26.models.SideAndComb import SideAndComb
+from v26.funcs import orig_relus
+from v26.functions.convs import conv3x3, conv3x3up, conv1x1
+from v26.models.SideAndComb import SideAndComb
 
 
 class BasicBlockTDLat(nn.Module):

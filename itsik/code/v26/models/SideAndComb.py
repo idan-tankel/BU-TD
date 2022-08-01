@@ -1,7 +1,7 @@
 from torch import nn
 
-from persons.code.v26.funcs import orig_relus
-from persons.code.v26.models.Hadamard import Hadamard
+from v26.funcs import orig_relus
+from v26.models.Hadamard import Hadamard
 
 
 class SideAndCombSharedBase():

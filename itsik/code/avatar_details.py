@@ -1,19 +1,19 @@
 # %% general initialization
 
 import v26.cfg as cfg
-from persons.code.v26.Configs.Config import Config
-from persons.code.v26.functions.inits import add_arguments_to_parser, init_model_options
-from persons.code.v26.models.DatasetInfo import DatasetInfo
-from persons.code.v26.models.WrappedDataLoader import WrappedDataLoader
-from persons.code.v26.models.BU_TD_Models import *
-from persons.code.v26.models.Measurements import Measurements
-from v26.accuracy_funcs import *
+from v26.Configs.Config import Config
+from v26.functions.inits import add_arguments_to_parser, init_model_options
+from v26.models.DatasetInfo import DatasetInfo
+from v26.models.WrappedDataLoader import WrappedDataLoader
+from v26.models.BU_TD_Models import BUModelSimple, BUTDModelShared
+from v26.models.Measurements import Measurements
+from v26.accuracy_funcs import multi_label_accuracy, get_bounding_box, multi_label_accuracy_weighted_loss
 from v26.funcs import *
 import argparse
 import matplotlib.patches as patches
 from torch.utils.data import DataLoader
 import torch.backends.cudnn as cudnn
-from persons.code.v26.functions.loses import *
+from v26.functions.loses import *
 
 
 # %% visualize predictions

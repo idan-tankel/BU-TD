@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from persons.code.v26.models.AutoSimpleNamespace import inputs_to_struct_raw
+from v26.models.AutoSimpleNamespace import inputs_to_struct_raw
 
 
 class MeasurementsBase():
