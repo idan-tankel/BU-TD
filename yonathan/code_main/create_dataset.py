@@ -61,7 +61,7 @@ def gen_sample(parser:argparse, sample_id:int, is_train:bool, aug_data:transform
         aug_data = get_aug_data(image.shape)
         image, keypoints = augment_albumentations(image, aug_data, keypoints=keypoints)
         #TODO - VISUALIZE THE POINTS.
-        vis_keypoints(image,keypoints)
+      #  vis_keypoints(image,transformed_keypoints)
        # image = image.transpose(2, 0, 1)
    # image = image * 255
 
@@ -129,7 +129,7 @@ def gen_samples(parser:argparse, dataloader:DataSet, job_id:int, range_start:int
 def main(language_list:list)->None:
     # Getting the option parser.
     parser = Get_parser()
-    raw_data_set = DataSet(data_dir = '/home/sverkip/data/Create_dataset_adapting_to_all_datasets/data',dataset = 'emnist',raw_data_source=parser.path_data_raw,language_list=[49]) # Getting the raw data.
+    raw_data_set = DataSet(data_dir = '/home/sverkip/data/Create_dataset_adapting_to_all_datasets/data',dataset = 'omniglot',raw_data_source=parser.path_data_raw,language_list=[49]) # Getting the raw data.
     parser.image_size = (raw_data_set.nchannels,*parser.image_size)
     njobs = parser.threads # The number of threads.
     num_rows_in_the_image   = parser.num_rows_in_the_image      # The number of rows in the image.

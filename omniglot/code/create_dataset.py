@@ -9,14 +9,18 @@ from Create_dataset_utils import *
 from parser import *
 from Raw_data_loaders import *
 from matplotlib import pyplot as plt
+import numpy as np
 KEYPOINT_COLOR = (0, 255, 0)  # Green
 import cv2
+cv2_BORDER_CONSTANT = 0
 
 def vis_keypoints(image, keypoints, color=KEYPOINT_COLOR, diameter=1):
-    image = image.copy()
     image = image.transpose((1, 2, 0))
+    img = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+  #  image = cv2.imread(image)
     for (x, y) in keypoints:
-        cv2.circle(image, (int(x), int(y)), radius = 1, color = -1)
+        cv2.circle(img, center = (int(x), int(y)), radius = 2, color =  (0, 255, 0))
 
     plt.figure(figsize=(112, 224))
     plt.axis('off')
@@ -59,22 +63,15 @@ def gen_sample(parser:argparse, sample_id:int, is_train:bool, aug_data:transform
     # Doing data augmentation
     if is_train and augment_sample:
         aug_data = get_aug_data(image.shape)
-        image, keypoints = augment_albumentations(image, aug_data, keypoints=keypoints)
+        image, _ = augment_albumentations(image, aug_data, keypoints=keypoints)
         #TODO - VISUALIZE THE POINTS.
-        vis_keypoints(image,keypoints)
-       # image = image.transpose(2, 0, 1)
+      #  vis_keypoints(image,keypoints)
+     #   image = image.transpose(2, 0, 1)
    # image = image * 255
 
-    label_task, flag,keypoint = Get_label_task(example, infos, label_ordered, dataloader.nclasses,keypoints)
-    '''
-    if is_train and augment_sample:
-        # augment
-        data_augment = DataAugmentClass(image, label_existence, aug_data)
-        image = data_augment.get_batch_base()
-    '''
-
+    label_task, flag, keypoint = Get_label_task(example, infos, label_ordered, dataloader.nclasses,keypoints)
     # Storing the needed information about the sample.
-    sample = Sample(infos, image, sample_id, label_existence, label_ordered, example.query_part_id, label_task, flag, is_train,keypoint)
+    sample = Sample(infos, image, label_existence, label_ordered,sample_id, example.query_part_id,flag,label_task,keypoints)
     return sample # Returning the sample we are going to store.
 
 def gen_samples(parser:argparse, dataloader:DataSet, job_id:int, range_start:int, range_stop:int, examples:list, storage_dir:str, ds_type:str, augment_sample:bool)->None:
@@ -129,7 +126,7 @@ def gen_samples(parser:argparse, dataloader:DataSet, job_id:int, range_start:int
 def main(language_list:list)->None:
     # Getting the option parser.
     parser = Get_parser()
-    raw_data_set = DataSet(data_dir = '/home/sverkip/data/Create_dataset_adapting_to_all_datasets/data',dataset = 'emnist',raw_data_source=parser.path_data_raw,language_list=[49]) # Getting the raw data.
+    raw_data_set = DataSet(data_dir = '/home/sverkip/data/Create_dataset_adapting_to_all_datasets/data',dataset = 'omniglot',raw_data_source=parser.path_data_raw,language_list=[49]) # Getting the raw data.
     parser.image_size = (raw_data_set.nchannels,*parser.image_size)
     njobs = parser.threads # The number of threads.
     num_rows_in_the_image   = parser.num_rows_in_the_image      # The number of rows in the image.
@@ -247,6 +244,6 @@ def main(language_list:list)->None:
 # %%
 if __name__ == "__main__":
   #   tasks = [[27,5]]
-     tasks = [ [17] ]
+     tasks = [ [49] ]
      for task in tasks:
        main(task)
