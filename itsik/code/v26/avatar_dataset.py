@@ -6,7 +6,7 @@ import torch.utils.data as data
 import torchvision.transforms as transforms
 from types import SimpleNamespace
 
-from persons.code.v26.models.AutoSimpleNamespace import AutoSimpleNamespace
+from v26.models.AutoSimpleNamespace import AutoSimpleNamespace
 
 
 class AvatarDetailsDatasetBase(data.Dataset):
