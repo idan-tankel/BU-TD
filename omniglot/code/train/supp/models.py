@@ -272,12 +272,12 @@ class BUModel(nn.Module):
 
 
 class BUTDModel(nn.Module):
-    def forward(self, inputs: list[torch]) -> list[torch]:
+    def forward(self, samples: list[torch], stage:int ) -> list[torch]:
         """
         :param inputs: The images, all labels including the task_occurrence, segmentation_task, the label_task.
         :return: The output from all streams in order to compute the appropriate loss.
         """
-        samples = self.inputs_to_struct(inputs)  # Transform the input to struct.
+      #  samples = self.inputs_to_struct(inputs)  # Transform the input to struct.
         images = samples.image
         flags = samples.flag
         model_inputs = [images, flags, None]  # The input to the BU1 stream is just the images and the flags.
@@ -303,7 +303,7 @@ class BUTDModel(nn.Module):
             model_inputs += [[td_out]]
         bu2_out, bu2_laterals_out = self.bumodel2(
             model_inputs)  # The input to the TD stream is the images, flags, the lateral connections.
-        head_input = (bu2_out, flags)
+        head_input = (bu2_out, flags,stage)
         task_out = self.Head(head_input)  # Compute the classification layer.
         outs = [occurrence_out, task_out, bu_out, bu2_out]
         if self.use_td_loss:
@@ -409,7 +409,6 @@ class CYCLICBUTDMODELSHARED(nn.Module):
     def __init__(self,opts):
         self.model = BUTDModelShared(opts)
 
-
     def forward(self, inputs: list[torch]) -> list[torch]:
         samples_stage_1 = inputs_to_struct(inputs,stage = 0)
         out_stage_1 = self.model(samples_stage_1,stage = 0 )
@@ -421,11 +420,6 @@ class CYCLICBUTDMODELSHARED(nn.Module):
         out_stage_3 = self.model(samples_stage_3,stage = 2)
         #
         return [out_stage_1, out_stage_2, out_stage_3]
-
-
-
-
-
 
 class BUTDModelDuplicate(BUTDModel):
     """
