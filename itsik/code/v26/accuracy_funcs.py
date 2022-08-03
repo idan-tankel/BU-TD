@@ -47,6 +47,7 @@ def multi_label_accuracy(outs, samples, nclasses):
 def multi_label_accuracy_weighted_loss(outs, samples, nclasses):
     preds, task_accuracy = multi_label_accuracy_base(outs, samples, nclasses)
     loss_weight = samples.loss_weight
+    print(f'{task_accuracy.shape} {loss_weight.shape}')
     task_accuracy = task_accuracy * loss_weight
     task_accuracy = task_accuracy.sum(axis=1) / loss_weight.sum(
         axis=1)  # per single example

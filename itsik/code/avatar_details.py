@@ -65,7 +65,7 @@ def init_train_options(model, args, num_gpus, scale_batch_size, ubs, batch_size,
                                weight_decay=train_opts.weight_decay)
     train_opts.optimizer = optimizer
     train_opts.loss_fun = loss_fun
-    lmbda = lambda epoch: train_opts.learning_rates_mult[epoch]
+    def lmbda(epoch): return train_opts.learning_rates_mult[epoch]
     scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lmbda)
     train_opts.scheduler = scheduler
     train_opts.checkpoints_per_epoch = args.checkpoints_per_epoch
@@ -111,8 +111,10 @@ def init_datasets(inshape, flag_size, nclasses_existence, nsamples_train, nsampl
         def flag_to_comp(flag):
             return 1, 1
 
-        train_ds = dataset(inshape, flag_size, nclasses_existence, nsamples_train)
-        test_ds = dataset(inshape, flag_size, nclasses_existence, nsamples_test)
+        train_ds = dataset(inshape, flag_size,
+                           nclasses_existence, nsamples_train)
+        test_ds = dataset(inshape, flag_size,
+                          nclasses_existence, nsamples_test)
         val_ds = dataset(inshape, flag_size, nclasses_existence, nsamples_test)
         nsamples_val = len(
             val_ds
@@ -193,7 +195,8 @@ def main():
 
     init_some_hyper_params(args)
 
-    base_samples_dir, data_fname, results_dir = init_folders(base_tf_records_dir, config)
+    base_samples_dir, data_fname, results_dir = init_folders(
+        base_tf_records_dir, config)
 
     flag_at = config.RunningSpecs.FlagAt
     # when True use a dummy dataset instead of a real one (for debugging)
@@ -206,11 +209,11 @@ def main():
                                                                                      ngpus_per_node)
 
     flag_to_comp, inputs_to_struct, normalize_image, the_datasets, train_dataset, val_dataset, mean_image, \
-    nbatches_train, nbatches_val, nbatches_test, train_sampler = init_all_datasets(args, base_samples_dir, batch_size,
-                                                                                   config, flag_size, inshape,
-                                                                                   nclasses_existence, nfeatures,
-                                                                                   nsamples_test, nsamples_train, ubs,
-                                                                                   flag_at)
+        nbatches_train, nbatches_val, nbatches_test, train_sampler = init_all_datasets(args, base_samples_dir, batch_size,
+                                                                                       config, flag_size, inshape,
+                                                                                       nclasses_existence, nfeatures,
+                                                                                       nsamples_test, nsamples_train, ubs,
+                                                                                       flag_at)
     # %% model options
     model_opts = init_model_opts_2(args, base_tf_records_dir, config, flag_at, flag_size, inputs_to_struct, inshape,
                                    nclasses_existence, normalize_image, ntypes, results_dir)
@@ -260,7 +263,8 @@ def main():
     lens = np.zeros((npersons, nfeatures))
     for inputs in val_dataset:
         loss, outs = test_step(inputs, train_opts)
-        samples, outs = from_network(inputs, outs, model.module, inputs_to_struct)
+        samples, outs = from_network(
+            inputs, outs, model.module, inputs_to_struct)
         for k in range(len(samples.image)):
             flag = samples.flag[k]
             avatar_id, feature_id = flag_to_comp(flag)
@@ -285,9 +289,11 @@ def go_over_samples_variables(inputs_to_struct, mean_image, model, model_opts, n
                               train_opts):
     ds_iter = iter(train_dataset)
     inputs = next(ds_iter)
-    loss, outs = test_step(inputs, train_opts)  # Here pass it through the network
+    # Here pass it through the network
+    loss, outs = test_step(inputs, train_opts)
     samples, outs = from_network(inputs, outs, model.module, inputs_to_struct)
-    samples, outs = from_network_transpose(samples, outs, normalize_image, mean_image, model_opts)
+    samples, outs = from_network_transpose(
+        samples, outs, normalize_image, mean_image, model_opts)
     preds = np.array(outs.occurence > 0, dtype=np.float)
     fig = plt.figure(figsize=(15, 4))
     n = number_of_subplots(model_opts)
@@ -301,7 +307,8 @@ def go_over_sample(features_strings, fig, flag_to_comp, k, model_opts, n, nfeatu
     tit = 'Present: %s\n' % present
     fl = samples.flag[k]
     avatar_id, feature_id = flag_to_comp(fl)
-    feature_value, predicted_feature_value = predict(avatar_id, feature_id, k, nfeatures, outs, samples, model_opts)
+    feature_value, predicted_feature_value = predict(
+        avatar_id, feature_id, k, nfeatures, outs, samples, model_opts)
     ins = 'Instruction: Avatar %d, %s' % (avatar_id,
                                           features_strings[feature_id])
     tit = tit + ins
@@ -319,7 +326,8 @@ def go_over_sample(features_strings, fig, flag_to_comp, k, model_opts, n, nfeatu
     curseg_min = vals[counts.argmax()]
     mask = curseg > curseg_min
     add_mask(ax, mask)
-    gt_str, pred_str = pred_and_gt_text(feature_id, feature_value, features_strings, predicted_feature_value)
+    gt_str, pred_str = pred_and_gt_text(
+        feature_id, feature_value, features_strings, predicted_feature_value)
     predicted_existing_avatar_ids = preds[k]
     font = get_font(feature_value, predicted_feature_value)
     title_with_td_loss(font, gt_str, k, model_opts, n, outs, pred_str)
@@ -439,7 +447,7 @@ def create_model(model_opts):
         model = BUModelSimple(model_opts)
     else:
 
-            model = BUTDModelShared(model_opts)
+        model = BUTDModelShared(model_opts)
     if not torch.cuda.is_available():
         logger.info('using CPU, this will be slow')
     else:
@@ -516,7 +524,8 @@ def init_all_datasets(args, base_samples_dir, batch_size, config, flag_size, ins
     set_inputs_to_struct(inputs_to_struct=inputs_to_struct)
     train_sampler = None
     batch_size = batch_size * ubs
-    train_dl, test_dl, val_dl = create_data_loaders(train_ds, test_ds, val_ds, batch_size, args, train_sampler)
+    train_dl, test_dl, val_dl = create_data_loaders(
+        train_ds, test_ds, val_ds, batch_size, args, train_sampler)
     nbatches_train = len(train_dl)
     nbatches_val = len(val_dl)
     nbatches_test = len(test_dl)

@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"name": "BU-TD",
+			"path": "../.."
+		}
+	],
+	"settings": {
+		"python.linting.pylintEnabled": true,
+		"python.linting.enabled": true
+	}
+}

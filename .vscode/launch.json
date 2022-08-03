@@ -5,15 +5,22 @@
     "version": "0.2.0",
     "configurations": [
         {
-            //"preLaunchTask": "echo",
             "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            //"preLaunchTask": "echo",
+            "name": "Python: Run on node",
             "type": "python",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
             //"cwd": "${fileDirname}"
-            
         }
     ]
 }
