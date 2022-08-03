@@ -31,7 +31,7 @@ strings:
 
 Losses:
   use_td_loss: False
-  use_bu1_loss: True
+  use_bu1_loss: False
   use_bu2_loss: True
 
 

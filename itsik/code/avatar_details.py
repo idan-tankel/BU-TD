@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from torch.utils.data import DataLoader
 import torch.backends.cudnn as cudnn
+import v26 as v26
 from v26.functions.loses import *
 
 
@@ -290,7 +291,7 @@ def go_over_samples_variables(inputs_to_struct, mean_image, model, model_opts, n
     ds_iter = iter(train_dataset)
     inputs = next(ds_iter)
     # Here pass it through the network
-    loss, outs = test_step(inputs, train_opts)
+    loss, outs = v26.test_step(inputs, train_opts)
     samples, outs = from_network(inputs, outs, model.module, inputs_to_struct)
     samples, outs = from_network_transpose(
         samples, outs, normalize_image, mean_image, model_opts)
