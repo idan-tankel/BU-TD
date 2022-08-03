@@ -1,5 +1,6 @@
 import torch
 from v26.ConstantsBuTd import dev
+from types import SimpleNamespace
 
 
 def get_bounding_box(mask):
@@ -26,14 +27,29 @@ def get_bounding_box(mask):
 
 
 def multi_label_accuracy_base(outs, samples, nclasses):
+    """
+    multi_label_accuracy_base _summary_
+
+    Args:
+        outs (_type_): _description_
+        samples (`SimpleNamespace`): Represent a list of samples, maintained when outputing the raw data
+        nclasses (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     cur_batch_size = samples.image.shape[0]
     preds = torch.zeros((cur_batch_size, len(nclasses)),
                         dtype=torch.int).to(dev, non_blocking=True)
-    for k in range(len(nclasses)):
-        taskk_out = outs.task[:, :, k]
-        predsk = torch.argmax(taskk_out, axis=1)
-        preds[:, k] = predsk
+    # for k in range(len(nclasses)):
+    #     taskk_out = outs.task[:, :, k]
+    #     predsk = torch.argmax(taskk_out, axis=1)
+    #     preds[:, k] = predsk
+    #  do the argmax only along the first dimention
+    preds = torch.argmax(input=outs.task, dim=1, keepdim=False)
     label_task = samples.label_task
+    # true label task for each sample, has shape (`number of samples`,`label`)
+    # TODO - label_task has shape (`batch_size`,1) and preds has shape (`batch_size`,`number_of_classes`)
     task_accuracy = (preds == label_task).float()
     return preds, task_accuracy
 
@@ -48,7 +64,11 @@ def multi_label_accuracy_weighted_loss(outs, samples, nclasses):
     preds, task_accuracy = multi_label_accuracy_base(outs, samples, nclasses)
     loss_weight = samples.loss_weight
     print(f'{task_accuracy.shape} {loss_weight.shape}')
-    task_accuracy = task_accuracy * loss_weight
+    # task_accuracy = task_accuracy * loss_weight
+    # It was in the original version only regular mean in the second access
+    # we want to do a weighted mean
+    # we have 10 - batch size here in the current example
+    task_accuracy = torch.bmm(input=task_accuracy, mat2=loss_weight)
     task_accuracy = task_accuracy.sum(axis=1) / loss_weight.sum(
         axis=1)  # per single example
     return preds, task_accuracy
