@@ -16,12 +16,13 @@ from supp.visuialize_predctions import *
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 
-def train_omniglot(embedding_idx, flag_at, processed_data, raw_data,model_name= None, path_loading=None, train_all_model=True,train_arg=False,transfer_learning=False,task_embedding=False,load_model_if_exists = False):
+def train_omniglot(embedding_idx, flag_at, processed_data, raw_data,model_name= None, path_loading=None, train_all_model=True,train_arg=False,transfer_learning=False,task_embedding=False,load_model_if_exists = False, stages = [0]):
     # Getting the options for creating the model and the hyper-parameters.
-    results_dir = '/home/sverkip/data/omniglot/data/results'
-    parser = GetParser(flag_at, raw_data, processed_data, embedding_idx, results_dir,train_arg,1,model_name,load_model_if_exists)
+    results_dir = '/home/sverkip/data/BU-TD/omniglot/data/results'
+    parser = GetParser(flag_at, raw_data, processed_data, embedding_idx, results_dir,train_arg,1,model_name,load_model_if_exists,stages)
     # Getting the dataset for the training.
-    data_path = os.path.join('/home/sverkip/data/omniglot/data/new_samples', processed_data)
+
+    data_path = os.path.join('/home/sverkip/data/BU-TD/omniglot/data/new_samples/test_new_100K_samples', processed_data)
     [the_datasets, train_dl, test_dl, train_dataset, test_dataset] = get_dataset(embedding_idx, parser,
                                                                                  data_fname=data_path)
     # Printing the model and the hyper-parameters.
@@ -50,8 +51,8 @@ def train_omniglot(embedding_idx, flag_at, processed_data, raw_data,model_name= 
 
 def main():
     train_omniglot(embedding_idx = 0, flag_at = FlagAt.SF, processed_data = '6_extended_[49]',
-                   raw_data = '/home/sverkip/data/omniglot/data/omniglot_all_languages',model_name = '4R', path_loading =None,  train_all_model = True, train_arg = False,    task_embedding = False, transfer_learning = False,
-                   load_model_if_exists = False)
+                   raw_data = '/home/sverkip/data/BU-TD/omniglot/data/omniglot_all_languages',model_name = '4R', path_loading = None,  train_all_model = True, train_arg = False,    task_embedding = False, transfer_learning = False,
+                   load_model_if_exists = False, stages = [ 2 ])
 
 main()
 

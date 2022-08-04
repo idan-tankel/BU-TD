@@ -12,15 +12,17 @@ from supp.omniglot_dataset import inputs_to_struct as inputs_to_struct
 from supp.omniglot_dataset import get_omniglot_dictionary
 from typing import Callable
 
-def GetParser(model_flag, raw_data_path, processed_data, embedding_idx, results_dir,train_arg = False, checkpoints_per_epoch=1, path_loading = None,load_model_if_exists = False):
+def GetParser(model_flag, raw_data_path, processed_data, embedding_idx, results_dir,train_arg = False, checkpoints_per_epoch=1, path_loading = None,load_model_if_exists = False,stages = [0]):
     parser = argparse.ArgumentParser()
     num_gpus = torch.cuda.device_count()
-    parser.add_argument('--wd', default=0.0001, type=float, help='The weight decay of the Adam optimizer')
+    parser.add_argument('--stages', default=stages, type=list, help = "'")
+    parser.add_argument('--grit_size', default = 6, type=list, help="'")
+    parser.add_argument('--wd', default=0.00001, type=float, help='The weight decay of the Adam optimizer')
     parser.add_argument('--SGD', default=False, type=bool, help='Whether to use SGD or Adam optimizer')
     parser.add_argument('--lr', default=1e-3 * 2, type=float, help='Base lr for the SGD optimizer ')
     parser.add_argument('--checkpoints_per_epoch', default=checkpoints_per_epoch, type=int,
                         help='Number of model saves per epoch')
-    parser.add_argument('--initial_tasks', default=[27, 5, 42, 18,33], type=list,
+    parser.add_argument('--initial_tasks', default=[49], type=list,
                         help='The initial tasks to train first')
     parser.add_argument('--bs', default=10, type=int, help='The training batch size')
     parser.add_argument('--scale_batch_size', default=num_gpus * parser.parse_args().bs, type=int,
@@ -57,7 +59,7 @@ def GetParser(model_flag, raw_data_path, processed_data, embedding_idx, results_
                         help='Whether to use the lateral connection from TD to BU2')
     parser.add_argument('--use_final_conv', default=False, type=bool,
                         help='Whether to use the final conc at the end of BU2')
-    parser.add_argument('--nfilters', default = [64, 96, 128, 256], type=list, help='The ResNet filters')
+    parser.add_argument('--nfilters', default = [64, 128, 128, 258], type=list, help='The ResNet filters')
     parser.add_argument('--strides', default=[2,2,2,2], type=list, help='The ResNet strides')
     parser.add_argument('--ks', default=[7, 3, 3,3], type=list, help='The kernel sizes')
     parser.add_argument('--ns', default=[1, 1, 1, 1], type=list, help='Number of blocks per filter size')
@@ -70,7 +72,7 @@ def GetParser(model_flag, raw_data_path, processed_data, embedding_idx, results_
     ##########################################
     now = datetime.now()
     dt_string = now.strftime("%d.%m.%Y %H:%M:%S")
-    model_path = 'DS=' + str(processed_data) + "_embedding_idx=" + str(embedding_idx) + "time = " + str(dt_string)
+    model_path = 'DS=' + str(processed_data) + "_embedding_idx=" + str(embedding_idx) + 'Stage='+str(stages) + "Time=" + str(dt_string)
 
     if not load_model_if_exists: #TODO -CHANGE
      model_dir = os.path.join(results_dir, model_path)
@@ -109,17 +111,12 @@ def GetParser(model_flag, raw_data_path, processed_data, embedding_idx, results_
                         help='The loss used at the end of the bu1 stream')
     parser.add_argument('--td_loss', default=nn.MSELoss(reduction='mean').to(dev), type=nn.Module,
                         help='The loss used at the end of the td stream')
-    parser.add_argument('--bu2_classification_loss', default=nn.CrossEntropyLoss(reduction='none').to(dev),
-                        type=nn.Module, help='The loss used at the end of the bu2 stream')
-    parser.add_argument('--loss_fun', default=UnifiedLossFun(parser.parse_args()), type=Callable,
-                        help='The unified loss function of all training')
-    parser.add_argument('--train_arg', default=train_arg, type = bool , help='The unified loss function of all training')
-    parser.add_argument('--model', default=create_model(parser.parse_args()), type=nn.Module,
-                        help='The model we fit')
-    parser.add_argument('--epoch_save_idx', default='accuracy', type=str,
-                        help='The metric we update the best model according to(usually loss/accuracy)')
-    parser.add_argument('--dataset_id', default='test', type=str,
-                        help='The dataset we update the best model according to(usually val/test)')
+    parser.add_argument('--bu2_classification_loss', default=nn.CrossEntropyLoss(reduction='none').to(dev),    type=nn.Module, help='The loss used at the end of the bu2 stream')
+    parser.add_argument('--train_arg', default=train_arg, type=bool, help='The unified loss function of all training')
+    parser.add_argument('--model', default=create_model(parser.parse_args()), type=nn.Module,   help='The model we fit')
+    parser.add_argument('--loss_fun', default=CYCLICUnifiedLossFun(parser.parse_args()), type=Callable, help='The unified loss function of all training')
+    parser.add_argument('--epoch_save_idx', default='accuracy', type=str,     help='The metric we update the best model according to(usually loss/accuracy)')
+    parser.add_argument('--dataset_id', default='test', type=str,     help='The dataset we update the best model according to(usually val/test)')
     #  self.epoch_save_idx = 'accuracy'
     #   self.dataset_id = 'test'
     return parser.parse_args()

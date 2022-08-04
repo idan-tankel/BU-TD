@@ -61,7 +61,7 @@ def gen_sample(parser:argparse, sample_id:int, is_train:bool, aug_data:transform
         aug_data = get_aug_data(image.shape)
         image, keypoints = augment_albumentations(image, aug_data, keypoints=keypoints)
         #TODO - VISUALIZE THE POINTS.
-        vis_keypoints(image,keypoints)
+#        vis_keypoints(image,keypoints)
        # image = image.transpose(2, 0, 1)
    # image = image * 255
 

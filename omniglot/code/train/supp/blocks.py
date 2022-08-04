@@ -153,6 +153,73 @@ class Modulation(nn.Module):  # Modulation layer.
         inputs = inputs * (1 - task_emb)  # perform the modulation.
         return inputs
 
+class BUStream(nn.Module):
+    def __init__(self, opts: argparse, shared: nn.Module, is_bu2: bool) -> None:
+        super(BUStream, self).__init__()
+        self.block = opts.bu_block_type
+        self.inshapes = opts.bu_inshapes
+        self.ntasks = opts.ntasks
+        self.task_embedding = [[] for _ in range(self.ntasks)]
+        self.norm_layer = opts.norm_fun
+        self.activation_fun = opts.activation_fun
+        self.model_flag = opts.model_flag
+        self.inshapes = shared.inshapes_one_list
+        self.orig_relus = opts.orig_relus
+        self.use_lateral = shared.use_lateral
+        self.filters = opts.nfilters[0]
+        self.InitialBlock = BUInitialBlock(opts, shared)
+        layers = []
+        for shared_layer in shared.alllayers:  # For each shared layer we create associate BU layer.
+            layers.append(self._make_layer(shared_layer, self.inshapes, is_bu2))
+        self.alllayers = nn.ModuleList(layers)
+        self.avgpool = shared.avgpool  # Avg pool layer.
+        if self.use_lateral:
+            self.top_lat = SideAndCombShared(shared.top_lat, self.norm_layer, self.activation_fun, self.orig_relus,
+                                             self.ntasks)
+
+        init_module_weights(self.modules())
+
+    def _make_layer(self, blocks: nn.Module, inshapes: list, is_bu2: bool) -> nn.ModuleList:
+        """
+        :param blocks: Shred layers between BU1, BU2.
+        :param inshapes: The input shape of the model.
+        :param is_bu2: Whether BU1 or BU2.
+        :return: A ResNet shared layer.
+        """
+        norm_layer = self.norm_layer
+        layers = []
+        for shared_block in blocks:
+            # Create Basic BU block.
+            layer = self.block(shared_block, norm_layer, self.activation_fun, inshapes, self.ntasks, self.model_flag,
+                               is_bu2, self.orig_relus)
+            if self.model_flag is FlagAt.SF and is_bu2:
+                # Adding the task embedding of the BU2 stream.
+                for i in range(self.ntasks):
+                    self.task_embedding[i].extend(layer.task_embedding[i])
+            layers.append(layer)
+        return nn.ModuleList(layers)
+
+    def forward(self, inputs: list[torch]) -> tuple:
+        x, flags, laterals_in = inputs  # The input is the image, the flag and the lateral from the previous stream.
+        laterals_out = []  # The laterals for the second stream.
+        x = self.InitialBlock((x, flags, laterals_in))  # Compute the initial block in ResNet.
+        laterals_out.append(x)
+        for layer_id, layer in enumerate(self.alllayers):
+            layer_lats_out = []
+            for block_id, block in enumerate(layer):
+                lateral_layer_id = layer_id + 1
+                cur_lat_in = get_laterals(laterals_in, lateral_layer_id,
+                                          block_id)  # Get the laterals associate with the layer,block_id.
+                x, block_lats_out = block((x, flags, cur_lat_in))  # Compute the block with the lateral connection.
+                layer_lats_out.append(block_lats_out)
+
+            laterals_out.append(layer_lats_out)
+        x = self.avgpool(x)  # Avg pool.
+        lateral_in = get_laterals(laterals_in, lateral_layer_id + 1, None)
+        if self.use_lateral and lateral_in is not None:
+            x = self.top_lat((x, lateral_in))  # last lateral connection before the the loss.
+        laterals_out.append(x)
+        return x, laterals_out
 
 class BasicBlockBUShared(nn.Module):
     # Basic block of the shared part between BU1,BU2.
@@ -321,6 +388,67 @@ class BasicBlockBU(nn.Module):
             x = self.relu(x)
         return x, laterals_out
 
+class InitialEmbedding(nn.Module):
+    def __init__(self,opts,heads):
+        super(InitialEmbedding, self).__init__()
+        self.top_filters = opts.nfilters[-1]
+        self.nheads = len(heads)
+        self.norm_layer = opts.norm_fun
+        self.activation_fun = opts.activation_fun
+        self.ntasks = opts.ntasks
+        self.top_filters = opts.nfilters[-1]
+        self.model_flag = opts.model_flag
+        self.use_td_flag = opts.use_td_flag
+        self.task_embedding = [[] for _ in range(self.ntasks)]
+        self.norm_layer = opts.norm_fun
+        self.activation_fun = opts.activation_fun
+        self.use_SF = opts.use_SF
+        self.nclasses = opts.nclasses
+        self.train_arg = opts.train_arg
+
+        all_layers = []
+        for i in range(len(heads)):
+            layer = nn.Sequential(nn.Linear(heads[i], self.top_filters // self.nheads),  self.norm_layer(self.top_filters // self.nheads, dims=1, num_tasks=self.ntasks),  self.activation_fun())
+            all_layers.append(layer)
+
+        self.h_top_td = nn.Sequential(nn.Linear(self.top_filters * 2, self.top_filters),   self.norm_layer(self.top_filters, dims=1, num_tasks=self.ntasks),  self.activation_fun())
+        all_layers = nn.ModuleList(all_layers)
+        self.layers = all_layers
+        
+    def forward(self,inputs):
+        (bu_out, general_flag, stage_flag, stage) = inputs
+        task = general_flag[:, :self.ntasks]  # The task vector.
+        arg = general_flag[:, self.ntasks:]  # The argument vector.
+        task_id = flag_to_task(general_flag)
+        # flag_task = flag[:, task_id].view(-1, 1)
+
+        if stage == 0:
+            num_heads = 1
+            emb_inputs = [stage_flag]
+        if stage == 1:
+            num_heads = 3
+            emb_inputs = [stage_flag[:, :224 // 6], stage_flag[:, 224 // 6 : 224//6 * 2], task]
+        if stage == 2:
+            num_heads = 2
+            emb_inputs = [stage_flag[:, :224 // 6], stage_flag[:, 224 // 6 : 224 // 6 *2]]
+
+        outs = []
+        for i in range(num_heads):
+            out = self.layers[i](emb_inputs[i])
+            outs.append(out)
+        top_td = torch.cat(outs, dim = 1).squeeze()
+
+        top_td_embed = top_td
+        h_side_top_td = bu_out.squeeze()
+        top_td = torch.cat((h_side_top_td, top_td), dim=1)
+        top_td = torch.flatten(top_td, 1)
+        top_td = self.h_top_td(top_td)  # The projection layer.
+        top_td = top_td.view((-1, self.top_filters, 1, 1))
+        x = top_td
+        return x, top_td_embed, top_td
+
+# TODO - MAKE SURE THE SIZE IS COORECT.
+
 
 class InitialTaskEmbedding(nn.Module):
     """
@@ -328,7 +456,7 @@ class InitialTaskEmbedding(nn.Module):
     Takes as input the flag and the output from the BU1 stream and returns the task embedded input.
     """
 
-    def __init__(self, opts: argparse,nheads = 2,stage = 0) -> None:
+    def __init__(self, opts: argparse) -> None:
         """
         :param opts:Initialize the module according to the opts.
         """
@@ -343,23 +471,15 @@ class InitialTaskEmbedding(nn.Module):
         self.use_SF = opts.use_SF
         self.nclasses = opts.nclasses 
         self.train_arg = opts.train_arg
+        self.emb_layers = []
         if self.model_flag is FlagAt.SF:
-            self.h_flag_task_td = []  # The task embedding.
-            self.h_flag_arg_td = []
-            self.h_top_td = nn.Sequential(nn.Linear(self.top_filters * 2, self.top_filters),  self.norm_layer(self.top_filters, dims=1, num_tasks=self.ntasks), self.activation_fun())
-            for i in range(self.ntasks):
-                layer = nn.Sequential(nn.Linear(1, self.top_filters // 2), self.norm_layer(self.top_filters // 2, dims=1, num_tasks=self.ntasks),  self.activation_fun())
-                self.h_flag_task_td.append(layer)
-                self.task_embedding[i].extend(layer.parameters())
-                layer = nn.Sequential(nn.Linear(self.nclasses[i][0], self.top_filters // 2), self.norm_layer(self.top_filters // 2, dims=1, num_tasks=self.ntasks),  self.activation_fun())
-                self.h_flag_arg_td.append(layer)
-                if self.train_arg:
-                 self.task_embedding[i].extend(layer.parameters())
-            self.h_flag_task_td = nn.ModuleList(self.h_flag_task_td)
-            self.h_flag_arg_td = nn.ModuleList(self.h_flag_arg_td)
-            # The argument embedding.
-
-            # The projection layer.
+         for i in range(self.ntasks):
+             layer_stage_1 = InitialEmbedding(opts,self.nclasses[i])
+             layer_stage_2 = InitialEmbedding(opts, [224//6,224//6,self.ntasks])
+             layer_stage_3 = InitialEmbedding(opts, [224//6,224//6])
+             Task_emb = nn.ModuleList([layer_stage_1,layer_stage_2,layer_stage_3])
+             self.emb_layers.append(Task_emb)
+        self.emb_layers = nn.ModuleList(self.emb_layers)
 
         if self.model_flag is FlagAt.TD:
             # The task embedding.
@@ -380,46 +500,11 @@ class InitialTaskEmbedding(nn.Module):
         :param inputs: bu_out-the output from the BU1 stream, flag the task and argument one hot vectors.
         :return: The initial task embedding to the top of the TD network.
         """
-        (bu_out, flag) = inputs
-        task = flag[:, :self.ntasks]  # The task vector.
-        arg = flag[:, self.ntasks:]  # The argument vector.
-        task_id = flag_to_task(flag)
-        flag_task = flag[:, task_id].view(-1, 1)
-        if self.use_SF:
-            top_td_task = self.h_flag_task_td[task_id](
-                flag_task)  # Take the specific task embedding to avoid forgetting.
-        else:
-            top_td_task = self.h_flag_task_td(task)
-        top_td_task = top_td_task.view((-1, self.top_filters // 2, 1, 1))
-        top_td_arg = self.h_flag_arg_td[task_id](arg)  # Embed the argument.
-        top_td_arg = top_td_arg.view((-1, self.top_filters // 2, 1, 1))
-        top_td = torch.cat((top_td_task, top_td_arg), dim=1)  # Concatenate the flags
-        top_td_embed = top_td
-        h_side_top_td = bu_out
-        top_td = torch.cat((h_side_top_td, top_td), dim=1)
-        top_td = torch.flatten(top_td, 1)
-        top_td = self.h_top_td(top_td)  # The projection layer.
-        top_td = top_td.view((-1, self.top_filters, 1, 1))
-        x = top_td
-        return x, top_td_embed, top_td
+        ( _ , general_flag , _ , stage) = inputs
 
-class CyclicInitialTaskEmbedding(nn.Module):
-    """
-    The Initial Task embedding at the top of the TD stream.
-    Takes as input the flag and the output from the BU1 stream and returns the task embedded input.
-    """
-
-    def __init__(self, opts: argparse) -> None:
-        """
-        Args:
-            opts:
-        """
-        """
-        :param opts:Initialize the module according to the opts.
-        """
-        super(CyclicInitialTaskEmbedding, self).__init__()
-        self.opts = opts
-
+        task_id = flag_to_task(general_flag)
+        # flag_task = flag[:, task_id].view(-1, 1)
+        return self.emb_layers[task_id][stage](inputs)
 
 
 class BasicBlockTD(nn.Module):
