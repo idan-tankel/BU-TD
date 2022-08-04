@@ -12,7 +12,7 @@ from supp.omniglot_dataset import inputs_to_struct as inputs_to_struct
 from supp.omniglot_dataset import get_omniglot_dictionary
 from typing import Callable
 
-def GetParser(model_flag, raw_data_path, processed_data, embedding_idx, results_dir,train_arg = False, checkpoints_per_epoch=1, path_loading = None,load_model_if_exists = False,stages = [0]):
+def GetParser(model_flag, raw_data_path, processed_data, embedding_idx, train_arg = False, checkpoints_per_epoch=1, path_loading = None,load_model_if_exists = False,stages = [0]):
     parser = argparse.ArgumentParser()
     num_gpus = torch.cuda.device_count()
     parser.add_argument('--stages', default=stages, type=list, help = "'")
@@ -22,7 +22,7 @@ def GetParser(model_flag, raw_data_path, processed_data, embedding_idx, results_
     parser.add_argument('--lr', default=1e-3 * 2, type=float, help='Base lr for the SGD optimizer ')
     parser.add_argument('--checkpoints_per_epoch', default=checkpoints_per_epoch, type=int,
                         help='Number of model saves per epoch')
-    parser.add_argument('--initial_tasks', default=[49], type=list,
+    parser.add_argument('--initial_tasks', default=[18, 42, 5, 27], type=list,
                         help='The initial tasks to train first')
     parser.add_argument('--bs', default=10, type=int, help='The training batch size')
     parser.add_argument('--scale_batch_size', default=num_gpus * parser.parse_args().bs, type=int,
@@ -62,7 +62,7 @@ def GetParser(model_flag, raw_data_path, processed_data, embedding_idx, results_
     parser.add_argument('--nfilters', default = [64, 128, 128, 258], type=list, help='The ResNet filters')
     parser.add_argument('--strides', default=[2,2,2,2], type=list, help='The ResNet strides')
     parser.add_argument('--ks', default=[7, 3, 3,3], type=list, help='The kernel sizes')
-    parser.add_argument('--ns', default=[1, 1, 1, 1], type=list, help='Number of blocks per filter size')
+    parser.add_argument('--ns', default=[1,1,1,1], type=list, help='Number of blocks per filter size')
     parser.add_argument('--inshape', default=(3, 112, 224), type=tuple, help='The input image shape')
     parser.add_argument('--norm_fun', default=BatchNorm, type=nn.Module, help='The used batch normalization')
     parser.add_argument('--EPOCHS', default=200, type=int, help='Number of epochs in the training')
@@ -74,15 +74,19 @@ def GetParser(model_flag, raw_data_path, processed_data, embedding_idx, results_
     dt_string = now.strftime("%d.%m.%Y %H:%M:%S")
     model_path = 'DS=' + str(processed_data) + "_embedding_idx=" + str(embedding_idx) + 'Stage='+str(stages) + "Time=" + str(dt_string)
 
+    results_dir = '/home/sverkip/data/BU-TD/omniglot/data/results'
     if not load_model_if_exists: #TODO -CHANGE
      model_dir = os.path.join(results_dir, model_path)
     else:
      model_dir = os.path.join(results_dir, path_loading)
 
     ##########################################
-    parser.add_argument('--model_dir', default=model_dir, type=str, help='The direction the model will be stored')
-    parser.add_argument('--nclasses', default=get_omniglot_dictionary(parser.parse_args(), raw_data_path), type=list,
-                        help='The sizes of the Linear layers')
+    parser.add_argument('--model_dir', default = model_dir, type=str, help='The direction the model will be stored')
+    parser.add_argument('--resulrs_dir', default = results_dir, type=str, help='The direction the model will be stored')
+   # '/home/sverkip/data/BU-TD/omniglot/data/results'
+   # '/home/sverkip/data/BU-TD/omniglot/data/new_samples/test_new_100K_samples'
+    parser.add_argument('--data_dir', default = '/home/sverkip/data/BU-TD/omniglot/data/new_samples/test_new_100K_samples', type=str,  help='The direction the model will be stored')
+    parser.add_argument('--nclasses', default=get_omniglot_dictionary(parser.parse_args(), raw_data_path), type=list,  help='The sizes of the Linear layers')
     #  if Parser.flag_at is FlagAt.BU1_SIMPLE:
     #           Parser.ns = 3 * np.array(parser.ns)
     parser.add_argument('--logfname', default='log.txt', type=str, help='The name of the log file')

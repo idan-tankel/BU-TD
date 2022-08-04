@@ -45,7 +45,6 @@ def flag_to_task(flag: torch) -> int:
     task = torch.argmax(flag, dim=1)[0]  # Finds the non zero entry in the one-hot vector
     return task
 
-
 def get_laterals(laterals: list[torch], layer_id: int, block_id: int) -> torch:
     """
     :param laterals: All lateral connections from the previous stream, if exists.
@@ -64,7 +63,6 @@ def get_laterals(laterals: list[torch], layer_id: int, block_id: int) -> torch:
             return layer_laterals  # If there is only 1 lateral connection in the block we return it.
     else:
         return None
-
 
 class depthwise_separable_conv(nn.Module):
     """

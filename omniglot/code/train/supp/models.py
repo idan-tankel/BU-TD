@@ -3,6 +3,7 @@ from supp.heads import *
 from supp.blocks import *
 from supp.general_functions import *
 from supp.FlagAt import *
+from supp.Data_and_structs import *
 from types import SimpleNamespace
 import numpy as np
 
@@ -29,10 +30,11 @@ class TDModel(nn.Module):
         self.use_final_conv = opts.use_final_conv
         upsample_size = opts.avg_pool_size  # before avg pool we have 7x7x512
         self.task_embedding = [[] for _ in range(self.ntasks)]
+        self.arg_embedding = [[] for _ in range(self.ntasks)]
         self.InitialTaskEmbedding = InitialTaskEmbedding(opts)
         for i in range(self.ntasks):
             self.task_embedding[i].extend(self.InitialTaskEmbedding.task_embedding[i])
-
+            self.arg_embedding[i].extend(self.InitialTaskEmbedding.arg_embedding[i])
         self.top_upsample = nn.Upsample(scale_factor=upsample_size, mode='bilinear',
                                         align_corners=False)  # Upsample layer to make at of the shape before the avgpool.
         layers = []
@@ -314,59 +316,6 @@ class BUTDModel(nn.Module):
             outs += [td_top_embed]
         return outs  # Return all the outputs from all streams.
 
-class outs_to_struct:
-    """
-    Struct transforming the model output list to struct.
-    """
-
-    def __init__(self, model: nn.Module) -> None:
-        """
-        :param model:Containing the flags to create the model according to.
-        """
-        self.use_td_loss = model.use_td_loss
-        self.use_td_flag = model.use_td_flag
-        self.occurrence_out = None
-        self.task_out = None
-        self.bu_out = None
-        self.bu2_out = None
-        self.td_head_out = None
-        self.td_top_embe = None
-
-    def __call__(self, outs: list[torch]) -> object:
-        """
-        :param outs: List of all model streams output.
-        :return: Struct instance.
-        """
-        occurrence_out, task_out, bu_out, bu2_out, *rest = outs
-        self.occurrence_out = occurrence_out
-        self.task = task_out
-        self.bu = bu_out
-        self.bu2 = bu2_out
-        if self.use_td_loss:
-            td_head_out, *rest = rest
-            self.td_head = td_head_out
-        if self.use_td_flag:
-            td_top_embed = rest[0]
-            self.td_top_embed = td_top_embed
-        return self
-
-class cyclicOutToStruct:
-    def __init__(self,opts):
-        self.outs = [ ]
-        self.stages = opts.stages
-        self.use_td_loss = opts.model.module.use_td_loss
-        self.use_td_flag = opts.model.module.use_td_flag
-        for  _ in self.stages:
-         out = outs_to_struct(opts)
-         self.outs.append(out)
-
-    def __call__(self, model_outs: list[torch]) -> object:
-        outs = {}
-        for idx, stage in enumerate(self.stages):
-            out = self.outs[idx](model_outs[stage])
-            outs[stage] = out
-        return outs
-
 
 class BUTDModelShared(BUTDModel):
     def __init__(self, opts: argparse) -> None:
@@ -380,6 +329,8 @@ class BUTDModelShared(BUTDModel):
         self.inputs_to_struct = opts.inputs_to_struct
         self.task_embedding = [[] for _ in range(self.ntasks)]  # Container to store the task embedding.
         self.transfer_learning = [[] for _ in range(self.ntasks)]
+        self.arg_embedding = [[] for _ in range(self.ntasks)]
+        self.Head_learning = [[] for _ in range(self.ntasks)]
         self.model_flag = opts.model_flag  # The model type
         self.use_bu1_loss = opts.use_bu1_loss  # Whether to use the Occurrence loss.
         self.use_td_flag = opts.use_td_flag
@@ -401,28 +352,16 @@ class BUTDModelShared(BUTDModel):
                 self.task_embedding[i].extend(list(self.Head.taskhead[i].parameters()))
                 self.task_embedding[i].extend(self.bumodel2.task_embedding[i])
                 self.task_embedding[i].extend(self.tdmodel.task_embedding[i])
+                self.arg_embedding[i].extend(self.tdmodel.arg_embedding[i])
+
                 self.transfer_learning[i].extend(list(self.Head.taskhead[i].parameters()))
-                self.transfer_learning[i].extend(self.tdmodel.task_embedding[i])
+                self.transfer_learning[i].extend(self.tdmodel.arg_embedding[i])
+                self.Head_learning[i].extend(list(self.Head.taskhead[i].parameters()))
         else:
             for i in range(self.ntasks):
                 self.task_embedding[i].extend(list(self.Head.taskhead[i].parameters()))
 
-class cyclic_inputs_to_strcut:
-    def __init__(self,inputs,stage):
-        img, label_all, label_existence,flag, flag_stage_1, flag_stage_2, flag_stage_3 ,label_task_stage_1, label_task_stage_2, label_task_stage_3  = inputs
-        self.image = img
-        self.label_all = label_all
-        self.label_existence = label_existence
-        self.general_flag = flag
-        if stage == 0:
-         self.label_task = label_task_stage_1
-         self.flag = flag_stage_1
-        if stage == 1:
-         self.label_task = label_task_stage_2
-         self.flag = flag_stage_2
-        if stage == 2:
-         self.label_task = label_task_stage_3
-         self.flag = flag_stage_3
+
 
 class CYCLICBUTDMODELSHARED(nn.Module):
     def __init__(self,opts):
@@ -432,6 +371,9 @@ class CYCLICBUTDMODELSHARED(nn.Module):
         self.use_td_flag = opts.use_td_flag
         self.stages = opts.stages
         self.outs_to_struct = cyclicOutToStruct
+        self.task_embedding = self.model.task_embedding
+        self.transfer_learning = self.model.transfer_learning
+        self.Head_learning = self.model.Head_learning
 
     def forward(self, inputs: list[torch]) -> list[torch]:
         stages = self.stages

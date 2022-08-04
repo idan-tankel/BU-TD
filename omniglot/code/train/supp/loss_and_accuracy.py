@@ -3,12 +3,12 @@ from supp.measurments import *
 import torch
 from supp.data_functions import *
 import argparse
-
+from supp.Data_and_structs import *
 
 # from utils.training_functions import test_step\
 # Accuracy#
 # TODO-change to support the NOFLAG mode.
-def multi_label_accuracy_base(outs: object, samples: object, num_outputs: int = 1) -> tuple:
+def multi_label_accuracy_base(outs: object, samples: object, stage:int, num_outputs: int = 1) -> tuple:
     """
     :param outs:Outputs from all the model, including BU1,TD,BU2 outputs.
     :param samples: The samples we train in the current step.
@@ -18,10 +18,13 @@ def multi_label_accuracy_base(outs: object, samples: object, num_outputs: int = 
     cur_batch_size = samples.image.shape[0]
     predictions = torch.zeros((cur_batch_size, num_outputs), dtype=torch.int).to(dev, non_blocking=True)
     task_output = outs.task  # For each task extract its predictions.
-    task_pred = torch.argmax(task_output, axis=1)  # Find the highest probability in the distribution
+    task_pred = torch.argmax(task_output, axis=1).squeeze()  # Find the highest probability in the distribution
     predictions = task_pred  # assign for each task its predictions
     label_task = samples.label_task
-    task_accuracy = (predictions == label_task).float().sum(dim = 1) == 2 / (num_outputs)   # Compare the number of matches and normalize by the batch size*num_outputs.
+    if stage == 2:
+     task_accuracy = (predictions == label_task).float().sum(dim = 0) / (num_outputs)   # Compare the number of matches and normalize by the batch size*num_outputs.
+    else:
+     task_accuracy = (predictions == label_task).float().sum(dim=0) == 2 / (num_outputs)
     return predictions, task_accuracy  # return the predictions and the accuracy.
  #  task_accuracy = (predictions == label_task).float().sum(dim = 1) == 2 / (num_outputs) 
 
@@ -60,22 +63,6 @@ def multi_label_loss(outs: object, samples: object) -> float:
     losses_task = multi_label_loss_base()(outs, samples)  # list of the losses per sample.
     return losses_task.mean()  # The average loss
 
-class cyclic_inputs_to_strcut:
-    def __init__(self,inputs,stage):
-        img, label_all, label_existence,flag, flag_stage_1, flag_stage_2, flag_stage_3 ,label_task_stage_1, label_task_stage_2, label_task_stage_3  = inputs
-        self.image = img
-        self.label_all = label_all
-        self.label_existence = label_existence
-        self.general_flag = flag
-        if stage == 0:
-         self.label_task = label_task_stage_1
-         self.flag = flag_stage_1
-        if stage == 1:
-         self.label_task = label_task_stage_2
-         self.flag = flag_stage_2
-        if stage == 2:
-         self.label_task = label_task_stage_3
-         self.flag = flag_stage_3
 
 class UnifiedLossFun:
     def __init__(self, opts: argparse) -> None:
@@ -92,7 +79,7 @@ class UnifiedLossFun:
         self.opts = opts
  # outs_to_struct
 # TODO - CHANGE TO NOT PROVIDE MODEL.
-    def __call__(self, model, samples: list[torch], outs: list) -> float:
+    def __call__(self, samples: list[torch], outs: list) -> float:
         """
         :param inputs: Input to the model.
         :param outs: Output from the model.
@@ -119,28 +106,25 @@ class CYCLICUnifiedLossFun:
     def __init__(self,opts):
         self.base_loss = UnifiedLossFun(opts)
         self.opts = opts
+
     def __call__(self, inputs: list[torch], outs_list: list) -> float:
         loss = 0.0
-        cnt = 0
         stages = self.opts.stages
         # Make samples
         outs = get_model_outs(self.opts, outs_list)
         if 0 in stages:
-         samples = cyclic_inputs_to_strcut(inputs, stage = 0)
-         loss_stage_1 = self.base_loss(self.opts.model,samples,outs[0])
-         loss += loss_stage_1
-         cnt = cnt + 1
+          samples = cyclic_inputs_to_strcut(inputs, stage = 0)
+          loss_stage_1 = self.base_loss(self.opts.model,samples,outs[0])
+          loss += loss_stage_1
         if 1 in stages:
-         samples = cyclic_inputs_to_strcut(inputs, stage=1)
-         loss_stage_2 = self.base_loss(self.opts.model, samples, outs[1])
-         loss+=loss_stage_2
-         cnt = cnt + 1
+          samples = cyclic_inputs_to_strcut(inputs, stage=1)
+          loss_stage_2 = self.base_loss(self.opts.model, samples, outs[1])
+          loss+=loss_stage_2
         if 2 in stages:
-         samples = cyclic_inputs_to_strcut(inputs, stage=2)
-         loss_stage_3 = self.base_loss(self.opts.model, samples, outs[2])
-         cnt = cnt + 1
-         loss += loss_stage_3
-        return loss/cnt
+          samples = cyclic_inputs_to_strcut(inputs, stage=2)
+          loss_stage_3 = self.base_loss(self.opts.model, samples, outs[2])
+          loss += loss_stage_3
+        return loss
 
 def accuracy(opts: nn.Module, test_data_loader: DataLoader) -> float:
     """
@@ -153,12 +137,12 @@ def accuracy(opts: nn.Module, test_data_loader: DataLoader) -> float:
     for inputs in test_data_loader:  # Running over all inputs
         inputs = preprocess(inputs)  # Move to the cuda.
         num_samples += len(inputs[0])  # Update the number of samples.
-        samples = cyclic_inputs_to_strcut(inputs, stage = 0)  # Make it struct.
+        samples = cyclic_inputs_to_strcut(inputs, stage = 2)  # Make it struct.
         opts.model.eval() #
         outs = opts.model(inputs)  # Compute the output.
         outs = get_model_outs(opts, outs)  # From output to struct
-        outs = outs[0]
-        (_, task_accuracy_batch) = multi_label_accuracy_base(outs, samples)  # Compute the accuracy on the batch
+        outs = outs[2]
+        (_, task_accuracy_batch) = multi_label_accuracy_base(outs, samples,stage=2)  # Compute the accuracy on the batch
         num_correct_pred += task_accuracy_batch.sum()  # Sum all accuracies on the batches.
     return num_correct_pred / num_samples  # Compute the mean.
 

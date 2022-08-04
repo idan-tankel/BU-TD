@@ -17,7 +17,6 @@ def create_model(args: argparse) -> nn.Module:
         args:
 
     Returns:
-
     """
     if args.model_flag is FlagAt.BU1_SIMPLE:
         model = BUModelSimple(args)

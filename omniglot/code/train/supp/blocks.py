@@ -118,6 +118,12 @@ class SideAndCombShared(nn.Module):
 
 class Modulation(nn.Module):  # Modulation layer.
     def __init__(self, inshapes: list, pixel_modulation: bool, ntasks: int) -> None:
+        """
+        Args:
+            inshapes: shape according to allocate params.
+            pixel_modulation: If True we perform pixel modulation o.w. channel modulation.
+            ntasks: The number of tasks we desire to solve.
+        """
         super(Modulation, self).__init__()  # TODO-ask someone about this super
         """
         :param inshapes: shape according to allocate params.
@@ -447,7 +453,7 @@ class InitialEmbedding(nn.Module):
         x = top_td
         return x, top_td_embed, top_td
 
-# TODO - MAKE SURE THE SIZE IS COORECT.
+# TODO - MAKE SURE THE SIZE IS CORRECT.
 
 
 class InitialTaskEmbedding(nn.Module):
@@ -466,34 +472,35 @@ class InitialTaskEmbedding(nn.Module):
         self.model_flag = opts.model_flag
         self.use_td_flag = opts.use_td_flag
         self.task_embedding = [[] for _ in range(self.ntasks)]
+        self.arg_embedding  = [[] for _ in range(self.ntasks)]
         self.norm_layer = opts.norm_fun
         self.activation_fun = opts.activation_fun
         self.use_SF = opts.use_SF
         self.nclasses = opts.nclasses 
         self.train_arg = opts.train_arg
         self.emb_layers = []
+        grit = opts.grit_size
         if self.model_flag is FlagAt.SF:
          for i in range(self.ntasks):
              layer_stage_1 = InitialEmbedding(opts,self.nclasses[i])
-             layer_stage_2 = InitialEmbedding(opts, [224//6,224//6,self.ntasks])
-             layer_stage_3 = InitialEmbedding(opts, [224//6,224//6])
+             self.arg_embedding.extend(layer_stage_1.layers.parameters())
+             layer_stage_2 = InitialEmbedding(opts, [224//grit,224//grit,self.ntasks])
+             self.arg_embedding.extend(layer_stage_2.layers[:2].parameters())
+             self.task_embedding.extend(layer_stage_2.layers[2].parameters())
+             layer_stage_3 = InitialEmbedding(opts, [224//grit,224//grit])
+             self.arg_embedding.extend(layer_stage_3.layers.parameters())
+
              Task_emb = nn.ModuleList([layer_stage_1,layer_stage_2,layer_stage_3])
              self.emb_layers.append(Task_emb)
         self.emb_layers = nn.ModuleList(self.emb_layers)
 
         if self.model_flag is FlagAt.TD:
             # The task embedding.
-            self.h_flag_task_td = nn.Sequential(nn.Linear(self.ntasks, self.top_filters // 2),
-                                                self.norm_layer(self.top_filters // 2, dims=1, num_tasks=self.ntasks),
-                                                self.activation_fun())
+            self.h_flag_task_td = nn.Sequential(nn.Linear(self.ntasks, self.top_filters // 2),     self.norm_layer(self.top_filters // 2, dims=1, num_tasks=self.ntasks),  self.activation_fun())
             # The argument embedding.
-            self.h_flag_arg_td = nn.Sequential(nn.Linear(opts.nargs, self.top_filters // 2),
-                                               self.norm_layer(self.top_filters // 2, dims=1, num_tasks=self.ntasks),
-                                               self.activation_fun())
+            self.h_flag_arg_td = nn.Sequential(nn.Linear(opts.nargs, self.top_filters // 2),    self.norm_layer(self.top_filters // 2, dims=1, num_tasks=self.ntasks),     self.activation_fun())
             # The projection layer.
-            self.h_top_td = nn.Sequential(nn.Linear(self.top_filters * 2, self.top_filters),
-                                          self.norm_layer(self.top_filters, dims=1, num_tasks=self.ntasks),
-                                          self.activation_fun())
+            self.h_top_td = nn.Sequential(nn.Linear(self.top_filters * 2, self.top_filters),     self.norm_layer(self.top_filters, dims=1, num_tasks=self.ntasks),    self.activation_fun())
 
     def forward(self, inputs: tuple) -> tuple:
         """
@@ -503,7 +510,6 @@ class InitialTaskEmbedding(nn.Module):
         ( _ , general_flag , _ , stage) = inputs
 
         task_id = flag_to_task(general_flag)
-        # flag_task = flag[:, task_id].view(-1, 1)
         return self.emb_layers[task_id][stage](inputs)
 
 
