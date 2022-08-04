@@ -1,8 +1,8 @@
 import argparse
 def Get_parser(nchars_per_row = 6, num_rows_in_the_image = 1):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path_data_raw', default='/home/sverkip/data/omniglot/data/omniglot_all_languages', type=str, help='The Raw data path')
-    parser.add_argument('--store_folder', default='/home/sverkip/data/omniglot/data/', type=str,help='The storing path')
+    parser.add_argument('--path_data_raw', default='/home/sverkip/data/BU-TD/omniglot/data/omniglot_all_languages', type=str, help='The Raw data path')
+    parser.add_argument('--store_folder', default='/home/sverkip/data/BU-TD/omniglot/data/new_samples', type=str,help='The storing path')
     parser.add_argument('--job_chunk_size', default=1000, type=int, help='The number of samples each jobs processes')
     parser.add_argument('--folder_split', default=True, type=bool, help='Whether to split the folder into parts.')
     parser.add_argument('--folder_size', default=1000, type=int, help=' The folder size')
@@ -10,7 +10,7 @@ def Get_parser(nchars_per_row = 6, num_rows_in_the_image = 1):
     parser.add_argument('--letter_size', default=28, type=int, help='The basic letter size')
     parser.add_argument('--threads', default = 10, type=int, help='The number of threads in the job')
     parser.add_argument('--nchars_per_row', default = nchars_per_row, type=int, help='The number of characters in the image')
-    parser.add_argument('--nsamples_train', default = 10000, type=int, help='The number of samples in the train set')
+    parser.add_argument('--nsamples_train', default = 20000, type=int, help='The number of samples in the train set')
     parser.add_argument('--nsamples_test', default = 2000, type=int, help='The number of samples in the test set')
     parser.add_argument('--nsamples_val', default = 2000, type=int, help='The number of samples in the val set')
     parser.add_argument('--generalize', default = True, type=bool, help='Whether to create the combinatorial generalization set')

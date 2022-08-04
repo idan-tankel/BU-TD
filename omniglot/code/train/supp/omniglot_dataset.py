@@ -94,6 +94,24 @@ class OmniglotDataSetBase(data.Dataset):
         return self.nexamples
 
 
+
+class cyclic_inputs_to_strcut:
+    def __init__(self,inputs,stage):
+        img, label_all, label_existence,flag, flag_stage_1, flag_stage_2, flag_stage_3 ,label_task_stage_1, label_task_stage_2, label_task_stage_3  = inputs
+        self.image = img
+        self.label_all = label_all
+        self.label_existence = label_existence
+        self.general_flag = flag
+        if stage == 0:
+         self.label_task = label_task_stage_1
+         self.flag = flag_stage_1
+        if stage == 1:
+         self.label_task = label_task_stage_2
+         self.flag = flag_stage_2
+        if stage == 2:
+         self.label_task = label_task_stage_3
+         self.flag = flag_stage_3
+
 class inputs_to_struct:
     def __init__(self, inputs: torch) -> None:
         """
@@ -252,44 +270,56 @@ class OmniglotDatasetLabelSingleTaskRight(OmniglotDataSetBase):
         # TODO CHANGE TO SUPPORT ANY SIZE.
         char_type_one = torch.nn.functional.one_hot(torch.tensor(char),240 )
         # Concatenating into one flag.
-        flag = torch.concat([lan_type_ohe, char_type_one], dim=0).float()
+        general_flag = torch.concat([lan_type_ohe, char_type_one], dim=0).float()
        # adj_type, char = flag
-        adj_type = 1
+        adj_type = 0
         obj_per_row = 6
         edge_class = self.nclasses_existence
         r,c = (label_all == char).nonzero()
         (r,c) = (r[0], c[0])
+
+        grid = 6
+
         if adj_type == 0:
             # right
             if c == (obj_per_row - 1):
-                label_task = [224//4,112//4]
+                label_task = [224//grid,112//grid]
+                character = edge_class
             else:
-                label_task = sample.keypoints[c+1]
+                label_task = sample.keypoints[c + 1]
+                character = label_all[r,c + 1]
         if adj_type == 1:
             # left
             if c == 0:
                 label_task = [0,0]
+                character = edge_class
             else:
-                label_task = sample.keypoints[c+1]
+                label_task = sample.keypoints[c-1]
+                character = label_all[r,c-1]
+
         label_existence, label_all, label_task, id = map(torch.tensor, (label_existence, label_all, label_task, id))
         label_existence = label_existence.float()
         #
-        flag_stage_1 = torch.nn.functional.one_hot(torch.tensor(char),self.nclasses_existence )
-        label_task_stage_1 = torch.tensor(sample.keypoints[c]).astype(Torch.Long)
+        flag_stage_1 = torch.nn.functional.one_hot(torch.tensor(char),self.nclasses_existence ).float()
+        label_task_stage_1 = torch.tensor(sample.keypoints[c]).long()
+        label_task_stage_1 = torch.div(label_task_stage_1, grid, rounding_mode='trunc')
         #
         lan_type_ohe = torch.nn.functional.one_hot(task_emb_id, self.num_languages)
         (x,y) = sample.keypoints[c]
-        flag_stage_2_x = torch.nn.functional.one_hot(x, 224//4)
-        flag_stage_2_y = torch.nn.functional.one_hot(y, 224 // 4)
-        flag_stage_2 = torch.concat([lan_type_ohe, flag_stage_2_x, flag_stage_2_y], dim=0).float()
-        label_task_stage_2 = torch.tensor(label_task).astype(Torch.Long)
+
+        x = torch.div(x, grid, rounding_mode='trunc')
+        y = torch.div(y, grid, rounding_mode='trunc')
+        flag_stage_2_x = torch.nn.functional.one_hot(x, 224 // grid )
+        flag_stage_2_y = torch.nn.functional.one_hot(y, 224 // grid )
+        flag_stage_2 = torch.concat([flag_stage_2_x, flag_stage_2_y,lan_type_ohe], dim=0).float()
+        label_task_stage_2 = label_task.clone().long()
         #
-        (x_tar, y_tar) = label_task
-        flag_stage_3_x = torch.nn.functional.one_hot(x_tar, 224 // 4)
-        flag_stage_3_y = torch.nn.functional.one_hot(y_tar, 224 // 4)
+        (x_tar, y_tar) = torch.div(label_task, grid, rounding_mode='trunc')
+        flag_stage_3_x = torch.nn.functional.one_hot(x_tar, 224 // grid)
+        flag_stage_3_y = torch.nn.functional.one_hot(y_tar, 224 // grid)
         flag_stage_3 = torch.concat([ flag_stage_3_x, flag_stage_3_y], dim=0).float()
-        label_task_stage_3 = label_all[r,c+1]
+        label_task_stage_3 = character
         #
-        
+
         #
-        return  img, label_all, label_existence, flag_stage_1, flag_stage_2, flag_stage_3 ,label_task_stage_1, label_task_stage_2, label_task_stage_3
+        return  img, label_all, label_existence,general_flag, flag_stage_1, flag_stage_2, flag_stage_3 ,label_task_stage_1, label_task_stage_2, label_task_stage_3

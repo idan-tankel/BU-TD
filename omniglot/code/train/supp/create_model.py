@@ -22,7 +22,7 @@ def create_model(args: argparse) -> nn.Module:
     if args.model_flag is FlagAt.BU1_SIMPLE:
         model = BUModelSimple(args)
     else:
-        model = BUTDModelShared(args)
+        model = CYCLICBUTDMODELSHARED(args)
     if not torch.cuda.is_available():
         logger.info('using CPU, this will be slow')
     elif args.distributed:

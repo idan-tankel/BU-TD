@@ -61,6 +61,7 @@ def gen_sample(parser:argparse, sample_id:int, is_train:bool, aug_data:transform
     image = image * 255
     image = image.astype(np.uint8)
     # Doing data augmentation
+    augment_sample = False
     if is_train and augment_sample:
         aug_data = get_aug_data(image.shape)
         image, _ = augment_albumentations(image, aug_data, keypoints=keypoints)

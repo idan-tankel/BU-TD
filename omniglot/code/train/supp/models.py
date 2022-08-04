@@ -81,10 +81,10 @@ class TDModel(nn.Module):
         :param inputs:bu_out:the output from the BU1 stream, flag the task+arg flag , laterals_in the laterals from the BU1 stream.
         :return:
         """
-        bu_out, flag, laterals_in = inputs
+        bu_out, general_flag, stage_flag, stage, laterals_in = inputs
         laterals_out = []
         if self.use_td_flag:
-            (x, top_td_embed, top_td) = self.InitialTaskEmbedding((bu_out, flag))  # Compute the initial task embedding.
+            (x, top_td_embed, top_td) = self.InitialTaskEmbedding((bu_out, general_flag,stage_flag, stage))  # Compute the initial task embedding.
         else:
             x = bu_out
         laterals_out.append(x)
@@ -105,7 +105,7 @@ class TDModel(nn.Module):
                 reverse_lateral_in = lateral_in[::-1]  # Inverting the laterals to match the desired shape.
                 for block, cur_lat_in in zip(layer, reverse_lateral_in):  # Iterating over all blocks in the layer.
                     reverse_cur_lat_in = cur_lat_in[::-1]  # Inverting the laterals to match the desired shape.
-                    x, block_lats_out = block((x, flag,
+                    x, block_lats_out = block((x, general_flag,
                                                reverse_cur_lat_in))  # Compute the block output using x, the flag and the lateral connections.
                     layer_lats_out.append(block_lats_out)  # Add the lateral output for the next stream.
                 reverse_layer_lats_out = layer_lats_out[::-1]
@@ -120,7 +120,7 @@ class TDModel(nn.Module):
             outs += [top_td_embed, top_td]  # Add the top embeddings to the output if needed.
         return outs
 
-class BUStream(nn.Module):
+class BUStreamBUStream(nn.Module):
     def __init__(self, opts: argparse, shared: nn.Module, is_bu2: bool) -> None:
         super(BUStream, self).__init__()
         self.block = opts.bu_block_type
@@ -279,31 +279,32 @@ class BUTDModel(nn.Module):
         """
       #  samples = self.inputs_to_struct(inputs)  # Transform the input to struct.
         images = samples.image
-        flags = samples.flag
-        model_inputs = [images, flags, None]  # The input to the BU1 stream is just the images and the flags.
+        general_flags = samples.general_flag
+        model_inputs = [images, general_flags, None]  # The input to the BU1 stream is just the images and the flags.
         bu_out, bu_laterals_out = self.bumodel1(model_inputs)
         if self.use_bu1_loss:
             occurrence_out = self.occhead(bu_out)  # Compute the occurrence head output.
         else:
             occurrence_out = None
-        model_inputs = [bu_out, flags]
+        stage_flag = samples.flag
+        model_inputs = [bu_out,general_flags,stage_flag,stage]
         if self.use_lateral_butd:
             model_inputs += [bu_laterals_out]
         else:
             model_inputs += [None]
-        td_outs = self.tdmodel(
-            model_inputs)  # The input to the TD stream is the bu_out, flags, the lateral connections.
+        
+        td_outs = self.tdmodel( model_inputs)  # The input to the TD stream is the bu_out, flags, the lateral connections.
         td_out, td_laterals_out, *td_rest = td_outs
         if self.use_td_loss:  # Compute the TD head output.
             td_head_out = self.imagehead(td_out)
-        model_inputs = [images, flags]
+        model_inputs = [images, general_flags]
         if self.use_lateral_tdbu:
             model_inputs += [td_laterals_out]
         else:
             model_inputs += [[td_out]]
         bu2_out, bu2_laterals_out = self.bumodel2(
             model_inputs)  # The input to the TD stream is the images, flags, the lateral connections.
-        head_input = (bu2_out, flags,stage)
+        head_input = (bu2_out, general_flags,stage)
         task_out = self.Head(head_input)  # Compute the classification layer.
         outs = [occurrence_out, task_out, bu_out, bu2_out]
         if self.use_td_loss:
@@ -313,41 +314,58 @@ class BUTDModel(nn.Module):
             outs += [td_top_embed]
         return outs  # Return all the outputs from all streams.
 
-    class outs_to_struct:
-        """
-        Struct transforming the model output list to struct.
-        """
+class outs_to_struct:
+    """
+    Struct transforming the model output list to struct.
+    """
 
-        def __init__(self, model: nn.Module) -> None:
-            """
-            :param model:Containing the flags to create the model according to.
-            """
-            self.use_td_loss = model.use_td_loss
-            self.use_td_flag = model.use_td_flag
-            self.occurrence_out = None
-            self.task_out = None
-            self.bu_out = None
-            self.bu2_out = None
-            self.td_head_out = None
-            self.td_top_embe = None
+    def __init__(self, model: nn.Module) -> None:
+        """
+        :param model:Containing the flags to create the model according to.
+        """
+        self.use_td_loss = model.use_td_loss
+        self.use_td_flag = model.use_td_flag
+        self.occurrence_out = None
+        self.task_out = None
+        self.bu_out = None
+        self.bu2_out = None
+        self.td_head_out = None
+        self.td_top_embe = None
 
-        def __call__(self, outs: list[torch]) -> object:
-            """
-            :param outs: List of all model streams output.
-            :return: Struct instance.
-            """
-            occurrence_out, task_out, bu_out, bu2_out, *rest = outs
-            self.occurrence_out = occurrence_out
-            self.task = task_out
-            self.bu = bu_out
-            self.bu2 = bu2_out
-            if self.use_td_loss:
-                td_head_out, *rest = rest
-                self.td_head = td_head_out
-            if self.use_td_flag:
-                td_top_embed = rest[0]
-                self.td_top_embed = td_top_embed
-            return self
+    def __call__(self, outs: list[torch]) -> object:
+        """
+        :param outs: List of all model streams output.
+        :return: Struct instance.
+        """
+        occurrence_out, task_out, bu_out, bu2_out, *rest = outs
+        self.occurrence_out = occurrence_out
+        self.task = task_out
+        self.bu = bu_out
+        self.bu2 = bu2_out
+        if self.use_td_loss:
+            td_head_out, *rest = rest
+            self.td_head = td_head_out
+        if self.use_td_flag:
+            td_top_embed = rest[0]
+            self.td_top_embed = td_top_embed
+        return self
+
+class cyclicOutToStruct:
+    def __init__(self,opts):
+        self.outs = [ ]
+        self.stages = opts.stages
+        self.use_td_loss = opts.model.module.use_td_loss
+        self.use_td_flag = opts.model.module.use_td_flag
+        for  _ in self.stages:
+         out = outs_to_struct(opts)
+         self.outs.append(out)
+
+    def __call__(self, model_outs: list[torch]) -> object:
+        outs = {}
+        for idx, stage in enumerate(self.stages):
+            out = self.outs[idx](model_outs[stage])
+            outs[stage] = out
+        return outs
 
 
 class BUTDModelShared(BUTDModel):
@@ -391,10 +409,11 @@ class BUTDModelShared(BUTDModel):
 
 class cyclic_inputs_to_strcut:
     def __init__(self,inputs,stage):
-        img, label_all, label_existence, flag_stage_1, flag_stage_2, flag_stage_3 ,label_task_stage_1, label_task_stage_2, label_task_stage_3  = inputs
-        self.img = img
+        img, label_all, label_existence,flag, flag_stage_1, flag_stage_2, flag_stage_3 ,label_task_stage_1, label_task_stage_2, label_task_stage_3  = inputs
+        self.image = img
         self.label_all = label_all
         self.label_existence = label_existence
+        self.general_flag = flag
         if stage == 0:
          self.label_task = label_task_stage_1
          self.flag = flag_stage_1
@@ -407,19 +426,35 @@ class cyclic_inputs_to_strcut:
 
 class CYCLICBUTDMODELSHARED(nn.Module):
     def __init__(self,opts):
+        super(CYCLICBUTDMODELSHARED, self).__init__()
         self.model = BUTDModelShared(opts)
+        self.use_td_loss = opts.use_td_flag
+        self.use_td_flag = opts.use_td_flag
+        self.stages = opts.stages
+        self.outs_to_struct = cyclicOutToStruct
 
     def forward(self, inputs: list[torch]) -> list[torch]:
-        samples_stage_1 = inputs_to_struct(inputs,stage = 0)
-        out_stage_1 = self.model(samples_stage_1,stage = 0 )
+        stages = self.stages
+        outs = {}
+        if 0 in stages:
+         samples_stage_1 = cyclic_inputs_to_strcut(inputs,stage = 0)
+         out_stage_1 = self.model(samples_stage_1,stage = 0 )
+         outs[0] = out_stage_1
+        # print("Done stage 0!")
         #
-        samples_stage_2 = inputs_to_struct(inputs, stage=1)
-        out_stage_2 = self.model(samples_stage_2,stage = 1)
+        if 1 in stages:
+         samples_stage_2 = cyclic_inputs_to_strcut(inputs, stage = 1)
+         out_stage_2 = self.model(samples_stage_2,stage = 1)
+         outs[1] = out_stage_2
+       #  print("Done stage 1!")
         #
-        samples_stage_3 = inputs_to_struct(inputs, stage=2)
-        out_stage_3 = self.model(samples_stage_3,stage = 2)
+        if 2 in stages:
+         samples_stage_3 = cyclic_inputs_to_strcut(inputs, stage = 2)
+         out_stage_3 = self.model(samples_stage_3,stage = 2)
+         outs[2] = out_stage_3
+       #  print("Done stage 2!")
         #
-        return [out_stage_1, out_stage_2, out_stage_3]
+        return outs
 
 class BUTDModelDuplicate(BUTDModel):
     """

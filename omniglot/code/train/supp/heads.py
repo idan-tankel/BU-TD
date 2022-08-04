@@ -49,9 +49,9 @@ class MultiTaskHead(nn.Module):
         self.num_classes = opts.nclasses  # num_classes to create the task-heads according to.
         for i in range(self.ntasks):  # For each task create its task-head according to num_clases.
             Task_heads = []
-            Task_heads.append(HeadSingleTask(opts, 224//4,num_heads = 2))
             Task_heads.append(HeadSingleTask(opts, 224//4, num_heads = 2))
-            Task_heads.append(HeadSingleTask(opts, self.num_classes[i][0], num_heads=1))
+            Task_heads.append(HeadSingleTask(opts, 224//4, num_heads = 2))
+            Task_heads.append(HeadSingleTask(opts, self.num_classes[i][0] + 1, num_heads=1))
             Task_heads = nn.ModuleList(Task_heads)
             self.taskhead.append(Task_heads)
         self.taskhead = nn.ModuleList(self.taskhead)
@@ -61,11 +61,10 @@ class MultiTaskHead(nn.Module):
         :param inputs: bu2_out one dimensional tensor from BU2,the flag that says which task-head to choose.
         :return: one dimensional tensor of shape according to the needed number of classes.
         """
-        (bu2_out, flag) = inputs
+        (bu2_out, flag,stage) = inputs
         task = flag_to_task(flag)  # #TODO- change flag_to_direction -> flag_to_task
         bu2_out = bu2_out.squeeze()  # Make it 1-dimensional.
-        task_out = self.taskhead[task][0](bu2_out)  # apply the appropriate task-head.
-        task_out =  task_out
+        task_out = self.taskhead[task][stage](bu2_out)  # apply the appropriate task-head.
         return task_out
 
 
