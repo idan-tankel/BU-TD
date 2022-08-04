@@ -127,7 +127,7 @@ def gen_samples(parser:argparse, dataloader:DataSet, job_id:int, range_start:int
 def main(language_list:list)->None:
     # Getting the option parser.
     parser = Get_parser()
-    raw_data_set = DataSet(data_dir = '/home/sverkip/data/Create_dataset_adapting_to_all_datasets/data',dataset = 'omniglot',raw_data_source=parser.path_data_raw,language_list=[49]) # Getting the raw data.
+    raw_data_set = DataSet(data_dir = '/home/sverkip/data/Create_dataset_adapting_to_all_datasets/data',dataset = 'omniglot',raw_data_source=parser.path_data_raw,language_list=language_list) # Getting the raw data.
     parser.image_size = (raw_data_set.nchannels,*parser.image_size)
     njobs = parser.threads # The number of threads.
     num_rows_in_the_image   = parser.num_rows_in_the_image      # The number of rows in the image.
@@ -245,6 +245,6 @@ def main(language_list:list)->None:
 # %%
 if __name__ == "__main__":
   #   tasks = [[27,5]]
-     tasks = [ [49] ]
+     tasks = [ [18, 42, 5, 27 ] ]
      for task in tasks:
        main(task)

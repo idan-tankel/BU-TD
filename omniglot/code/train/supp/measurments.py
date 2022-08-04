@@ -3,6 +3,7 @@ import torch
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import argparse
+from supp.Data_and_structs import *
 
 def get_model_outs(opts: nn.Module, outs: list[torch]) -> object:
     """
@@ -130,23 +131,6 @@ class MeasurementsBase:
         """
         self.names += [name]
 
-class cyclic_inputs_to_strcut:
-    def __init__(self,inputs,stage):
-        img, label_all, label_existence,flag, flag_stage_1, flag_stage_2, flag_stage_3 ,label_task_stage_1, label_task_stage_2, label_task_stage_3  = inputs
-        self.image = img
-        self.label_all = label_all
-        self.label_existence = label_existence
-        self.general_flag = flag
-        if stage == 0:
-         self.label_task = label_task_stage_1
-         self.flag = flag_stage_1
-        if stage == 1:
-         self.label_task = label_task_stage_2
-         self.flag = flag_stage_2
-        if stage == 2:
-         self.label_task = label_task_stage_3
-         self.flag = flag_stage_3
-
 
 class Measurements(MeasurementsBase):
     def __init__(self, opts: argparse, model: nn.Module) -> None:
@@ -185,8 +169,9 @@ class Measurements(MeasurementsBase):
                 super().update_metric(self.occurrence_accuracy,occurrence_accuracy.sum().cpu().numpy())  # Update the occurrence metric.
             # TODO CHANGE IT.
             # TODO CHANGE INTO REAL ACCURACY.
+            # TODO change it into stage dependent.
             if self.opts.use_bu2_loss:
-                preds, task_accuracy = self.opts.task_accuracy(model_outs[stage],samples)
+                preds, task_accuracy = self.opts.task_accuracy(model_outs[stage],samples, stage = self.stages[0])
               #  task_accuracy = torch.zeros([1])
                 stage_task_accuracy = getattr(self,'Task_Acc_Stage_'+str(stage))
                 super().update_metric(stage_task_accuracy, task_accuracy.sum().cpu().numpy())  # Update the task metric.

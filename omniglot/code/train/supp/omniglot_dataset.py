@@ -286,7 +286,7 @@ class OmniglotDatasetLabelSingleTaskRight(OmniglotDataSetBase):
                 label_task = [224//grid,112//grid]
                 character = edge_class
             else:
-                label_task = sample.keypoints[c + 1]
+                label_task = list(sample.keypoints[c + 1])
                 character = label_all[r,c + 1]
         if adj_type == 1:
             # left
@@ -311,8 +311,9 @@ class OmniglotDatasetLabelSingleTaskRight(OmniglotDataSetBase):
         y = torch.div(y, grid, rounding_mode='trunc')
         flag_stage_2_x = torch.nn.functional.one_hot(x, 224 // grid )
         flag_stage_2_y = torch.nn.functional.one_hot(y, 224 // grid )
-        flag_stage_2 = torch.concat([flag_stage_2_x, flag_stage_2_y,lan_type_ohe], dim=0).float()
-        label_task_stage_2 = label_task.clone().long()
+        flag_stage_2 = torch.concat([flag_stage_2_x, flag_stage_2_y], dim=0).float()
+        label_task_stage_2 = torch.div(label_task, grid, rounding_mode='trunc').clone().long()
+    #    label_task_stage_2 = label_task.clone().long()
         #
         (x_tar, y_tar) = torch.div(label_task, grid, rounding_mode='trunc')
         flag_stage_3_x = torch.nn.functional.one_hot(x_tar, 224 // grid)
@@ -323,3 +324,4 @@ class OmniglotDatasetLabelSingleTaskRight(OmniglotDataSetBase):
 
         #
         return  img, label_all, label_existence,general_flag, flag_stage_1, flag_stage_2, flag_stage_3 ,label_task_stage_1, label_task_stage_2, label_task_stage_3
+

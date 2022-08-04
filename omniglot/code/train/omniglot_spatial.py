@@ -17,14 +17,31 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 
 def train_omniglot(embedding_idx, flag_at, processed_data, raw_data,model_name= None, path_loading=None, train_all_model=True,train_arg=False,transfer_learning=False,task_embedding=False,load_model_if_exists = False, stages = [0]):
+    """
+    Args:
+        embedding_idx:
+        flag_at:
+        processed_data:
+        raw_data:
+        model_name:
+        path_loading:
+        train_all_model:
+        train_arg:
+        transfer_learning:
+        task_embedding:
+        load_model_if_exists:
+        stages:
+
+    Returns:
+
+    """
     # Getting the options for creating the model and the hyper-parameters.
     results_dir = '/home/sverkip/data/BU-TD/omniglot/data/results'
-    parser = GetParser(flag_at, raw_data, processed_data, embedding_idx, results_dir,train_arg,1,model_name,load_model_if_exists,stages)
+    parser = GetParser(flag_at, raw_data, processed_data, embedding_idx,train_arg,1,model_name,load_model_if_exists,stages)
     # Getting the dataset for the training.
 
-    data_path = os.path.join('/home/sverkip/data/BU-TD/omniglot/data/new_samples/test_new_100K_samples', processed_data)
-    [the_datasets, train_dl, test_dl, train_dataset, test_dataset] = get_dataset(embedding_idx, parser,
-                                                                                 data_fname=data_path)
+    data_path = os.path.join(parser.data_dir, processed_data)
+    [the_datasets, train_dl, test_dl, train_dataset, test_dataset] = get_dataset(parser, embedding_idx, data_fname = data_path)
     # Printing the model and the hyper-parameters.
     if True:  # TODO-replace with condition.
         print_detail(parser)
@@ -43,16 +60,16 @@ def train_omniglot(embedding_idx, flag_at, processed_data, raw_data,model_name= 
     if task_embedding:
         learned_params = parser.model.module.task_embedding[embedding_idx]
     if transfer_learning:
-        learned_params = parser.model.module.transfer_learning[embedding_idx]
+        learned_params = parser.model.module.Head_learning[embedding_idx]
     # Training the learned params of the model.
     train_model(parser, the_datasets, learned_params, embedding_idx)
     print(accuracy(parser, test_dl))
     visualize(parser, train_dataset)
 
 def main():
-    train_omniglot(embedding_idx = 0, flag_at = FlagAt.SF, processed_data = '6_extended_[49]',
-                   raw_data = '/home/sverkip/data/BU-TD/omniglot/data/omniglot_all_languages',model_name = '4R', path_loading = None,  train_all_model = True, train_arg = False,    task_embedding = False, transfer_learning = False,
-                   load_model_if_exists = False, stages = [ 2 ])
+    train_omniglot(embedding_idx = 0, flag_at = FlagAt.SF, processed_data = '4L',
+                   raw_data = '/home/sverkip/data/BU-TD/omniglot/data/omniglot_all_languages',model_name = None, path_loading = None,  train_all_model = True, train_arg = False,    task_embedding = False, transfer_learning = False,
+                   load_model_if_exists = False, stages = [1])
 
 main()
 

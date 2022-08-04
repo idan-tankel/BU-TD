@@ -13,7 +13,7 @@ else:
     from supp.omniglot_dataset import OmniglotDatasetLabelSingleTask as dataset, inputs_to_struct as inputs_to_struct
 
 
-def get_dataset(embedding_idx: int, args: argparse, data_fname: str) -> list:
+def get_dataset(args: argparse,embedding_idx: int,  data_fname: str) -> list:
     """
     returns the datasets needed for the training according to the data_fname,embedding_idx
     :param embedding_idx: the embedding for the task,creates the flag according to the embedding.
