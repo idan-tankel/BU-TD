@@ -317,19 +317,19 @@ def Get_valid_classes(parser,nclasses):
         valid_classes = np.arange(0, nclasses)
     return valid_classes
 
-def Get_data_dir(parser, store_folder,language_list):
+def Get_data_dir(parser, language_list):
     """
     :param parser: 
     :param store_folder: 
     :param language_list: 
     :return: 
     """
-    base_storage_dir = '%d_' % (parser.nchars_per_row *parser.num_rows_in_the_image)
+    base_storage_dir = '%d_' % (parser.nchars_per_row *parser.num_rows_in_image)
     base_storage_dir += 'extended_' + str(language_list)
-    store_dir = os.path.join(store_folder, 'test_new_100K_samples')
+    store_dir = parser.store_folder
     base_samples_dir = os.path.join(store_dir, base_storage_dir)
     if not os.path.exists(base_samples_dir):
         os.makedirs(base_samples_dir, exist_ok=True)
     storage_dir = base_samples_dir
-    conf_data_fname = os.path.join(storage_dir, 'conf')
+    conf_data_fname = os.path.join(storage_dir, 'metadata')
     return conf_data_fname, storage_dir

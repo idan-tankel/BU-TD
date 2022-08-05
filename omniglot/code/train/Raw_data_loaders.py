@@ -102,7 +102,7 @@ class DataSet(data.Dataset):
         if dataset != 'omniglot':
          self.images, self.labels, self.letter_size, self.nchannels = get_raw_data(download_raw_data_dir, dataset = dataset)
         else:
-         self.images, self.labels, self.letter_size, self.nchannels = get_raw_data_omniglot(language_list,raw_data_source )
+         self.images, self.labels, self.letter_size, self.nchannels,self.dict = get_raw_data_omniglot(language_list,raw_data_source )
         self.nclasses = len(set(self.labels))
         self.num_examples_per_character = len(self.labels) // self.nclasses
 
@@ -152,7 +152,7 @@ def get_raw_data_omniglot(languages_list:list,raw_data_source:str)->tuple:
     images = torch.stack(images, dim=0)
     letter_size = images[0].shape[1]
 
-    return images, labels, letter_size, 1
+    return images, labels, letter_size, 1,dictionary
 
     # if True, generate multiple examples (image,label) pairs from each image, else generate a single example
     # generate multiple examples (image,label) pairs from each image

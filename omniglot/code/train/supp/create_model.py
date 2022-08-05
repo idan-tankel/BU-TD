@@ -5,37 +5,33 @@ from supp.models import *
 from supp.training_functions import *
 from supp.loss_and_accuracy import UnifiedLossFun
 
-"""
-  Creating a model and make it parallel and move it to the cuda.
-  :param args: arguments to create the model according to.
-  :return: The desired model.
-  """
-
-def create_model(args: argparse) -> nn.Module:
+def create_model(opts: argparse) -> nn.Module:
     """
+    Creating a model and moving it to the cuda.
     Args:
-        args:
+        opts: The model options we create the model according to.
 
-    Returns:
+    Returns: The created model.
+
     """
-    if args.model_flag is FlagAt.BU1_SIMPLE:
-        model = BUModelSimple(args)
+    if opts.model_flag is FlagAt.BU1_SIMPLE:
+        model = BUModelSimple(opts)
     else:
-        model = CYCLICBUTDMODELSHARED(args)
+        model = CYCLICBUTDMODELSHARED(opts)
     if not torch.cuda.is_available():
         logger.info('using CPU, this will be slow')
-    elif args.distributed:
-        if args.gpu is not None:
-            torch.cuda.set_device(args.gpu)
-            model.cuda(args.gpu)
-            args.workers = int((args.workers + ngpus_per_node - 1) / ngpus_per_node)
-            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu], find_unused_parameters=True)
+    elif opts.distributed:
+        if opts.gpu is not None:
+            torch.cuda.set_device(opts.gpu)
+            model.cuda(opts.gpu)
+            opts.workers = int((opts.workers + ngpus_per_node - 1) / ngpus_per_node)
+            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[opts.gpu], find_unused_parameters=True)
         else:
             model.cuda()
             model = torch.nn.parallel.DistributedDataParallel(model)
-    elif args.gpu is not None:
-        torch.cuda.set_device(args.gpu)
-        model = model.cuda(args.gpu)
+    elif opts.gpu is not None:
+        torch.cuda.set_device(opts.gpu)
+        model = model.cuda(opts.gpu)
     else:
         model = torch.nn.DataParallel(model).cuda()
 
