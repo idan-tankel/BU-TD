@@ -11,6 +11,8 @@ from v26.models.BU_TD_Models import BUModelSimple, BUTDModelShared
 from v26.models.Measurements import Measurements
 from v26.accuracy_funcs import multi_label_accuracy, get_bounding_box, multi_label_accuracy_weighted_loss
 from v26.funcs import *
+import v26.funcs as funcs
+from v26.functions import inits, convs, loses
 import argparse
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -18,6 +20,7 @@ from torch.utils.data import DataLoader
 import torch.backends.cudnn as cudnn
 import v26 as v26
 from v26.functions.loses import *
+from types import SimpleNamespace
 
 
 # %% visualize predictions
@@ -38,9 +41,9 @@ def init_train_options(model, args, num_gpus, scale_batch_size, ubs, batch_size,
     train_opts.weight_decay = args.wd
     train_opts.initial_lr = args.lr
     learning_rates_mult = np.ones(300)
-    learning_rates_mult = get_multi_gpu_learning_rate(learning_rates_mult,
-                                                      num_gpus, scale_batch_size,
-                                                      ubs)
+    learning_rates_mult = funcs.get_multi_gpu_learning_rate(learning_rates_mult,
+                                                            num_gpus, scale_batch_size,
+                                                            ubs)
     if args.checkpoints_per_epoch > 1:
         learning_rates_mult = np.repeat(learning_rates_mult,
                                         args.checkpoints_per_epoch)
@@ -85,7 +88,6 @@ def create_data_loaders(train_ds, test_ds, val_ds,
                           shuffle=(train_sampler is None),
                           pin_memory=True,
                           sampler=train_sampler)
-    # train_dl = DataLoader(train_ds, batch_size=batch_size,num_workers=0,shuffle=False,pin_memory=True, sampler=train_sampler)
     test_dl = DataLoader(test_ds,
                          batch_size=batch_size,
                          num_workers=args.workers,
@@ -413,16 +415,30 @@ def number_of_subplots(model_opts) -> int:
 def model_loss_and_accuracy(model_opts):
     if model_opts.flag_at is FlagAt.NOFLAG:
         # if not model_opts.head_of_all_features:  # TODO - change it from config
-        model_opts.bu2_loss = multi_label_loss_weighted_loss
+        model_opts.bu2_loss = loses.multi_label_loss_weighted_loss
         # else:
         #     model_opts.bu2_loss = multi_label_loss_weighted_loss_only_one
-        model_opts.task_accuracy = multi_label_accuracy_weighted_loss
+        model_opts.task_accuracy = loses.multi_label_accuracy_weighted_loss
     else:
         model_opts.bu2_loss = multi_label_loss
         model_opts.task_accuracy = multi_label_accuracy
 
 
-def datasets_specs(IMAGE_SIZE, args, img_channels, nclasses_existence, nfeatures, ngpus_per_node):
+def datasets_specs(IMAGE_SIZE: int, args, img_channels: int, nclasses_existence: int, nfeatures: int, ngpus_per_node: int) -> tuple:
+    """
+    datasets_specs initialize training parameters as batch_size,flag_size,input shape, number of gpus...
+
+    Args:
+        IMAGE_SIZE (`int`): the size of the input should m be (IMAGE_SIZE*IMAGE_SIZE)
+        args (`SimpleNamespace`): Module arguments for getting in the batch size
+        img_channels (`int`): number of channels in the input image.
+        nclasses_existence (`int`): number of classes in the output
+        nfeatures (`int`): number of person features TODO
+        ngpus_per_node (`int`): 
+
+    Returns:
+        `tuple`: the model options
+    """
     inshape = (img_channels, *IMAGE_SIZE)
     flag_size = nclasses_existence + nfeatures
     num_gpus = ngpus_per_node
@@ -483,7 +499,26 @@ def init_some_hyper_params(args):
 def init_model_opts_2(args, base_tf_records_dir, config: Config, flag_at, flag_size,
                       inputs_to_struct,
                       inshape, nclasses_existence, normalize_image, ntypes, results_dir):
-    model_opts = init_model_options(config, flag_at, normalize_image, nclasses_existence, ntypes, flag_size,
+    """
+    init_model_opts_2 initialize all the model parameters. This function supply further information on the existing ``
+
+    Args:
+        args (_type_): _description_
+        base_tf_records_dir (_type_): _description_
+        config (Config): object represent the `config.yaml` file
+        flag_at (_type_): _description_
+        flag_size (_type_): _description_
+        inputs_to_struct (_type_): _description_
+        inshape (_type_): _description_
+        nclasses_existence (_type_): _description_
+        normalize_image (_type_): _description_
+        ntypes (_type_): _description_
+        results_dir (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    model_opts = inits.init_model_options(config, flag_at, normalize_image, nclasses_existence, ntypes, flag_size,
                                     BatchNorm, inshape)
     flag_str = str(model_opts.flag_at).replace('.', '_').lower()
     num_gpus = torch.cuda.device_count()

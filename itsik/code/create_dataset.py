@@ -18,8 +18,7 @@ parser.add_argument(
     '--data-dir',
     default='../data',
     type=str,
-    help=
-    'root dir for dataset generation and location of the input Avatars Raw file'
+    help='root dir for dataset generation and location of the input Avatars Raw file'
 )
 parser.add_argument('-t',
                     '--threads',

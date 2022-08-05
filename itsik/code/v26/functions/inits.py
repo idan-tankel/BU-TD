@@ -34,8 +34,24 @@ def get_num_features(num_heads: str, ntypes, num_features: int):
     return len(ntypes)
 
 
-def init_model_options(config: Config, flag_at, normalize_image, nclasses_existence, ntypes, flag_size,
+def init_model_options(config: Config, flag_at, normalize_image, nclasses_existence: int, ntypes: int, flag_size,
                        BatchNorm, inshape):
+    """
+    init_model_options initialize the core model options
+
+    Args:
+        config (Config): _description_
+        flag_at (_type_): _description_
+        normalize_image (_type_): _description_
+        nclasses_existence (int): _description_
+        ntypes (int): _description_
+        flag_size (_type_): _description_
+        BatchNorm (_type_): _description_
+        inshape (_type_): _description_
+
+    Returns:
+        `SimpleNamespae`: the core model options from the config file
+    """                       
     model_opts = SimpleNamespace()
     model_opts.data_dir = config.Folders.data_dir
     model_opts.normalize_image = normalize_image

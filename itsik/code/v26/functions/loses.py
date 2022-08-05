@@ -12,6 +12,17 @@ loss_task_op = nn.CrossEntropyLoss(reduction='mean').to(dev)
 
 
 def multi_label_loss_base(outs, samples, nclasses):
+    """
+    multi_label_loss_base _summary_
+
+    Args:
+        outs (_type_): _description_
+        samples (_type_): _description_
+        nclasses (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """    
     losses_task = torch.zeros((samples.label_task.shape)).to(dev, non_blocking=True)
     for k in range(
             len(nclasses)):  # TODO - this we need to change/modify - diff for only one mission - not all the options at once(to check if this specific mission - got what it needed...)
@@ -23,6 +34,17 @@ def multi_label_loss_base(outs, samples, nclasses):
 
 
 def multi_label_loss(outs, samples, nclasses):
+    """
+    multi_label_loss _summary_
+
+    Args:
+        outs (_type_): _description_
+        samples (_type_): _description_
+        nclasses (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     losses_task = multi_label_loss_base(outs, samples, nclasses)
     loss_task = losses_task.mean(
     )  # a single valued result for the whole batch
