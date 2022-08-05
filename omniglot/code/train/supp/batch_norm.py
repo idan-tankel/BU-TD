@@ -3,13 +3,14 @@ import torch
 
 
 class BatchNorm(nn.Module):
-    def __init__(self, num_channels, num_tasks, dims=2):
+    def __init__(self, num_channels:int, num_tasks:int, dims:int=2):
         """
-         creates batch_norm class.
+        creates batch_norm class.
          For each task stores its mean,var as consecutive trainings override this variables.
-        :param num_channels: num channels to apply batch_norm on.
-        :param num_tasks: access mean,var for each task
-        :param dims: apply 2d or 1d batch normalization.
+        Args:
+            num_channels: num channels to apply batch_norm on.
+            num_tasks: access mean,var for each task.
+            dims: apply 2d or 1d batch normalization.
         """
         super(BatchNorm, self).__init__()
         # Creates the norm function.
@@ -21,7 +22,7 @@ class BatchNorm(nn.Module):
         # creates list that should store the mean, var for each task.
         self.running_mean_list = []
         self.running_var_list = []
-        for i in range(num_tasks):
+        for _ in range(num_tasks):
             self.running_mean_list.append(torch.zeros(1, num_channels))  # Initializes the mean.
             self.running_var_list.append(torch.ones(1, num_channels))  # Initialized the variance.
 
@@ -34,28 +35,33 @@ class BatchNorm(nn.Module):
 
     def forward(self, inputs):
         """
+        Args:
+            inputs: tensor of dim [B,C,H,W] or [B,C,H]
 
-        :param inputs: tensor of dim [B,C,H,W] or [B,C,H].
-        :return: tensor of dim [B,C,H,W] or [B,C,H] respectively.
+        Returns: tensor of dim [B,C,H,W] or [B,C,H] respectively.
+
         """
         # applies the norm function.
         return self.norm(inputs)
 
-    def load_running_stats(self, task_emb_id: int) -> None:
+    def load_running_stats(self, task_emb_id: int):
         """
+        loads the saved mean, variance to the running_mean,var in the test time.
+        Args:
+            task_emb_id: The task id.
 
-        :param task_emb_id:
-        :return: loads the saved mean, variance to the running_mean,var in the test time.
         """
         running_mean = self.running_mean[task_emb_id, :]
         running_var = self.running_var[task_emb_id, :]
         self.norm.running_mean = running_mean
         self.norm.running_var = running_var
 
-    def store_running_stats(self, task_emb_id: int) -> None:
+    def store_running_stats(self, task_emb_id: int) :
         """
-        :param task_emb_id:
-        :return: saves the mean, variance to the running_mean,var in the training time.
+        saves the mean, variance to the running_mean,var in the training time.
+        Args:
+            task_emb_id: The task id.
+
         """
         running_mean = self.norm.running_mean
         running_var = self.norm.running_var
@@ -63,26 +69,26 @@ class BatchNorm(nn.Module):
         self.running_var[task_emb_id, :] = running_var
 
 
-def store_running_stats(model: nn.Module, task_emb_id: int) -> None:
+def store_running_stats(model: nn.Module, task_emb_id: int):
     """
     Stores the running_stats of the task_id for each norm_layer.
+    Args:
+        model: The model we want to store its variables.
+        task_emb_id: the task_id
 
-    :param model: BUTD model
-    :param task_emb_id: the task_id
-    :return:
     """
     for _, layer in model.named_modules():
         if isinstance(layer, BatchNorm):
             layer.store_running_stats(task_emb_id)
 
 
-def load_running_stats(model: nn.Module, task_emb_id: int) -> None:
+def load_running_stats(model: nn.Module, task_emb_id: int) :
     """
     loads the running_stats of the task_id for each norm_layer.
+    Args:
+        model: The model we want to load its variables.
+        task_emb_id: the task_id
 
-    :param model: BUTD model
-    :param task_emb_id: the task_id
-    :return:
     """
     for _, layer in model.named_modules():
         if isinstance(layer, BatchNorm):

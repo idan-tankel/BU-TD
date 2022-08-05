@@ -13,8 +13,7 @@ from torch.utils.data import DataLoader
 class DatasetInfo:
     """encapsulates a (train/test/validation) dataset with its appropriate train or test function and Measurement class"""
 
-    def __init__(self, istrain: bool, data_set: DataLoader, nbatches: int, name: str, checkpoints_per_epoch: int = 1,
-                 sampler=None) -> None:
+    def __init__(self, istrain: bool, data_set: DataLoader, nbatches: int, name: str, checkpoints_per_epoch: int = 1,  sampler=None) -> None:
         """
         :param istrain: Whether we should fit the dataset.
         :param data_set: The data set.
@@ -302,8 +301,8 @@ def fit(opts: argparse, the_datasets: list, task: int) -> None:
     save_details = save_details_class(opts)  # Contains the optimum.
     last_epoch = -1
   #  model_latest_path = model_basename + '_latest' + model_ext
-    if opts.load_model_if_exists:  # If we want to continue started training.
-        Load_model_if_exists(opts, logger, model_latest_fname, the_datasets)
+#    if opts.load_model_if_exists:  # If we want to continue started training.
+   #     Load_model_if_exists(opts, logger, model_latest_fname, the_datasets)
     st_epoch = last_epoch + 1
     end_epoch = nb_epochs
     if instruct(opts, 'abort_after_epochs') and opts.abort_after_epochs > 0:

@@ -7,9 +7,10 @@ from supp.FlagAt import *
 
 class ChannelModulation(nn.Module):
     # The layer performs the channel modulation on the lateral connection
-    def __init__(self, nchannels: int) -> None:
+    def __init__(self, nchannels: int) :
         """
-        :param nchannels: The number of channels to perform channel-modulation on.
+        Args:
+            nchannels: The number of channels to perform channel-modulation on.
         """
         super(ChannelModulation, self).__init__()
         self.nchannels = nchannels
@@ -19,18 +20,21 @@ class ChannelModulation(nn.Module):
 
     def forward(self, inputs: torch) -> torch:
         """
-        :param inputs: receives tensor of shape [N,C,H,W]
-        :return: tensor of shape [N,C,H,W]
+        Performs the channel modulation on the skip connection.
+        Args:
+            inputs: tensor of shape [N,C,H,W]
+
+        Returns: tensor of shape [N,C,H,W]
+
         """
         return inputs * self.weights  # performs the channel-modulation.
 
 
-def init_module_weights(modules: nn.Module) -> None:
-    # same as our paper's experiments
+def init_module_weights(modules: nn.Module):
     """
     Initializes all model layers according to the distributions above.
-    :param modules: all model's layers
-    :return: None
+    Args:
+        modules: all model's layers
 
     """
     for m in modules:
@@ -45,17 +49,17 @@ def init_module_weights(modules: nn.Module) -> None:
         elif isinstance(m, ChannelModulation):
             nn.init.xavier_uniform_(m.weights)  # init your weights here...
 
-
 class SideAndComb(nn.Module):
     # performs the lateral connection BU1 -> TD or TD -> BU2
     def __init__(self, filters: int, norm_layer: nn.Module, activation_fun: nn.Module, orig_relus: bool,
-                 ntasks: int) -> None:
+                 ntasks: int):
         """
-        :param filters: The number of filters in the channel-modulation layer
-        :param norm_layer: Batch norm instance
-        :param activation_fun: usually relu
-        :param orig_relus: whether to use the activation_fun after the batch norm on the lateral connection
-        :param ntasks: number of possible tasks
+        Args:
+            filters: The number of filters in the channel-modulation layer.
+            norm_layer: Batch norm instance.
+            activation_fun: usually relu.
+            orig_relus: If True we use the activation_fun after the batch norm on the lateral connection.
+            ntasks: The number of tasks we desire to solve.
         """
         super(SideAndComb, self).__init__()
         self.side = ChannelModulation(filters)  # channel-modulation layer.
@@ -410,7 +414,6 @@ class InitialEmbedding(nn.Module):
         self.activation_fun = opts.activation_fun
         self.use_SF = opts.use_SF
         self.nclasses = opts.nclasses
-        self.train_arg = opts.train_arg
 
         all_layers = []
         for i in range(len(heads)):
@@ -476,8 +479,7 @@ class InitialTaskEmbedding(nn.Module):
         self.norm_layer = opts.norm_fun
         self.activation_fun = opts.activation_fun
         self.use_SF = opts.use_SF
-        self.nclasses = opts.nclasses 
-        self.train_arg = opts.train_arg
+        self.nclasses = opts.nclasses
         self.emb_layers = []
         grit = opts.grit_size
         if self.model_flag is FlagAt.SF:

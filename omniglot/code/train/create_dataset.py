@@ -65,10 +65,6 @@ def gen_sample(parser:argparse, sample_id:int, is_train:bool, aug_data:transform
     if is_train and augment_sample:
         aug_data = get_aug_data(image.shape)
         image, _ = augment_albumentations(image, aug_data, keypoints=keypoints)
-        #TODO - VISUALIZE THE POINTS.
-      #  vis_keypoints(image,keypoints)
-     #   image = image.transpose(2, 0, 1)
-   # image = image * 255
 
     label_task, flag, keypoint = Get_label_task(example, infos, label_ordered, dataloader.nclasses,keypoints)
     # Storing the needed information about the sample.
@@ -130,9 +126,9 @@ def main(language_list:list)->None:
     raw_data_set = DataSet(data_dir = '/home/sverkip/data/Create_dataset_adapting_to_all_datasets/data',dataset = 'omniglot',raw_data_source=parser.path_data_raw,language_list=language_list) # Getting the raw data.
     parser.image_size = (raw_data_set.nchannels,*parser.image_size)
     njobs = parser.threads # The number of threads.
-    num_rows_in_the_image   = parser.num_rows_in_the_image      # The number of rows in the image.
+    num_rows_in_image   = parser.num_rows_in_image      # The number of rows in the image.
     obj_per_row = parser.nchars_per_row            # The number of characters in the row.
-    num_chars_per_image = parser.nchars_per_row * parser.num_rows_in_the_image       # The number of characters in the image.
+    num_chars_per_image = parser.nchars_per_row * parser.num_rows_in_image       # The number of characters in the image.
     nsamples_test = parser.nsamples_test           # The number of test samples we desire to create.
     nsamples_train = parser.nsamples_train         # The number of train samples we desire to create.
     nsamples_val = parser.nsamples_val             # The number of validation samples we desire to create.
@@ -153,7 +149,7 @@ def main(language_list:list)->None:
     ntest_strings = parser.ntest_strings
 
     # each 'job' processes several chunks. Each chunk is of 'storage_batch_size' samples
-    conf_data_fname, storage_dir = Get_data_dir(parser, parser.store_folder,language_list) # Get the storage dir for the data and for the conf file.
+    Metadata_data_fname, storage_dir = Get_data_dir(parser, language_list) # Get the storage dir for the data and for the conf file.
     if parser.create_all_directions: # Creating the possible tasks
      avail_adj_types = range(ndirections)
     else:
@@ -236,8 +232,9 @@ def main(language_list:list)->None:
 
     print('done') # Done creating and storing the samples.
     # store the dataset's properties.
-    with open(conf_data_fname, "wb") as new_data_file:
-        pickle.dump((nsamples_train, nsamples_test, nsamples_val, nclasses,  parser.letter_size, parser.image_size, num_rows_in_the_image, obj_per_row, num_chars_per_image,ndirections, valid_classes), new_data_file)
+    with open(Metadata_data_fname, "wb") as new_data_file:
+        MetaData = Meta_data(nsamples_train, nsamples_test, nsamples_val, raw_data_set.dict, parser.letter_size, parser.image_size, parser.num_rows_in_image,parser.nchars_per_row)
+        pickle.dump(MetaData, new_data_file)
     #TBD - SAVE ALSO THE UTILS.
     # copy the generating script
     script_fname = mainmod.__file__

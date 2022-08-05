@@ -16,68 +16,51 @@ from supp.visuialize_predctions import *
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 
-def train_omniglot(embedding_idx, flag_at, processed_data, raw_data,model_name= None, path_loading=None, train_all_model=True,train_arg=False,transfer_learning=False,task_embedding=False,load_model_if_exists = False, stages = [0]):
+def train_omniglot(embedding_idx, flag_at, processed_data, raw_data,stages, path_loading=None, training_option = 'All'):
     """
     Args:
-        embedding_idx:
-        flag_at:
-        processed_data:
-        raw_data:
-        model_name:
-        path_loading:
-        train_all_model:
-        train_arg:
-        transfer_learning:
-        task_embedding:
-        load_model_if_exists:
-        stages:
-
-    Returns:
+        embedding_idx: The embedding index.
+        flag_at: The model flag.
+        processed_data: The samples we study from.
+        raw_data: The raw_data path.
+        path_loading: The path to load a pretrained model from.
+        training_option:  The parameter training option
+        stages: The stages we desire to learn.
 
     """
     # Getting the options for creating the model and the hyper-parameters.
-    results_dir = '/home/sverkip/data/BU-TD/omniglot/data/results'
-    parser = GetParser(flag_at, raw_data, processed_data, embedding_idx,train_arg,1,model_name,load_model_if_exists,stages)
-    # Getting the dataset for the training.
+    if  training_option not in ['all','task','arg','head']:
+        raise Exception("The parameter training options are 'all', 'tasks', 'arg', 'head' ")
 
+    parser = GetParser(flag_at, raw_data, processed_data, embedding_idx,1,stages)
+    # Getting the dataset for the training.
     data_path = os.path.join(parser.data_dir, processed_data)
-    [the_datasets, train_dl, test_dl, train_dataset, test_dataset] = get_dataset(parser, embedding_idx, data_fname = data_path)
-    # Printing the model and the hyper-parameters.
-    if True:  # TODO-replace with condition.
-        print_detail(parser)
+    [the_datasets, _ , test_dl, train_dataset, _ ] = get_dataset(parser, embedding_idx, data_fname = data_path)
+    print_detail(parser)
     # creating the model according the parser.
-    #  create_model(parser)
     set_datasets_measurements(the_datasets, Measurements, parser, parser.model)
     cudnn.benchmark = True  # TODO:understand what it is.
     # Loading a pretrained model if exists.
     if path_loading is not None and parser.load_model_if_exists == False:
-        model_path = os.path.join(results_dir,path_loading)
+        model_path = os.path.join(parser.results_dir,path_loading)
         load_model(parser, model_path);
     # Deciding which parameters will be trained: if True all the model otherwise,only the task embedding.
-    if train_all_model:
+    if training_option == 'all':
         learned_params = parser.model.parameters()
-
-    if task_embedding:
+    if training_option == 'task':
         learned_params = parser.model.module.task_embedding[embedding_idx]
-    if transfer_learning:
+    if training_option == 'arg':
+        learned_params = parser.model.module.arg_learning[embedding_idx]
+    if training_option == 'head':
         learned_params = parser.model.module.Head_learning[embedding_idx]
     # Training the learned params of the model.
     train_model(parser, the_datasets, learned_params, embedding_idx)
-    print(accuracy(parser, test_dl))
-    visualize(parser, train_dataset)
+    if True:
+     print(accuracy(parser, test_dl))
+     visualize(parser, train_dataset)
 
 def main():
     train_omniglot(embedding_idx = 0, flag_at = FlagAt.SF, processed_data = '4L',
-                   raw_data = '/home/sverkip/data/BU-TD/omniglot/data/omniglot_all_languages',model_name = None, path_loading = None,  train_all_model = True, train_arg = False,    task_embedding = False, transfer_learning = False,
-                   load_model_if_exists = False, stages = [1])
+                raw_data = '/home/sverkip/data/BU-TD/omniglot/data/omniglot_all_languages', path_loading = None,  training_option = 'all', stages = [1])
 
 main()
-
-# Temp place
-##############################################
-# /home/sverkip/data/Omniglot/data/new_samples/T
-# print(num_params(learned_params))
-# print(accuracy_one_language(args.model, args.test_dl))
-# /home/sverkip/data/Omniglot/data/results/DS=Four_languages_embedding_idx=029.06.2022 11:55:49/model5.pt
-# 'DS=8_extended_exp[27, 5, 42]_embedding_idx=029.06.2022 15:21:58'
-###############################################

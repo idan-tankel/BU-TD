@@ -14,35 +14,19 @@ class FlagAt(Enum):
 
 def setup_flag(parser):
     model_flag = parser.parse_args().model_flag
-    if model_flag is FlagAt.BU2:
-        use_bu1_flag = False
-        use_td_flag = False
-        use_bu2_flag = True
-    elif model_flag is FlagAt.BU1 or model_flag is FlagAt.BU1_SIMPLE or model_flag is FlagAt.BU1_NOLAG:
-        use_bu1_flag = True
-        use_td_flag = False
-        use_bu2_flag = False
-    elif model_flag is FlagAt.TD:
-        use_bu1_flag = False
+
+    if model_flag is FlagAt.TD:
         use_td_flag = True
-        use_bu2_flag = False
-        use_SF = False
-    elif model_flag is FlagAt.SF:
-        use_bu1_flag = False
-        use_td_flag = True
-        use_bu2_flag = False
-        use_SF = True
-    elif model_flag is FlagAt.NOFLAG:
-        use_bu1_flag = False
-        use_td_flag = False
-        use_bu2_flag = False
         use_SF = False
 
-    parser.add_argument('--use_bu1_flag', default=use_bu1_flag, type=staticmethod,
-                        help='The unified loss function of all training')  #
-    parser.add_argument('--use_td_flag', default=use_td_flag, type=staticmethod,
-                        help='The unified loss function of all training')  #
-    parser.add_argument('--use_bu2_flag', default=use_bu2_flag, type=staticmethod,
-                        help='The unified loss function of all training')  #
-    parser.add_argument('--use_SF', default=use_SF, type=staticmethod,
-                        help='The unified loss function of all training')  #
+    elif model_flag is FlagAt.SF:
+        use_td_flag = True
+        use_SF = True
+
+    elif model_flag is FlagAt.NOFLAG:
+        use_td_flag = False
+        use_SF = False
+
+
+    parser.add_argument('--use_td_flag', default=use_td_flag, type=staticmethod,     help='Whether to use the BU-TD model with task & arg embedding.')  #
+    parser.add_argument('--use_SF', default=use_SF, type=staticmethod,       help='Whther to create task embedding at the BU2 stream')  #

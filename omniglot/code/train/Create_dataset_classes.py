@@ -209,7 +209,7 @@ class CharacterTransforms:
         new_size = int(self.scale * parser.letter_size)
         shift = prng.rand(2) * (maxshift - minshift) + minshift
         y, x = shift.astype(np.int)
-        origr, origc = np.unravel_index(samplei, [parser.num_rows_in_the_image, parser.nchars_per_row])
+        origr, origc = np.unravel_index(samplei, [parser.num_rows_in_image, parser.nchars_per_row])
         c = origc + 1  # start from column 1 instead of 0
         r = origr
         _ , imageh , imagew = parser.image_size
@@ -224,10 +224,20 @@ class CharacterTransforms:
         midx = int(np.rint(self.location_x + (self.scale * self.letter_size)/2))
         midy = int(np.rint(self.location_y + (self.scale * self.letter_size)/2))
         self.middle_point = (midx,midy)
-
-
        # self.middle_point = int(self.middle_point)
         self.edge_to_the_right = origc == parser.nchars_per_row - 1 or samplei == parser.sample_nchars - 1
 
     def update(self):
         return None
+
+class Meta_data:
+    def __init__(self, nsamples_train, nsamples_test, nsamples_val, nclasses_per_language, letter_size, image_size, num_rows_in_image, obj_per_row):
+        self.nsamples_train = nsamples_train
+        self.nsamples_test = nsamples_test
+        self.nsamples_val = nsamples_val
+        self.nclasses_per_language = nclasses_per_language
+        self.letter_size = letter_size
+        self.image_size = image_size
+        self.num_rows_in_image = num_rows_in_image
+        self.obj_per_row = obj_per_row
+        self.nchars_per_image = num_rows_in_image * obj_per_row

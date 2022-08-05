@@ -201,7 +201,6 @@ class BUStreamShared(nn.Module):
         layers = []
         self.activation_fun = opts.activation_fun
         self.use_lateral = opts.use_lateral_tdbu
-        self.use_bu1_flag = opts.use_bu1_flag
         self.block = opts.bu_shared_block_type
         stride = opts.strides[0]
         filters = opts.nfilters[0]
@@ -370,7 +369,7 @@ class CYCLICBUTDMODELSHARED(nn.Module):
         self.use_td_loss = opts.use_td_flag
         self.use_td_flag = opts.use_td_flag
         self.stages = opts.stages
-        self.outs_to_struct = cyclicOutToStruct
+        self.outs_to_struct = cyclic_outs_to_struct
         self.task_embedding = self.model.task_embedding
         self.transfer_learning = self.model.transfer_learning
         self.Head_learning = self.model.Head_learning

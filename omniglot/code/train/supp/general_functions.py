@@ -7,18 +7,22 @@ import argparse
 
 def folder_size(path: str) -> int:
     """
+    Args:
+        path: path to a folder.
 
-    :param path:path to a language file.
-    :return: number of characters in the language
+    Returns: Number of characters in the folder.
+
     """
     return len([_ for _ in os.scandir(path)])
 
 
 def create_dict(path: str) -> dict:
     """
+    Args:
+        path: path to a folder of folders.
 
-    :param path: path to all raw Omniglot languages
-    :return: dictionary of number of characters per language
+    Returns: dictionary assigning for each sub-folder its number of files.
+
     """
     dict_language = {}
     cnt = 0
@@ -30,27 +34,36 @@ def create_dict(path: str) -> dict:
 
 def instruct(struct: argparse, key: str) -> bool:
     """
-    :param struct: a parser
-    :param key: key to check in the parser
-    :return: True iff key is one of the struct's keys.
+    Args:
+        struct: a parser.
+        key: key to check if in the parser.
+
+    Returns: True if the key in the struct's key.
+
     """
     return getattr(struct, key, None) is not None
 
 
 def flag_to_task(flag: torch) -> int:
     """
-    :param flag: The flag.
-    :return: The task the model solves.
+    Args:
+        flag: The flag.
+
+    Returns: The task the flag represents.
+
     """
     task = torch.argmax(flag, dim=1)[0]  # Finds the non zero entry in the one-hot vector
     return task
 
 def get_laterals(laterals: list[torch], layer_id: int, block_id: int) -> torch:
     """
-    :param laterals: All lateral connections from the previous stream, if exists.
-    :param layer_id: The layer id in the stream.
-    :param block_id: The block id in the layer.
-    :return: all the lateral connections associate with the block(usually 3).
+    Args:
+        laterals: All lateral connections from the previous stream, if exists.
+        layer_id: The layer id in the stream.
+        block_id: The block id in the layer.
+
+    Returns: all the lateral connections associate with the block(usually 3).
+
     """
     if laterals is None:  # If BU1, there are not any lateral connections.
         return None
@@ -65,20 +78,20 @@ def get_laterals(laterals: list[torch], layer_id: int, block_id: int) -> torch:
         return None
 
 class depthwise_separable_conv(nn.Module):
+
     """
-    Layer downsampling the tensor .
+    Downsampling layer.
     Equivalent to conv3x3(channels_in,channels_out) but with much less parameters.
     """
-
-    def __init__(self, channels_in: int, channels_out: int, kernel_size: int, stride: int = 1, padding: int = 1,
-                 bias: bool = False) -> None:
+    def __init__(self, channels_in: int, channels_out: int, kernel_size: int, stride: int = 1, padding: int = 1,  bias: bool = False):
         """
-        :param channels_in: Channels in of the input tensor.
-        :param channels_out: Channels out of the output tensor
-        :param kernel_size: Kernel size
-        :param stride: stride to Downsample the tensor
-        :param padding: Padding
-        :param bias: Whether to use bias or not
+        Args:
+            channels_in: Channels in of the input tensor.
+            channels_out: Channels out of the output tensor.
+            kernel_size: Kernel size.
+            stride: stride to Downsample the tensor
+            padding: The padding.
+            bias: Whether to use bias or not
         """
         super(depthwise_separable_conv, self).__init__()
         self.depthwise = nn.Conv2d(channels_in, channels_in, kernel_size=kernel_size, stride=stride, padding=padding,
@@ -89,8 +102,11 @@ class depthwise_separable_conv(nn.Module):
 
     def forward(self, x: torch) -> torch:
         """
-        :param x: tensor of shape [B,C_in,H1,W1]
-        :return: [B,C_out,H2,W2]
+        Args:
+            x: tensor of shape [B,C_in,H1,W1]
+
+        Returns: [B,C_out,H2,W2]
+
         """
         out = self.depthwise(x)  # Downsample the tensor.
         out = self.pointwise(out)  # Change the number of channels
@@ -99,10 +115,13 @@ class depthwise_separable_conv(nn.Module):
 
 def conv3x3(in_channels: int, out_channels: int, stride: int = 1) -> nn.Module:
     """
-    :param in_channels: In channels of the input tensor
-    :param out_channels: Out channels of the output tensor.
-    :param stride: stride.
-    :return: Module that performs the 3x3conv.
+    Args:
+        in_channels: In channels of the input tensor.
+        out_channels: Out channels of the output tensor.
+        stride: The stride.
+
+    Returns: Module that performs the conv3x3.
+
     """
     return depthwise_separable_conv(in_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
 
@@ -110,10 +129,14 @@ def conv3x3(in_channels: int, out_channels: int, stride: int = 1) -> nn.Module:
 def conv3x3up(in_channels, out_channels,size, upsample_size=1) -> nn.Module:
     """
     Opposite to the conv3x3: it decreases the number of channels, and increases the inner channels.
-    :param in_channels: The number of channels in the input. out_channels < in_channels
-    :param out_channels: The number of channels in the output. out_channels < in_channels
-    :param upsample_size: The factor to upsample the inner dimensions.
-    :return: Module that Upsamples the tensor.
+    Args:
+        in_channels: The number of channels in the input. out_channels < in_channels
+        out_channels: The number of channels in the output. out_channels < in_channels
+        size: The desired size after the upsampling.
+        upsample_size: The factor to upsample the inner dimensions.
+
+    Returns: Upsampling module.
+
     """
     layer = conv3x3(in_channels, out_channels)  # Changing the number of channels.
     if upsample_size > 1:
@@ -124,18 +147,22 @@ def conv3x3up(in_channels, out_channels,size, upsample_size=1) -> nn.Module:
 
 def conv1x1(in_channels, out_channels, stride=1) -> nn.Module:
     """
-    :param in_channels: In channels of the input tensor
-    :param out_channels: Out channels of the output tensor.
-    :param stride: stride.
-    :return: Module: the layer just changes the number of channels, the inner dimensions remain the same.
+    Args:
+        in_channels: In channels of the input tensor.
+        out_channels: Out channels of the output tensor.
+        stride: The stride.
+
+    Returns: The conv1x1 ,preserving the inner channels and changes the number of channels.
     """
     return nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False)
 
 
 def num_params(params: list) -> int:
     """
-    :params params: List of all model's parameters.
-    :return: Number of leaned parameters.
+    Args:
+        params: List of model's parameters.
+
+    Returns: Number of parameters in the params.
     """
     nparams = 0
     for param in params:  # For each parameter in the model we sum its parameters
