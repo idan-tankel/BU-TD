@@ -1,6 +1,5 @@
 import torch
 from v26.ConstantsBuTd import dev
-from types import SimpleNamespace
 
 
 def get_bounding_box(mask) -> list:
@@ -63,12 +62,32 @@ def multi_label_accuracy_base(outs, samples, nclasses):
 
 
 def multi_label_accuracy(outs, samples, nclasses):
+    """_summary_
+
+    Args:
+        outs (_type_): _description_
+        samples (_type_): _description_
+        nclasses (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """    
     preds, task_accuracy = multi_label_accuracy_base(outs, samples, nclasses)
     task_accuracy = task_accuracy.mean(axis=1)  # per single example
     return preds, task_accuracy
 
 
 def multi_label_accuracy_weighted_loss(outs, samples, nclasses):
+    """_summary_
+
+    Args:
+        outs (_type_): _description_
+        samples (_type_): _description_
+        nclasses (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """    
     preds, task_accuracy = multi_label_accuracy_base(outs, samples, nclasses)
     loss_weight = samples.loss_weight
     print(f'{task_accuracy.shape} {loss_weight.shape}')

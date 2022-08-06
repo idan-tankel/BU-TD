@@ -29,14 +29,16 @@ class ResNet(nn.Module):
             nblocks = opts.ns[k]
             stride = opts.strides[k]
             filters = opts.nfilters[k]
-            layers.append(self._make_layer(block, filters, nblocks, stride=stride))
+            layers.append(self._make_layer(
+                block, filters, nblocks, stride=stride))
 
         self.alllayers = nn.ModuleList(layers)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                nn.init.kaiming_normal_(
+                    m.weight, mode='fan_out', nonlinearity='relu')
             elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
@@ -51,10 +53,12 @@ class ResNet(nn.Module):
             )
 
         layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample, norm_layer, self.activation_fun))
+        layers.append(block(self.inplanes, planes, stride,
+                      downsample, norm_layer, self.activation_fun))
         self.inplanes = planes * block.expansion
         for _ in range(1, blocks):
-            layers.append(block(self.inplanes, planes, norm_layer, self.activation_fun))
+            layers.append(block(self.inplanes, planes,
+                          norm_layer, self.activation_fun))
 
         return nn.ModuleList(layers)
 
@@ -91,8 +95,10 @@ class ResNetLatShared(nn.Module):
             self.flag_shape = shared.flag_shape
             self.h_flag_bu_resized = shared.h_flag_bu_resized
 
-        self.conv1 = nn.Sequential(shared.conv1, self.norm_layer(filters), self.activation_fun())
-        self.bot_lat = SideAndCombShared(shared.bot_lat, self.norm_layer, self.activation_fun)
+        self.conv1 = nn.Sequential(
+            shared.conv1, self.norm_layer(filters), self.activation_fun())
+        self.bot_lat = SideAndCombShared(
+            shared.bot_lat, self.norm_layer, self.activation_fun)
 
         layers = []
         for shared_layer in shared.alllayers:
@@ -101,7 +107,8 @@ class ResNetLatShared(nn.Module):
         self.alllayers = nn.ModuleList(layers)
         self.avgpool = shared.avgpool
         if self.use_lateral:
-            self.top_lat = SideAndCombShared(shared.top_lat, self.norm_layer, self.activation_fun)
+            self.top_lat = SideAndCombShared(
+                shared.top_lat, self.norm_layer, self.activation_fun)
 
         if not instruct(opts, 'use_top_flag'):
             use_top_flag = False
@@ -123,7 +130,8 @@ class ResNetLatShared(nn.Module):
         norm_layer = self.norm_layer
         layers = []
         for shared_block in blocks:
-            layers.append(BasicBlockLatShared(shared_block, norm_layer, self.activation_fun))
+            layers.append(BasicBlockLatShared(
+                shared_block, norm_layer, self.activation_fun))
 
         return nn.ModuleList(layers)
 
@@ -147,7 +155,8 @@ class ResNetLatShared(nn.Module):
             layer_lats_out = []
             for block_id, block in enumerate(layer):
                 lateral_layer_id = layer_id + 1
-                cur_lat_in = get_laterals(laterals_in, lateral_layer_id, block_id)
+                cur_lat_in = get_laterals(
+                    laterals_in, lateral_layer_id, block_id)
                 x, block_lats_out = block((x, cur_lat_in))
                 layer_lats_out.append(block_lats_out)
 
@@ -172,6 +181,8 @@ class ResNetLatShared(nn.Module):
 
 
 class ResNetTDLat(nn.Module):
+    """ResNetTDLat is ResNet network with lateral connections
+    """
 
     def __init__(self, opts):
         super(ResNetTDLat, self).__init__()
@@ -191,7 +202,8 @@ class ResNetTDLat(nn.Module):
                                           self.activation_fun())
 
         upsample_size = opts.avg_pool_size  # before avg pool we have 7x7x512
-        self.top_upsample = nn.Upsample(scale_factor=upsample_size, mode='bilinear', align_corners=False)
+        self.top_upsample = nn.Upsample(
+            scale_factor=upsample_size, mode='bilinear', align_corners=False)
         #        if self.use_lateral:
         #           self.top_lat = SideAndComb(lateral_per_neuron=False,filters=top_filters)
 
@@ -200,19 +212,22 @@ class ResNetTDLat(nn.Module):
             nblocks = opts.ns[k]
             stride = opts.strides[k]
             filters = opts.nfilters[k - 1]
-            layers.append(self._make_layer(block, filters, nblocks, stride=stride))
+            layers.append(self._make_layer(
+                block, filters, nblocks, stride=stride))
 
         self.alllayers = nn.ModuleList(layers)
         filters = opts.nfilters[0]
         if self.use_lateral:
-            self.bot_lat = SideAndComb(False, filters, self.norm_layer, self.activation_fun)
+            self.bot_lat = SideAndComb(
+                False, filters, self.norm_layer, self.activation_fun)
         self.use_final_conv = opts.use_final_conv
         if self.use_final_conv:
             # here we should have performed another convolution to match BU conv1, but
             # we don't, as that was the behaviour in TF. Unless use_final_conv=True
             conv1 = conv2d_fun(filters, filters, kernel_size=7, stride=1, padding=3,
                                bias=False)
-            self.conv1 = nn.Sequential(conv1, self.norm_layer(filters), self.activation_fun())
+            self.conv1 = nn.Sequential(
+                conv1, self.norm_layer(filters), self.activation_fun())
 
         init_module_weights(self.modules())
 
@@ -220,8 +235,10 @@ class ResNetTDLat(nn.Module):
         norm_layer = self.norm_layer
         layers = []
         for _ in range(1, blocks):
-            layers.append(block(self.inplanes, self.inplanes, 1, norm_layer, self.activation_fun, self.use_lateral))
-        layers.append(block(self.inplanes, planes, stride, norm_layer, self.activation_fun, self.use_lateral))
+            layers.append(block(self.inplanes, self.inplanes, 1,
+                          norm_layer, self.activation_fun, self.use_lateral))
+        layers.append(block(self.inplanes, planes, stride,
+                      norm_layer, self.activation_fun, self.use_lateral))
         self.inplanes = planes * block.expansion
 
         return nn.ModuleList(layers)

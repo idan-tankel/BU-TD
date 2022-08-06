@@ -1,11 +1,12 @@
 # %% general initialization
 import os
+from tokenize import String
+from typing import Tuple
 import torch
 import torch.optim as optim
 from v26 import accuracy_funcs
 import v26.cfg as cfg
 from v26.Configs.Config import Config
-from v26.functions.inits import add_arguments_to_parser
 from v26.models.DatasetInfo import DatasetInfo
 from v26.models.WrappedDataLoader import WrappedDataLoader
 from v26.models.BU_TD_Models import BUModelSimple, BUTDModelShared
@@ -22,6 +23,8 @@ from torch.utils.data import DataLoader
 import torch.backends.cudnn as cudnn
 import v26 as v26
 from types import SimpleNamespace
+import v26.models.FlagAt
+import sys
 
 
 # %% visualize predictions
@@ -125,7 +128,7 @@ def init_datasets(inshape, flag_size, nclasses_existence, nsamples_train, nsampl
         )  # validation set is only sometimes present so nsamples_val is not always available
     else:
         from v26.avatar_dataset import AvatarDetailsDatasetRawNew as dataset
-        if flag_at is FlagAt.NOFLAG:
+        if flag_at is v26.models.FlagAt.NOFLAG:
             from v26.models.AutoSimpleNamespace import inputs_to_struct_raw_label_all as inputs_to_struct
         else:
             from v26.models.AutoSimpleNamespace import inputs_to_struct_raw as inputs_to_struct
@@ -142,7 +145,7 @@ def init_datasets(inshape, flag_size, nclasses_existence, nsamples_train, nsampl
                                   num_workers=args.workers,
                                   shuffle=False,
                                   pin_memory=True)
-            mean_image = get_mean_image(train_dl, inshape, inputs_to_struct)
+            mean_image = funcs.get_mean_image(train_dl, inshape, inputs_to_struct)
             train_ds = dataset(os.path.join(base_samples_dir, 'train'),
                                nclasses_existence,
                                nfeatures,
@@ -185,7 +188,7 @@ def main():
 
     parser = argparse.ArgumentParser()
 
-    add_arguments_to_parser(parser)
+    inits.add_arguments_to_parser(parser)
     if config.Visibility.interactive_session:
         sys.argv = ['']
     args = parser.parse_args()
@@ -222,9 +225,9 @@ def main():
     model_opts = init_model_opts_2(args, base_tf_records_dir, config, flag_at, flag_size, inputs_to_struct, inshape,
                                    nclasses_existence, normalize_image, ntypes, results_dir)
 
-    log_init(model_opts)
-    print_info(model_opts)
-    save_script(model_opts)
+    funcs.log_init(model_opts)
+    funcs.print_info(model_opts)
+    funcs.save_script(model_opts)
 
     if args.hyper_search:
         logger.info('sysargv %s' % sys.argv)
@@ -234,7 +237,8 @@ def main():
     # %% create model
     model = create_model(model_opts)
 
-    funcs.set_datasets_measurements(the_datasets, Measurements, model_opts, model)
+    funcs.set_datasets_measurements(
+        the_datasets, Measurements, model_opts, model)
 
     model_loss_and_accuracy(model_opts)
 
@@ -376,7 +380,7 @@ def pred_and_gt_text(feature_id, feature_value, features_strings, predicted_feat
 
 def add_mask(ax, mask):
     if len(np.unique(mask)) > 1:
-        [stx, sty, endx, endy] = get_bounding_box(mask)
+        [stx, sty, endx, endy] = loses.get_bounding_box(mask)
         ax.add_patch(
             patches.Rectangle((stx, sty),
                               endx - stx,
@@ -451,7 +455,12 @@ def datasets_specs(IMAGE_SIZE: int, args, img_channels: int, nclasses_existence:
     return batch_size, flag_size, inshape, num_gpus, scale_batch_size, ubs
 
 
-def init_folders(base_tf_records_dir, config):
+def init_folders(base_tf_records_dir, config: Config) -> Tuple[String, String, String]:
+    """init_folders init folder paths with `os.path.join`
+
+    Returns:
+        tuple: (base_folder,data_filename,results_dir)
+    """
     avatars_dir = os.path.join(config.Folders.data_dir, config.Folders.avatars)
     new_avatars_dir = os.path.join(avatars_dir, config.Folders.samples)
     base_samples_dir = os.path.join(new_avatars_dir, base_tf_records_dir)
@@ -467,7 +476,7 @@ def create_model(model_opts):
 
         model = BUTDModelShared(model_opts)
     if not torch.cuda.is_available():
-        logger.info('using CPU, this will be slow')
+        funcs.logger.info('using CPU, this will be slow')
     else:
         # DataParallel will divide and allocate batch_size to all available GPUs
         model = torch.nn.DataParallel(model).cuda()
@@ -520,7 +529,7 @@ def init_model_opts_2(args, base_tf_records_dir, config: Config, flag_at, flag_s
         _type_: _description_
     """
     model_opts = inits.init_model_options(config, flag_at, normalize_image, nclasses_existence, ntypes, flag_size,
-                                    BatchNorm, inshape)
+                                          BatchNorm, inshape)
     flag_str = str(model_opts.flag_at).replace('.', '_').lower()
     num_gpus = torch.cuda.device_count()
     dummytype = '_dummyds' * config.Datasets.dummyds
@@ -581,6 +590,15 @@ def init_all_datasets(args, base_samples_dir, batch_size, config, flag_size, ins
 
 
 def load_samples(config, data_fname):
+    """load_samples load samples from files using `pickle.load`
+
+    Args:
+        config (_type_): _description_
+        data_fname (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     if not config.Datasets.dummyds:
         with open(data_fname, "rb") as new_data_file:
             nsamples_train, nsamples_test, nsamples_val, nfeatures, nclasses, nclasses_existence, ntypes, img_channels, IMAGE_SIZE = pickle.load(

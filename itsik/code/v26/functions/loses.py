@@ -1,13 +1,17 @@
-import numpy as np
 from torch import nn
-
-from v26.ConstantsBuTd import *
+import torch
+from v26.ConstantsBuTd import dev, get_model, get_model_opts, get_inputs_to_struct
 from v26.funcs import activated_tasks
 from v26.models.Measurements import get_model_outs
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from torch import Tensor
+
 loss_task_multi_label = nn.CrossEntropyLoss(reduction='none').to(dev)
-loss_occurrence = torch.nn.BCEWithLogitsLoss(reduction='mean').to(dev)
-loss_seg = torch.nn.MSELoss(reduction='mean').to(dev)
+loss_occurrence = nn.BCEWithLogitsLoss(reduction='mean').to(dev)
+loss_seg = nn.MSELoss(reduction='mean').to(dev)
 loss_task_op = nn.CrossEntropyLoss(reduction='mean').to(dev)
 
 
@@ -22,8 +26,9 @@ def multi_label_loss_base(outs, samples, nclasses):
 
     Returns:
         _type_: _description_
-    """    
-    losses_task = torch.zeros((samples.label_task.shape)).to(dev, non_blocking=True)
+    """
+    losses_task = torch.zeros((samples.label_task.shape)).to(
+        dev, non_blocking=True)
     for k in range(
             len(nclasses)):  # TODO - this we need to change/modify - diff for only one mission - not all the options at once(to check if this specific mission - got what it needed...)
         taskk_out = outs.task[:, :, k]
@@ -33,7 +38,7 @@ def multi_label_loss_base(outs, samples, nclasses):
     return losses_task
 
 
-def multi_label_loss(outs, samples, nclasses):
+def multi_label_loss(outs, samples, nclasses) -> Tensor:
     """
     multi_label_loss _summary_
 
@@ -52,6 +57,16 @@ def multi_label_loss(outs, samples, nclasses):
 
 
 def multi_label_loss_weighted_loss(outs, samples, nclasses):
+    """multi_label_loss_weighted_loss _summary_
+
+    Args:
+        outs (_type_): _description_
+        samples (_type_): _description_
+        nclasses (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """    
     losses_task = multi_label_loss_base(outs, samples, nclasses)
     loss_weight = samples.loss_weight
 
@@ -68,7 +83,8 @@ def multi_label_loss_weighted_loss_only_one(outs, samples, nclasses):
 
     loss_weight_by_task = activated_tasks(losses_task.shape[1], samples.flag)
     losses_task = losses_task * loss_weight * loss_weight_by_task
-    loss_task = losses_task.sum() / loss_weight.sum()  # a single valued result for the whole batch
+    # a single valued result for the whole batch
+    loss_task = losses_task.sum() / loss_weight.sum()
     return loss_task
 
 
@@ -78,19 +94,20 @@ def loss_fun(inputs, outs):
     inputs_to_struct = get_inputs_to_struct()
     samples = inputs_to_struct(inputs)
     losses = []
-    if get_model_opts().use_bu1_loss:
+    model_options = get_model_opts()
+    if model_options.use_bu1_loss:
         loss_occ = loss_occurrence(outs.occurence, samples.label_existence)
         losses.append(loss_occ)
 
-    if get_model_opts().use_td_loss:
+    if model_options.use_td_loss:
         loss_seg_td = loss_seg(outs.td_head, samples.seg)
         loss_bu1_after_convergence = 1
         loss_td_after_convergence = 100
         ratio = loss_bu1_after_convergence / loss_td_after_convergence
         losses.append(ratio * loss_seg_td)
 
-    if get_model_opts().use_bu2_loss:
-        loss_task = get_model_opts().bu2_loss(outs, samples, get_model_opts().nclasses)
+    if model_options.use_bu2_loss:
+        loss_task = model_options.bu2_loss(outs, samples, model_options.nclasses)
         losses.append(loss_task)
 
     loss = torch.sum(torch.stack(losses))

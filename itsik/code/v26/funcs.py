@@ -1,3 +1,17 @@
+import torch.optim as optim
+import torch.nn as nn
+import torch
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+import logging
+import time
+import pickle
+import six
+import shutil
+from types import SimpleNamespace
+from pathlib import Path
+import os
+import sys
 import numpy as np
 
 from v26.models.FlagAt import FlagAt
@@ -6,20 +20,10 @@ from vae.StoreForVae import *
 np.set_printoptions(precision=6)
 np.set_printoptions(suppress=True)
 np.set_printoptions(linewidth=120)
-import sys
-import os
-from pathlib import Path
 
 home = str(Path.home())
 sys.path.append(os.path.join(home, "code/other_py"))
-from types import SimpleNamespace
 
-import shutil
-import six
-import pickle
-import time
-import logging
-import matplotlib as mpl
 
 try:
     # only used here for determining matplotlib backend
@@ -34,13 +38,10 @@ if use_gui:
     # from mimshow import *
 else:
     mpl.use('AGG')
-import matplotlib.pyplot as plt
 
-import torch
-import torch.nn as nn
-import torch.optim as optim
 
-dev = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+dev = torch.device(
+    "cuda") if torch.cuda.is_available() else torch.device("cpu")
 seed = 0
 torch.manual_seed(seed)
 # if torch.cuda.is_available():
@@ -50,16 +51,18 @@ torch.manual_seed(seed)
 # np.random.seed(seed)  # Numpy module.
 # random.seed(seed)  # Python random module.
 
-orig_relus = False  # if True use the same number of ReLUs as in the original tensorflow implementation
-orig_bn_eps = False  # if True use the batch norm epsilon as in the original tensorflow implementation
+# if True use the same number of ReLUs as in the original tensorflow implementation
+orig_relus = False
+# if True use the batch norm epsilon as in the original tensorflow implementation
+orig_bn_eps = False
 if orig_bn_eps:
     bn_eps = 1e-3
 else:
     bn_eps = 1e-5
 
-import logging
 
-logging.basicConfig(format=('%(asctime)s ' + '%(message)s'), level=logging.INFO)
+logging.basicConfig(
+    format=('%(asctime)s ' + '%(message)s'), level=logging.INFO)
 
 logger = logging.getLogger(__name__)
 
@@ -142,17 +145,20 @@ def save_script(opts):
                 if opts.distributed:
                     # if distributed then also copy the actual script
                     script_base_fname = opts.module + '.py'
-                    script_base_fname = os.path.join(os.path.dirname(script_fname), script_base_fname)
+                    script_base_fname = os.path.join(
+                        os.path.dirname(script_fname), script_base_fname)
                     dst = shutil.copy(script_base_fname, model_dir)
 
             # copy funcs folder
-            mods = [m.__name__ for m in sys.modules.values() if '.funcs' in m.__name__]
+            mods = [m.__name__ for m in sys.modules.values()
+                    if '.funcs' in m.__name__]
             if len(mods) > 0:
                 mods = mods[0]
                 mods = mods.split('.')
                 funcs_version = mods[0]
                 # might want to use  dirs_exist_ok=True for Python>3.6
-                dst = shutil.copytree(funcs_version, os.path.join(model_dir, funcs_version))
+                dst = shutil.copytree(
+                    funcs_version, os.path.join(model_dir, funcs_version))
         except:
             pass
 
@@ -232,7 +238,8 @@ def preprocess(inputs):
 
 
 def print_total_parameters(model):
-    total_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    total_parameters = sum(p.numel()
+                           for p in model.parameters() if p.requires_grad)
     print("{:,}".format(total_parameters))
     return total_parameters
 
@@ -263,21 +270,30 @@ def from_network(inputs, outs, module, inputs_to_struct, convert_to_np=True):
 #     return mean_image
 
 # set stop_after to None if you want the accurate mean, otherwise set to the number of examples to process
-def get_mean_image(dl, inshape, inputs_to_struct, stop_after=1000):
+def get_mean_image(dl, inshape, inputs_to_struct, stop_after=1000) -> np.ndarray:
     mean_image = np.zeros(inshape)
     nimgs = 0
     for inputs in dl:
         inputs = tonp(inputs)
         samples = inputs_to_struct(inputs)
         cur_bs = samples.image.shape[0]
-        mean_image = (mean_image * nimgs + samples.image.sum(axis=0)) / (nimgs + cur_bs)
+        mean_image = (mean_image * nimgs +
+                      samples.image.sum(axis=0)) / (nimgs + cur_bs)
         nimgs += cur_bs
         if stop_after and nimgs > stop_after:
             break
     return mean_image
 
 
-def argmax_by_thresh(a):
+def argmax_by_thresh(a: np.ndarray):
+    """argmax_by_thresh argmax function limited by threshold
+
+    Args:
+        a (ndarray): the array to order
+
+    Returns:
+        _type_: _description_
+    """
     # returns 0 if the first argument is larger than the second one by at least some threshold
     THRESH = 0.01
     index_array = np.argsort(a)
@@ -331,7 +347,7 @@ def NoNorm(num_channels, dims=2):
 
 
 def GroupNorm(num_groups):
-    f = lambda num_channels, dims=2: nn.GroupNorm(num_groups, num_channels)
+    def f(num_channels, dims=2): return nn.GroupNorm(num_groups, num_channels)
     return f
 
 
@@ -348,9 +364,11 @@ def BatchNormNoStats(num_channels, dims=2):
 
 def BatchNorm(num_channels, dims=2):
     if dims == 2:
-        norm = nn.BatchNorm2d(num_channels, eps=bn_eps, track_running_stats=True)
+        norm = nn.BatchNorm2d(num_channels, eps=bn_eps,
+                              track_running_stats=True)
     else:
-        norm = nn.BatchNorm1d(num_channels, eps=bn_eps, track_running_stats=True)
+        norm = nn.BatchNorm1d(num_channels, eps=bn_eps,
+                              track_running_stats=True)
     return norm
 
 
@@ -407,7 +425,8 @@ def get_multi_gpu_learning_rate(learning_rates_mult, num_gpus, scale_batch_size,
             warmup_epochs = 5
             initial_lr = np.linspace(
                 learning_rates_mult[0] / num_gpus, scale_batch_size * learning_rates_mult[0], warmup_epochs)
-            learning_rates_mult = np.concatenate((initial_lr, scale_batch_size * learning_rates_mult))
+            learning_rates_mult = np.concatenate(
+                (initial_lr, scale_batch_size * learning_rates_mult))
     return learning_rates_mult
 
 
@@ -457,7 +476,8 @@ def train_step(inputs, opts):
 def test_step(inputs, opts):
     opts.model.eval()
     with torch.no_grad():
-        outs = opts.model(inputs)  # Here check the output - where more than 1 flag
+        # Here check the output - where more than 1 flag
+        outs = opts.model(inputs)
         loss = opts.loss_fun(inputs, outs)
     return loss, outs
 
@@ -519,7 +539,8 @@ def fit(opts, the_datasets):
 
     for epoch in range(st_epoch, end_epoch):
         if opts.first_node:
-            logger.info('Epoch {} learning rate: {}'.format(epoch + 1, optimizer.param_groups[0]['lr']))
+            logger.info('Epoch {} learning rate: {}'.format(
+                epoch + 1, optimizer.param_groups[0]['lr']))
         # if opts.distributed:
         #     opts.train_sampler.set_epoch(epoch)
 
@@ -536,12 +557,13 @@ def fit(opts, the_datasets):
 
         # save model
         if opts.first_node:
-            # When using distributed data parallel, one optimization is to save the model in only one process, reducing write overhead. This is correct because all processes start from the same parameters and gradients are synchronized in backward passes, and hence optimizers should keep setting parameters to the same values 
+            # When using distributed data parallel, one optimization is to save the model in only one process, reducing write overhead. This is correct because all processes start from the same parameters and gradients are synchronized in backward passes, and hence optimizers should keep setting parameters to the same values
             if opts.save_model:
                 save_by_dataset = the_datasets[save_details.dataset_id]
                 measurements = np.array(save_by_dataset.measurements.results)
                 new_optimum = False
-                epoch_save_value = measurements[epoch, save_details.epoch_save_idx]
+                epoch_save_value = measurements[epoch,
+                                                save_details.epoch_save_idx]
                 if save_details.save_cmp_fun(
                         [epoch_save_value, optimum]) == 0:
                     optimum = epoch_save_value
@@ -556,10 +578,12 @@ def fit(opts, the_datasets):
                 metadata['optimum'] = optimum
 
                 model_latest_fname = model_basename + '_latest' + model_ext
-                model_latest_fname = os.path.join(model_dir, model_latest_fname)
+                model_latest_fname = os.path.join(
+                    model_dir, model_latest_fname)
                 save_model_and_md(model_latest_fname, metadata, epoch, opts)
                 if new_optimum:
-                    model_fname = model_basename + '%d' % (epoch + 1) + model_ext
+                    model_fname = model_basename + \
+                        '%d' % (epoch + 1) + model_ext
                     model_fname = os.path.join(model_dir, model_fname)
                     shutil.copyfile(model_latest_fname, model_fname)
                     logger.info('Saved model to %s' % model_fname)
@@ -569,7 +593,8 @@ def fit(opts, the_datasets):
         if opts.first_node:
             if epoch == st_epoch:
                 n_measurements = len(the_datasets[0].measurements.metrics)
-                fig, subplots_axes = plt.subplots(1, n_measurements, figsize=(5, 3))
+                fig, subplots_axes = plt.subplots(
+                    1, n_measurements, figsize=(5, 3))
                 if n_measurements == 1:
                     subplots_axes = [subplots_axes]
             else:

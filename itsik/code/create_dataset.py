@@ -194,7 +194,7 @@ def gen_sample(sample_id, is_train, aug_data, grayscale,
         mask = msks[s_id]
         scale = person.scale
         sz = scale * np.array([PERSON_SIZE, PERSON_SIZE])
-        sz = sz.astype(np.int)
+        sz = sz.astype(int)
         h, w = sz
         im = skimage.transform.resize(im, sz, mode='constant')
         if grayscale:
