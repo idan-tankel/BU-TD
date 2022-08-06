@@ -213,7 +213,7 @@ class BUStreamShared(nn.Module):
         self.inplanes = filters
         inshape = np.array([filters,np.int(np.ceil(inshape[1] / stride)),np.int(np.ceil(inshape[2] / stride))])  # The first shape.
         inshapes.append([inshape])
-        self.bot_lat = SideAndCombSharedBase(filters=filters)
+        self.bot_lat = SideAndCombSharedBase(num_channels=filters)
         num_blocks = 0
         for k in range(1, len(opts.strides)):
             nblocks = opts.ns[k]
@@ -232,7 +232,7 @@ class BUStreamShared(nn.Module):
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))  # Average pool before the classification.
         filters = opts.nfilters[-1]
         if self.use_lateral:
-            self.top_lat = SideAndCombSharedBase(filters=filters)
+            self.top_lat = SideAndCombSharedBase(num_channels =filters)
         inshape = np.array([filters, 1, 1])  # Add the shape of the last layer.
         inshapes.append(inshape)
         self.inshapes = inshapes

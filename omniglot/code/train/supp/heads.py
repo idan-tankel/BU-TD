@@ -53,8 +53,8 @@ class MultiTaskHead(nn.Module):
         self.grit_size = opts.grit_size
         for i in range(self.ntasks):  # For each task create its task-head according to num_clases.
             Task_heads = []
-            Task_heads.append(HeadSingleTask(opts, 224//self.grit_size, num_heads = 2))
-            Task_heads.append(HeadSingleTask(opts, 224//self.grit_size, num_heads = 2))
+            Task_heads.append(HeadSingleTask(opts, 224//self.grit_size+1, num_heads = 2))
+            Task_heads.append(HeadSingleTask(opts, 224//self.grit_size+1, num_heads = 2))
             Task_heads.append(HeadSingleTask(opts, self.num_classes[i][0] + 1, num_heads=1))
             Task_heads = nn.ModuleList(Task_heads)
             self.taskhead.append(Task_heads)

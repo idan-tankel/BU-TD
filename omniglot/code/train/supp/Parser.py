@@ -23,13 +23,12 @@ def GetParser(model_flag, raw_data_path, processed_data, embedding_idx, checkpoi
         stages:
 
     Returns:
-
     """
     parser = argparse.ArgumentParser()
     num_gpus = torch.cuda.device_count()
     parser.add_argument('--stages', default=stages, type=list, help = "'")
     parser.add_argument('--grit_size', default = 6, type=list, help="'")
-    parser.add_argument('--wd', default=0.0001, type=float, help='The weight decay of the Adam optimizer')
+    parser.add_argument('--wd', default=0.00001, type=float, help='The weight decay of the Adam optimizer')
     parser.add_argument('--SGD', default=False, type=bool, help='Whether to use SGD or Adam optimizer')
     parser.add_argument('--lr', default=1e-3 * 2, type=float, help='Base lr for the SGD optimizer ')
     parser.add_argument('--checkpoints_per_epoch', default=checkpoints_per_epoch, type=int,  help='Number of model saves per epoch')
@@ -60,7 +59,7 @@ def GetParser(model_flag, raw_data_path, processed_data, embedding_idx, checkpoi
     parser.add_argument('--nfilters', default = [64, 128, 256, 516], type=list, help='The ResNet filters')
     parser.add_argument('--strides', default=[2,2,2,2], type=list, help='The ResNet strides')
     parser.add_argument('--ks', default=[7, 3, 3,3], type=list, help='The kernel sizes')
-    parser.add_argument('--ns', default=[1,1,1,1], type=list, help='Number of blocks per filter size')
+    parser.add_argument('--ns', default=[2,2,2,2], type=list, help='Number of blocks per filter size')
     parser.add_argument('--inshape', default=(3, 112, 224), type=tuple, help='The input image shape')
     parser.add_argument('--norm_fun', default=BatchNorm, type=nn.Module, help='The used batch normalization')
     parser.add_argument('--EPOCHS', default=200, type=int, help='Number of epochs in the training')
