@@ -3,7 +3,15 @@ from v26.ConstantsBuTd import dev
 from types import SimpleNamespace
 
 
-def get_bounding_box(mask):
+def get_bounding_box(mask) -> list:
+    """_summary_
+
+    Args:
+        mask (_type_): _description_
+
+    Returns:
+        list: list of 4 points of the bounding box
+    """
     if len(mask.shape) > 2:
         bool_mask = mask[:, :, 1]
     else:
@@ -64,11 +72,11 @@ def multi_label_accuracy_weighted_loss(outs, samples, nclasses):
     preds, task_accuracy = multi_label_accuracy_base(outs, samples, nclasses)
     loss_weight = samples.loss_weight
     print(f'{task_accuracy.shape} {loss_weight.shape}')
-    # task_accuracy = task_accuracy * loss_weight
+    task_accuracy = task_accuracy * loss_weight
     # It was in the original version only regular mean in the second access
     # we want to do a weighted mean
     # we have 10 - batch size here in the current example
-    task_accuracy = torch.bmm(input=task_accuracy, mat2=loss_weight)
+    # task_accuracy = torch.bmm(input=task_accuracy, mat2=loss_weight)
     task_accuracy = task_accuracy.sum(axis=1) / loss_weight.sum(
         axis=1)  # per single example
     return preds, task_accuracy

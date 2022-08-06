@@ -2,16 +2,18 @@
 import os
 import torch
 import torch.optim as optim
+from v26 import accuracy_funcs
 import v26.cfg as cfg
 from v26.Configs.Config import Config
-from v26.functions.inits import add_arguments_to_parser, init_model_options
+from v26.functions.inits import add_arguments_to_parser
 from v26.models.DatasetInfo import DatasetInfo
 from v26.models.WrappedDataLoader import WrappedDataLoader
 from v26.models.BU_TD_Models import BUModelSimple, BUTDModelShared
 from v26.models.Measurements import Measurements
-from v26.accuracy_funcs import multi_label_accuracy, get_bounding_box, multi_label_accuracy_weighted_loss
-from v26.funcs import *
+from v26.ConstantsBuTd import set_inputs_to_struct
+from v26 import ConstantsBuTd
 import v26.funcs as funcs
+from v26.funcs import *
 from v26.functions import inits, convs, loses
 import argparse
 import matplotlib.pyplot as plt
@@ -19,7 +21,6 @@ import matplotlib.patches as patches
 from torch.utils.data import DataLoader
 import torch.backends.cudnn as cudnn
 import v26 as v26
-from v26.functions.loses import *
 from types import SimpleNamespace
 
 
@@ -68,7 +69,7 @@ def init_train_options(model, args, num_gpus, scale_batch_size, ubs, batch_size,
                                lr=train_opts.initial_lr,
                                weight_decay=train_opts.weight_decay)
     train_opts.optimizer = optimizer
-    train_opts.loss_fun = loss_fun
+    train_opts.loss_fun = loses.loss_fun
     def lmbda(epoch): return train_opts.learning_rates_mult[epoch]
     scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lmbda)
     train_opts.scheduler = scheduler
@@ -233,7 +234,7 @@ def main():
     # %% create model
     model = create_model(model_opts)
 
-    set_datasets_measurements(the_datasets, Measurements, model_opts, model)
+    funcs.set_datasets_measurements(the_datasets, Measurements, model_opts, model)
 
     model_loss_and_accuracy(model_opts)
 
@@ -418,9 +419,9 @@ def model_loss_and_accuracy(model_opts):
         model_opts.bu2_loss = loses.multi_label_loss_weighted_loss
         # else:
         #     model_opts.bu2_loss = multi_label_loss_weighted_loss_only_one
-        model_opts.task_accuracy = loses.multi_label_accuracy_weighted_loss
+        model_opts.task_accuracy = accuracy_funcs.multi_label_accuracy_weighted_loss
     else:
-        model_opts.bu2_loss = multi_label_loss
+        model_opts.bu2_loss = loses.multi_label_loss
         model_opts.task_accuracy = multi_label_accuracy
 
 
@@ -470,8 +471,8 @@ def create_model(model_opts):
     else:
         # DataParallel will divide and allocate batch_size to all available GPUs
         model = torch.nn.DataParallel(model).cuda()
-    set_model(model)
-    set_model_opts(model_opts)
+    ConstantsBuTd.set_model(model)
+    ConstantsBuTd.set_model_opts(model_opts)
     return model
 
 
