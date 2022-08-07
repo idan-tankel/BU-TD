@@ -5,7 +5,7 @@ from torch import nn
 
 from v26.Configs.Config import Config
 from v26.funcs import setup_flag
-from v26.models.FlagAt import FlagAt
+from v26.models.flag_at import FlagAt
 from vae.StoreForVae import StoreForVae
 
 

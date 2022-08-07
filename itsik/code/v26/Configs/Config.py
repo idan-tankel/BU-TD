@@ -4,7 +4,7 @@ from typing import List
 import yaml
 
 # configuration class
-from v26.models.FlagAt import FlagAt
+from v26.models.flag_at import FlagAt
 
 
 class Config:
@@ -48,7 +48,7 @@ class Visibility:
 class RunningSpecs:
     def __init__(self, config: dict):
         self.distributed = config['distributed']
-        self.FlagAt = FlagAt.from_str(config['FlagAt'])
+        self.FlagAt = FlagAt[config['FlagAt']]
         self.isFit = config['isFit']
 
 

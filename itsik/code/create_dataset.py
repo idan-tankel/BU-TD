@@ -244,7 +244,7 @@ def gen_sample(sample_id, is_train, aug_data, grayscale,
 
     # create segmentation of the example we are interested in (object-based attention)
     query_part_id = example.query_part_id
-    det_id = example.det_id
+    det_id = example.det_id # TODO detail_id?
     seg = np.zeros_like(image)
     if query_part_id == npersons:
         person_id = example.non_existing_person
@@ -297,7 +297,7 @@ def gen_sample(sample_id, is_train, aug_data, grayscale,
     sample.image = image
     sample.id = sample_id
     sample.label_all = label_all
-    sample.label_existence = label_existence.astype(np.int)
+    sample.label_existence = label_existence.astype(int)
     sample.loss_weight = loss_weight
     sample.query_part_id = query_part_id
     sample.seg = seg

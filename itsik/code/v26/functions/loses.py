@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from torch import Tensor
+from torch import Tensor
 
 loss_task_multi_label = nn.CrossEntropyLoss(reduction='none').to(dev)
 loss_occurrence = nn.BCEWithLogitsLoss(reduction='mean').to(dev)

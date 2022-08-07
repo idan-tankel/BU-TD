@@ -1,6 +1,8 @@
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from torch.utils.data import DataLoader
+# from typing import TYPE_CHECKING
+# if TYPE_CHECKING:
+#     from torch.utils.data import DataLoader
+
+from torch.utils.data import DataLoader
 
 
 class WrappedDataLoader:

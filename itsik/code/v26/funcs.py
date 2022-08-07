@@ -14,7 +14,7 @@ import os
 import sys
 import numpy as np
 
-from v26.models.FlagAt import FlagAt
+from v26.models.flag_at import FlagAt
 from vae.StoreForVae import *
 
 np.set_printoptions(precision=6)

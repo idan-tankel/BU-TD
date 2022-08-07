@@ -23,7 +23,7 @@ from torch.utils.data import DataLoader
 import torch.backends.cudnn as cudnn
 import v26 as v26
 from types import SimpleNamespace
-import v26.models.FlagAt
+from v26.models.flag_at import FlagAt
 import sys
 
 
@@ -128,7 +128,7 @@ def init_datasets(inshape, flag_size, nclasses_existence, nsamples_train, nsampl
         )  # validation set is only sometimes present so nsamples_val is not always available
     else:
         from v26.avatar_dataset import AvatarDetailsDatasetRawNew as dataset
-        if flag_at is v26.models.FlagAt.NOFLAG:
+        if flag_at is FlagAt.NOFLAG:
             from v26.models.AutoSimpleNamespace import inputs_to_struct_raw_label_all as inputs_to_struct
         else:
             from v26.models.AutoSimpleNamespace import inputs_to_struct_raw as inputs_to_struct
@@ -309,6 +309,21 @@ def go_over_samples_variables(inputs_to_struct, mean_image, model, model_opts, n
 
 
 def go_over_sample(features_strings, fig, flag_to_comp, k, model_opts, n, nfeatures, outs, preds, samples):
+    """
+    go_over_sample iterate over the samples of the dataset
+
+    Args:
+        features_strings (_type_): _description_
+        fig (_type_): _description_
+        flag_to_comp (_type_): _description_
+        k (_type_): _description_
+        model_opts (_type_): _description_
+        n (_type_): _description_
+        nfeatures (_type_): _description_
+        outs (_type_): _description_
+        preds (_type_): _description_
+        samples (`SimpleNamespace`): The samples object
+    """    
     clear_fig(fig)
     # we only have existence information about all the avatars, without order
     present = str(samples.label_existence[k].nonzero()[0].tolist())
@@ -405,6 +420,12 @@ def predict(avatar_id, feature_id, k, nfeatures, outs, samples, model_opts):
 
 
 def clear_fig(fig):
+    """
+    clear_fig _summary_
+
+    Args:
+        fig (_type_): _description_
+    """    
     fig.clf()
     fig.tight_layout()
 
@@ -455,7 +476,7 @@ def datasets_specs(IMAGE_SIZE: int, args, img_channels: int, nclasses_existence:
     return batch_size, flag_size, inshape, num_gpus, scale_batch_size, ubs
 
 
-def init_folders(base_tf_records_dir, config: Config) -> Tuple[String, String, String]:
+def init_folders(base_tf_records_dir, config: Config) -> Tuple:
     """init_folders init folder paths with `os.path.join`
 
     Returns:
