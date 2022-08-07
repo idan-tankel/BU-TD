@@ -48,11 +48,7 @@ def multi_label_accuracy_base(outs, samples, nclasses):
     cur_batch_size = samples.image.shape[0]
     preds = torch.zeros((cur_batch_size, len(nclasses)),
                         dtype=torch.int).to(dev, non_blocking=True)
-    # for k in range(len(nclasses)):
-    #     taskk_out = outs.task[:, :, k]
-    #     predsk = torch.argmax(taskk_out, axis=1)
-    #     preds[:, k] = predsk
-    #  do the argmax only along the first dimention
+    # TODO: check if this is correct - the nclasses is the number of classes in the current task
     preds = torch.argmax(input=outs.task, dim=1, keepdim=False)
     label_task = samples.label_task
     # true label task for each sample, has shape (`number of samples`,`label`)
