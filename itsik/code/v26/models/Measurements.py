@@ -75,7 +75,14 @@ class MeasurementsBase():
 
 class Measurements(MeasurementsBase):
     def __init__(self, opts, model):
-        super(Measurements, self).__init__(opts)
+        """
+        __init__ _summary_
+
+        Args:
+            opts (_type_): _description_
+            model (_type_): _description_
+        """        
+        MeasurementsBase.__init__(self, opts)
         # self.reset()
         self.model = model
         self.opts = opts
@@ -83,7 +90,7 @@ class Measurements(MeasurementsBase):
             MeasurementsBase.add_name('Occurence Acc')
 
         if self.opts.use_bu2_loss:
-            MeasurementsBase.add_name('Task Acc')
+            MeasurementsBase.add_name(name='Task Acc',self=self)
 
         self.init_results()
 
@@ -118,7 +125,7 @@ class Measurements(MeasurementsBase):
                                   task_accuracy.sum().cpu().numpy())
 
     def reset(self):
-        MeasurementsBase.reset()
+        MeasurementsBase.reset(self)
         if self.opts.use_bu1_loss:
             self.occurence_accuracy = np.array(0.0)
             self.metrics += [self.occurence_accuracy]

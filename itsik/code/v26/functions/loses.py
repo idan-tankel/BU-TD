@@ -1,14 +1,9 @@
-from torch import nn
+from torch import nn,Tensor
 import torch
 from v26.ConstantsBuTd import dev, get_model, get_model_opts, get_inputs_to_struct
 from v26.funcs import activated_tasks
 from v26.models.Measurements import get_model_outs
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from torch import Tensor
-from torch import Tensor
 
 loss_task_multi_label = nn.CrossEntropyLoss(reduction='none').to(dev)
 loss_occurrence = nn.BCEWithLogitsLoss(reduction='mean').to(dev)
@@ -21,8 +16,8 @@ def multi_label_loss_base(outs, samples, nclasses):
     multi_label_loss_base _summary_
 
     Args:
-        outs (_type_): _description_
-        samples (_type_): _description_
+        outs (_type_): the output of the model
+        samples (_type_): the sample 
         nclasses (_type_): _description_
 
     Returns:
@@ -33,7 +28,9 @@ def multi_label_loss_base(outs, samples, nclasses):
     for k in range(
             len(nclasses)):  # TODO - this we need to change/modify - diff for only one mission - not all the options at once(to check if this specific mission - got what it needed...)
         taskk_out = outs.task[:, :, k]
-        label_taskk = samples.label_task[:, k]
+        label_taskk = samples.label_task[:, k] 
+        # samples.label_task has shape (batch_size, n_tasks = 42) the 42 different types
+        #TODO print here with pyplt - do an x11 forwarding
         loss_taskk = loss_task_multi_label(taskk_out, label_taskk)
         losses_task[:, k] = loss_taskk
     return losses_task
@@ -41,12 +38,13 @@ def multi_label_loss_base(outs, samples, nclasses):
 
 def multi_label_loss(outs, samples, nclasses) -> Tensor:
     """
-    multi_label_loss _summary_
+    multi_label_loss 
+    running the loss base and then taking mean - to do a single value result for all the batch
 
     Args:
-        outs (_type_): _description_
-        samples (_type_): _description_
-        nclasses (_type_): _description_
+        outs (`SimpleNamespace`): an object holding the outputs after `bu,bu2,occurence,task`
+        samples (`SimpleNamespace`): an object holding all the samples in the batch
+        nclasses (`array`): a list of classes 
 
     Returns:
         _type_: _description_
@@ -81,10 +79,10 @@ def multi_label_loss_weighted_loss(outs, samples, nclasses):
 def multi_label_loss_weighted_loss_only_one(outs, samples, nclasses):
     losses_task = multi_label_loss_base(outs, samples, nclasses)
     loss_weight = samples.loss_weight
-
+    # TODO test this
     loss_weight_by_task = activated_tasks(losses_task.shape[1], samples.flag)
     losses_task = losses_task * loss_weight * loss_weight_by_task
-    # a single valued result for the whole batch
+    # a single valued result for the whole batch 
     loss_task = losses_task.sum() / loss_weight.sum()
     return loss_task
 

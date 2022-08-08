@@ -355,10 +355,22 @@ def go_over_sample(features_strings, fig, flag_to_comp, k, model_opts, n, nfeatu
     print(k)
     print(predicted_existing_avatar_ids)
     #    savefig(os.path.join(avatars_dir, 'examples%d.png'% k), dpi=90, bbox_inches='tight' )
-    pause_image()
+    funcs.pause_image()
 
 
 def title_with_td_loss(font, gt_str, k, model_opts, n, outs, pred_str):
+    """
+    title_with_td_loss _summary_
+
+    Args:
+        font (_type_): _description_
+        gt_str (_type_): _description_
+        k (_type_): _description_
+        model_opts (_type_): _description_
+        n (_type_): _description_
+        outs (_type_): _description_
+        pred_str (_type_): _description_
+    """    
     if model_opts.use_td_loss:
         tit_str = gt_str
         plt.title(tit_str)
@@ -494,7 +506,17 @@ def init_folders(base_tf_records_dir, config: Config) -> Tuple:
     return base_samples_dir, data_fname, results_dir
 
 
-def create_model(model_opts):
+def create_model(model_opts:SimpleNamespace):
+    """
+    create_model create the model object according to the `model_opts`
+
+    Args:
+        model_opts (SimpleNamespace): The model options object as parsed from the configuration file
+
+    Returns:
+        (`BUModelSimple` | `BUTDModelShared` ): model object
+        inherite from `nn.Module`
+    """    
     if model_opts.flag_at is FlagAt.BU1_SIMPLE:
         model = BUModelSimple(model_opts)
     else:
@@ -511,6 +533,12 @@ def create_model(model_opts):
 
 
 def init_some_hyper_params(args):
+    """
+    init_some_hyper_params init the model learning rate, batch size,
+
+    Args:
+        args (SimpleNamespace): The hyperparameters object
+    """    
     if args.hyper_search:
         index = args.hyper
         import itertools
@@ -551,7 +579,7 @@ def init_model_opts_2(args, base_tf_records_dir, config: Config, flag_at, flag_s
         results_dir (_type_): _description_
 
     Returns:
-        _type_: _description_
+        SimpleNamespace: model options object
     """
     model_opts = inits.init_model_options(config, flag_at, normalize_image, nclasses_existence, ntypes, flag_size,
                                           BatchNorm, inshape)
