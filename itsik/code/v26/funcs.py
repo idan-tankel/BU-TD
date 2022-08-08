@@ -483,10 +483,16 @@ def test_step(inputs, opts):
 
 
 def fit(opts, the_datasets):
-    '''iterate over the datasets and train (or test) them'''
+    """
+    fit iterate over the datasets and train (or test) them 
+
+    Args:
+        opts (SimpleNamespace): training options
+        the_datasets (_type_): The datasets to train on
+    """
     # if opts.first_node:
     #     logger.info('train_opts: %s', str(opts))
-    optimizer = opts.optimizer
+    optimizer = opts.optimizer  # get the model optimizer from the training options
     scheduler = opts.scheduler
     datasets_name = [dataset.name for dataset in the_datasets]
 
@@ -496,7 +502,7 @@ def fit(opts, the_datasets):
 
     model_ext = '.pt'
     model_basename = 'model'
-    model_latest_fname = model_basename + '_latest' + model_ext
+    model_latest_fname = model_basename + '_latest' + model_ext 
     model_latest_fname = os.path.join(model_dir, model_latest_fname)
 
     if not instruct(opts, 'save_details'):
@@ -539,8 +545,7 @@ def fit(opts, the_datasets):
 
     for epoch in range(st_epoch, end_epoch):
         if opts.first_node:
-            logger.info('Epoch {} learning rate: {}'.format(
-                epoch + 1, optimizer.param_groups[0]['lr']))
+            logger.info(f'Epoch {epoch + 1} learning rate: { optimizer.param_groups[0]["lr"] }')
         # if opts.distributed:
         #     opts.train_sampler.set_epoch(epoch)
 

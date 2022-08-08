@@ -31,7 +31,15 @@ class DatasetInfo():
     def reset_iter(self):
         self.dataset_iter = iter(self.dataset)
 
-    def do_epoch(self, epoch, opts, number_of_epochs):
+    def do_epoch(self, epoch:int, opts, number_of_epochs):
+        """
+        do_epoch Do a specific epoch of the dataset (validation/training/test)
+
+        Args:
+            epoch (int): the current epoch
+            opts (SimpleNamespace): The model options
+            number_of_epochs (int): The total number of epochs
+        """        
         logger.info(self.name)
         nbatches_report = 10
         aborted = False

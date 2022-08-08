@@ -80,15 +80,26 @@ class Measurements(MeasurementsBase):
         self.model = model
         self.opts = opts
         if self.opts.use_bu1_loss:
-            super().add_name('Occurence Acc')
+            MeasurementsBase.add_name('Occurence Acc')
 
         if self.opts.use_bu2_loss:
-            super().add_name('Task Acc')
+            MeasurementsBase.add_name('Task Acc')
 
         self.init_results()
 
     def update(self, inputs, outs, loss):
-        super().update(inputs, outs, loss)
+        """
+        update update the accuracy for task and occurence tasks of the model
+        Using the losses specified in the model opts (config file)
+        The measurement class store the model opts and the model itself as it's attributes
+        i.e `self.opts`, `self.model`
+
+        Args:
+            inputs (_type_): _description_
+            outs (_type_): _description_
+            loss (_type_): _description_
+        """        
+        MeasurementsBase.update(inputs, outs, loss)
         outs = get_model_outs(self.model, outs)
         # outs = get_model_outs(model, outs)
         samples = inputs_to_struct_raw(inputs)
@@ -97,17 +108,17 @@ class Measurements(MeasurementsBase):
             occurence_accuracy = (
                     occurence_pred == samples.label_existence).type(
                 torch.float).mean(axis=1)
-            super().update_metric(self.occurence_accuracy,
+            MeasurementsBase.update_metric(self.occurence_accuracy,
                                   occurence_accuracy.sum().cpu().numpy())
 
         if self.opts.use_bu2_loss:
             preds, task_accuracy = self.opts.task_accuracy(
                 outs, samples, self.opts.nclasses)
-            super().update_metric(self.task_accuracy,
+            MeasurementsBase.update_metric(self.task_accuracy,
                                   task_accuracy.sum().cpu().numpy())
 
     def reset(self):
-        super().reset()
+        MeasurementsBase.reset()
         if self.opts.use_bu1_loss:
             self.occurence_accuracy = np.array(0.0)
             self.metrics += [self.occurence_accuracy]

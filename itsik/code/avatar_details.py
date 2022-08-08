@@ -45,9 +45,7 @@ def init_train_options(model, args, num_gpus, scale_batch_size, ubs, batch_size,
     train_opts.weight_decay = args.wd
     train_opts.initial_lr = args.lr
     learning_rates_mult = np.ones(300)
-    learning_rates_mult = funcs.get_multi_gpu_learning_rate(learning_rates_mult,
-                                                            num_gpus, scale_batch_size,
-                                                            ubs)
+    learning_rates_mult = funcs.get_multi_gpu_learning_rate(learning_rates_mult,num_gpus, scale_batch_size,ubs)
     if args.checkpoints_per_epoch > 1:
         learning_rates_mult = np.repeat(learning_rates_mult,
                                         args.checkpoints_per_epoch)
@@ -240,7 +238,7 @@ def main():
     funcs.set_datasets_measurements(
         the_datasets, Measurements, model_opts, model)
 
-    model_loss_and_accuracy(model_opts)
+    init_model_loss_and_accuracy(model_opts)
 
     # %% fit
 
@@ -299,7 +297,7 @@ def go_over_samples_variables(inputs_to_struct, mean_image, model, model_opts, n
     inputs = next(ds_iter)
     # Here pass it through the network
     loss, outs = v26.test_step(inputs, train_opts)
-    samples, outs = from_network(inputs, outs, model.module, inputs_to_struct)
+    samples, outs = funcs.from_network(inputs, outs, model.module, inputs_to_struct)
     samples, outs = from_network_transpose(
         samples, outs, normalize_image, mean_image, model_opts)
     preds = np.array(outs.occurence > 0, dtype=np.float)
@@ -438,7 +436,13 @@ def number_of_subplots(model_opts) -> int:
     return n
 
 
-def model_loss_and_accuracy(model_opts):
+def init_model_loss_and_accuracy(model_opts):
+    """
+    model_loss_and_accuracy initializes the model loss and accuracy for the model
+
+    Args:
+        model_opts (SimpleNamespace): The model options object
+    """    
     if model_opts.flag_at is FlagAt.NOFLAG:
         # if not model_opts.head_of_all_features:  # TODO - change it from config
         model_opts.bu2_loss = loses.multi_label_loss_weighted_loss
@@ -447,7 +451,7 @@ def model_loss_and_accuracy(model_opts):
         model_opts.task_accuracy = accuracy_funcs.multi_label_accuracy_weighted_loss
     else:
         model_opts.bu2_loss = loses.multi_label_loss
-        model_opts.task_accuracy = multi_label_accuracy
+        model_opts.task_accuracy = accuracy_funcs.multi_label_accuracy
 
 
 def datasets_specs(IMAGE_SIZE: int, args, img_channels: int, nclasses_existence: int, nfeatures: int, ngpus_per_node: int) -> tuple:
