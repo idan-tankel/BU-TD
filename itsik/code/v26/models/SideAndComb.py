@@ -5,14 +5,38 @@ from v26.models.Hadamard import Hadamard
 
 
 class SideAndCombSharedBase():
-    def __init__(self, lateral_per_neuron, filters):
-        super(SideAndCombSharedBase, self).__init__()
+    """
+    SideAndCombSharedBase _summary_
+    """    
+    def __init__(self, lateral_per_neuron=False, filters):
+        """
+        __init__ _summary_
+
+        Args:
+            lateral_per_neuron (bool): 
+            filters (_type_): _description_
+        """ 
+        # super(SideAndCombSharedBase, self).__init__()
         self.side = Hadamard(lateral_per_neuron, filters)
         self.filters = filters
 
 
 class SideAndCombShared(nn.Module):
+    """
+    SideAndCombShared _summary_
+
+    Args:
+        nn (_type_): _description_
+    """    
     def __init__(self, shared, norm_layer, activation_fun):
+        """
+        __init__ _summary_
+
+        Args:
+            shared (_type_): _description_
+            norm_layer (_type_): _description_
+            activation_fun (_type_): _description_
+        """        
         super(SideAndCombShared, self).__init__()
         self.side = shared.side
         self.norm = norm_layer(shared.filters)
@@ -33,7 +57,19 @@ class SideAndCombShared(nn.Module):
 
 
 class SideAndComb(nn.Module):
-    def __init__(self, lateral_per_neuron, filters, norm_layer, activation_fun):
+    """
+    SideAndComb _summary_
+    """    
+    def __init__(self, lateral_per_neuron: int, filters, norm_layer, activation_fun):
+        """
+        __init__ _summary_
+
+        Args:
+            lateral_per_neuron (int): _description_
+            filters (_type_): _description_
+            norm_layer (_type_): _description_
+            activation_fun (_type_): _description_
+        """        
         super(SideAndComb, self).__init__()
         self.side = Hadamard(lateral_per_neuron, filters)
         self.norm = norm_layer(filters)

@@ -79,6 +79,10 @@ class ResNet(nn.Module):
 
 
 class ResNetLatShared(nn.Module):
+    r"""
+    ResNetLatShared _summary_
+
+    """    
 
     def __init__(self, opts, shared):
         super(ResNetLatShared, self).__init__()
@@ -178,7 +182,6 @@ class ResNetLatShared(nn.Module):
         laterals_out.append(x)
 
         return x, laterals_out
-
 
 class ResNetTDLat(nn.Module):
     """ResNetTDLat is ResNet network with lateral connections

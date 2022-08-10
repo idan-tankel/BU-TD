@@ -29,7 +29,12 @@ class BasicBlockLatSharedBase():
 
 
 class BasicBlockLatShared(nn.Module):
+    r"""
+    BasicBlockLatShared _summary_
 
+    Args:
+        nn (_type_): _description_
+    """
     def __init__(self, shared, norm_layer, activation_fun):
         super(BasicBlockLatShared, self).__init__()
         # Both self.conv1 and self.downsample layers downsample the input when stride != 1

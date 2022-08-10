@@ -1,3 +1,4 @@
+from typing import List
 import torch.optim as optim
 import torch.nn as nn
 import torch
@@ -463,7 +464,17 @@ def set_datasets_measurements(datasets, measurements_class, model_opts, model):
         the_dataset.create_measurement(measurements_class, model_opts, model)
 
 
-def train_step(inputs, opts):
+def train_step(inputs: List, opts: SimpleNamespace):
+    """
+    train_step The actual training step
+
+    Args:
+        inputs (`List[Torch.Tensor]`): list of inputs to the model
+        opts (_type_): _description_
+
+    Returns:
+        (Torch.tensor,Torch.tensor): (loss,outs)
+    """    
     opts.model.train()
     outs = opts.model(inputs)
     loss = opts.loss_fun(inputs, outs)
@@ -473,7 +484,19 @@ def train_step(inputs, opts):
     return loss, outs
 
 
-def test_step(inputs, opts):
+def test_step(inputs, opts:SimpleNamespace):
+    """
+    test_step Run the actual training step on the data, but without autograd (with torch.no_grad())
+
+    Args:
+        inputs (): 
+        opts (`SimpleNamespace`): Model options.
+            The model options is a container holding also the model object (under ``opts.model``)
+            and the model loss function (under ``opts.loss_fun``), and both are callable
+
+    Returns:
+        loss,outs (`torch.Tensor`,`torch.Tensor`): The loss value and the model outputs
+    """    
     opts.model.eval()
     with torch.no_grad():
         # Here check the output - where more than 1 flag

@@ -19,7 +19,7 @@ class MeasurementsBase():
 
     # update metrics for current batch and epoch (cumulative)
     # here we update the basic metric (loss). Subclasses should also call update_metric()
-    def update(self, inputs, outs, loss):
+    def update(self, inputs, loss):
         cur_batch_size = inputs[0].shape[0]
         self.loss += loss * cur_batch_size
         self.nexamples += cur_batch_size

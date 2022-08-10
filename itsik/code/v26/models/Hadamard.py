@@ -4,8 +4,8 @@ from torch import nn
 
 class Hadamard(nn.Module):
 
-    def __init__(self, lateral_per_neuron, filters):
-        super(Hadamard, self).__init__()
+    def __init__(self, lateral_per_neuron: bool, filters):
+        nn.Module.__init__(self)
         self.lateral_per_neuron = lateral_per_neuron
         self.filters = filters
         # Create a trainable weight variable for this layer.

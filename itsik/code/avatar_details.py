@@ -268,7 +268,7 @@ def main():
     perc = np.zeros((npersons, nfeatures))
     lens = np.zeros((npersons, nfeatures))
     for inputs in val_dataset:
-        loss, outs = test_step(inputs, train_opts)
+        loss, outs = funcs.test_step(inputs, train_opts)
         samples, outs = from_network(
             inputs, outs, model.module, inputs_to_struct)
         for k in range(len(samples.image)):
