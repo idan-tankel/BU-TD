@@ -56,6 +56,7 @@ class BasicBlockLatShared(nn.Module):
             self.relu = activation_fun()
 
     def forward(self, inputs):
+        # TODO change
         x, laterals_in = inputs
         if laterals_in is not None:
             lateral1_in, lateral2_in, lateral3_in = laterals_in

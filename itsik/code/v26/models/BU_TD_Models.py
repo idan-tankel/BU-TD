@@ -28,18 +28,28 @@ class TDModel(nn.Module):
         self.trunk = ResNetTDLat(opts)
 
     def forward(self, inputs):
-        td_outs = self.trunk(inputs)
+        bu_out, flag, laterals_in = inputs
+        td_outs = self.trunk(bu_out, flag, laterals_in)
         return td_outs
 
 
 class BUTDModel(nn.Module):
 
     def forward(self, inputs):
-        samples = self.inputs_to_struct(inputs)  # Here we got all the flags/features - check where input is more than 1
-        images = samples.image
-        flags = samples.flag  # TODO Those flags - we need to change - to be more than 1(on inference time)
+        # Here we got all the flags/features - check where input is more than 1
+        samples = self.inputs_to_struct(inputs)
+        images = samples.image  # TODO torch.Size([10, 3, 224, 448])
+        # TODO Those flags - we need to change - to be more than 1(on inference time)
+        flags = samples.flag
+        # flags shape is (10,13=7+6)
         model_inputs = [images, flags, None]
-        bu_out, bu_laterals_out = self.bumodel1(model_inputs)
+        bu_out, bu_laterals_out = self.bumodel1(
+            x=images, flags=flags, laterals_in=None)
+        # this is forward pass for bu model
+        # Although the recipe for forward pass needs to be defined within this function,
+        #  one should call the Module instance afterwards instead of this
+        # since the former takes care of running the registered hooks while the latter silently ignores them
+        # https://pytorch.org/docs/stable/generated/torch.nn.Module.html
         if self.use_bu1_loss:
             occurence_out = self.occhead(bu_out)
         else:
@@ -49,7 +59,7 @@ class BUTDModel(nn.Module):
             model_inputs += [bu_laterals_out]
         else:
             model_inputs += [None]
-        td_outs = self.tdmodel(model_inputs)
+        td_outs = self.tdmodel(bu_out=bu_out, flag=flags, laterals_in=bu_laterals_out)
         td_out, td_laterals_out, *td_rest = td_outs
         if self.use_td_loss:
             td_head_out = self.imagehead(td_out)
@@ -61,7 +71,8 @@ class BUTDModel(nn.Module):
             model_inputs += [[td_out]]
         bu2_out, bu2_laterals_out = self.bumodel2(
             model_inputs)  # TODO - This output - we need to check diff from all flags
-        task_out = self.taskhead(bu2_out, flags)  # TODO - check input and output
+        # TODO - check input and output
+        task_out = self.taskhead(bu2_out, flags)
         if False:  # TODO itsik - change this to be from config - itsik_flag
             self.zero_non_task_layers(flags, task_out)
 
@@ -84,11 +95,13 @@ class BUTDModel(nn.Module):
         for index_layer in list(range(task_out.shape[2])):
             if loss_weight_by_task is not None and type(loss_weight_by_task) is list and len(
                     loss_weight_by_task) > index_layer:
-                task_out[:, :, index_layer] = task_out[:, :, index_layer] * loss_weight_by_task[index_layer]
+                task_out[:, :, index_layer] = task_out[:, :,
+                                                       index_layer] * loss_weight_by_task[index_layer]
 
     def outs_to_struct(self, outs):
         occurence_out, task_out, bu_out, bu2_out, *rest = outs
-        outs_ns = SimpleNamespace(occurence=occurence_out, task=task_out, bu=bu_out, bu2=bu2_out)
+        outs_ns = SimpleNamespace(
+            occurence=occurence_out, task=task_out, bu=bu_out, bu2=bu2_out)
         if self.use_td_loss:
             td_head_out, *rest = rest
             outs_ns.td_head = td_head_out
@@ -105,7 +118,8 @@ class BUTDModelShared(BUTDModel):
         self.use_bu1_loss = opts.use_bu1_loss
         if self.use_bu1_loss:
             self.occhead = OccurrenceHead(opts)
-        self.taskhead = MultiLabelHeadOnlyTask(opts) # here should use instead MultiLabelHeadOnlyTask
+        # here should use instead MultiLabelHeadOnlyTask
+        self.taskhead = MultiLabelHeadOnlyTask(opts)
         # self.taskhead = MultiLabelHead(opts) # here should use instead MultiLabelHeadOnlyTask
         self.use_td_loss = opts.use_td_loss
         if self.use_td_loss:
@@ -135,7 +149,8 @@ class BUTDModelDuplicate(BUTDModel):
             self.imagehead = ImageHead(opts)
         bu_shared = ResNetLatSharedBase(opts)
         self.bumodel1 = ResNetLatShared(opts, bu_shared)
-        opts.use_top_flag = opts.use_bu2_flag  # TODO: fix this as this will not work in duplicate
+        # TODO: fix this as this will not work in duplicate
+        opts.use_top_flag = opts.use_bu2_flag
         self.bumodel2 = self.bumodel1
 
         pre_top_shape = bu_shared.inshapes[-2][-1]
@@ -195,7 +210,8 @@ class BUModelSimple(nn.Module):
 
     def outs_to_struct(self, outs):
         occurence_out, task_out, bu_out = outs
-        outs_ns = SimpleNamespace(occurence=occurence_out, task=task_out, bu=bu_out)
+        outs_ns = SimpleNamespace(
+            occurence=occurence_out, task=task_out, bu=bu_out)
         return outs_ns
 
 

@@ -45,7 +45,8 @@ def init_train_options(model, args, num_gpus, scale_batch_size, ubs, batch_size,
     train_opts.weight_decay = args.wd
     train_opts.initial_lr = args.lr
     learning_rates_mult = np.ones(300)
-    learning_rates_mult = funcs.get_multi_gpu_learning_rate(learning_rates_mult,num_gpus, scale_batch_size,ubs)
+    learning_rates_mult = funcs.get_multi_gpu_learning_rate(
+        learning_rates_mult, num_gpus, scale_batch_size, ubs)
     if args.checkpoints_per_epoch > 1:
         learning_rates_mult = np.repeat(learning_rates_mult,
                                         args.checkpoints_per_epoch)
@@ -105,6 +106,25 @@ def create_data_loaders(train_ds, test_ds, val_ds,
 
 def init_datasets(inshape, flag_size, nclasses_existence, nsamples_train, nsamples_test, base_samples_dir,
                   nfeatures, batch_size, dummyds, args, flag_at):
+    """
+    init_datasets _summary_
+
+    Args:
+        inshape (_type_): _description_
+        flag_size (_type_): _description_
+        nclasses_existence (_type_): _description_
+        nsamples_train (_type_): _description_
+        nsamples_test (_type_): _description_
+        base_samples_dir (_type_): _description_
+        nfeatures (_type_): _description_
+        batch_size (_type_): _description_
+        dummyds (_type_): _description_
+        args (_type_): _description_
+        flag_at (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """                  
     # from v26.models.AutoSimpleNamespace import inputs_to_struct_raw_label_all as inputs_to_struct
     from v26.avatar_dataset import AvatarDetailsDatasetLabelAll as dataset
     normalize_image = False
@@ -143,7 +163,8 @@ def init_datasets(inshape, flag_size, nclasses_existence, nsamples_train, nsampl
                                   num_workers=args.workers,
                                   shuffle=False,
                                   pin_memory=True)
-            mean_image = funcs.get_mean_image(train_dl, inshape, inputs_to_struct)
+            mean_image = funcs.get_mean_image(
+                train_dl, inshape, inputs_to_struct)
             train_ds = dataset(os.path.join(base_samples_dir, 'train'),
                                nclasses_existence,
                                nfeatures,
@@ -260,8 +281,7 @@ def main():
                                                              normalize_image, train_dataset, train_opts)
 
     for k in range(len(samples.image)):
-        go_over_sample(config.Strings.features_strings, fig, flag_to_comp, k, model_opts, n, nfeatures, outs, preds,
-                       samples)
+        go_over_sample(config.Strings.features_strings, fig=fig, flag_to_comp=flag_to_comp, k=k, model_opts=model_opts, n=n, nfeatures=nfeatures, outs=outs, preds=preds,samples=samples)
     # %% percent correct
     accs_id = [[] for i in range(nfeatures)]
     npersons = 6
@@ -297,7 +317,8 @@ def go_over_samples_variables(inputs_to_struct, mean_image, model, model_opts, n
     inputs = next(ds_iter)
     # Here pass it through the network
     loss, outs = v26.test_step(inputs, train_opts)
-    samples, outs = funcs.from_network(inputs, outs, model.module, inputs_to_struct)
+    samples, outs = funcs.from_network(
+        inputs, outs, model.module, inputs_to_struct)
     samples, outs = from_network_transpose(
         samples, outs, normalize_image, mean_image, model_opts)
     preds = np.array(outs.occurence > 0, dtype=np.float)
@@ -321,7 +342,7 @@ def go_over_sample(features_strings, fig, flag_to_comp, k, model_opts, n, nfeatu
         outs (_type_): _description_
         preds (_type_): _description_
         samples (`SimpleNamespace`): The samples object
-    """    
+    """
     clear_fig(fig)
     # we only have existence information about all the avatars, without order
     present = str(samples.label_existence[k].nonzero()[0].tolist())
@@ -329,7 +350,7 @@ def go_over_sample(features_strings, fig, flag_to_comp, k, model_opts, n, nfeatu
     fl = samples.flag[k]
     avatar_id, feature_id = flag_to_comp(fl)
     feature_value, predicted_feature_value = predict(
-        avatar_id, feature_id, k, nfeatures, outs, samples, model_opts)
+        avatar_id, feature_id, task_index=k, nfeatures=nfeatures, outs=outs, samples=samples, model_opts=model_opts)
     ins = 'Instruction: Avatar %d, %s' % (avatar_id,
                                           features_strings[feature_id])
     tit = tit + ins
@@ -370,7 +391,7 @@ def title_with_td_loss(font, gt_str, k, model_opts, n, outs, pred_str):
         n (_type_): _description_
         outs (_type_): _description_
         pred_str (_type_): _description_
-    """    
+    """
     if model_opts.use_td_loss:
         tit_str = gt_str
         plt.title(tit_str)
@@ -415,17 +436,33 @@ def add_mask(ax, mask):
                               facecolor='none'))
 
 
-def predict(avatar_id, feature_id, k, nfeatures, outs, samples, model_opts):
+def predict(avatar_id, feature_id, task_index, nfeatures, outs, samples, model_opts):
+    """
+    This function predicts the value of a feature for a given avatar, within the task number `task_index` [only]
+    The output of k is based on the value of `outs.task[task_index]`
+
+    Args:
+        avatar_id (_type_): _description_
+        feature_id (_type_): _description_
+        task_index (`int`): _description_
+        nfeatures (`int`): _description_
+        outs (_type_): _description_
+        samples (_type_): _description_
+        model_opts (_type_): _description_
+
+    Returns:
+        (): (ground_truth, predicted_value)
+    """
     if model_opts.flag_at is FlagAt.NOFLAG:
-        pred = outs.task[k].argmax(axis=0)
+        pred = outs.task[task_index].argmax(axis=0)
         pred = np.array(pred).reshape((-1, nfeatures))
         predicted_feature_value = pred[avatar_id][feature_id]
-        gt = samples.label_task[k]
-        gt = np.array(gt).reshape((-1, nfeatures))
-        feature_value = gt[avatar_id][feature_id]
+        true_labels = np.array(
+            samples.label_task[task_index]).reshape((-1, nfeatures))
+        feature_value = true_labels[avatar_id][feature_id]
     else:
-        feature_value = samples.label_task[k][0]
-        predicted_feature_value = outs.task[k].argmax()
+        feature_value = samples.label_task[task_index][0]
+        predicted_feature_value = outs.task[task_index].argmax()
     return feature_value, predicted_feature_value
 
 
@@ -435,7 +472,7 @@ def clear_fig(fig):
 
     Args:
         fig (_type_): _description_
-    """    
+    """
     fig.clf()
     fig.tight_layout()
 
@@ -454,7 +491,7 @@ def init_model_loss_and_accuracy(model_opts):
 
     Args:
         model_opts (SimpleNamespace): The model options object
-    """    
+    """
     if model_opts.flag_at is FlagAt.NOFLAG:
         # if not model_opts.head_of_all_features:  # TODO - change it from config
         model_opts.bu2_loss = loses.multi_label_loss_weighted_loss
@@ -506,7 +543,7 @@ def init_folders(base_tf_records_dir, config: Config) -> Tuple:
     return base_samples_dir, data_fname, results_dir
 
 
-def create_model(model_opts:SimpleNamespace):
+def create_model(model_opts: SimpleNamespace):
     """
     create_model create the model object according to the `model_opts`
 
@@ -516,7 +553,7 @@ def create_model(model_opts:SimpleNamespace):
     Returns:
         (`BUModelSimple` | `BUTDModelShared` ): model object
         inherite from `nn.Module`
-    """    
+    """
     if model_opts.flag_at is FlagAt.BU1_SIMPLE:
         model = BUModelSimple(model_opts)
     else:
@@ -538,7 +575,7 @@ def init_some_hyper_params(args):
 
     Args:
         args (SimpleNamespace): The hyperparameters object
-    """    
+    """
     if args.hyper_search:
         index = args.hyper
         import itertools
@@ -650,7 +687,7 @@ def load_samples(config, data_fname):
         data_fname (_type_): _description_
 
     Returns:
-        _type_: _description_
+        (IMAGE_SIZE=List, img_channels=3, nclasses_existence=6, nfeatures=7, nsamples_test=int, nsamples_train=int, ntypes=List(has shape 42,0))
     """
     if not config.Datasets.dummyds:
         with open(data_fname, "rb") as new_data_file:
@@ -667,6 +704,7 @@ def load_samples(config, data_fname):
         IMAGE_SIZE = [224, 448]
         img_channels = 3
     return IMAGE_SIZE, img_channels, nclasses_existence, nfeatures, nsamples_test, nsamples_train, ntypes
+    #TODO search for ntypes definition in data file by create_dataset
 
 
 if __name__ == "__main__":

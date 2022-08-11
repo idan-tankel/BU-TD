@@ -79,12 +79,17 @@ class ResNet(nn.Module):
 
 
 class ResNetLatShared(nn.Module):
-    r"""
+    __doc__=r"""
     ResNetLatShared _summary_
-
-    """    
-
+    """
     def __init__(self, opts, shared):
+        """
+        __init__ _summary_
+
+        Args:
+            opts (_type_): _description_
+            shared (_type_): _description_
+        """        
         super(ResNetLatShared, self).__init__()
         self.norm_layer = opts.norm_fun
         self.activation_fun = opts.activation_fun
@@ -139,8 +144,18 @@ class ResNetLatShared(nn.Module):
 
         return nn.ModuleList(layers)
 
-    def forward(self, inputs):
-        x, flags, laterals_in = inputs
+    def forward(self, x, flags, laterals_in):
+        """
+        forward the forward pass
+
+        Args:
+            x (_type_): the input tensor
+            flags (_type_): 
+            laterals_in (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """        
         if self.use_bu1_flag:
             f = self.h_flag_bu(flags)
             f = f.view(self.flag_shape)
@@ -246,7 +261,9 @@ class ResNetTDLat(nn.Module):
 
         return nn.ModuleList(layers)
 
-    def forward(self, inputs):
+    def forward(self, bu_out,flag,laterals_in):
+        #TODO change input model to **kwargs or to fix the inputs!
+        # Get rid of the `inputs` variable
         bu_out, flag, laterals_in = inputs
         laterals_out = []
 

@@ -8,7 +8,7 @@ class SideAndCombSharedBase():
     """
     SideAndCombSharedBase _summary_
     """    
-    def __init__(self, lateral_per_neuron=False, filters):
+    def __init__(self, lateral_per_neuron, filters):
         """
         __init__ _summary_
 

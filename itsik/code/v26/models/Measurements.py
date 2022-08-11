@@ -20,7 +20,15 @@ class MeasurementsBase():
     # update metrics for current batch and epoch (cumulative)
     # here we update the basic metric (loss). Subclasses should also call update_metric()
     def update(self, inputs, loss):
-        cur_batch_size = inputs[0].shape[0]
+        """
+        update update the loss and the number of examples in the current batch results
+
+        Args:
+            inputs (torch.utils.data.dataloader.DataLoader): a list of an objects came from the data loader
+            loss (_type_): _description_
+            # TODO why do we need all the inputs here? can't we get only the length?
+        """        
+        cur_batch_size = inputs[1].shape[1]
         self.loss += loss * cur_batch_size
         self.nexamples += cur_batch_size
         self.metrics_cur_batch = [loss * cur_batch_size]
@@ -106,7 +114,7 @@ class Measurements(MeasurementsBase):
             outs (_type_): _description_
             loss (_type_): _description_
         """        
-        MeasurementsBase.update(inputs, outs, loss)
+        MeasurementsBase.update(self=self, inputs=inputs,loss=loss)
         outs = get_model_outs(self.model, outs)
         # outs = get_model_outs(model, outs)
         samples = inputs_to_struct_raw(inputs)
