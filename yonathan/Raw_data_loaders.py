@@ -42,6 +42,7 @@ def get_raw_data(download_dir:str, dataset:str)->tuple:
     # Getting the raw train, test data.
     train_raw_data,test_raw_data, rotate = None,None,None
     nchannels = 1
+    # __config__[dataset]
     if dataset == 'emnist': # The balanced emnist dataset.
         train_raw_data = torchvision.datasets.EMNIST(download_dir, split='balanced', train=True, download=True)
         test_raw_data = torchvision.datasets.EMNIST(download_dir, split='balanced', train=False, download=True)
@@ -89,12 +90,26 @@ def get_raw_data(download_dir:str, dataset:str)->tuple:
     return images_arranged, labels_arranged, letter_size,nchannels
 
 class DataSet(data.Dataset):
+    """
+    DataSet abstract class represent a dataset
+
+    Args:
+        data (_type_): _description_
+    """    
+    __config__ = {
+        'emnist': {},
+        'cifar10': {},
+        'cifar100': {},
+        'FashionEmnist': {},
+        'omniglot': {},
+    }
+
     def __init__(self, data_dir:str, dataset:str,language_list:list,raw_data_source:str):
         """
         Args:
             data_dir: The data we want to store the raw data into, in order to not re-download the raw data again.
             dataset: The dataset type.
-            language_list: The language list for the Omniglot dataset.
+            language_list (optional): The language list for the Omniglot dataset.
             raw_data_source: # The Raw data source for the Omniglot dataset.
         """
         assert dataset in ['emnist', 'cifar10', 'cifar100', 'FashionEmnist', 'omniglot']
@@ -106,6 +121,9 @@ class DataSet(data.Dataset):
         self.nclasses = len(set(self.labels))
         self.num_examples_per_character = len(self.labels) // self.nclasses
 
+
+    # TODO add self.shape and anoter attrs in the `get_raw_data` function
+    # TODO add support in persons dadaset
     def __getitem__(self, index:int)->tuple:
         """
         Args:
