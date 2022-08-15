@@ -114,6 +114,12 @@ def gen_samples(parser: argparse, dataloader: DataSet, job_id: int, range_start:
 
 
 def main(language_list: list) -> None:
+    """
+    main _summary_
+
+    Args:
+        language_list (list): _description_
+    """    
     # Getting the option parser.
     parser = Get_parser()
     # Getting the raw data.

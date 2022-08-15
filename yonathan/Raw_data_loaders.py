@@ -1,3 +1,4 @@
+from logging import root
 import os
 import pickle
 
@@ -43,27 +44,11 @@ def get_raw_data(download_dir:str, dataset:str)->tuple:
     train_raw_data,test_raw_data, rotate = None,None,None
     nchannels = 1
     # __config__[dataset]
-    if dataset == 'emnist': # The balanced emnist dataset.
-        train_raw_data = torchvision.datasets.EMNIST(download_dir, split='balanced', train=True, download=True)
-        test_raw_data = torchvision.datasets.EMNIST(download_dir, split='balanced', train=False, download=True)
-        rotate = (1,0)
-        nchannels = 1
-        shape = (1,28,28)
-    if dataset == 'cifar10': # The cifar10 dataset.
-        train_raw_data = torchvision.datasets.CIFAR10(download_dir, train=True, download=True)
-        test_raw_data = torchvision.datasets.CIFAR10(download_dir, train=False, download=True)
-        rotate = (2,0,1)
-        nchannels = 3
-    if dataset == 'cifar100': # The cifar100 dataset.
-        train_raw_data = torchvision.datasets.CIFAR100(download_dir, train=True, download=True)
-        test_raw_data = torchvision.datasets.CIFAR100(download_dir, train=False, download=True)
-        rotate = (2,0,1)
-        nchannels = 3
-    if dataset == 'FashionEmnist': # The fashion mnist dataset.
-        train_raw_data = torchvision.datasets.FashionMNIST(download_dir, train=True, download=True)
-        test_raw_data = torchvision.datasets.FashionMNIST(download_dir, train=False, download=True)
-        rotate = (0,1)
-        nchannels = 1
+    train_raw_data = DataSet.__config__[dataset]['dataset'](root = download_dir,split="balanced",train=True,download=True,transform=transforms.ToTensor())
+    test_raw_data = DataSet.__config__[dataset]['dataset'](root = download_dir,split="balanced",train=False,download=True,transform=transforms.ToTensor())
+    rotate = DataSet.__config__[dataset]['rotate']
+    nchannels = DataSet.__config__[dataset]['nchannels']
+    shape = DataSet.__config__[dataset]['shape']
     # From dataset to list.
     images = []
     labels = []
@@ -77,6 +62,7 @@ def get_raw_data(download_dir:str, dataset:str)->tuple:
     images_arranged = [[] for _ in range(num_labels)]
     labels_arranged = [[] for _ in range(num_labels)]
     # Arranging the data according to the labels.
+    # This will return all the images labeled as 0 as a sequence, and than all the ...
     for idx in range(len(labels)):
         index = labels[idx]
         img = images[idx].transpose(rotate)
@@ -97,10 +83,27 @@ class DataSet(data.Dataset):
         data (_type_): _description_
     """    
     __config__ = {
-        'emnist': {},
-        'cifar10': {},
-        'cifar100': {},
-        'FashionEmnist': {},
+        'emnist': {
+            'dataset': torchvision.datasets.EMNIST,
+            "rotate": (0,2,1),
+            "nchannels": 1,
+            "shape": (1,28,28)
+        },
+        'cifar10': {
+            'dataset': torchvision.datasets.CIFAR10,
+            'rotate': (2,0,1),
+            'nchannels': 3
+        },
+        'cifar100': {
+            'dataset': torchvision.datasets.CIFAR10,
+            'rotate': (2,0,1),
+            'nchannels': 3
+        },
+        'FashionEmnist': {
+            'dataset': torchvision.datasets.FashionMNIST,
+            'rotate': (0,2,1),
+            'nchannels': 1
+            },
         'omniglot': {},
     }
 
