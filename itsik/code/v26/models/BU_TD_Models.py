@@ -27,8 +27,8 @@ class TDModel(nn.Module):
         super(TDModel, self).__init__()
         self.trunk = ResNetTDLat(opts)
 
-    def forward(self, inputs):
-        bu_out, flag, laterals_in = inputs
+    def forward(self, bu_out, flag, laterals_in):
+        # bu_out, flag, laterals_in = inputs
         td_outs = self.trunk(bu_out, flag, laterals_in)
         return td_outs
 
@@ -59,18 +59,20 @@ class BUTDModel(nn.Module):
             model_inputs += [bu_laterals_out]
         else:
             model_inputs += [None]
-        td_outs = self.tdmodel(bu_out=bu_out, flag=flags, laterals_in=bu_laterals_out)
+        td_outs = self.tdmodel(bu_out=bu_out, flag=flags,
+                               laterals_in=bu_laterals_out)
         td_out, td_laterals_out, *td_rest = td_outs
         if self.use_td_loss:
             td_head_out = self.imagehead(td_out)
         model_inputs = [images, flags]
         if self.use_lateral_tdbu:
-            model_inputs += [td_laterals_out]
+            bu2_out, bu2_laterals_out = self.bumodel2(
+                x=images, flags=flags, laterals_in=td_laterals_out)
         else:
             # when not using laterals we only use td_out as a lateral
-            model_inputs += [[td_out]]
-        bu2_out, bu2_laterals_out = self.bumodel2(
-            model_inputs)  # TODO - This output - we need to check diff from all flags
+            bu2_out, bu2_laterals_out = self.bumodel2(
+                x=images, flags=flags, laterals_in=[td_out])
+            # TODO - This output - we need to check diff from all flags
         # TODO - check input and output
         task_out = self.taskhead(bu2_out, flags)
         if False:  # TODO itsik - change this to be from config - itsik_flag

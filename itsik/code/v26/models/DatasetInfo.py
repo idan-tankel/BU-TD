@@ -26,6 +26,14 @@ class DatasetInfo():
         self.needinit = True
 
     def create_measurement(self, measurements_class, model_opts, model):
+        """
+        create_measurement _summary_
+
+        Args:
+            measurements_class (_type_): _description_
+            model_opts (_type_): _description_
+            model (_type_): _description_
+        """        
         self.measurements = measurements_class(model_opts, model)
 
     def reset_iter(self):

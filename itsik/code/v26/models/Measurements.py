@@ -87,8 +87,8 @@ class Measurements(MeasurementsBase):
         __init__ _summary_
 
         Args:
-            opts (_type_): _description_
-            model (_type_): _description_
+            opts (SimpleNamespace): The model opts
+            model (): 
         """        
         MeasurementsBase.__init__(self, opts)
         # self.reset()

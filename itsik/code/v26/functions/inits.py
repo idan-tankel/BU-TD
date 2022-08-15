@@ -40,7 +40,7 @@ def init_model_options(config: Config, flag_at, normalize_image, nclasses_existe
     init_model_options initialize the core model options
 
     Args:
-        config (Config): _description_
+        config (Config): The config object represent the config file
         flag_at (_type_): _description_
         normalize_image (_type_): _description_
         nclasses_existence (int): _description_

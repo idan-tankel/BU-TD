@@ -264,7 +264,7 @@ class ResNetTDLat(nn.Module):
     def forward(self, bu_out,flag,laterals_in):
         #TODO change input model to **kwargs or to fix the inputs!
         # Get rid of the `inputs` variable
-        bu_out, flag, laterals_in = inputs
+        # bu_out, flag, laterals_in = inputs
         laterals_out = []
 
         if self.use_td_flag:

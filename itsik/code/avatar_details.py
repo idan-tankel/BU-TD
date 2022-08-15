@@ -124,7 +124,7 @@ def init_datasets(inshape, flag_size, nclasses_existence, nsamples_train, nsampl
 
     Returns:
         _type_: _description_
-    """                  
+    """
     # from v26.models.AutoSimpleNamespace import inputs_to_struct_raw_label_all as inputs_to_struct
     from v26.avatar_dataset import AvatarDetailsDatasetLabelAll as dataset
     normalize_image = False
@@ -241,8 +241,8 @@ def main():
                                                                                        nsamples_test, nsamples_train, ubs,
                                                                                        flag_at)
     # %% model options
-    model_opts = init_model_opts_2(args, base_tf_records_dir, config, flag_at, flag_size, inputs_to_struct, inshape,
-                                   nclasses_existence, normalize_image, ntypes, results_dir)
+    model_opts = init_model_opts(args, base_tf_records_dir, config, flag_at, flag_size, inputs_to_struct, inshape,
+                                 nclasses_existence, normalize_image, ntypes, results_dir)
 
     funcs.log_init(model_opts)
     funcs.print_info(model_opts)
@@ -281,7 +281,8 @@ def main():
                                                              normalize_image, train_dataset, train_opts)
 
     for k in range(len(samples.image)):
-        go_over_sample(config.Strings.features_strings, fig=fig, flag_to_comp=flag_to_comp, k=k, model_opts=model_opts, n=n, nfeatures=nfeatures, outs=outs, preds=preds,samples=samples)
+        go_over_sample(config.Strings.features_strings, fig=fig, flag_to_comp=flag_to_comp, k=k,
+                       model_opts=model_opts, n=n, nfeatures=nfeatures, outs=outs, preds=preds, samples=samples)
     # %% percent correct
     accs_id = [[] for i in range(nfeatures)]
     npersons = 6
@@ -596,9 +597,9 @@ def init_some_hyper_params(args):
         args.bs = int(args.bs)
 
 
-def init_model_opts_2(args, base_tf_records_dir, config: Config, flag_at, flag_size,
-                      inputs_to_struct,
-                      inshape, nclasses_existence, normalize_image, ntypes, results_dir):
+def init_model_opts(args, base_tf_records_dir, config: Config, flag_at, flag_size,
+                    inputs_to_struct,
+                    inshape, nclasses_existence, normalize_image, ntypes, results_dir):
     """
     init_model_opts_2 initialize all the model parameters. This function supply further information on the existing ``
 
@@ -704,7 +705,7 @@ def load_samples(config, data_fname):
         IMAGE_SIZE = [224, 448]
         img_channels = 3
     return IMAGE_SIZE, img_channels, nclasses_existence, nfeatures, nsamples_test, nsamples_train, ntypes
-    #TODO search for ntypes definition in data file by create_dataset
+    # TODO search for ntypes definition in data file by create_dataset
 
 
 if __name__ == "__main__":
