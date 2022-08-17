@@ -1,0 +1,48 @@
+---
+dataset: emnist
+parser = argparse.ArgumentParser()
+('--dataset', type=string, default='emnist',help='name of the dataset to use')
+('--path_data_raw', default='../data',
+ type=str, help='The Raw data path')
+('--store_folder', default='../data',
+ type=str, help='The storing path')
+('--job_chunk_size', default=1000, type=int,
+ help='The number of samples each jobs processes')
+('--folder_split', default=True, type=bool,
+ help='Whether to split the folder into parts.')
+('--folder_size', default=1000,
+ type=int, help=' The folder size')
+('--augment_sample', default=True,
+ type=bool, help='Whether to augment the sample')
+('--letter_size', default=28,
+ type=int, help='The basic letter size')
+('--threads', default=10, type=int,
+ help='The number of threads in the job')
+('--nchars_per_row', default=nchars_per_row,
+ type=int, help='The number of characters in the image')
+('--nsamples_train', default=10000,
+ type=int, help='The number of samples in the train set')
+('--nsamples_test', default=2000,
+ type=int, help='The number of samples in the test set')
+('--nsamples_val', default=2000,
+ type=int, help='The number of samples in the val set')
+('--generalize', default=True, type=bool,
+ help='Whether to create the combinatorial generalization set')
+('--use_only_valid_classes', default=True,
+ type=bool, help='Whether to use only specific classes')
+('--ndirections', default=2, type=int,
+ help='Number of directions to create from')
+(
+ default=[112, 224], type=list, help='The image size')
+('--create_all_directions', default=False,
+ type=bool,   help='Whether to create all directions')
+('--ngenerate', default=5, type=int,
+ help='The number of queries to create for the same image')
+('--num_rows_in_the_image', default=num_rows_in_the_image,
+ type=int, help='The number of rows in the image')
+('--single_feat_to_generate', default=False, type=bool,
+ help='Whether to create multiple queries about the same sample')
+('--ntest_strings', default=1, type=int,
+ help='The number of samples strings for the combinatorial test.')
+('--sample_nchars', default=nchars_per_row * num_rows_in_the_image,
+ type=int,   help='The number of characters in each image')
