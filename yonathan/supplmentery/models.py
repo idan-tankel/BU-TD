@@ -1,8 +1,6 @@
 import torch.nn as nn
-from supp.heads import *
-from supp.blocks import *
-from supp.general_functions import *
-from supp.FlagAt import *
+from .heads import *
+
 from types import SimpleNamespace
 import numpy as np
 

@@ -5,8 +5,8 @@ import numpy as np
 import time
 import torch
 import shutil
-from supp.create_model import *
-from supp.batch_norm import *
+from create_model import *
+from batch_norm import *
 from torch.utils.data import DataLoader
 
 

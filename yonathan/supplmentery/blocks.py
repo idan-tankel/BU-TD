@@ -1,8 +1,10 @@
 import torch.nn as nn
 import torch
+import torch._C
 import numpy as np
-from supp.general_functions import *
-from supp.FlagAt import *
+from supplmentery.general_functions import flag_to_task, conv3x3, conv1x1, get_laterals, conv3x3up
+from supplmentery.FlagAt import FlagAt
+import argparse
 
 
 class ChannelModulation(nn.Module):
@@ -29,7 +31,7 @@ def init_module_weights(modules: nn.Module) -> None:
     # same as our paper's experiments
     """
     Initializes all model layers according to the distributions above.
-    :param modules: all model's layers
+    :param modules(`nn.Module`): all model's layers
     :return: None
 
     """
@@ -59,7 +61,8 @@ class SideAndComb(nn.Module):
         """
         super(SideAndComb, self).__init__()
         self.side = ChannelModulation(filters)  # channel-modulation layer.
-        self.norm = norm_layer(filters, ntasks)  # batch norm after the channel-modulation of the lateral.
+        # batch norm after the channel-modulation of the lateral.
+        self.norm = norm_layer(filters, ntasks)
         self.orig_relus = orig_relus
         self.filters = filters
         if not orig_relus:
@@ -75,7 +78,8 @@ class SideAndComb(nn.Module):
         side_val = self.side(lateral)  # channel-modulation(CM)
         side_val = self.norm(side_val)  # batch_norm after the CM
         if not self.orig_relus:
-            side_val = self.relu1(side_val)  # activation_fun after the batch_norm
+            # activation_fun after the batch_norm
+            side_val = self.relu1(side_val)
         x = x + side_val  # the lateral skip connection
         x = self.relu2(x)  # activation_fun after the skip connection
         return x
@@ -89,21 +93,23 @@ class SideAndCombSharedBase(nn.Module):
         self.filters = filters
 
 # TODO - This can be deleted as there is no shared part between the lateral connections of BU1,BU2
+
+
 class SideAndCombShared(nn.Module):
     # performs the lateral connection BU1 -> TD or TD -> BU2.
     # Very similar to SideAndComb so the functionality is the same.
     # In this class the channel_modulation is shared between ?
     # TODO-understand where this is shared.
 
-    def __init__(self, shared, norm_layer, activation_fun, orig_relus, ntasks):
+    def __init__(self, shared, norm_layer, activation_func, orig_relus, ntasks):
         super(SideAndCombShared, self).__init__()
         self.side = shared.side
         self.ntasks = ntasks
         self.norm = norm_layer(shared.filters, self.ntasks)
         self.orig_relus = orig_relus
         if not orig_relus:
-            self.relu1 = activation_fun()
-        self.relu2 = activation_fun()
+            self.relu1 = activation_func()
+        self.relu2 = activation_func()
 
     def forward(self, inputs):
         x, lateral = inputs
@@ -128,9 +134,11 @@ class Modulation(nn.Module):  # Modulation layer.
         self.task_embedding = [[] for _ in range(ntasks)]
         self.modulation = []
         if self.pixel_modulation:
-            self.size = [-1, 1, *inshapes]  # If pixel modulation matches the inner spatial of the input
+            # If pixel modulation matches the inner spatial of the input
+            self.size = [-1, 1, *inshapes]
         else:
-            self.size = [-1, inshapes, 1, 1]  # If channel modulation matches the number of channels
+            # If channel modulation matches the number of channels
+            self.size = [-1, inshapes, 1, 1]
         inshapes = np.prod(inshapes)
         for i in range(ntasks):  # allocating for every task its task embedding
             layer = nn.Linear(1, inshapes)
@@ -154,18 +162,21 @@ class Modulation(nn.Module):  # Modulation layer.
 
 
 class BasicBlockBUShared(nn.Module):
-    # Basic block of the shared part between BU1,BU2.
-    # Based at most on the ResNet pytorch's implementation.
     expansion = 1
 
-    def __init__(self, in_channels: int, out_channels: int, stride: int, use_lateral: bool,idx:int=0) -> None:
+    def __init__(self, in_channels: int, out_channels: int, stride: int, use_lateral: bool, idx: int = 0) -> None:
         """
+        Basic block of the shared part between BU1,BU2.
+        The conv layers of BU1 and BU2 are shared (with the same weights)
+        Based at most on the ResNet pytorch's implementation.
 
-        :param in_channels: in channel from the previous block.
-        :param out_channels: out channel of the block for the Next block
-        :param stride: stride to perform
-        :param use_lateral: whether to perform the lateral connection from the previous stream.
-        :param idx : The block index.
+
+        Args:
+            in_channels (int): number of input channels
+            out_channels (int): number of out channels
+            stride (int): the stride of the conv layer
+            use_lateral (bool): use lateral connections between BU1 to BU2
+            idx (int, optional): _description_. Defaults to 0.
         """
         super(BasicBlockBUShared, self).__init__()
         self.in_channels = in_channels
@@ -173,33 +184,48 @@ class BasicBlockBUShared(nn.Module):
         self.stride = stride
         self.use_lateral = use_lateral
         self.index = idx
-        self.conv1 = conv3x3(in_channels, out_channels, stride)  # changes the number of channels and the spatial shape.
-        self.conv2 = conv3x3(out_channels, out_channels)  # preserves the tensor shape
+        # changes the number of channels and the spatial shape.
+        self.conv1 = conv3x3(in_channels, out_channels, stride)
+        # preserves the tensor shape
+        self.conv2 = conv3x3(out_channels, out_channels)
         downsample = None
         if stride != 1 or in_channels != out_channels * BasicBlockBUShared.expansion:
             downsample = conv1x1(in_channels, out_channels * BasicBlockBUShared.expansion,
                                  stride)  # performs downsmaple on the lateral connection to match the shape after conv1.
         self.downsample = downsample
         if self.use_lateral:
-            self.lat1 = SideAndCombSharedBase(filters=in_channels)  # The lateral connection from the previous stream.
-            self.lat2 = SideAndCombSharedBase(filters=out_channels)  # The lateral connection from the previous stream.
-            self.lat3 = SideAndCombSharedBase(filters=out_channels)  # The lateral connection from the previous stream.
+            # The lateral connection from the previous stream.
+            self.lat1 = SideAndCombSharedBase(filters=in_channels)
+            # The lateral connection from the previous stream.
+            self.lat2 = SideAndCombSharedBase(filters=out_channels)
+            # The lateral connection from the previous stream.
+            self.lat3 = SideAndCombSharedBase(filters=out_channels)
+
 
 class BUInitialBlock(nn.Module):
+    """
+    BUInitialBlock represent the first BU block in the BU-TD-BU chain
+
+    Attributes:
+        Filters(`int`): number of filters
+        norm_layer(): The norm taken
+        activation_func(): The activation function
+    """
+
     def __init__(self, opts: argparse, shared: nn.Module) -> None:
         """
-        :param opts: The model options.
-        :param shared: The shared part between BU1, BU2.
+        :param opts: The model options. Given by arguments of the user input, parsed by `parser.py` file
+        :param shared: This is the shared layers between BU1 BU2. This part contains conv layers
         """
         super(BUInitialBlock, self).__init__()
         self.filters = opts.nfilters[0]
         self.norm_layer = opts.norm_fun
-        self.activation_fun = opts.activation_fun
+        self.activation_func = opts.activation_fun
         self.orig_relus = opts.orig_relus
         self.ntasks = opts.ntasks
         self.conv1 = nn.Sequential(shared.conv1, opts.norm_fun(self.filters, opts.ntasks),
-                                   self.activation_fun())  # The initial block downsampling from RGB.
-        self.bot_lat = SideAndCombShared(shared.bot_lat, self.norm_layer, self.activation_fun, self.orig_relus,
+                                   self.activation_func())  # The initial block downsampling from RGB.
+        self.bot_lat = SideAndCombShared(shared.bot_lat, self.norm_layer, self.activation_func, self.orig_relus,
                                          self.ntasks)  # Skip connection from the TD initial embedding.
 
     def forward(self, inputs: list[torch]) -> torch:
@@ -209,10 +235,12 @@ class BUInitialBlock(nn.Module):
         """
         x, flags, laterals_in = inputs  # The input is the image, the flag and the lateral from the previous stream.
         x = self.conv1(x)  # Compute conv1.
-        lateral_in = get_laterals(laterals_in, 0, None)  # The initial lateral connection.
+        # The initial lateral connection.
+        lateral_in = get_laterals(laterals_in, 0, None)
         if lateral_in is not None:
             x = self.bot_lat((x, lateral_in))  # Compute the skip connection.
         return x
+
 
 class BasicBlockBU(nn.Module):
     # Basic block of the BU1,BU2 streams.
@@ -236,29 +264,39 @@ class BasicBlockBU(nn.Module):
         self.idx = shared.index
         self.ntasks = ntasks
         block_inshapes = inshapes[self.idx]
-        shape_spatial = block_inshapes[1:]  # computing the shape for the channel and pixel modulation.
-        nchannels = block_inshapes[0]  # computing the shape for the channel and pixel modulation.
-        if self.flag_at is FlagAt.SF and self.is_bu2:  # If BU2 stream create the task embedding.
-            self.task_embedding = [[] for _ in range(ntasks)]  # The parameters stored as task embedding.
+        # computing the shape for the channel and pixel modulation.
+        shape_spatial = block_inshapes[1:]
+        # computing the shape for the channel and pixel modulation.
+        nchannels = block_inshapes[0]
+        # If BU2 stream create the task embedding.
+        if self.flag_at is FlagAt.SF and self.is_bu2:
+            # The parameters stored as task embedding.
+            self.task_embedding = [[] for _ in range(ntasks)]
             self.task_embedding_layers = []
             self.channel_modulation_after_conv1 = Modulation(nchannels, False,
                                                              self.ntasks)  # channel modulation after conv1
-            self.task_embedding_layers.append(self.channel_modulation_after_conv1)
+            self.task_embedding_layers.append(
+                self.channel_modulation_after_conv1)
             self.pixel_modulation_after_conv1 = Modulation(shape_spatial, True,
                                                            self.ntasks)  # pixel modulation after conv1
-            self.task_embedding_layers.append(self.pixel_modulation_after_conv1)
+            self.task_embedding_layers.append(
+                self.pixel_modulation_after_conv1)
             self.channel_modulation_after_conv2 = Modulation(nchannels, False,
                                                              self.ntasks)  # channel modulation after conv2
-            self.task_embedding_layers.append(self.channel_modulation_after_conv2)
+            self.task_embedding_layers.append(
+                self.channel_modulation_after_conv2)
             self.pixel_modulation_after_conv2 = Modulation(shape_spatial, True,
                                                            self.ntasks)  # pixel modulation after conv2
-            self.task_embedding_layers.append(self.pixel_modulation_after_conv2)
+            self.task_embedding_layers.append(
+                self.pixel_modulation_after_conv2)
             for layer in self.task_embedding_layers:  # store for each task its task embedding
                 for i in range(ntasks):
                     self.task_embedding[i].extend(layer.task_embedding[i])
 
-        self.conv1 = nn.Sequential(shared.conv1, norm_layer(nchannels, self.ntasks), activation_fun())  # conv1
-        self.conv2 = nn.Sequential(shared.conv2, norm_layer(nchannels, self.ntasks), activation_fun())  # conv2
+        self.conv1 = nn.Sequential(shared.conv1, norm_layer(
+            nchannels, self.ntasks), activation_fun())  # conv1
+        self.conv2 = nn.Sequential(shared.conv2, norm_layer(
+            nchannels, self.ntasks), activation_fun())  # conv2
         if shared.downsample is not None:
             downsample = nn.Sequential(shared.downsample, norm_layer(nchannels,
                                                                      self.ntasks))  # downsample,sometimes needed for the skip connection from the previous block.
@@ -284,7 +322,8 @@ class BasicBlockBU(nn.Module):
         """
         x, flag, laterals_in = inputs  # The inputs are the x(from the previous block or an image) , flag , the lateral connection from the last stream (if exists).
         if laterals_in is not None:
-            lateral1_in, lateral2_in, lateral3_in = laterals_in  # There are 3 connections from the last stream.
+            # There are 3 connections from the last stream.
+            lateral1_in, lateral2_in, lateral3_in = laterals_in
         laterals_out = []
         if laterals_in is not None:
             x = self.lat1((x, lateral1_in))  # perform lateral skip connection.
@@ -292,7 +331,8 @@ class BasicBlockBU(nn.Module):
         inp = x  # save the inp for the skip to the end of the block
         x = self.conv1(x)  # perform conv
 
-        if self.flag_at is FlagAt.SF and self.is_bu2:  # perform the task embedding if needed.
+        # perform the task embedding if needed.
+        if self.flag_at is FlagAt.SF and self.is_bu2:
             x = self.pixel_modulation_after_conv1(x, flag)
             x = self.channel_modulation_after_conv1(x, flag)
 
@@ -302,7 +342,8 @@ class BasicBlockBU(nn.Module):
         laterals_out.append(x)
         x = self.conv2(x)  # perform conv
 
-        if self.flag_at is FlagAt.SF and self.is_bu2:  # perform the task embedding if needed.
+        # perform the task embedding if needed.
+        if self.flag_at is FlagAt.SF and self.is_bu2:
             x = self.pixel_modulation_after_conv2(x, flag)
             x = self.channel_modulation_after_conv2(x, flag)
 
@@ -310,7 +351,8 @@ class BasicBlockBU(nn.Module):
             x = self.lat3((x, lateral3_in))
 
         laterals_out.append(x)
-        if self.downsample is not None:  # downsample the input from the beginning of the block to match the expected shape.
+        # downsample the input from the beginning of the block to match the expected shape.
+        if self.downsample is not None:
             identity = self.downsample(inp)
         else:
             identity = inp
@@ -345,30 +387,35 @@ class InitialTaskEmbedding(nn.Module):
 
         if self.model_flag is FlagAt.SF:
             self.h_flag_task_td = []  # The task embedding.
-            self.h_top_td = nn.Sequential(nn.Linear(self.top_filters * 2, self.top_filters),  self.norm_layer(self.top_filters, dims=1, num_tasks=self.ntasks), self.activation_fun())
+            self.h_top_td = nn.Sequential(nn.Linear(self.top_filters * 2, self.top_filters),  self.norm_layer(
+                self.top_filters, dims=1, num_tasks=self.ntasks), self.activation_fun())
             for i in range(self.ntasks):
-                layer = nn.Sequential(nn.Linear(1, self.top_filters // 2), self.norm_layer(self.top_filters // 2, dims=1, num_tasks=self.ntasks),  self.activation_fun())
+                layer = nn.Sequential(nn.Linear(1, self.top_filters // 2), self.norm_layer(
+                    self.top_filters // 2, dims=1, num_tasks=self.ntasks),  self.activation_fun())
                 self.h_flag_task_td.append(layer)
                 self.task_embedding[i].extend(layer.parameters())
-            self.h_flag_arg_td = nn.Sequential(nn.Linear(self.nargs, self.top_filters // 2), self.norm_layer(self.top_filters // 2, dims=1, num_tasks=self.ntasks),  self.activation_fun())
+            self.h_flag_arg_td = nn.Sequential(nn.Linear(self.nargs, self.top_filters // 2), self.norm_layer(
+                self.top_filters // 2, dims=1, num_tasks=self.ntasks),  self.activation_fun())
             self.h_flag_task_td = nn.ModuleList(self.h_flag_task_td)
             # The argument embedding.
 
             # The projection layer.
 
-
         if self.model_flag is FlagAt.TD:
             # The task embedding.
             self.h_flag_task_td = nn.Sequential(nn.Linear(self.ntasks, self.top_filters // 2),
-                                                self.norm_layer(self.top_filters // 2, dims=1, num_tasks=self.ntasks),
+                                                self.norm_layer(
+                                                    self.top_filters // 2, dims=1, num_tasks=self.ntasks),
                                                 self.activation_fun())
             # The argument embedding.
             self.h_flag_arg_td = nn.Sequential(nn.Linear(opts.nargs, self.top_filters // 2),
-                                               self.norm_layer(self.top_filters // 2, dims=1, num_tasks=self.ntasks),
+                                               self.norm_layer(
+                                                   self.top_filters // 2, dims=1, num_tasks=self.ntasks),
                                                self.activation_fun())
             # The projection layer.
             self.h_top_td = nn.Sequential(nn.Linear(self.top_filters * 2, self.top_filters),
-                                          self.norm_layer(self.top_filters, dims=1, num_tasks=self.ntasks),
+                                          self.norm_layer(
+                                              self.top_filters, dims=1, num_tasks=self.ntasks),
                                           self.activation_fun())
 
     def forward(self, inputs: tuple) -> tuple:
@@ -382,13 +429,15 @@ class InitialTaskEmbedding(nn.Module):
         task_id = flag_to_task(flag)
         flag_task = flag[:, task_id].view(-1, 1)
         if self.use_SF:
-            top_td_task = self.h_flag_task_td[task_id]( flag_task)  # Take the specific task embedding to avoid forgetting.
+            # Take the specific task embedding to avoid forgetting.
+            top_td_task = self.h_flag_task_td[task_id](flag_task)
         else:
             top_td_task = self.h_flag_task_td(task)
         top_td_task = top_td_task.view((-1, self.top_filters // 2, 1, 1))
         top_td_arg = self.h_flag_arg_td(arg)  # Embed the argument.
         top_td_arg = top_td_arg.view((-1, self.top_filters // 2, 1, 1))
-        top_td = torch.cat((top_td_task, top_td_arg), dim=1)  # Concatenate the flags
+        top_td = torch.cat((top_td_task, top_td_arg),
+                           dim=1)  # Concatenate the flags
         top_td_embed = top_td
         h_side_top_td = bu_out
         top_td = torch.cat((h_side_top_td, top_td), dim=1)
@@ -398,13 +447,14 @@ class InitialTaskEmbedding(nn.Module):
         x = top_td
         return x, top_td_embed, top_td
 
+
 class BasicBlockTD(nn.Module):
     # Basic block of the TD stream.
     # The same architecture as in BU just instead of downsampling by stride factor we upsample by stride factor.
     expansion = 1
 
     def __init__(self, in_channels, out_channels, stride, norm_layer, activation_fun, use_lateral, inshapes, ntasks,
-                 orig_relus,index):
+                 orig_relus, index):
         """
         :param in_channels: in channels from the last block.
         :param out_channels: the out channels of the block.
@@ -425,13 +475,16 @@ class BasicBlockTD(nn.Module):
         self.stride = stride
         size = tuple(self.inshapes[index - 1][0][1:])
         if use_lateral:
-            self.lat1 = SideAndComb(in_channels, norm_layer, activation_fun, orig_relus, ntasks)
-            self.lat2 = SideAndComb(in_channels, norm_layer, activation_fun, orig_relus, ntasks)
-            self.lat3 = SideAndComb(out_channels, norm_layer, activation_fun, orig_relus, ntasks)
+            self.lat1 = SideAndComb(
+                in_channels, norm_layer, activation_fun, orig_relus, ntasks)
+            self.lat2 = SideAndComb(
+                in_channels, norm_layer, activation_fun, orig_relus, ntasks)
+            self.lat3 = SideAndComb(
+                out_channels, norm_layer, activation_fun, orig_relus, ntasks)
         self.conv1 = conv3x3(in_channels, in_channels)
         self.conv1_norm = norm_layer(in_channels, self.ntasks)
         self.relu1 = activation_fun()
-        self.conv2 = conv3x3up(in_channels, out_channels,size, stride)
+        self.conv2 = conv3x3up(in_channels, out_channels, size, stride)
         self.conv2_norm = norm_layer(out_channels, self.ntasks)
         if self.orig_relus:
             self.relu2 = activation_fun()
@@ -439,10 +492,11 @@ class BasicBlockTD(nn.Module):
         upsample = None
         out_channels = out_channels * BasicBlockTD.expansion
         if stride != 1:
-            upsample = nn.Sequential(nn.Upsample(size = size, mode='bilinear', align_corners=False),
+            upsample = nn.Sequential(nn.Upsample(size=size, mode='bilinear', align_corners=False),
                                      conv1x1(in_channels, out_channels, stride=1), norm_layer(out_channels, ntasks))
         elif in_channels != out_channels:
-            upsample = nn.Sequential(conv1x1(in_channels, out_channels, stride=1), norm_layer(out_channels, ntasks))
+            upsample = nn.Sequential(
+                conv1x1(in_channels, out_channels, stride=1), norm_layer(out_channels, ntasks))
         self.upsample = upsample
 
     def forward(self, inputs):
@@ -452,7 +506,8 @@ class BasicBlockTD(nn.Module):
         """
         x, flag, laterals_in = inputs
         if laterals_in is not None:
-            lateral1_in, lateral2_in, lateral3_in = laterals_in  # There are 3 lateral connections from the last stream
+            # There are 3 lateral connections from the last stream
+            lateral1_in, lateral2_in, lateral3_in = laterals_in
         laterals_out = []
         if laterals_in is not None:
             x = self.lat1((x, lateral1_in))  # perform lateral connection1
@@ -472,7 +527,8 @@ class BasicBlockTD(nn.Module):
             x = self.lat3((x, lateral3_in))  # perform lateral connection3
         laterals_out.append(x)
         if self.upsample is not None:
-            identity = self.upsample(inp)  # Upsample the input if needed,for the skip connection.
+            # Upsample the input if needed,for the skip connection.
+            identity = self.upsample(inp)
         else:
             identity = inp
         x = x + identity  # Performs the skip connection

@@ -2,20 +2,22 @@ import os
 import pickle
 import torch
 from torch.utils.data import DataLoader
-from supp.FlagAt import *
-from supp.training_functions import *
-from supp.data_functions import *
+from supplmentery.emnist_dataset import EMNISTAdjDatasetNew2 as dataset,inputs_to_struct
+# from supp.FlagAt import *
+# from supp.training_functions import *
+# from supp.data_functions import *
 num_gpus=torch.cuda.device_count()
 
-#'/home/sverkip/data/Fashion_spatial/data/samples/6_extended'
+
 
 def get_dataset(direction,args,data_fname):
     conf_path=os.path.join(data_fname,'conf')
+    #TODO change this config file path since the pickle is not loaded
     with open(conf_path, "rb") as conf_path:
         nsamples_train, nsamples_test, nsamples_val, nclasses_existence, img_channels, LETTER_SIZE, IMAGE_SIZE, ntypes, edge_class, not_available_class, total_rows, obj_per_row, sample_nchars, ngenerate, ndirections, exclude_percentage, valid_classes, cl2let = pickle.load(
             conf_path)
+            # TODO change this pickle path ot
         nclasses = int(max(ntypes))
-    from supp.emnist_dataset import EMNISTAdjDatasetNew2 as dataset,inputs_to_struct as inputs_to_strcut
     args.inputs_to_struct=inputs_to_struct
     ndirections = 4
     train_ds = dataset(os.path.join(data_fname, 'train'), nclasses_existence, ndirections,  nexamples=nsamples_train, split=True, direction=direction)

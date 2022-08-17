@@ -2,6 +2,12 @@ from enum import Enum, auto
 
 
 class FlagAt(Enum):
+    """
+    FlagAt _summary_
+
+    Args:
+        Enum (_type_): _description_
+    """    
     BU1 = auto()
     TD = auto()
     BU2 = auto()

@@ -1,8 +1,9 @@
 import torch.nn as nn
 import torch
-from supp.general_functions import *
-from supp.FlagAt import *
-from supp.emnist_dataset import *
+from .general_functions import *
+# from FlagAt import *
+
+from emnist_dataset import *
 import argparse
 
 

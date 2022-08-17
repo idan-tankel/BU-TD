@@ -1,16 +1,21 @@
 # %% general initialization
+import matplotlib.patches as patches
+import torch.backends.cudnn as cudnn
+from torch.utils.data import DataLoader
+import argparse
+from v26.funcs import *
 import os
+import sys
 import v26.cfg as cfg
+import torch
 # running interactively uses a single GPU and plots the training results in a window
 interactive_session = False
 cfg.gpu_interactive_queue = interactive_session
 if interactive_session:
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
-from v26.funcs import *
 
 ngpus_per_node = torch.cuda.device_count()
-import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--workers',
@@ -63,7 +68,7 @@ new_avatars_dir = os.path.join(avatars_dir, 'samples')
 base_samples_dir = os.path.join(new_avatars_dir, base_tf_records_dir)
 data_fname = os.path.join(base_samples_dir, 'conf')
 results_dir = os.path.join(data_dir, 'results')
-flag_at = FlagAt.TD
+flag_at = FlagAt.NOFLAG
 # when True use a dummy dataset instead of a real one (for debugging)
 dummyds = False
 
@@ -91,7 +96,6 @@ ubs = scale_batch_size  # unified batch scale
 if num_gpus > 1:
     ubs = ubs * num_gpus
 
-from torch.utils.data import DataLoader
 if dummyds:
     from v26.avatar_dataset import AvatarDetailsDatasetDummy as dataset, inputs_to_struct_raw as inputs_to_struct
 
@@ -215,7 +219,7 @@ model_opts.use_final_conv = False
 model_opts.ntaskhead_fc = 1
 setup_flag(model_opts)
 
-#based on ResNet 18
+# based on ResNet 18
 model_opts.nfilters = [64, 64, 128, 256, 512]
 model_opts.strides = [2, 2, 2, 2, 2]
 # filter sizes
@@ -376,8 +380,8 @@ def multi_label_loss(outs, samples, nclasses):
     return loss_task
 
 
-def multi_label_loss_weighted_loss(outs, samples):
-    losses_task = multi_label_loss_base(outs, samples)
+def multi_label_loss_weighted_loss(outs, samples, nclasses: int):
+    losses_task = multi_label_loss_base(outs, samples, nclasses)
     loss_weight = samples.loss_weight
     losses_task = losses_task * loss_weight
     loss_task = losses_task.sum() / loss_weight.sum(
@@ -424,7 +428,6 @@ else:
     model_opts.task_accuracy = multi_label_accuracy
 
 # %% fit
-import torch.backends.cudnn as cudnn
 
 cudnn.benchmark = True
 
@@ -462,7 +465,9 @@ else:
                            weight_decay=train_opts.weight_decay)
 train_opts.optimizer = optimizer
 train_opts.loss_fun = loss_fun
-lmbda = lambda epoch: train_opts.learning_rates_mult[epoch]
+def lmbda(epoch): return train_opts.learning_rates_mult[epoch]
+
+
 scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lmbda)
 train_opts.scheduler = scheduler
 train_opts.checkpoints_per_epoch = args.checkpoints_per_epoch
@@ -477,7 +482,7 @@ if not interactive_session:
     # return
 
 
-#load_model(train_opts,os.path.join(model_dir,'model_latest.pt'));
+# load_model(train_opts,os.path.join(model_dir,'model_latest.pt'));
 # %% visualize predictions
 def from_network_transpose(samples, outs):
     if normalize_image:
@@ -487,9 +492,6 @@ def from_network_transpose(samples, outs):
     if model_opts.use_td_loss:
         outs.td_head = outs.td_head.transpose(0, 2, 3, 1)
     return samples, outs
-
-
-import matplotlib.patches as patches
 
 
 def get_bounding_box(mask):

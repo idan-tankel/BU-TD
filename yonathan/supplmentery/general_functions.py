@@ -1,7 +1,7 @@
 import os
 import torch
 import torch.nn as nn
-from supp.FlagAt import *
+from .FlagAt import *
 import argparse
 
 

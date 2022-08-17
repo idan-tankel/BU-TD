@@ -2,27 +2,36 @@ import os
 import argparse
 import torch.backends.cudnn as cudnn
 from torch.utils.data import DataLoader
+# import supplmentery
+from supplmentery import *
+from supplmentery.Parser import *
+from supplmentery.FlagAt import FlagAt
+from supplmentery.get_dataset import get_dataset
 # from utils.funcs import *
-from supp.Parser import *
-from supp.get_dataset import *
-from supp.create_model import *
-from supp.FlagAt import *
-from supp.emnist_dataset import inputs_to_struct as inputs_to_struct
-from supp.logger import *
-from supp.data_functions import *
-from supp.loss_and_accuracy import *
-from supp.visuialize_predctions import *
+# from supplementery.Parser import *
+# from supplementery.get_dataset import *
+# from supplementery.create_model import *
+# from supplementery.FlagAt import *
+# from supplementery.emnist_dataset import inputs_to_struct as inputs_to_struct
+# from supplementery.logger import *
+# from supplementery.data_functions import *
+# from supplementery.loss_and_accuracy import *
+# from supplementery.visuialize_predctions import *
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+dev = torch.device(
+    "cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 
 def train_emnist(embedding_idx, flag_at, processed_data, path_loading=None, train_all_model=True):
     # Getting the options for creating the model and the hyper-parameters.
-    results_dir = '/home/sverkip/data/emnist/data/results'
+    results_dir = '../data/emnist/data/results'
     parser = GetParser(flag_at, processed_data, embedding_idx, results_dir)
     # Getting the dataset for the training.
-    data_path = os.path.join('/home/sverkip/data/Emnist_NEW_version/data/samples/', processed_data)
-    [the_datasets, train_dl, test_dl, val_dl, train_dataset, test_dataset] = get_dataset(embedding_idx, parser, data_fname=data_path)
+    data_path = os.path.join(
+        '../data/new_samples/6_extended_[17]', processed_data)
+    [the_datasets, train_dl, test_dl, val_dl, train_dataset,
+        test_dataset] = get_dataset(embedding_idx, parser, data_fname=data_path)
     # Printing the model and the hyper-parameters.
     if True:  # TODO-replace with condition.
         print_detail(parser)
@@ -32,7 +41,7 @@ def train_emnist(embedding_idx, flag_at, processed_data, path_loading=None, trai
     cudnn.benchmark = True  # TODO:understand what it is.
     # Loading a pretrained model if exists.
     if path_loading is not None:
-        load_model(parser, results_dir, path_loading);
+        load_model(parser, results_dir, path_loading)
     # Deciding which parameters will be trained: if True all the model otherwise,only the task embedding.
     if train_all_model:
         learned_params = parser.model.parameters()
@@ -47,8 +56,11 @@ def train_emnist(embedding_idx, flag_at, processed_data, path_loading=None, trai
     train_model(parser, the_datasets, learned_params, embedding_idx)
     visualize(parser, train_dataset)
 
+
 def main():
-    train_emnist(embedding_idx = 0, flag_at=FlagAt.SF, processed_data='6_extended_digits', path_loading=None,  train_all_model = True)
+    train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
+                 processed_data='6_extended_digits', path_loading=None,  train_all_model=True)
+
 
 main()
 
