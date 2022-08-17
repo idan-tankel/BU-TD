@@ -5,7 +5,7 @@ import shutil
 from torchvision import transforms
 from multiprocessing import Pool
 from Create_dataset_utils import *
-from parser import Get_parser
+from get_parser import get_parser
 from Raw_data_loaders import *
 
 # TODO-assert nclasses is the correct one.
@@ -121,7 +121,7 @@ def main(language_list: list) -> None:
         language_list (list): _description_
     """    
     # Getting the option parser.
-    parser = Get_parser()
+    parser = parser()
     # Getting the raw data.
     raw_data_set = DataSet(data_dir='../data', dataset='emnist',
                            raw_data_source=parser.path_data_raw, language_list=[49])

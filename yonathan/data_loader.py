@@ -7,7 +7,7 @@ import shutil
 from torchvision import transforms
 from multiprocessing import Pool
 from Create_dataset_utils import *
-from parser import *
+from get_parser import *
 
 #TODO-assert nclasses is the correct one.
 def gen_sample(sample_id:int, is_train:bool, aug_data:transforms, OmniglotLoader:OmniglotDataLoader, nclasses:int, CHAR_SIZE:int, IMAGE_SIZE:list, example:example_class, augment_sample,num_examples_per_character:int)->Sample:
@@ -114,7 +114,7 @@ from yonathan.emnist_dataset import *
 def main(language_list:list)->None:
   #  cmd_args = parser.parse_args()
     Omniglot_loader = EmnistLoader(data_dir='/home/sverkip/data/Create_dataset_adapting_to_all_datasets/data') # Getting the raw data.
-    parser = Get_parser()
+    parser = parser()
 
 
   #  dictionary = create_dict(parser.path_data_raw)  # The dictionary assigning for each language its number of characters.

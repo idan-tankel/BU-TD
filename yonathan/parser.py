@@ -1,10 +1,12 @@
 import argparse
+import string
 
 
-def Get_parser(nchars_per_row=6, num_rows_in_the_image=1):
+def get_parser(nchars_per_row=6, num_rows_in_the_image=1):
     """
     Get_parser _summary_
 
+    #TODO change this to config.yaml or config.ini file
     Args:
         nchars_per_row (int, optional): Numbers of rows per incoming data . Defaults to 6.
         num_rows_in_the_image (int, optional): Numbers of raws in each image. Defaults to 1.
@@ -13,7 +15,8 @@ def Get_parser(nchars_per_row=6, num_rows_in_the_image=1):
         `argparse`: an object holding up all the arguments for running (coming from terminal)
     """    
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path_data_raw', default='/home/sverkip/data/omniglot/data/omniglot_all_languages',
+    parser.add_argument('--dataset', type=string, default='emnist',help='name of the dataset to use')
+    parser.add_argument('--path_data_raw', default='../data',
                         type=str, help='The Raw data path')
     parser.add_argument('--store_folder', default='../data',
                         type=str, help='The storing path')

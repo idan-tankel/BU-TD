@@ -50,6 +50,7 @@ def get_raw_data(download_dir:str, dataset:str)->tuple:
     """
     # Getting the raw train, test data.
     # __config__[dataset]
+    # to add a supporting new dataset, please change the 
     train_raw_data = DataSet.__config__[dataset]['dataset'](root = download_dir,split="balanced",train=True,download=True,transform=transforms.ToTensor())
     test_raw_data = DataSet.__config__[dataset]['dataset'](root = download_dir,split="balanced",train=False,download=True,transform=transforms.ToTensor())
     rotate = DataSet.__config__[dataset]['rotate']
