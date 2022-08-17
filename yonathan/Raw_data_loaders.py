@@ -39,10 +39,16 @@ def get_raw_data(download_dir:str, dataset:str)->tuple:
         dataset: The dataset type e.g. emnist, cifar10.
 
     Returns: The images, labels, the raw character size, the number of channels.
+    As a tuple images_arranged, labels_arranged, letter_size,nchannels
+    #TODO change this to class attribute (?)
+    # this will be kept within memory as a tuple otherwise
+    # is that efficient?
+    # as seen here
+    # https://pytorch.org/tutorials/beginner/basics/data_tutorial.html
+    #  in the original class all the info is saved under the Dataset object
+    # Might be helpufl
     """
     # Getting the raw train, test data.
-    train_raw_data,test_raw_data, rotate = None,None,None
-    nchannels = 1
     # __config__[dataset]
     train_raw_data = DataSet.__config__[dataset]['dataset'](root = download_dir,split="balanced",train=True,download=True,transform=transforms.ToTensor())
     test_raw_data = DataSet.__config__[dataset]['dataset'](root = download_dir,split="balanced",train=False,download=True,transform=transforms.ToTensor())

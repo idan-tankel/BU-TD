@@ -6,8 +6,12 @@ from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from types import SimpleNamespace
 
+
 class CharInfo:
-    def __init__(self,label:int, label_idx:int, im:np.array, stx:int, endx:int, sty:int, endy:int, edge_to_the_right:bool):
+    """
+     _summary_
+    """    
+    def __init__(self, label: int, label_idx: int, im: np.array, stx: int, endx: int, sty: int, endy: int, edge_to_the_right: bool):
         """
         ImageInfo class.
         Args:
@@ -29,8 +33,15 @@ class CharInfo:
         self.endy = endy
         self.edge_to_the_right = edge_to_the_right
 
+
 class Sample:
-    #Class containing all information about the sample, including the image, the flags, the label task.
+    """
+     _summary_
+        This class represent a single sample in the dataset
+
+    """
+    # Class containing all information about the sample, including the image, the flags, the label task.
+
     def __init__(self, infos, image, sample_id, label_existence, label_ordered, query_part_id, label_task, flag, is_train):
         """
         #Class containing all information about the sample, including the image, the flags, the label task.
@@ -55,8 +66,13 @@ class Sample:
         self.flag = flag
         self.is_train = is_train
 
+
 class ExampleClass:
-    def __init__(self,sample:Sample,query_part_id:int,adj_type:int,chars:list):
+    """
+     _summary_
+    """
+
+    def __init__(self, sample: Sample, query_part_id: int, adj_type: int, chars: list):
         """
         Args:
             sample: The sample.
@@ -69,9 +85,14 @@ class ExampleClass:
         self.adj_type = adj_type
         self.chars = chars
 
+
 class GetAugData:
+    """
+     _summary_
+    """
     # Class returning for a given image size a data augmentation transform.
-    def __init__(self,image_size:tuple):
+
+    def __init__(self, image_size: tuple):
         """
         Args:
             image_size: The image size.
@@ -81,21 +102,28 @@ class GetAugData:
         color_add_range = int(0.2 * 255)
         rotate_deg = 2
         # translate by -20 to +20 percent (per axis))
-        aug = iaa.Sequential( [iaa.Affine(  translate_percent={   "x": (-0.1, 0.1),  "y": (-0.05, 0.05) },  rotate=(-rotate_deg, rotate_deg), mode='edge', name='affine'), ], random_state=0)
+        aug = iaa.Sequential([iaa.Affine(translate_percent={
+                             "x": (-0.1, 0.1),  "y": (-0.05, 0.05)},  rotate=(-rotate_deg, rotate_deg), mode='edge', name='affine'), ], random_state=0)
         aug_nn_interpolation = aug.deepcopy()
         aff_aug = aug_nn_interpolation.find_augmenters_by_name('affine')[0]
         aff_aug.order = iap.Deterministic(0)
         self.aug_nn_interpolation = aug_nn_interpolation
         # this will be used to add random color to the segmented avatar but not the segmented background.
-        aug.append(iaa.Add(  (-color_add_range,color_add_range)))  # only for the image not the segmentation
+        # only for the image not the segmentation
+        aug.append(iaa.Add((-color_add_range, color_add_range)))
         self.aug = aug
         self.image_size = image_size
+
 
 class DataAugmentClass:
     """
     class performing the augmentation.
+    #TODO thic class only holds the information about the augmentation
+    #  Is it relevant? the aug_data object is rich enough for that...
+    # maybe expand the existing class
     """
-    def __init__(self, image:np.array, label_existence:np.array, aug_data:transforms):
+
+    def __init__(self, image: np.array, label_existence: np.array, aug_data: transforms):
         """
         Args:
             image: The image we want to augment.
@@ -104,7 +132,7 @@ class DataAugmentClass:
         """
         self.images = image[np.newaxis]
         self.labels = label_existence[np.newaxis]
-        self.batch_range = range(1)
+        self.batch_range = range(1) #what?
         self.aug_data = aug_data
 
     def get_batch_base(self):
@@ -112,7 +140,8 @@ class DataAugmentClass:
         image = batch_data.images[0]
         return image
 
-def get_batch_base(aug_data_struct:DataAugmentClass)->SimpleNamespace:
+
+def get_batch_base(aug_data_struct: DataAugmentClass) -> SimpleNamespace:
     """
     Args:
         aug_data_struct: The augmentation data struct.
@@ -121,12 +150,12 @@ def get_batch_base(aug_data_struct:DataAugmentClass)->SimpleNamespace:
 
     """
     batch_range = aug_data_struct.batch_range
-    batch_images =aug_data_struct.images[batch_range]
+    batch_images = aug_data_struct.images[batch_range]
     batch_labels = aug_data_struct.labels[batch_range]
 
     aug_data = aug_data_struct.aug_data
     augment_type = 'aug_package'
-    if aug_data.augment:
+    if aug_data.augment: 
         aug_seed = aug_data.aug_seed
         if augment_type == 'aug_package':
             aug = aug_data.aug
@@ -140,9 +169,13 @@ def get_batch_base(aug_data_struct:DataAugmentClass)->SimpleNamespace:
     result.size = len(batch_images)
     return result
 
+
 class CharacterTransforms:
+    """
+     _summary_
+    """    
    # def __init__(self, prng: random, letter_size: int, label_ids: list, samplei: int, sample_chars: int, total_rows:,   obj_per_row, IMAGE_SIZE, sample_nchars):
-    def __init__(self,parser:argparse, prng:random,label_ids:list,samplei:int,sample_chars:int ):
+    def __init__(self, parser: argparse, prng: random, label_ids: list, samplei: int, sample_chars: int):
         """
         Args:
             parser: The options parser.
@@ -163,10 +196,11 @@ class CharacterTransforms:
 
         shift = prng.rand(2) * (maxshift - minshift) + minshift
         y, x = shift.astype(np.int)
-        origr, origc = np.unravel_index(samplei, [parser.num_rows_in_the_image, parser.nchars_per_row])
+        origr, origc = np.unravel_index(
+            samplei, [parser.num_rows_in_the_image, parser.nchars_per_row])
         c = origc + 1  # start from column 1 instead of 0
         r = origr
-        _ , imageh , imagew = parser.image_size
+        _, imageh, imagew = parser.image_size
         stx = c * parser.letter_size + x
         stx = max(0, stx)
         stx = min(stx, imagew - new_size)
@@ -175,4 +209,5 @@ class CharacterTransforms:
         sty = min(sty, imageh - new_size)
         self.location_x = stx
         self.location_y = sty
-        self.edge_to_the_right = origc == parser.nchars_per_row - 1 or samplei == parser.sample_nchars - 1
+        self.edge_to_the_right = origc == parser.nchars_per_row - \
+            1 or samplei == parser.sample_nchars - 1

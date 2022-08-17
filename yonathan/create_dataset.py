@@ -1,12 +1,11 @@
 import sys
 import datetime
-# for copying the generating script
-import __main__ as mainmod
+import __main__ as mainmod # for copying the generating script
 import shutil
 from torchvision import transforms
 from multiprocessing import Pool
 from Create_dataset_utils import *
-from parser import *
+from parser import Get_parser
 from Raw_data_loaders import *
 
 # TODO-assert nclasses is the correct one.
@@ -43,6 +42,7 @@ def gen_sample(parser: argparse, sample_id: int, is_train: bool, aug_data: trans
     # even for grayscale images, store them as 3 channels RGB like
     if image.shape[0] == 1:
         image = np.concatenate((image, image, image), axis=0)
+        # TODO wyhy?
     # Making RGB.
     image = image * 255
     image = image.astype(np.uint8)
@@ -242,7 +242,6 @@ def main(language_list: list) -> None:
         ranges = np.linspace(0, cur_nexamples, cur_njobs + 1).astype(int)
         # in case there are fewer ranges than jobs
         ranges = np.unique(ranges)
-        all_args = []
         jobs_range = range(len(ranges) - 1)
         # Iterating for each job and generate the needed number of samples.
         for job_id in jobs_range:
@@ -251,13 +250,13 @@ def main(language_list: list) -> None:
             # Preparing the arguments for the generation.
             args = (parser, raw_data_set, job_id, range_start, range_stop,
                     examples[range_start:range_stop], storage_dir, ds_type, augment_sample)
-            all_args.append(args)
             if not local_multiprocess:
                 gen_samples(*args)  # Calling the generation function.
         if local_multiprocess:
             with Pool(cur_njobs) as process:
                 # Calling the generation function.
-                process.starmap(gen_samples, all_args)
+                # this sould be a list of 
+                process.starmap(gen_samples, [args])
 
     print('done')  # Done creating and storing the samples.
     # store the dataset's properties.
