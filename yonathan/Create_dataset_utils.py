@@ -85,6 +85,7 @@ def AddCharacterToExistingImage(DataLoader:DataSet, image:np.array, char:CharInf
         char: The character we desire to add.
 
     Returns: The new image and the info about the character.
+    """
 
 class OmniglotDataLoader(data.Dataset):
     """

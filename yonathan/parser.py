@@ -1,5 +1,8 @@
+import os
 import argparse
 import string
+import yaml
+from types import SimpleNamespace
 
 
 def get_parser(nchars_per_row=6, num_rows_in_the_image=1):
@@ -15,7 +18,7 @@ def get_parser(nchars_per_row=6, num_rows_in_the_image=1):
         `argparse`: an object holding up all the arguments for running (coming from terminal)
     """    
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', type=string, default='emnist',help='name of the dataset to use')
+    parser.add_argument('--dataset', type=str, default='emnist',help='name of the dataset to use')
     parser.add_argument('--path_data_raw', default='../data',
                         type=str, help='The Raw data path')
     parser.add_argument('--store_folder', default='../data',
@@ -26,8 +29,8 @@ def get_parser(nchars_per_row=6, num_rows_in_the_image=1):
                         help='Whether to split the folder into parts.')
     parser.add_argument('--folder_size', default=1000,
                         type=int, help=' The folder size')
-    parser.add_argument('--augment_sample', default=True,
-                        type=bool, help='Whether to augment the sample')
+    parser.add_argument('--augment_data', default=True,
+                        type=bool, help='Whether to augment the data')
     parser.add_argument('--letter_size', default=28,
                         type=int, help='The basic letter size')
     parser.add_argument('--threads', default=10, type=int,
@@ -61,3 +64,20 @@ def get_parser(nchars_per_row=6, num_rows_in_the_image=1):
     parser.add_argument('--sample_nchars', default=nchars_per_row * num_rows_in_the_image,
                         type=int,   help='The number of characters in each image')
     return parser.parse_args()
+
+def get_config():
+    """
+    Get_config _summary_
+
+    Returns:
+        `namespace`: an object holding up all the arguments for running (coming from config file)
+    """
+
+    real_path = os.path.realpath(__file__)
+    dir_path = os.path.dirname(real_path)
+    full_path = f"{dir_path}/create_config.yaml"
+    with open(full_path, 'r') as stream:
+            config_as_dict = yaml.safe_load(stream)
+    config_as_namespace= SimpleNamespace(**config_as_dict)
+    config_as_namespace.sample_nchars = config_as_namespace.nchars_per_row * config_as_namespace.num_rows_in_the_image
+    return config_as_namespace

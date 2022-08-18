@@ -2,11 +2,13 @@ import sys
 import datetime
 import __main__ as mainmod # for copying the generating script
 import shutil
+from webbrowser import get
 from torchvision import transforms
 from multiprocessing import Pool
 from Create_dataset_utils import *
-from parser import get_parser
+from parser import get_config, get_parser
 from Raw_data_loaders import *
+from typing import Union
 
 # TODO-assert nclasses is the correct one.
 
@@ -30,8 +32,9 @@ def gen_sample(parser: argparse, sample_id: int, is_train: bool, aug_data: trans
     infos = []  # Stores all the information about the characters.
     for char in example.chars:  # Iterate over each chosen character.
         # Adding the character to the image.
-        image, info = AddCharacterToExistingImage(dataloader, image, char)
+        image, info = AddCharacterToExistingImage(dataloader, image, char,CHAR_SIZE=parser.letter_size,num_examples_per_character=parser.num_examples_per_character)
         infos.append(info)  # Adding to the info about the characters.
+    # TODO test if this is char size or letter size
     # Making label_existence flag.
     label_existence = Get_label_existence(infos, dataloader.nclasses)
     # the characters in order as seen in the image
@@ -57,7 +60,7 @@ def gen_sample(parser: argparse, sample_id: int, is_train: bool, aug_data: trans
     return sample  # Returning the sample we are going to store.
 
 
-def gen_samples(parser: argparse, dataloader: DataSet, job_id: int, range_start: int, range_stop: int, examples: list, storage_dir: str, ds_type: str, augment_sample: bool) -> None:
+def gen_samples(parser: Union[SimpleNamespace,argparse.Namespace], dataloader: DataSet, job_id: int, range_start: int, range_stop: int, examples: list, storage_dir: str, ds_type: str, augment_sample: bool) -> None:
     """
     Generates and stored samples, by calling to create_sample and store_sample_disk_pytorch.
     Args:
@@ -122,6 +125,8 @@ def main(language_list: list) -> None:
     """    
     # Getting the option parser.
     parser = get_parser()
+    config = get_config()
+    parser = config
     # Getting the raw data.
     raw_data_set = DataSet(data_dir='../data', dataset='emnist',
                            raw_data_source=parser.path_data_raw, language_list=[49])
@@ -154,7 +159,7 @@ def main(language_list: list) -> None:
     generalize = parser.generalize
     # The number of samples each job should handle.
     job_chunk_size = parser.job_chunk_size
-    augment_sample = parser.augment_sample
+    augment_data = parser.augment_data
     # Use multiprocessing on this machine
     local_multiprocess = njobs > 1
     image_ids = set()
@@ -249,7 +254,7 @@ def main(language_list: list) -> None:
             range_stop = ranges[job_id + 1]
             # Preparing the arguments for the generation.
             args = (parser, raw_data_set, job_id, range_start, range_stop,
-                    examples[range_start:range_stop], storage_dir, ds_type, augment_sample)
+                    examples[range_start:range_stop], storage_dir, ds_type, augment_data)
             if not local_multiprocess:
                 gen_samples(*args)  # Calling the generation function.
         if local_multiprocess:
