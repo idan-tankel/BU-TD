@@ -39,6 +39,8 @@ class Sample:
      _summary_
         This class represent a single sample in the dataset
         
+        TODO: add also method to this class [create_example?]
+        
         Attributes:
             infos: All information about all characters in the image.
             image: The image.

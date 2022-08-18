@@ -132,7 +132,7 @@ def main(language_list:list)->None:
     ngenerate = parser.ngenerate                   # The number of queries to create for each sample.
     nclasses = Omniglot_loader.nclasses            # The number of classes in the dataset.
     single_feat_to_generate = parser.single_feat_to_generate # Whether to create single query per sample.
-    valid_classes = Get_valid_classes(parser, nclasses)  # The valid classes, relevant for mnist.
+    valid_classes = get_valid_classes(nclasses=nclasses,use_only_valid_classes=parser.use_only_valid_classes)  # The valid classes, relevant for mnist.
     ndirections = parser.ndirections               # The number of directions we want to query about.
     generalize = parser.generalize   # Whether to create the combinatorial generalization dataset.
     job_chunk_size = parser.job_chunk_size # The number of samples each job should handle.

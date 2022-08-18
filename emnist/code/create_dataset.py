@@ -733,8 +733,6 @@ def main():
                 char.id = sample_chars[samplei]
                 scale = prng.rand() * (maxscale - minscale) + minscale
                 new_size = int(scale * LETTER_SIZE)
-                char.s_id = s_ids[samplei]
-                char.id = sample_chars[samplei]
                 char.scale = scale
                 shift = prng.rand(2) * (maxshift - minshift) + minshift
                 y, x = shift.astype(np.int32)

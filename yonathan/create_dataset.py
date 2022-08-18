@@ -41,7 +41,7 @@ def gen_sample(parser: argparse, sample_id: int, is_train: bool, aug_data: trans
     # TODO change this part to not support only omniglot
 
 
-    info = create_info_object()
+    info = create_info_object(example=example)
 
     # Making label_existence flag.
     label_existence = get_label_existence(infos, dataloader.nclasses)
@@ -159,7 +159,7 @@ def main(language_list: list) -> None:
     # Whether to create single query per sample.
     single_feat_to_generate = parser.single_feat_to_generate
     # The valid classes, relevant for mnist.
-    valid_classes = Get_valid_classes(parser, nclasses)
+    valid_classes = get_valid_classes(nclasses = nclasses,use_only_valid_classes = parser.use_only_valid_classes)
     # The number of directions we want to query about.
     ndirections = parser.ndirections
     # Whether to create the combinatorial generalization dataset.

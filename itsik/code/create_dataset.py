@@ -348,6 +348,32 @@ def gen_samples(job_id, range_start, range_stop, examples, storage_dir,
                 img_channels, augment_sample, max_value_features, grayscale,
                 use_natural_background, bg_fnames, grayscale_as_rgb,
                 folder_split, folder_size):
+    """
+    gen_samples _summary_
+
+    Args:
+        job_id (_type_): _description_
+        range_start (_type_): _description_
+        range_stop (_type_): _description_
+        examples (_type_): _description_
+        storage_dir (_type_): _description_
+        ds_type (_type_): _description_
+        storage_type (_type_): _description_
+        raw_data_fname (_type_): _description_
+        job_chunk_size (_type_): _description_
+        img_channels (_type_): _description_
+        augment_sample (_type_): _description_
+        max_value_features (_type_): _description_
+        grayscale (_type_): _description_
+        use_natural_background (_type_): _description_
+        bg_fnames (_type_): _description_
+        grayscale_as_rgb (_type_): _description_
+        folder_split (_type_): _description_
+        folder_size (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """                
 
     images_raw, masks_raw, labels_raw, npersons, total_bins, PERSON_SIZE, IMAGE_SIZE = load_raw_data(
         raw_data_fname)

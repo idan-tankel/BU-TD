@@ -3,6 +3,7 @@ import numpy as np
 import skimage.transform
 from PIL import Image
 import pickle
+from multipledispatch import dispatch
 from Raw_data_loaders import *
 from Create_dataset_classes import *
 from Create_dataset_classes import ExampleClass
@@ -43,11 +44,51 @@ def get_label_existence(infos: list, nclasses: int) -> np.array:
     label_existence = np.array(label)
     return label_existence
 
-def create_info_object():
+def create_info_object(example):
     """
     create_info_object _summary_
     """    
-    pass
+    infos = []
+    for person in example.persons:
+        person_id = person.id
+        s_id = person.s_id
+        ims = images_raw
+        msks = masks_raw
+        lbs = labels_raw
+        im = ims[s_id]
+        label = lbs[s_id]
+        mask = msks[s_id]
+        scale = person.scale
+        sz = scale * np.array([PERSON_SIZE, PERSON_SIZE])
+        sz = sz.astype(int)
+        h, w = sz
+        im = skimage.transform.resize(im, sz, mode='constant')
+        if grayscale:
+            im = color.rgb2gray(im)
+        mask = skimage.transform.resize(mask, sz, mode='constant')
+        stx = person.location_x
+        endx = stx + w
+        sty = person.location_y
+        endy = sty + h
+        # this is a view into the image and when it changes the image also changes
+        part = image[sty:endy, stx:endx]
+        if not grayscale:
+            mask = mask[:, :, np.newaxis]
+            mask = np.concatenate((mask, mask, mask), axis=2)
+        rng = mask > 0
+        part[rng] = mask[rng] * im[rng] + (1 - mask[rng]) * part[rng]
+        info = SimpleNamespace()
+        info.person_id = person_id
+        info.s_id = s_id
+        info.label = label
+        info.im = im
+        info.mask = mask
+        info.stx = stx
+        info.endx = endx
+        info.sty = sty
+        info.endy = endy
+        infos.append(info)
+    return infos
 
 
 
@@ -80,7 +121,7 @@ def store_sample_disk(sample:Sample, store_dir:str, folder_split:bool,folder_siz
     with open(data_fname, "wb") as new_data_file:
         pickle.dump(sample, new_data_file)
         
-
+@dispatch(DataSet,np.array,CharInfo)
 def addCharacterToExistingImage(DataLoader:DataSet, image:np.array, char:CharInfo)->tuple:
     """
     Function Adding a character to a given image.
@@ -136,7 +177,7 @@ class OmniglotDataLoader(data.Dataset):
 
   # Function Adding a character to a given image.
 
-
+@dispatch(OmniglotDataLoader,np.array,CharInfo,int)
 def addCharacterToExistingImage(OmniglotDataLoader:OmniglotDataLoader, image:np.array, char:CharInfo,num_examples_per_character:int)->None:
     """
     :param OmniglotDataLoader: The Omniglot data-loader.
@@ -346,13 +387,12 @@ def create_examples_per_sample(examples,sample_chars,chars, prng, adj_types,ncha
 # Only for emnist.
 
 
-def Get_valid_classes(parser, nclasses):
+def get_valid_classes(nclasses: int,use_only_valid_classes = True):
     """
-    :param parser: 
+    :param use_only_valid_classes: Whether to use only valid classes.
     :param nclasses: 
-    :return: 
+    :return: np.array of valid classes to the last layer.
     """
-    use_only_valid_classes = parser.use_only_valid_classes  # False #CHANGE IN EMNIST TO TRUE
     if use_only_valid_classes:
         # remove some characters which are very similar to other characters
         # ['O', 'F', 'q', 'L', 't', 'g', 'C', 'S', 'I', 'B', 'Y', 'n', 'b', 'X', 'r', 'H', 'P', 'G']
