@@ -302,7 +302,7 @@ def gen_sample(sample_id, is_train, aug_data, grayscale_as_rgb, images_raw,
         info.endy = endy
         info.edge_to_the_right = char.edge_to_the_right
         infos.append(info)
-
+    
     # create two of the labels: existence and ordered
     label = np.zeros(nclasses)
     for info in infos:

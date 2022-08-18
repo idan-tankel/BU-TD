@@ -128,6 +128,7 @@ class DataSet(data.Dataset):
          self.images, self.labels, self.letter_size, self.nchannels = get_raw_data(download_raw_data_dir, dataset = dataset)
         else:
          self.images, self.labels, self.letter_size, self.nchannels = get_raw_data_omniglot(language_list,raw_data_source )
+        self.dataset_name = dataset
         self.nclasses = len(set(self.labels))
         self.num_examples_per_character = len(self.labels) // self.nclasses
 

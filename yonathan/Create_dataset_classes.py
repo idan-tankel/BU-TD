@@ -38,6 +38,18 @@ class Sample:
     """
      _summary_
         This class represent a single sample in the dataset
+        
+        Attributes:
+            infos: All information about all characters in the image.
+            image: The image.
+            id: The id.
+            label_existence: The label existence.
+            label_ordered: The label ordered, containing all the characters arranged.
+            query_part_id: The index we query about.
+            label_task: The label task.
+            flag: The flag.
+            is_train: Whether the sample is part of the training set.
+
 
     """
     # Class containing all information about the sample, including the image, the flags, the label task.
@@ -70,6 +82,9 @@ class Sample:
 class ExampleClass:
     """
      _summary_
+
+
+     #TODO what is the difference between this and the above class?
     """
 
     def __init__(self, sample: Sample, query_part_id: int, adj_type: int, chars: list):

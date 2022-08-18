@@ -8,8 +8,7 @@ from Create_dataset_classes import *
 from Create_dataset_classes import ExampleClass
 
 
-
-def Get_label_ordered(infos:list) -> np.array:
+def get_label_ordered(infos:list) -> np.array:
     """
     Args:
         infos: The information about all characters.
@@ -30,7 +29,7 @@ def Get_label_ordered(infos:list) -> np.array:
     return label_ordered
 
 
-def Get_label_existence(infos: list, nclasses: int) -> np.array:
+def get_label_existence(infos: list, nclasses: int) -> np.array:
     """
     Args:
         infos: The information about the sample.
@@ -43,6 +42,12 @@ def Get_label_existence(infos: list, nclasses: int) -> np.array:
         label[info.label] = 1  # Set 1 in the label.
     label_existence = np.array(label)
     return label_existence
+
+def create_info_object():
+    """
+    create_info_object _summary_
+    """    
+    pass
 
 
 
@@ -76,7 +81,7 @@ def store_sample_disk(sample:Sample, store_dir:str, folder_split:bool,folder_siz
         pickle.dump(sample, new_data_file)
         
 
-def AddCharacterToExistingImage(DataLoader:DataSet, image:np.array, char:CharInfo)->tuple:
+def addCharacterToExistingImage(DataLoader:DataSet, image:np.array, char:CharInfo)->tuple:
     """
     Function Adding a character to a given image.
     Args:
@@ -132,7 +137,7 @@ class OmniglotDataLoader(data.Dataset):
   # Function Adding a character to a given image.
 
 
-def AddCharacterToExistingImage(OmniglotDataLoader:OmniglotDataLoader, image:np.array, char:CharInfo, CHAR_SIZE:list, num_examples_per_character:int)->None:
+def addCharacterToExistingImage(OmniglotDataLoader:OmniglotDataLoader, image:np.array, char:CharInfo,num_examples_per_character:int)->None:
     """
     :param OmniglotDataLoader: The Omniglot data-loader.
     :param image: The image we desire to add a character to.
@@ -306,6 +311,10 @@ def Get_sample_chars(prng:random, valid_pairs:np.array,is_test:bool,valid_classe
 
 def create_examples_per_sample(examples,sample_chars,chars, prng, adj_types,ncharacters_per_image,single_feat_to_generate,is_test,is_val,ngenerate):
     """
+    This function is used to craete a lot of examples from a single sample. These will be kept in `Examples` class
+    
+
+
     :param examples: The sample examples list.
     :param sample_chars: The sampled characters list.
     :param chars: The list of all information about all h
@@ -357,7 +366,7 @@ def Get_valid_classes(parser, nclasses):
     return valid_classes
 
 
-def Get_data_dir(parser, store_folder, language_list):
+def get_data_dir(parser, store_folder, language_list):
     """
     :param parser: 
     :param store_folder: 

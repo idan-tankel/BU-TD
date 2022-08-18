@@ -167,6 +167,36 @@ def gen_sample(sample_id, is_train, aug_data, grayscale,
                img_channels, total_bins, images_raw, labels_raw, masks_raw,
                PERSON_SIZE, IMAGE_SIZE, example, augment_sample,
                max_value_features, npersons):
+    """
+    gen_sample is the main function to add sample information above the raw data created by torch.utils.data.Dataset.
+    
+    Right now the sample is being saved / copied as an object of a totally new class Sample. 
+
+    #TODO transfer the sample information to be within the dataset, under an attributes of the DataSet class (abstraction created)
+
+    Args:
+        sample_id (int): the id of the sample
+        is_train (bool): If this sample is part of the train dataset or part of the test dataset
+        aug_data (_type_): _description_
+        grayscale (_type_): _description_
+        use_natural_background (_type_): _description_
+        bg_images (_type_): _description_
+        grayscale_as_rgb (_type_): _description_
+        img_channels (_type_): _description_
+        total_bins (_type_): _description_
+        images_raw (_type_): _description_
+        labels_raw (_type_): _description_
+        masks_raw (_type_): _description_
+        PERSON_SIZE (_type_): _description_
+        IMAGE_SIZE (_type_): _description_
+        example (_type_): _description_
+        augment_sample (_type_): _description_
+        max_value_features (_type_): _description_
+        npersons (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """               
     # start by creating the image background
     if use_natural_background:
         bg_index = example.bg_index
@@ -237,6 +267,10 @@ def gen_sample(sample_id, is_train, aug_data, grayscale,
     label_all = label.flatten()
     loss_weight = loss_weight.flatten()
 
+
+
+
+    # this is the get_label_existance function
     label_existence = np.zeros(npersons)
     for info in infos:
         label_existence[info.person_id] = 1

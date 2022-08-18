@@ -2,6 +2,7 @@ import sys
 import datetime
 import __main__ as mainmod # for copying the generating script
 import shutil
+import numpy as np
 from webbrowser import get
 from torchvision import transforms
 from multiprocessing import Pool
@@ -30,15 +31,22 @@ def gen_sample(parser: argparse, sample_id: int, is_train: bool, aug_data: trans
     # start by creating the image background(all black)
     image = 0 * np.ones(parser.image_size, dtype=np.float32)
     infos = []  # Stores all the information about the characters.
-    for char in example.chars:  # Iterate over each chosen character.
-        # Adding the character to the image.
-        image, info = AddCharacterToExistingImage(dataloader, image, char,CHAR_SIZE=parser.letter_size,num_examples_per_character=parser.num_examples_per_character)
-        infos.append(info)  # Adding to the info about the characters.
+    # since example.chars is empty, this is for omniglot only (probably) #TODO
+    if dataloader.dataset_name == 'omniglot':
+        for char in example.chars:  # Iterate over each chosen character.
+            # Adding the character to the image.
+            image, info = addCharacterToExistingImage(dataloader, image, char,CHAR_SIZE=parser.letter_size,num_examples_per_character=10)
+            infos.append(info)  # Adding to the info about the characters.
     # TODO test if this is char size or letter size
+    # TODO change this part to not support only omniglot
+
+
+    info = create_info_object()
+
     # Making label_existence flag.
-    label_existence = Get_label_existence(infos, dataloader.nclasses)
+    label_existence = get_label_existence(infos, dataloader.nclasses)
     # the characters in order as seen in the image
-    label_ordered = Get_label_ordered(infos)
+    label_ordered = get_label_ordered(infos)
     # instruction and task label
     label_task, flag = Get_label_task(
         example, infos, label_ordered, dataloader.nclasses)
@@ -93,8 +101,7 @@ def gen_samples(parser: Union[SimpleNamespace,argparse.Namespace], dataloader: D
     for k in range(len(ranges) - 1):  # Splitting into consecutive jobs.
         range_start = ranges[k]
         range_stop = ranges[k + 1]
-        print('%s: job %d. processing: %s-%d-%d' %
-              (datetime.datetime.now(), job_id, ds_type, range_start, range_stop - 1))
+        print(f'{datetime.datetime.now()}: job {job_id}. processing: {ds_type}-{range_start}-{range_stop - 1}')
         # Making the path.
         cur_samples_dir = os.path.join(storage_dir, ds_type)
         # creating the train/test/val paths is needed.
@@ -169,7 +176,7 @@ def main(language_list: list) -> None:
 
     # each 'job' processes several chunks. Each chunk is of 'storage_batch_size' samples
     # Get the storage dir for the data and for the conf file.
-    conf_data_fname, storage_dir = Get_data_dir(
+    conf_data_fname, storage_dir = get_data_dir(
         parser, parser.store_folder, language_list)
     if parser.create_all_directions:  # Creating the possible tasks
         avail_adj_types = range(ndirections)
