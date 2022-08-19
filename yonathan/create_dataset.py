@@ -41,7 +41,7 @@ def gen_sample(parser: argparse, sample_id: int, is_train: bool, aug_data: trans
     # TODO change this part to not support only omniglot
 
 
-    info = create_info_object(example=example)
+    # info = create_info_object(example=example)
 
     # Making label_existence flag.
     label_existence = get_label_existence(infos, dataloader.nclasses)

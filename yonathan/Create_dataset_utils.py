@@ -121,7 +121,7 @@ def store_sample_disk(sample:Sample, store_dir:str, folder_split:bool,folder_siz
     with open(data_fname, "wb") as new_data_file:
         pickle.dump(sample, new_data_file)
         
-@dispatch(DataSet,np.array,CharInfo)
+@dispatch(DataSet,np.ndarray,CharInfo)
 def addCharacterToExistingImage(DataLoader:DataSet, image:np.array, char:CharInfo)->tuple:
     """
     Function Adding a character to a given image.
