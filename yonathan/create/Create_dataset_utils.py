@@ -2,12 +2,12 @@ import os
 import numpy as np
 import skimage.transform
 from PIL import Image
+from torch.utils.data import Dataset
 import pickle
 from multipledispatch import dispatch
-from Raw_data_loaders import *
-from Raw_data_loaders import DataSet
-from Create_dataset_classes import *
-from Create_dataset_classes import ExampleClass,CharInfo
+from create.Raw_data_loaders import DataSet
+from create.Create_dataset_classes import *
+from create.Create_dataset_classes import ExampleClass,CharInfo
 
 
 def get_label_ordered(infos: list) -> np.array:
@@ -167,7 +167,7 @@ def addCharacterToExistingImage(DataLoader, image: np.ndarray, char: CharInfo, n
     return image, info  # Return the image, the character info.
 
 
-class OmniglotDataLoader(data.Dataset):
+class OmniglotDataLoader(Dataset):
     """
     Return data loader for omniglot.
     """

@@ -6,11 +6,14 @@ import numpy as np
 from webbrowser import get
 from torchvision import transforms
 from multiprocessing import Pool
-from Create_dataset_utils import *
-from Create_dataset_utils import addCharacterToExistingImage
+from create.Create_dataset_utils import *
+from create.Create_dataset_utils import addCharacterToExistingImage
 from parser import get_config, get_parser
-from Raw_data_loaders import *
+from create.Raw_data_loaders import *
 from typing import Union
+from create.Create_dataset_utils import *
+from create.Create_dataset_classes import *
+from create.Raw_data_loaders import *
 
 # TODO-assert nclasses is the correct one.
 

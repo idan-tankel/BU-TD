@@ -75,9 +75,9 @@ def get_config():
 
     real_path = os.path.realpath(__file__)
     dir_path = os.path.dirname(real_path)
-    full_path = f"{dir_path}/create_config.yaml"
+    full_path = f"{dir_path}/Configs/create_config.yaml"
     with open(full_path, 'r') as stream:
-            config_as_dict = yaml.safe_load(stream)
+        config_as_dict = yaml.safe_load(stream)
     config_as_namespace= SimpleNamespace(**config_as_dict)
     config_as_namespace.sample_nchars = config_as_namespace.nchars_per_row * config_as_namespace.num_rows_in_the_image
     return config_as_namespace

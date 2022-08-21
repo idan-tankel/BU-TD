@@ -1,5 +1,6 @@
 import os
 import argparse
+from torch import device
 import torch.backends.cudnn as cudnn
 from torch.utils.data import DataLoader
 # import supplmentery
@@ -7,6 +8,9 @@ from supplmentery import *
 from supplmentery.Parser import *
 from supplmentery.FlagAt import FlagAt
 from supplmentery.get_dataset import get_dataset
+from Configs.Config import Config
+# from {Package.module} import {class}
+
 # from utils.funcs import *
 # from supplementery.Parser import *
 # from supplementery.get_dataset import *
@@ -19,11 +23,18 @@ from supplmentery.get_dataset import get_dataset
 # from supplementery.visuialize_predctions import *
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-dev = torch.device(
-    "cuda") if torch.cuda.is_available() else torch.device("cpu")
+dev = device("cuda") if torch.cuda.is_available() else device("cpu")
+# this is not used here
 
 
-def train_emnist(embedding_idx, flag_at, processed_data, path_loading=None, train_all_model=True):
+def train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
+                 processed_data='6_extended_digits', path_loading=None,  train_all_model=True):
+    # add some training options from config file
+    config: Config = Config()
+
+    cfg.gpu_interactive_queue = config.Visibility.interactive_session
+    if config.Visibility.interactive_session:
+        os.environ['CUDA_VISIBLE_DEVICES'] = '0'
     # Getting the options for creating the model and the hyper-parameters.
     results_dir = '../data/emnist/data/results'
     parser = GetParser(flag_at, processed_data, embedding_idx, results_dir)
@@ -62,7 +73,8 @@ def main():
                  processed_data='6_extended_digits', path_loading=None,  train_all_model=True)
 
 
-main()
+if __name__ == "__main__":
+    main()
 
 # Temp place
 ##############################################
