@@ -5,9 +5,9 @@ import numpy as np
 import time
 import torch
 import shutil
-from create_model import *
-from batch_norm import *
+import argparse
 from torch.utils.data import DataLoader
+from torch import nn
 
 
 class DatasetInfo:

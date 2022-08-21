@@ -4,7 +4,8 @@ from torch import device
 import torch.backends.cudnn as cudnn
 from torch.utils.data import DataLoader
 # import supplmentery
-from supplmentery import *
+import supplmentery
+from supplmentery import measurments, training_functions, logger, visuialize_predctions
 from supplmentery.Parser import *
 from supplmentery.FlagAt import FlagAt
 from supplmentery.get_dataset import get_dataset
@@ -28,11 +29,10 @@ dev = device("cuda") if torch.cuda.is_available() else device("cpu")
 
 
 def train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
-                 processed_data='6_extended_digits', path_loading=None,  train_all_model=True):
+                 processed_data='5_extended', path_loading=None,  train_all_model=True):
     # add some training options from config file
     config: Config = Config()
 
-    cfg.gpu_interactive_queue = config.Visibility.interactive_session
     if config.Visibility.interactive_session:
         os.environ['CUDA_VISIBLE_DEVICES'] = '0'
     # Getting the options for creating the model and the hyper-parameters.
@@ -40,19 +40,20 @@ def train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
     parser = GetParser(flag_at, processed_data, embedding_idx, results_dir)
     # Getting the dataset for the training.
     data_path = os.path.join(
-        '../data/new_samples/6_extended_[17]', processed_data)
+        '../data/new_samples', processed_data)
     [the_datasets, train_dl, test_dl, val_dl, train_dataset,
         test_dataset] = get_dataset(embedding_idx, parser, data_fname=data_path)
     # Printing the model and the hyper-parameters.
     if True:  # TODO-replace with condition.
-        print_detail(parser)
+        logger.print_detail(parser)
     # creating the model according the parser.
     #  create_model(parser)
-    set_datasets_measurements(the_datasets, Measurements, parser, parser.model)
+    measurments.set_datasets_measurements(
+        the_datasets, measurments.Measurements, parser, parser.model)
     cudnn.benchmark = True  # TODO:understand what it is.
     # Loading a pretrained model if exists.
     if path_loading is not None:
-        load_model(parser, results_dir, path_loading)
+        training_functions.load_model(parser, results_dir, path_loading)
     # Deciding which parameters will be trained: if True all the model otherwise,only the task embedding.
     if train_all_model:
         learned_params = parser.model.parameters()
@@ -64,8 +65,9 @@ def train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
         learned_params = parser.model.module.transfer_learning[embedding_idx]
     # Training the learned params of the model.
     # print(accuracy(parser, val_dl))
-    train_model(parser, the_datasets, learned_params, embedding_idx)
-    visualize(parser, train_dataset)
+    training_functions.train_model(
+        parser, the_datasets, learned_params, embedding_idx)
+    visuialize_predctions.visualize(parser, train_dataset)
 
 
 def main():

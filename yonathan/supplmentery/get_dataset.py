@@ -1,8 +1,11 @@
 import os
 import pickle
 import torch
+import numpy as np
 from torch.utils.data import DataLoader
 from supplmentery.emnist_dataset import EMNISTAdjDatasetNew2 as dataset,inputs_to_struct
+from v26.models.WrappedDataLoader import WrappedDataLoader
+from v26.models.DatasetInfo import DatasetInfo
 # from supp.FlagAt import *
 # from supp.training_functions import *
 # from supp.data_functions import *
@@ -11,13 +14,23 @@ num_gpus=torch.cuda.device_count()
 
 
 def get_dataset(direction,args,data_fname):
+    """
+    get_dataset _summary_
+
+    Args:
+        direction (_type_): _description_
+        args (_type_): _description_
+        data_fname (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """    
     conf_path=os.path.join(data_fname,'conf')
     #TODO change this config file path since the pickle is not loaded
     with open(conf_path, "rb") as conf_path:
-        nsamples_train, nsamples_test, nsamples_val, nclasses_existence, img_channels, LETTER_SIZE, IMAGE_SIZE, ntypes, edge_class, not_available_class, total_rows, obj_per_row, sample_nchars, ngenerate, ndirections, exclude_percentage, valid_classes, cl2let = pickle.load(
+        nsamples_train, nsamples_test, nsamples_val, nclasses_existence, LETTER_SIZE, IMAGE_SIZE, num_rows_in_the_image,obj_per_row, num_chars_per_image, ndirections, valid_classes = pickle.load(
             conf_path)
             # TODO change this pickle path ot
-        nclasses = int(max(ntypes))
     args.inputs_to_struct=inputs_to_struct
     ndirections = 4
     train_ds = dataset(os.path.join(data_fname, 'train'), nclasses_existence, ndirections,  nexamples=nsamples_train, split=True, direction=direction)

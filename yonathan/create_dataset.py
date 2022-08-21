@@ -3,15 +3,16 @@ import datetime
 import __main__ as mainmod  # for copying the generating script
 import shutil
 import numpy as np
-from webbrowser import get
 from torchvision import transforms
 from multiprocessing import Pool
 from create.Create_dataset_utils import *
 from create.Create_dataset_utils import addCharacterToExistingImage
+from create import Create_dataset_utils
 from parser import get_config, get_parser
 from create.Raw_data_loaders import *
 from typing import Union
 from create.Create_dataset_utils import *
+import create
 from create.Create_dataset_classes import *
 from create.Raw_data_loaders import *
 
@@ -126,7 +127,7 @@ def gen_samples(parser: Union[SimpleNamespace, argparse.Namespace], dataloader: 
     print('%s: Done' % (datetime.datetime.now()))
 
 
-def main(language_list: list) -> None:
+def main() -> None:
     """
     main _summary_
 
@@ -180,8 +181,8 @@ def main(language_list: list) -> None:
 
     # each 'job' processes several chunks. Each chunk is of 'storage_batch_size' samples
     # Get the storage dir for the data and for the conf file.
-    conf_data_fname, storage_dir = get_data_dir(
-        parser, parser.store_folder, language_list)
+    conf_data_fname, storage_dir = Create_dataset_utils.get_data_dir(
+        parser, parser.store_folder)
     if parser.create_all_directions:  # Creating the possible tasks
         avail_adj_types = range(ndirections)
     else:
@@ -287,7 +288,4 @@ def main(language_list: list) -> None:
 
 # %%
 if __name__ == "__main__":
-  #   tasks = [[27,5]]
-    tasks = [[17]]
-    for task in tasks:
-        main(task)
+    main()

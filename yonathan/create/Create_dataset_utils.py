@@ -452,7 +452,7 @@ def get_valid_classes(nclasses: int, use_only_valid_classes=True):
     return valid_classes
 
 
-def get_data_dir(parser, store_folder, language_list):
+def get_data_dir(parser, store_folder):
     """
     :param parser: 
     :param store_folder: 
@@ -461,7 +461,7 @@ def get_data_dir(parser, store_folder, language_list):
     """
     base_storage_dir = '%d_' % (
         parser.nchars_per_row * parser.num_rows_in_the_image)
-    base_storage_dir += 'extended_' + str(language_list)
+    base_storage_dir += 'extended'
     store_dir = os.path.join(store_folder, 'new_samples')
     base_samples_dir = os.path.join(store_dir, base_storage_dir)
     if not os.path.exists(base_samples_dir):
