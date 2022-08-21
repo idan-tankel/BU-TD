@@ -1,12 +1,13 @@
 import sys
 import datetime
-import __main__ as mainmod # for copying the generating script
+import __main__ as mainmod  # for copying the generating script
 import shutil
 import numpy as np
 from webbrowser import get
 from torchvision import transforms
 from multiprocessing import Pool
 from Create_dataset_utils import *
+from Create_dataset_utils import addCharacterToExistingImage
 from parser import get_config, get_parser
 from Raw_data_loaders import *
 from typing import Union
@@ -32,14 +33,13 @@ def gen_sample(parser: argparse, sample_id: int, is_train: bool, aug_data: trans
     image = 0 * np.ones(parser.image_size, dtype=np.float32)
     infos = []  # Stores all the information about the characters.
     # since example.chars is empty, this is for omniglot only (probably) #TODO
-    if dataloader.dataset_name == 'omniglot':
-        for char in example.chars:  # Iterate over each chosen character.
-            # Adding the character to the image.
-            image, info = addCharacterToExistingImage(dataloader, image, char,CHAR_SIZE=parser.letter_size,num_examples_per_character=10)
-            infos.append(info)  # Adding to the info about the characters.
+    for char in example.chars:  # Iterate over each chosen character.
+        # Adding the character to the image.
+        image, info = addCharacterToExistingImage(
+            dataloader, image=image, char=char, num_examples_per_character=10)
+        infos.append(info)  # Adding to the info about the characters.
     # TODO test if this is char size or letter size
     # TODO change this part to not support only omniglot
-
 
     # info = create_info_object(example=example)
 
@@ -48,7 +48,7 @@ def gen_sample(parser: argparse, sample_id: int, is_train: bool, aug_data: trans
     # the characters in order as seen in the image
     label_ordered = get_label_ordered(infos)
     # instruction and task label
-    label_task, flag = Get_label_task(
+    label_task, flag = get_label_task(
         example, infos, label_ordered, dataloader.nclasses)
     # even for grayscale images, store them as 3 channels RGB like
     if image.shape[0] == 1:
@@ -68,7 +68,7 @@ def gen_sample(parser: argparse, sample_id: int, is_train: bool, aug_data: trans
     return sample  # Returning the sample we are going to store.
 
 
-def gen_samples(parser: Union[SimpleNamespace,argparse.Namespace], dataloader: DataSet, job_id: int, range_start: int, range_stop: int, examples: list, storage_dir: str, ds_type: str, augment_sample: bool) -> None:
+def gen_samples(parser: Union[SimpleNamespace, argparse.Namespace], dataloader: DataSet, job_id: int, range_start: int, range_stop: int, examples: list, storage_dir: str, ds_type: str, augment_sample: bool) -> None:
     """
     Generates and stored samples, by calling to create_sample and store_sample_disk_pytorch.
     Args:
@@ -129,7 +129,7 @@ def main(language_list: list) -> None:
 
     Args:
         language_list (list): _description_
-    """    
+    """
     # Getting the option parser.
     parser = get_parser()
     config = get_config()
@@ -159,7 +159,8 @@ def main(language_list: list) -> None:
     # Whether to create single query per sample.
     single_feat_to_generate = parser.single_feat_to_generate
     # The valid classes, relevant for mnist.
-    valid_classes = get_valid_classes(nclasses = nclasses,use_only_valid_classes = parser.use_only_valid_classes)
+    valid_classes = get_valid_classes(
+        nclasses=nclasses, use_only_valid_classes=parser.use_only_valid_classes)
     # The number of directions we want to query about.
     ndirections = parser.ndirections
     # Whether to create the combinatorial generalization dataset.
@@ -267,7 +268,7 @@ def main(language_list: list) -> None:
         if local_multiprocess:
             with Pool(cur_njobs) as process:
                 # Calling the generation function.
-                # this sould be a list of 
+                # this sould be a list of
                 process.starmap(gen_samples, [args])
 
     print('done')  # Done creating and storing the samples.

@@ -5,18 +5,19 @@ from PIL import Image
 import pickle
 from multipledispatch import dispatch
 from Raw_data_loaders import *
+from Raw_data_loaders import DataSet
 from Create_dataset_classes import *
-from Create_dataset_classes import ExampleClass
+from Create_dataset_classes import ExampleClass,CharInfo
 
 
-def get_label_ordered(infos:list) -> np.array:
+def get_label_ordered(infos: list) -> np.array:
     """
     Args:
         infos: The information about all characters.
 
     Returns: list of all characters arranged in order.
     """
-    
+
     row = list()
     rows = []  # A ll the rows.
     for k in range(len(infos)):  # Iterate for each character in the image.
@@ -44,10 +45,11 @@ def get_label_existence(infos: list, nclasses: int) -> np.array:
     label_existence = np.array(label)
     return label_existence
 
+
 def create_info_object(example):
     """
     create_info_object _summary_
-    """    
+    """
     infos = []
     for person in example.persons:
         person_id = person.id
@@ -91,8 +93,7 @@ def create_info_object(example):
     return infos
 
 
-
-def store_sample_disk(sample:Sample, store_dir:str, folder_split:bool,folder_size:int):
+def store_sample_disk(sample: Sample, store_dir: str, folder_split: bool, folder_size: int):
     """
     Storing the sample on the disk.
     Args:
@@ -102,27 +103,29 @@ def store_sample_disk(sample:Sample, store_dir:str, folder_split:bool,folder_siz
         folder_size: The folder size.
 
     """
-    samples_dir =  store_dir
+    samples_dir = store_dir
     i = sample.id
     if folder_split:
         # The inner path, based on the sample id.
         samples_dir = os.path.join(store_dir, '%d' % (i // folder_size))
         if not os.path.exists(samples_dir):
             os.makedirs(samples_dir, exist_ok=True)
-    img = sample.image # Saving the image.
-    img_fname = os.path.join(samples_dir, '%d_img.jpg' % i) # The image directory.
+    img = sample.image  # Saving the image.
+    # The image directory.
+    img_fname = os.path.join(samples_dir, '%d_img.jpg' % i)
    # img = img.transpose((0, 1, 2))
-    c = Image.fromarray(img.transpose(1,2,0)) # Convert to Image format.
-    c.save(img_fname) # Saving the image.
+    c = Image.fromarray(img.transpose(1, 2, 0))  # Convert to Image format.
+    c.save(img_fname)  # Saving the image.
     del sample.image, sample.infos
     # The labels directory.
     data_fname = os.path.join(samples_dir, '%d_raw.pkl' % i)
     # Dumping the labels in the pickle file.
     with open(data_fname, "wb") as new_data_file:
         pickle.dump(sample, new_data_file)
-        
-@dispatch(DataSet,np.ndarray,CharInfo)
-def addCharacterToExistingImage(DataLoader:DataSet, image:np.array, char:CharInfo)->tuple:
+
+
+@dispatch(DataSet, image=np.ndarray, char=CharInfo, num_examples_per_character=int)
+def addCharacterToExistingImage(DataLoader, image: np.ndarray, char: CharInfo, num_examples_per_character: int) -> tuple:
     """
     Function Adding a character to a given image.
     Args:
@@ -132,24 +135,58 @@ def addCharacterToExistingImage(DataLoader:DataSet, image:np.array, char:CharInf
 
     Returns: The new image and the info about the character.
     """
+    label = char.label  # The label of the character.
+    label_id = char.label_id  # The label -d.
+    # The index in the data-loader.
+    img_id = num_examples_per_character * label + label_id
+    im, _ = DataLoader[img_id]  # The character image.
+    scale = char.scale
+    c = DataLoader.nchannels
+    sz = scale * np.array(im.shape[1:])
+    sz = sz.astype(np.int)
+    h, w = sz
+    sz = (c, *sz)
+    # Apply the transform.
+    im = skimage.transform.resize(im, sz, mode='constant')
+    stx = char.location_x
+    endx = stx + w
+    sty = char.location_y
+    endy = sty + h
+    # this is a view into the image and when it changes the image also changes
+    # The part of the image we plan to plant the character.
+    part = image[:, sty:endy, stx:endx]
+    mask = im.copy()
+    mask[mask > 0] = 1
+    mask[mask < 1] = 0
+    rng = mask > 0
+    # Change the part, yielding changing the original image.
+    part[rng] = mask[rng] * im[rng] + (1 - mask[rng]) * part[rng]
+    edge_to_the_right = char.edge_to_the_right
+    info = CharInfo(label, label_id,  im, stx, endx,
+                    sty, endy, edge_to_the_right)
+    return image, info  # Return the image, the character info.
+
 
 class OmniglotDataLoader(data.Dataset):
     """
     Return data loader for omniglot.
     """
-    def __init__(self, languages:list, Raw_data_source='/home/sverkip/data/omniglot/data/omniglot_all_languages'):
+
+    def __init__(self, languages: list, Raw_data_source='/home/sverkip/data/omniglot/data/omniglot_all_languages'):
         """
         :param languages: The languages we desire to load.
         :param data_path:
         """
-        images = [] # The images list.
-        labels = [] # The labels list.
-        sum, num_charcters = 0.0,0
-        transform = transforms.Compose( [transforms.ToTensor(), transforms.functional.invert, transforms.Resize([28, 28])]) # Transforming to tensor + resizing.
+        images = []  # The images list.
+        labels = []  # The labels list.
+        sum, num_charcters = 0.0, 0
+        # Transforming to tensor + resizing.
+        transform = transforms.Compose([transforms.ToTensor(
+        ), transforms.functional.invert, transforms.Resize([28, 28])])
         Data_source = '/home/sverkip/data/omniglot/data/omniglot_all_languages'
-        dictionary = create_dict(Raw_data_source) # Getting the dictionary.
-        language_list = os.listdir(Raw_data_source) # The languages list.
-        for language_idx in languages: # Iterating over all the list of languages.
+        dictionary = create_dict(Raw_data_source)  # Getting the dictionary.
+        language_list = os.listdir(Raw_data_source)  # The languages list.
+        for language_idx in languages:  # Iterating over all the list of languages.
             lan = os.path.join(Data_source, language_list[language_idx])
             for idx, char in enumerate(os.listdir(lan)):
                 char_path = os.path.join(lan, char)
@@ -160,7 +197,7 @@ class OmniglotDataLoader(data.Dataset):
                     img = transform(img)
                     images.append(img)
                     labels.append(idx_torch)
-                num_charcters = num_charcters +1
+                num_charcters = num_charcters + 1
             sum = sum + dictionary[language_idx]
         images = torch.stack(images, dim=0).squeeze()
         labels = torch.stack(labels, dim=0)
@@ -177,8 +214,9 @@ class OmniglotDataLoader(data.Dataset):
 
   # Function Adding a character to a given image.
 
-@dispatch(OmniglotDataLoader,np.array,CharInfo,int)
-def addCharacterToExistingImage(OmniglotDataLoader:OmniglotDataLoader, image:np.array, char:CharInfo,num_examples_per_character:int)->None:
+
+@dispatch(OmniglotDataLoader, image=np.ndarray, char=CharInfo, num_examples_per_character=int)
+def addCharacterToExistingImage(OmniglotDataLoader, image: np.array, char: CharInfo, num_examples_per_character: int) -> None:
     """
     :param OmniglotDataLoader: The Omniglot data-loader.
     :param image: The image we desire to add a character to.
@@ -187,24 +225,26 @@ def addCharacterToExistingImage(OmniglotDataLoader:OmniglotDataLoader, image:np.
     :param num_examples_per_character: Number of characters with the same label.
     :return: The image after the new character was added and the info about the character.
     """
-
-    label= char.label # The label of the character.
-    label_id = char.label_id # The label -d.
-    img_id = num_examples_per_character * label + label_id  # The index in the data-loader.
-    im, _ = OmniglotDataLoader[img_id] # The character image.
+    label = char.label  # The label of the character.
+    label_id = char.label_id  # The label -d.
+    # The index in the data-loader.
+    img_id = num_examples_per_character * label + label_id
+    im, _ = OmniglotDataLoader[img_id]  # The character image.
     scale = char.scale
-    c = DataLoader.nchannels
+    c = OmniglotDataLoader.nchannels
     sz = scale * np.array(im.shape[1:])
     sz = sz.astype(np.int)
     h, w = sz
-    sz = (c,*sz)
-    im = skimage.transform.resize(im, sz, mode='constant') # Apply the transform.
+    sz = (c, *sz)
+    # Apply the transform.
+    im = skimage.transform.resize(im, sz, mode='constant')
     stx = char.location_x
     endx = stx + w
     sty = char.location_y
     endy = sty + h
     # this is a view into the image and when it changes the image also changes
-    part = image[:,sty:endy, stx:endx] # The part of the image we plan to plant the character.
+    # The part of the image we plan to plant the character.
+    part = image[:, sty:endy, stx:endx]
     mask = im.copy()
     mask[mask > 0] = 1
     mask[mask < 1] = 0
@@ -216,7 +256,8 @@ def addCharacterToExistingImage(OmniglotDataLoader:OmniglotDataLoader, image:np.
                     sty, endy, edge_to_the_right)
     return image, info  # Return the image, the character info.
 
-def Get_label_task(example:ExampleClass, infos:list,label_ordered:np.array,nclasses:int)->tuple:
+
+def get_label_task(example: ExampleClass, infos: list, label_ordered: np.array, nclasses: int) -> tuple:
     """
     Args:
         example: The sample example.
@@ -226,12 +267,14 @@ def Get_label_task(example:ExampleClass, infos:list,label_ordered:np.array,nclas
 
     Returns: The label_task, the flag.
     """
-    query_part_id = example.query_part_id # The index we create about.
-    info = infos[query_part_id] # The character information in the index.
-    char = info.label # The label of the character.
-    rows, obj_per_row = label_ordered.shape # The number of rows, the number of characters in evert row.
-    adj_type = example.adj_type # The direction we query about.
-    edge_class = nclasses # The label of the edge class is the number of characters.
+    query_part_id = example.query_part_id  # The index we create about.
+    info = infos[query_part_id]  # The character information in the index.
+    char = info.label  # The label of the character.
+    # The number of rows, the number of characters in evert row.
+    rows, obj_per_row = label_ordered.shape
+    adj_type = example.adj_type  # The direction we query about.
+    # The label of the edge class is the number of characters.
+    edge_class = nclasses
 
     # Find the row and the index of the character.
     r, c = (label_ordered == char).nonzero()
@@ -252,11 +295,13 @@ def Get_label_task(example:ExampleClass, infos:list,label_ordered:np.array,nclas
             # If in the border, the class is edge class.
             label_task = edge_class
         else:
-            label_task = label_ordered[r, c - 1] # Otherwise we return the character appearing in the left.
-    flag = np.array([adj_type, char]) # The flag.
-    return label_task,flag
+            # Otherwise we return the character appearing in the left.
+            label_task = label_ordered[r, c - 1]
+    flag = np.array([adj_type, char])  # The flag.
+    return label_task, flag
 
-def Get_valid_pairs_for_the_combinatorial_test(parser:argparse, nclasses:int,valid_classes:list,num_chars_to_sample)->tuple:
+
+def Get_valid_pairs_for_the_combinatorial_test(parser: argparse, nclasses: int, valid_classes: list, num_chars_to_sample) -> tuple:
     """
     Exclude part of the training data. Validation set is from the train distribution. Test is only the excluded data (combinatorial generalization)
     How many strings (of nsample_chars) to exclude from training
@@ -283,12 +328,13 @@ def Get_valid_pairs_for_the_combinatorial_test(parser:argparse, nclasses:int,val
     test_chars_list = []
     # it is enough to validate only right-of pairs even when we query for left of as it is symmetric
     for _ in range(ntest_strings):
-        test_chars = np.random.choice(valid_classes, num_chars_to_sample, replace=False)
+        test_chars = np.random.choice(
+            valid_classes, num_chars_to_sample, replace=False)
         print('test chars:', test_chars)
         test_chars_list.append(test_chars)
-        test_chars = test_chars.reshape((-1,parser.nchars_per_row))
+        test_chars = test_chars.reshape((-1, parser.nchars_per_row))
         for row in test_chars:
-            for pi in range(parser.nchars_per_row- 1):
+            for pi in range(parser.nchars_per_row - 1):
                 cur_char = row[pi]
                 adj_char = row[pi + 1]
                 valid_pairs[cur_char, adj_char] = 0
@@ -302,7 +348,7 @@ def Get_valid_pairs_for_the_combinatorial_test(parser:argparse, nclasses:int,val
     return valid_pairs, test_chars_list
 
 
-def Get_sample_chars(prng:random, valid_pairs:np.array,is_test:bool,valid_classes:list,num_characters_per_sample:int, ntest_strings:int,test_chars_list:list)->list:
+def Get_sample_chars(prng: random, valid_pairs: np.array, is_test: bool, valid_classes: list, num_characters_per_sample: int, ntest_strings: int, test_chars_list: list) -> list:
     """
     Returns a valid sample.
     If the sample is from the test dataset then the sample will be one of the test_chars_list.
@@ -318,7 +364,7 @@ def Get_sample_chars(prng:random, valid_pairs:np.array,is_test:bool,valid_classe
 
     Returns: A sequence of characters.
     """
-    
+
     sample_chars = []
     if not is_test:
         found = False
@@ -349,11 +395,10 @@ def Get_sample_chars(prng:random, valid_pairs:np.array,is_test:bool,valid_classe
     return sample_chars
 
 
-
-def create_examples_per_sample(examples,sample_chars,chars, prng, adj_types,ncharacters_per_image,single_feat_to_generate,is_test,is_val,ngenerate):
+def create_examples_per_sample(examples, sample_chars, chars, prng, adj_types, ncharacters_per_image, single_feat_to_generate, is_test, is_val, ngenerate):
     """
     This function is used to craete a lot of examples from a single sample. These will be kept in `Examples` class
-    
+
 
 
     :param examples: The sample examples list.
@@ -381,13 +426,14 @@ def create_examples_per_sample(examples,sample_chars,chars, prng, adj_types,ncha
                 query_part_ids = prng.choice(
                     valid_queries, cur_ngenerate, replace=False)
         for query_part_id in query_part_ids:
-            example = ExampleClass(sample_chars,query_part_id,adj_type,chars )
+            example = ExampleClass(
+                sample_chars, query_part_id, adj_type, chars)
             examples.append(example)
 
 # Only for emnist.
 
 
-def get_valid_classes(nclasses: int,use_only_valid_classes = True):
+def get_valid_classes(nclasses: int, use_only_valid_classes=True):
     """
     :param use_only_valid_classes: Whether to use only valid classes.
     :param nclasses: 
@@ -413,7 +459,8 @@ def get_data_dir(parser, store_folder, language_list):
     :param language_list: 
     :return: 
     """
-    base_storage_dir = '%d_' % (parser.nchars_per_row *parser.num_rows_in_the_image)
+    base_storage_dir = '%d_' % (
+        parser.nchars_per_row * parser.num_rows_in_the_image)
     base_storage_dir += 'extended_' + str(language_list)
     store_dir = os.path.join(store_folder, 'new_samples')
     base_samples_dir = os.path.join(store_dir, base_storage_dir)

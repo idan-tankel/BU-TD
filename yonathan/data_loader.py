@@ -30,14 +30,14 @@ def gen_sample(sample_id:int, is_train:bool, aug_data:transforms, OmniglotLoader
     image = 0 * np.ones(IMAGE_SIZE, dtype=np.float32)
     infos = [] #Stores all the information about the characters.
     for char in example.chars: # Iterate for each chosen character.
-     (image,info) = addCharacterToExistingImage(OmniglotLoader,image ,char,CHAR_SIZE,num_examples_per_character) # Adding the character to the image.
+     (image,info) = add_character_to_image(OmniglotLoader,image ,char,CHAR_SIZE,num_examples_per_character) # Adding the character to the image.
      infos.append(info) # Adding to the info about the characters.
     #Making label_existence flag.
     label_existence = get_label_existence(infos,nclasses) 
     # the characters in order as seen in the image
     label_ordered = get_label_ordered(infos)
     # instruction and task label
-    label_task, flag, query_index = Get_label_task(example, infos,label_ordered,nclasses)
+    label_task, flag, query_index = get_label_task(example, infos,label_ordered,nclasses)
     # even for grayscale images, store them as 3 channels RGB like
     if len(image.shape) == 2:
         image = image[:, :, np.newaxis]
