@@ -87,6 +87,7 @@ def gen_samples(parser: Union[SimpleNamespace, argparse.Namespace], dataloader: 
         augment_sample: Whether to augment the sample.
 
     """
+    print(f'{job_id} is the number of jobs')
     image_size = parser.image_size  # The image size.
     aug_data = None  # The augmentation transform.
     is_train = ds_type == 'train'  # Whether the dataset is of type train.
@@ -229,7 +230,7 @@ def main() -> None:
             # For each chosen character, we augment it and transform it.
             for samplei in range(num_chars_per_image):
                 char = CharacterTransforms(
-                    parser, prwng, label_ids, samplei, sample_chars)
+                    parser, prng, label_ids, samplei, sample_chars)
                 chars.append(char)
             print(i)
             # TODO - ASSERT WHAT WE WANT HERE.
@@ -260,6 +261,7 @@ def main() -> None:
         ranges = np.unique(ranges)
         jobs_range = range(len(ranges) - 1)
         # Iterating for each job and generate the needed number of samples.
+        all_args = []
         for job_id in jobs_range:
             range_start = ranges[job_id]
             range_stop = ranges[job_id + 1]
@@ -268,11 +270,13 @@ def main() -> None:
                     examples[range_start:range_stop], storage_dir, ds_type, augment_data)
             if not local_multiprocess:
                 gen_samples(*args)  # Calling the generation function.
+            else:
+                all_args.append(args)
         if local_multiprocess:
             with Pool(cur_njobs) as process:
                 # Calling the generation function.
                 # this sould be a list of
-                process.starmap(gen_samples, [args])
+                process.starmap(gen_samples, all_args)
 
     print('done')  # Done creating and storing the samples.
     # store the dataset's properties.

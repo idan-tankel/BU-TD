@@ -122,11 +122,8 @@ class EMNISTAdjDatasetNew2(EMNISTAdjDatasetBase):
         root = self.get_root_by_index(index)
         fname = os.path.join(root, '%d_img.jpg' % index)
         img = Image.open(fname).convert('RGB')
-        fname = os.path.join(root, '%d_seg.jpg' % index)
-        seg = Image.open(fname).convert('RGB')
-        img, seg = map(
-            transforms.ToTensor(), (img, seg))
-        img, seg = 255 * img, 255 * seg
+        img = transforms.ToTensor()(img)
+        img = 255 * img
         if self.mean_image is not None:
             img -= self.mean_image
             img = img.float()
@@ -177,5 +174,5 @@ class EMNISTAdjDatasetNew2(EMNISTAdjDatasetBase):
         flag = torch.cat((adj_type_ohe, char_ohe), dim=0)
         flag = flag.float()
         label_task = label_task.view((-1))
-        return img, seg, label_existence, label_all, label_task, id, flag
+        return img, label_existence, label_all, label_task, id, flag
     

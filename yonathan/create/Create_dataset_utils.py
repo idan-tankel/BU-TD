@@ -119,6 +119,7 @@ def store_sample_disk(sample: Sample, store_dir: str, folder_split: bool, folder
     c.save(img_fname)  # Saving the image.
     del sample.image, sample.infos
     # The labels directory.
+    # TODO save also segments into seg.jpg file
     data_fname = os.path.join(samples_dir, '%d_raw.pkl' % i)
     # Dumping the labels in the pickle file.
     with open(data_fname, "wb") as new_data_file:
