@@ -20,6 +20,16 @@ dev = device("cuda") if torch.cuda.is_available() else device("cpu")
 
 def train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
                  processed_data='5_extended', path_loading=None,  train_all_model=True):
+    """
+    train_emnist This is the main training function under the main function
+
+    Args:
+        embedding_idx (int, optional): _description_. Defaults to 0.
+        flag_at (_type_, optional): _description_. Defaults to FlagAt.SF.
+        processed_data (str, optional): _description_. Defaults to '5_extended'.
+        path_loading (_type_, optional): _description_. Defaults to None.
+        train_all_model (bool, optional): _description_. Defaults to True.
+    """                 
     # add some training options from config file
     config: Config = Config()
 
@@ -37,7 +47,7 @@ def train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
     data_path = os.path.join(
         '../data/new_samples', processed_data)
     [the_datasets, train_dl, test_dl, val_dl, train_dataset,
-        test_dataset] = get_dataset(embedding_idx, parser, data_fname=data_path)
+        test_dataset] = get_dataset(direction=embedding_idx, args=parser, data_fname=data_path)
     # Printing the model and the hyper-parameters.
     if True:  # TODO-replace with condition.
         logger.print_detail(parser)

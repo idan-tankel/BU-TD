@@ -55,6 +55,13 @@ class EmnistLoader(data.Dataset):
 
 
 def convert_raw_data_pytorch(download_dir, data_fname):
+    """
+    convert_raw_data_pytorch _summary_
+
+    Args:
+        download_dir (_type_): _description_
+        data_fname (_type_): _description_
+    """    
     emnist_download_dir = download_dir
     emnist_split_type = 'balanced'
     labels = [[] for _ in range(2)]

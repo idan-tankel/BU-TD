@@ -89,10 +89,9 @@ class EMNISTAdjDataset(EMNISTAdjDatasetBase):
         return img,seg,label_existence,label_all,label_task,id, flag
 
 def inputs_to_struct(inputs):
-    img,seg,label_existence,label_all,label_task,id, flag = inputs
+    img,label_existence,label_all,label_task,id, flag = inputs
     sample = SimpleNamespace()
     sample.image = img
-    sample.seg = seg
     sample.label_occurence = label_existence
     sample.label_existence = label_existence
     sample.label_all = label_all
@@ -114,7 +113,7 @@ class EMNISTAdjDatasetNew2(EMNISTAdjDatasetBase):
         self.direction = direction
 
     def __getitem__(self, index):
-        obj_per_row = 6
+        obj_per_row = 5
         obj_per_col = 1
         nclasses_existence = 47
         edge_class = nclasses_existence
@@ -132,6 +131,7 @@ class EMNISTAdjDatasetNew2(EMNISTAdjDatasetBase):
         label_all = sample.label_ordered
         flag = sample.flag
         # label_task = sample.label_task
+        # TODO understand this part
         id = sample.id
         flag[0] = self.direction
         adj_type, char = flag
@@ -144,7 +144,7 @@ class EMNISTAdjDatasetNew2(EMNISTAdjDatasetBase):
             if c == (obj_per_row - 1):
                 label_task = edge_class
             else:
-                label_task = label_all[r, c + 1]
+                label_task = label_all[r, c + 1] # see line 129 in `itsik/code/v26/avatar_dataset.py` file
         if adj_type == 1:
             # left
             if c == 0:
@@ -175,4 +175,4 @@ class EMNISTAdjDatasetNew2(EMNISTAdjDatasetBase):
         flag = flag.float()
         label_task = label_task.view((-1))
         return img, label_existence, label_all, label_task, id, flag
-    
+        # TODO edit the label task properly

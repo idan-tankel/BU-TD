@@ -3,6 +3,7 @@ import numpy as np
 import skimage.transform
 from PIL import Image
 from torch.utils.data import Dataset
+import torch
 import pickle
 from multipledispatch import dispatch
 from create.Raw_data_loaders import DataSet
@@ -127,7 +128,7 @@ def store_sample_disk(sample: Sample, store_dir: str, folder_split: bool, folder
 
 
 @dispatch(DataSet, image=np.ndarray, char=CharInfo, num_examples_per_character=int)
-def addCharacterToExistingImage(DataLoader, image: np.ndarray, char: CharInfo, num_examples_per_character: int) -> tuple:
+def addCharacterToExistingImage(DataSet, image: np.ndarray, char: CharInfo, num_examples_per_character: int) -> tuple:
     """
     Function Adding a character to a given image.
     Args:
@@ -141,9 +142,9 @@ def addCharacterToExistingImage(DataLoader, image: np.ndarray, char: CharInfo, n
     label_id = char.label_id  # The label -d.
     # The index in the data-loader.
     img_id = num_examples_per_character * label + label_id
-    im, _ = DataLoader[img_id]  # The character image.
+    im, _ = DataSet[img_id]  # The character image.
     scale = char.scale
-    c = DataLoader.nchannels
+    c = DataSet.nchannels
     sz = scale * np.array(im.shape[1:])
     sz = sz.astype(np.int)
     h, w = sz

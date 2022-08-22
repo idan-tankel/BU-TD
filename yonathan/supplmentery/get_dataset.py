@@ -3,7 +3,7 @@ import pickle
 import torch
 import numpy as np
 from torch.utils.data import DataLoader
-from supplmentery.emnist_dataset import EMNISTAdjDatasetNew2 as dataset,inputs_to_struct
+from .emnist_dataset import EMNISTAdjDatasetNew2 as dataset,inputs_to_struct
 from v26.models.WrappedDataLoader import WrappedDataLoader
 from v26.models.DatasetInfo import DatasetInfo
 # from supp.FlagAt import *
@@ -13,12 +13,12 @@ num_gpus=torch.cuda.device_count()
 
 
 
-def get_dataset(direction,args,data_fname):
+def get_dataset(direction:int,args,data_fname):
     """
     get_dataset _summary_
 
     Args:
-        direction (_type_): _description_
+        direction (int): The Right Left direction (0 or 1)
         args (_type_): _description_
         data_fname (_type_): _description_
 
@@ -117,10 +117,10 @@ def get_mean_image(data_loader:DataLoader, inshape, inputs_to_struct, stop_after
     mean_image = np.zeros(inshape)
     nimgs = 0
     for inputs in data_loader:
-        inputs = tonp(inputs)
+        # inputs = tonp(inputs) this line moved the input to CPU using that function /home/idanta/BU-TD/emnist/code/v26/funcs.py
         samples = inputs_to_struct(inputs)
         cur_bs = samples.image.shape[0]
-        mean_image = (mean_image * nimgs + samples.image.sum(axis=0)) / (nimgs + cur_bs)
+        mean_image =  np.add(mean_image * nimgs,samples.image.sum(axis=0)) / (nimgs + cur_bs)
         nimgs += cur_bs
         if stop_after and nimgs > stop_after:
             break

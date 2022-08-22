@@ -144,7 +144,6 @@ class DataSet(data.Dataset):
         """
         image = self.images[index]
         label = self.labels[index]
-        image = image
         return image, label
 
     def __len__(self):
