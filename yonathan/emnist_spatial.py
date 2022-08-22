@@ -12,16 +12,6 @@ from supplmentery.get_dataset import get_dataset
 from Configs.Config import Config
 # from {Package.module} import {class}
 
-# from utils.funcs import *
-# from supplementery.Parser import *
-# from supplementery.get_dataset import *
-# from supplementery.create_model import *
-# from supplementery.FlagAt import *
-# from supplementery.emnist_dataset import inputs_to_struct as inputs_to_struct
-# from supplementery.logger import *
-# from supplementery.data_functions import *
-# from supplementery.loss_and_accuracy import *
-# from supplementery.visuialize_predctions import *
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 dev = device("cuda") if torch.cuda.is_available() else device("cpu")
@@ -39,6 +29,11 @@ def train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
     results_dir = '../data/emnist/data/results'
     parser = GetParser(flag_at, processed_data, embedding_idx, results_dir)
     # Getting the dataset for the training.
+    # TODO initialize all model options from args (see `v26.functions.inits.py` under itsik branch)
+
+
+    
+
     data_path = os.path.join(
         '../data/new_samples', processed_data)
     [the_datasets, train_dl, test_dl, val_dl, train_dataset,
@@ -70,9 +65,14 @@ def train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
     visuialize_predctions.visualize(parser, train_dataset)
 
 
+
+
+
+
+
 def main():
     train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
-                 processed_data='6_extended_digits', path_loading=None,  train_all_model=True)
+                 processed_data='5_extended', path_loading=None,  train_all_model=True)
 
 
 if __name__ == "__main__":

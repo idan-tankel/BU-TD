@@ -111,8 +111,7 @@ def gen_samples(parser: Union[SimpleNamespace, argparse.Namespace], dataloader: 
         # creating the train/test/val paths is needed.
         if not os.path.exists(cur_samples_dir):
             os.makedirs(cur_samples_dir)
-        print('%s: storing in: %s' %
-              (datetime.datetime.now(), cur_samples_dir))
+        print(f'{datetime.datetime.now()}: storing in: {cur_samples_dir}')
         sys.stdout.flush()
         for samid in range(range_start, range_stop):
             # Generating the samples.
@@ -230,13 +229,13 @@ def main() -> None:
             # For each chosen character, we augment it and transform it.
             for samplei in range(num_chars_per_image):
                 char = CharacterTransforms(
-                    parser, prng, label_ids, samplei, sample_chars)
+                    parser, prwng, label_ids, samplei, sample_chars)
                 chars.append(char)
             print(i)
             # TODO - ASSERT WHAT WE WANT HERE.
             # For the two directions case this should change.
             # in 6_extended train_iterate_all_directions = False
-            # After we chose the characters we choose a direction and a query id.
+            # Aft   er we chose the characters we choose a direction and a query id.
             adj_types = [prng.choice(avail_adj_types)]
             # generate a single or multiple examples for each generated configuration
        #     adj_types=[0]

@@ -23,7 +23,7 @@ def get_dataset(direction,args,data_fname):
         data_fname (_type_): _description_
 
     Returns:
-        _type_: _description_
+        (`list`, `DataLoader`, ,``DataLoader``, ``WrappedDataLoader``, ``WrappedDataLoader``):(the_datasets, train_dl, test_dl,val_dl, train_dataset, test_dataset)
     """    
     conf_path=os.path.join(data_fname,'conf')
     #TODO change this config file path since the pickle is not loaded
@@ -97,14 +97,26 @@ def get_dataset(direction,args,data_fname):
         the_val_dataset = DatasetInfo(False, val_dataset, nbatches_val, 'Validation', 1, val_sampler)
         the_datasets += [the_val_dataset]
     #
-    return [the_datasets, train_dl, test_dl,val_dl, train_dataset, test_dataset]
+    return the_datasets, train_dl, test_dl,val_dl, train_dataset, test_dataset
 
 
 # set stop_after to None if you want the accurate mean, otherwise set to the number of examples to process
-def get_mean_image(dl, inshape, inputs_to_struct, stop_after=1000):
+def get_mean_image(data_loader:DataLoader, inshape, inputs_to_struct, stop_after=1000):
+    """
+    get_mean_image 
+
+    Args:
+        dl (DataLoader): The dataloader of the requierd dataset.
+        inshape (_type_): _description_
+        inputs_to_struct (_type_): _description_
+        stop_after (int, optional): _description_. Defaults to 1000.
+
+    Returns:
+        _type_: _description_
+    """    
     mean_image = np.zeros(inshape)
     nimgs = 0
-    for inputs in dl:
+    for inputs in data_loader:
         inputs = tonp(inputs)
         samples = inputs_to_struct(inputs)
         cur_bs = samples.image.shape[0]
@@ -117,7 +129,7 @@ def get_mean_image(dl, inshape, inputs_to_struct, stop_after=1000):
 def retrieve_mean_image(train_dl, inshape, inputs_to_struct, base_samples_dir, store, stop_after=1000):
     mean_image_fname = os.path.join(base_samples_dir, 'mean_image.pkl')
     if not os.path.exists(mean_image_fname):
-        mean_image = get_mean_image(train_dl, inshape, inputs_to_struct, stop_after)
+        mean_image = get_mean_image(data_loader=train_dl, inshape=inshape, inputs_to_struct=inputs_to_struct, stop_after=stop_after)
         if store:
             with open(mean_image_fname, "wb") as data_file:
                 pickle.dump(mean_image, data_file)

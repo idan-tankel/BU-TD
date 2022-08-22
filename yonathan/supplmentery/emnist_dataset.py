@@ -102,6 +102,12 @@ def inputs_to_struct(inputs):
     return sample
 
 class EMNISTAdjDatasetNew2(EMNISTAdjDatasetBase):
+    """
+    EMNISTAdjDatasetNew2 _summary_
+
+    Args:
+        EMNISTAdjDatasetBase (_type_): _description_
+    """    
     def __init__(self, root, nclasses_existence, ndirections, nexamples=None, split=False, mean_image=None,
                  direction=0):
         super(EMNISTAdjDatasetNew2, self).__init__(root, nclasses_existence, ndirections, nexamples, split, mean_image)

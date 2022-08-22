@@ -103,13 +103,14 @@ def store_sample_disk(sample: Sample, store_dir: str, folder_split: bool, folder
         folder_size: The folder size.
 
     """
-    samples_dir = store_dir
     i = sample.id
     if folder_split:
         # The inner path, based on the sample id.
         samples_dir = os.path.join(store_dir, '%d' % (i // folder_size))
         if not os.path.exists(samples_dir):
             os.makedirs(samples_dir, exist_ok=True)
+    else:
+        samples_dir = store_dir
     img = sample.image  # Saving the image.
     # The image directory.
     img_fname = os.path.join(samples_dir, '%d_img.jpg' % i)
