@@ -1,6 +1,6 @@
 import os
 from typing import List
-
+from datetime import datetime
 import yaml
 
 # configuration class
@@ -10,7 +10,7 @@ from v26.models.flag_at import FlagAt
 class Config:
     def __init__(self):
         path = "config.yaml"
-        full_path = os.path.join(os.getcwd(),'itsik','code','v26', 'Configs', path)
+        full_path = os.path.join(os.path.dirname(__file__), path)
         with open(full_path, 'r') as stream:
             self.__config = yaml.safe_load(stream)
         self.Visibility = Visibility(self.__config['Visibility'])
@@ -21,6 +21,14 @@ class Config:
         self.Strings = Strings(self.__config['strings'])
         self.Losses = Losses(self.__config['Losses'])
         self.Models = Models(self.__config['Models'])
+        self.Training = Training(self.__config['Training'])
+        now = datetime.now()
+        dt_string = now.strftime("%d.%m.%Y %H:%M:%S")
+        self.model_path = 'DS=' + self.RunningSpecs.processed_data + "time = " + str(dt_string)
+        self.results_dir = '../data/emnist/data/results'
+        self.model_dir = os.path.join(self.results_dir, self.model_path)
+
+        
 
     def get_config(self):
         return self.__config
@@ -36,8 +44,10 @@ class Strings:
 
 class Models:
     def __init__(self, config: dict):
-        self.features: str = config['features']
-        self.num_heads: str = config['num_heads']
+        for key, value in config.items():
+            setattr(self, key, value)
+        # self.features: str = config['features']
+        # self.num_heads: str = config['num_heads']
 
 
 class Visibility:
@@ -50,6 +60,7 @@ class RunningSpecs:
         self.distributed = config['distributed']
         self.FlagAt = FlagAt[config['FlagAt']]
         self.isFit = config['isFit']
+        self.processed_data = config['processed_data']
 
 
 class Datasets:
@@ -59,7 +70,8 @@ class Datasets:
 
 class Logging:
     def __init__(self, config: dict):
-        self.enable_logging = config['ENABLE_LOGGING']
+        for key, value in config.items():
+            setattr(self, key, value)
 
 
 class Losses:
@@ -76,3 +88,10 @@ class Folders:
         self.samples = config['samples']
         self.conf = config['conf']
         self.results = config['results']
+
+
+
+class Training:
+    def __init__(self,config: dict):
+        for key,value in config.items():
+            self.__setattr__(key,value)

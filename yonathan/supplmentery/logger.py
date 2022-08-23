@@ -23,7 +23,7 @@ def setup_logger(logger, fname):
 def log_init(opts):
     logging.basicConfig(format=('%(asctime)s ' + '%(message)s'), level=logging.INFO)
     logger = logging.getLogger(__name__)
-    logfname = opts.logfname
+    logfname = opts.Logging.log_fname
     opts.logger = logger
     if logfname is not None:
         model_dir = opts.model_dir
@@ -65,28 +65,37 @@ def save_script(opts):
         # copy the running script
         script_fname = main.__file__
         dst = shutil.copy(script_fname, model_dir)
-        if opts.distributed:
+        if opts.Training.distributed:
             # if distributed then also copy the actual script
             script_base_fname = opts.module + '.py'
             script_base_fname = os.path.join(os.path.dirname(script_fname),script_base_fname)
             dst = shutil.copy(script_base_fname, model_dir)
 
         # copy funcs folder
-        mods = [m.__name__ for m in sys.modules.values() if 'supp' in m.__name__]
-        if len(mods)>0:
-            mods=mods[0]
-            mods = mods.split('.')
-            funcs_version=mods[0]
-            dst = shutil.copytree(funcs_version, os.path.join(model_dir,funcs_version))
+        mods = [m.__name__ for m in sys.modules.values() if 'supplmentery' in m.__name__]
+        [shutil.copyfile(m.__file__, os.path.join(model_dir,m.__name__)) for m in sys.modules.values() if 'supplmentery' in m.__name__]
+        # if len(mods)>0:
+        
+        #     mods=mods[0]
+        #     mods = mods.split('.')
+        #     funcs_version=mods[0]
+        #     dst = shutil.copytree(funcs_version, os.path.join(model_dir,funcs_version))
 
 
 def print_detail(args):
-    first_node = not args.multiprocessing_distributed or (
+    """
+    print_detail print all the arguments required to the module args\
+    TODO add this to some function to_string object in order just to pass ``print(object)``
+
+    Args:
+        args (_type_): _description_
+    """    
+    first_node = not args.Training.multiprocessing_distributed or (
             args.multiprocessing_distributed and args.rank % ngpus_per_node == 0)
     args.first_node = first_node
     if first_node:
         os.makedirs(args.model_dir)
-    if args.distributed:
+    if args.Training.distributed:
         import torch.distributed as dist
         dist.barrier()
         model_opts.module = args.module

@@ -105,8 +105,7 @@ def GetParser(model_flag, processed_data, embedding_idx, results_dir, checkpoint
     ##########################################
     now = datetime.now()
     dt_string = now.strftime("%d.%m.%Y %H:%M:%S")
-    model_path = 'DS=' + str(processed_data) + "_embedding_idx=" + \
-        str(embedding_idx) + "time = " + str(dt_string)
+    model_path = 'DS=' + str(processed_data) + "time = " + str(dt_string)
     model_dir = os.path.join(results_dir, model_path)
     ##########################################
     parser.add_argument('--model_dir', default=model_dir,

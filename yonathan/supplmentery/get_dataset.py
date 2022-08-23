@@ -2,10 +2,14 @@ import os
 import pickle
 import torch
 import numpy as np
+import torch.distributed as dist
 from torch.utils.data import DataLoader
-from .emnist_dataset import EMNISTAdjDatasetNew2 as dataset,inputs_to_struct
+from torch.utils.data.distributed import DistributedSampler
+from supplmentery.emnist_dataset import EMNISTAdjDatasetNew2 as dataset,inputs_to_struct
+from supplmentery.data_functions import preprocess
 from v26.models.WrappedDataLoader import WrappedDataLoader
 from v26.models.DatasetInfo import DatasetInfo
+from Configs.Config import Config
 # from supp.FlagAt import *
 # from supp.training_functions import *
 # from supp.data_functions import *
@@ -13,13 +17,13 @@ num_gpus=torch.cuda.device_count()
 
 
 
-def get_dataset(direction:int,args,data_fname):
+def get_dataset(direction:int,args: Config,data_fname):
     """
     get_dataset _summary_
 
     Args:
         direction (int): The Right Left direction (0 or 1)
-        args (_type_): _description_
+        args (`Config`): The `Config` object of all training options
         data_fname (_type_): _description_
 
     Returns:
@@ -38,8 +42,8 @@ def get_dataset(direction:int,args,data_fname):
     normalize_image = True #TODO-CHANGE
     if normalize_image:
         # just for getting the mean image
-        train_dl = DataLoader(train_ds, batch_size=args.bs, num_workers=args.workers, shuffle=True, pin_memory=True)
-        mean_image = retrieve_mean_image(train_dl, args.inshape, inputs_to_struct, data_fname, True)
+        train_dl = DataLoader(train_ds, batch_size=args.Training.bs, num_workers=args.Training.num_workers, shuffle=True, pin_memory=True)
+        mean_image = retrieve_mean_image(train_dl, args.Models.inshape, inputs_to_struct, data_fname, True)
         train_ds = dataset(os.path.join(data_fname, 'train'), nclasses_existence, ndirections, nexamples=nsamples_train, split=True, mean_image=mean_image, direction=direction)
     else:
         mean_image = None
@@ -51,10 +55,11 @@ def get_dataset(direction:int,args,data_fname):
 
     nsamples_val = len(val_ds)  # validation set is only sometimes present so nsamples_val is not always available
 
-    if args.distributed:
-        train_sampler = torch.utils.data.distributed.DistributedSampler(train_ds)
+    if args.Training.distributed:
+        dist.init_process_group(backend="gloo")
+        train_sampler = DistributedSampler(train_ds)
         if False:
-            test_sampler = torch.utils.data.distributed.DistributedSampler(test_ds, shuffle=False)
+            test_sampler = DistributedSampler(test_ds, shuffle=False)
         else:
             # Although we can divide the test set across the GPUs, currently we don't gather the accuracies but only use the
             # first node in order to report the epoch's accuracy and store the optimum accuracy. Therefore only part of the test
@@ -65,20 +70,20 @@ def get_dataset(direction:int,args,data_fname):
             # (redundant but at least this is accurate)
             # The train loss is also inaccurate but the most important things are the gradients which are accumulated and therefore work well.
             test_sampler = None
-        val_sampler = torch.utils.data.distributed.DistributedSampler(val_ds, shuffle=False)
+        val_sampler = DistributedSampler(val_ds, shuffle=False)
     else:
         train_sampler = None
         test_sampler = None
         val_sampler = None
         ubs=1
-        batch_size = args.bs * ubs
+        batch_size = args.Training.bs * ubs
 
-    train_dl = DataLoader(train_ds, batch_size=batch_size, num_workers=args.workers, shuffle=True,
+    train_dl = DataLoader(train_ds, batch_size=batch_size, num_workers=args.Training.num_workers, shuffle=True,
                           pin_memory=True, sampler=train_sampler)
     # train_dl = DataLoader(train_ds, batch_size=batch_size,num_workers=0,shuffle=False,pin_memory=True, sampler=train_sampler)
-    test_dl = DataLoader(test_ds, batch_size=batch_size, num_workers=args.workers, shuffle=False, pin_memory=True,
+    test_dl = DataLoader(test_ds, batch_size=batch_size, num_workers=args.Training.num_workers, shuffle=False, pin_memory=True,
                          sampler=test_sampler)
-    val_dl = DataLoader(val_ds, batch_size=batch_size, num_workers=args.workers, shuffle=False, pin_memory=True,sampler=val_sampler)
+    val_dl = DataLoader(val_ds, batch_size=batch_size, num_workers=args.Training.num_workers, shuffle=False, pin_memory=True,sampler=val_sampler)
 
     nbatches_train = len(train_dl)
     nbatches_val = len(val_dl)
@@ -90,11 +95,11 @@ def get_dataset(direction:int,args,data_fname):
     test_dataset = WrappedDataLoader(test_dl, preprocess)
     val_dataset = WrappedDataLoader(val_dl, preprocess)
 
-    the_train_dataset = DatasetInfo(True, train_dataset, nbatches_train, 'Train', args.checkpoints_per_epoch, train_sampler)
-    the_test_dataset = DatasetInfo(False, test_dataset, nbatches_test, 'Test', 1, test_sampler)
+    the_train_dataset = DatasetInfo(istrain=True, ds=train_dataset, nbatches=nbatches_train, name='Train', checkpoints_per_epoch=args.Training.checkpoints_per_epoch)
+    the_test_dataset = DatasetInfo(False, test_dataset, nbatches_test, 'Test', 1)
     the_datasets = [the_train_dataset, the_test_dataset]
     if nsamples_val > 0:
-        the_val_dataset = DatasetInfo(False, val_dataset, nbatches_val, 'Validation', 1, val_sampler)
+        the_val_dataset = DatasetInfo(istrain=False, ds=val_dataset, nbatches=nbatches_val, name='Validation',checkpoints_per_epoch=1)
         the_datasets += [the_val_dataset]
     #
     return the_datasets, train_dl, test_dl,val_dl, train_dataset, test_dataset

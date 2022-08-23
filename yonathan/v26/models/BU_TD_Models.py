@@ -117,7 +117,7 @@ class BUTDModelShared(BUTDModel):
 
     def __init__(self, opts):
         super(BUTDModelShared, self).__init__()
-        self.use_bu1_loss = opts.use_bu1_loss
+        self.use_bu1_loss = opts.Losses.use_bu1_loss
         if self.use_bu1_loss:
             self.occhead = OccurrenceHead(opts)
         # here should use instead MultiLabelHeadOnlyTask

@@ -1,3 +1,4 @@
+# The scheme of this object is important - don't change it, change only the values
 Visibility:
   interactiveSession: True
 
@@ -5,12 +6,15 @@ RunningSpecs:
   distributed: False
   FlagAt: NOFLAG
   isFit: True
+  processed_data: '5_extended' # The name of the model result directory
+  
 
 Datasets:
   dummyds: False
 
 Logging:
   ENABLE_LOGGING: True
+  log_fname: 'log.txt'
 
 Folders:
   data_dir: "../data" # relative to (?)
@@ -37,3 +41,17 @@ Losses:
 Models:
   features: "all"
   num_heads: "only_features"
+  inshape: (3, 112, 224) # `(int,int,int)` the spahe of the incoming data
+  nclasses: [[47], [47], [47], [47]] # the number of classes within the dataset
+  nfilters: [64, 96, 128, 256] # ResNet filters
+  ntaskhead_fc: 1 # get out only 1 task!
+
+Training:
+  bs: 32
+  num_workers: 2
+  epochs: 200
+  lr: # the learning rate
+  distributed: False # whether to use distributed data within training - accross some GPUs using DistributedSampler of torch
+  checkpoints_per_epoch: 1 # number of checkpoints of the model weights to save per epoch
+  multiprocessing_distributed: False #Whether to use multiprocessing_distributed data
+

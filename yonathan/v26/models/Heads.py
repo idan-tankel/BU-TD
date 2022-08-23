@@ -39,15 +39,15 @@ class MultiLabelHead(nn.Module):
     def __init__(self, opts):
         super(MultiLabelHead, self).__init__()
         layers = []
-        for k in range(len(opts.nclasses)):
-            filters = opts.nclasses[k]
+        for k in range(len(opts.Models.nclasses)):
+            filters = opts.Models.nclasses[k]
             k_layers = []
-            infilters = opts.nfilters[-1]
-            for i in range(opts.ntaskhead_fc - 1):
+            infilters = opts.Models.nfilters[-1]
+            for i in range(opts.Models.ntaskhead_fc - 1):
                 k_layers += [nn.Linear(infilters, infilters), opts.norm_fun(infilters, dims=1), opts.activation_fun()]
 
             # add last FC: plain
-            k_layers += [nn.Linear(infilters, filters)]
+            k_layers.append(nn.Linear(in_features=infilters, out_features=filters))
             if len(k_layers) > 1:
                 k_layers = nn.Sequential(*k_layers)
             else:

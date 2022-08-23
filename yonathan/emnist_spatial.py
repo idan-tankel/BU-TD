@@ -38,6 +38,7 @@ def train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
     # Getting the options for creating the model and the hyper-parameters.
     results_dir = '../data/emnist/data/results'
     parser = GetParser(flag_at, processed_data, embedding_idx, results_dir)
+    parser= config
     # Getting the dataset for the training.
     # TODO initialize all model options from args (see `v26.functions.inits.py` under itsik branch)
 
@@ -49,12 +50,12 @@ def train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
     [the_datasets, train_dl, test_dl, val_dl, train_dataset,
         test_dataset] = get_dataset(direction=embedding_idx, args=parser, data_fname=data_path)
     # Printing the model and the hyper-parameters.
-    if True:  # TODO-replace with condition.
-        logger.print_detail(parser)
+    logger.print_detail(parser)
     # creating the model according the parser.
-    #  create_model(parser)
+    model  = create_model.create_model(model_opts=parser)
     measurments.set_datasets_measurements(
-        the_datasets, measurments.Measurements, parser, parser.model)
+        the_datasets, measurments.Measurements, parser, model=model)
+    
     cudnn.benchmark = True  # TODO:understand what it is.
     # Loading a pretrained model if exists.
     if path_loading is not None:
