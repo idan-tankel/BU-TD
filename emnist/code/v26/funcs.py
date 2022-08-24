@@ -310,6 +310,7 @@ class FlagAt(Enum):
     BU1_NOLAT = auto()
 
 def setup_flag(opts):
+    # TODO change the enum to something more readable
     if opts.flag_at is FlagAt.BU2:
         opts.use_bu1_flag = False
         opts.use_td_flag = False

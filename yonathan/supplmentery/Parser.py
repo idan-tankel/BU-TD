@@ -1,7 +1,6 @@
 import supplmentery.FlagAt as FlagAt
 import supplmentery.batch_norm
 from supplmentery.models import *
-from supplmentery import create_model
 from .batch_norm import *
 from supplmentery.models import *
 from supplmentery.blocks import *
@@ -19,7 +18,6 @@ import torch.cuda
 import argparse
 
 # from blocks import *
-# from create_model import create_model
 # from emnist_dataset import inputs_to_struct as inputs_to_struct
 from typing import Callable
 dev = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")

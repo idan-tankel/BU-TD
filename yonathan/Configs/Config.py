@@ -1,10 +1,14 @@
 import os
 from typing import List
 from datetime import datetime
+import torch.nn as nn
 import yaml
+from supplmentery.FlagAt import FlagAt
+from v26.functions.inits import init_model_options
+from supplmentery.batch_norm import BatchNorm
 
 # configuration class
-from v26.models.flag_at import FlagAt
+# from v26.models.flag_at import FlagAt
 
 
 class Config:
@@ -27,8 +31,43 @@ class Config:
         self.model_path = 'DS=' + self.RunningSpecs.processed_data + "time = " + str(dt_string)
         self.results_dir = '../data/emnist/data/results'
         self.model_dir = os.path.join(self.results_dir, self.model_path)
-
+        self.setup_flag()
         
+    def setup_flag(self) -> None:
+        """
+        setup_flag This function set up the Architecture of the model using the FlagAt enum. The flags of the arch are attached to the Config object and later readed by the `create_model` function.
+
+        # TODO remove similar function from the FlagAt module under supplemtery package
+
+        Returns: None (setting attributes of the Config object `self`)
+        """    
+        model_flag = self.RunningSpecs.FlagAt
+        if model_flag is FlagAt.BU2:
+            self.use_bu1_flag = False
+            self.use_td_flag = False
+            self.use_bu2_flag = True
+        elif model_flag is FlagAt.BU1 or model_flag is FlagAt.BU1_SIMPLE or model_flag is FlagAt.BU1_NOLAG:
+            self.use_bu1_flag = True
+            self.use_td_flag = False
+            self.use_bu2_flag = False
+        elif model_flag is FlagAt.TD:
+            self.use_bu1_flag = False
+            self.use_td_flag = True
+            self.use_bu2_flag = False
+            self.use_SF = False
+        elif model_flag is FlagAt.SF:
+            self.use_bu1_flag = False
+            self.use_td_flag = True
+            self.use_bu2_flag = False
+            self.use_SF = True
+        elif model_flag is FlagAt.NOFLAG:
+            self.use_bu1_flag = False
+            self.use_td_flag = False
+            self.use_bu2_flag = False
+            self.use_SF = False
+        
+
+
 
     def get_config(self):
         return self.__config
@@ -48,6 +87,16 @@ class Models:
             setattr(self, key, value)
         # self.features: str = config['features']
         # self.num_heads: str = config['num_heads']
+    
+    def init_model_options(self):
+        """
+        init_model_options wrapped up an existing function from the v26.functions.inits module.
+        The idea is to still support setting up the options with a parser as well as with config files
+
+        """        
+        # init_model_options(config=self,flag_at=)
+        self.norm_fun = BatchNorm
+        self.activation_fun = nn.ReLU
 
 
 class Visibility:
@@ -79,6 +128,7 @@ class Losses:
         self.use_td_loss = config['use_td_loss']
         self.use_bu1_loss = config['use_bu1_loss']
         self.use_bu2_loss = config['use_bu2_loss']
+        self.activation_fun = nn.__getattribute__(config['activation_fun'])
 
 
 class Folders:

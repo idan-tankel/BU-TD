@@ -10,6 +10,7 @@ from supplmentery.Parser import *
 from supplmentery.FlagAt import FlagAt
 from supplmentery.get_dataset import get_dataset
 from Configs.Config import Config
+from supplmentery.create_model import create_model
 # from {Package.module} import {class}
 
 
@@ -32,13 +33,14 @@ def train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
     """                 
     # add some training options from config file
     config: Config = Config()
+    config.Models.init_model_options()
 
     if config.Visibility.interactive_session:
         os.environ['CUDA_VISIBLE_DEVICES'] = '0'
     # Getting the options for creating the model and the hyper-parameters.
     results_dir = '../data/emnist/data/results'
     parser = GetParser(flag_at, processed_data, embedding_idx, results_dir)
-    parser= config
+    parser = config
     # Getting the dataset for the training.
     # TODO initialize all model options from args (see `v26.functions.inits.py` under itsik branch)
 
@@ -52,7 +54,7 @@ def train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
     # Printing the model and the hyper-parameters.
     logger.print_detail(parser)
     # creating the model according the parser.
-    model  = create_model.create_model(model_opts=parser)
+    model  = create_model(model_opts=parser)
     measurments.set_datasets_measurements(
         the_datasets, measurments.Measurements, parser, model=model)
     

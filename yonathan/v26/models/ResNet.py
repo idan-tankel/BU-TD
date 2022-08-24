@@ -91,11 +91,11 @@ class ResNetLatShared(nn.Module):
             shared (_type_): _description_
         """        
         super(ResNetLatShared, self).__init__()
-        self.norm_layer = opts.norm_fun
-        self.activation_fun = opts.activation_fun
+        self.norm_layer = opts.Models.norm_fun
+        self.activation_fun = opts.Models.activation_fun
         self.inshapes = shared.inshapes
         self.use_lateral = shared.use_lateral  # incoming lateral
-        filters = opts.nfilters[0]
+        filters = opts.Models.nfilters[0]
         self.use_bu1_flag = opts.use_bu1_flag
         if self.use_bu1_flag:
             # flag at BU1. It is shared across all the BU towers

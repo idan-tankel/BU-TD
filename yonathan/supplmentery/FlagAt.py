@@ -18,6 +18,12 @@ class FlagAt(Enum):
 
 
 def setup_flag(parser):
+    """
+    setup_flag _summary_
+
+    Args:
+        parser ( `argparse` | `SimpleNamespace`): The options / parser object
+    """    
     model_flag = parser.parse_args().model_flag
     if model_flag is FlagAt.BU2:
         use_bu1_flag = False
@@ -43,6 +49,7 @@ def setup_flag(parser):
         use_bu2_flag = False
         use_SF = False
 
+    # TODO change that since this function is only setting up the parser!!!
     parser.add_argument('--use_bu1_flag', default=use_bu1_flag, type=staticmethod,
                         help='The unified loss function of all training')  #
     parser.add_argument('--use_td_flag', default=use_td_flag, type=staticmethod,

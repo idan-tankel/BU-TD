@@ -123,7 +123,7 @@ class BUTDModelShared(BUTDModel):
         # here should use instead MultiLabelHeadOnlyTask
         self.taskhead = MultiLabelHeadOnlyTask(opts)
         # self.taskhead = MultiLabelHead(opts) # here should use instead MultiLabelHeadOnlyTask
-        self.use_td_loss = opts.use_td_loss
+        self.use_td_loss = opts.Losses.use_td_loss
         if self.use_td_loss:
             self.imagehead = ImageHead(opts)
         bu_shared = ResNetLatSharedBase(opts)

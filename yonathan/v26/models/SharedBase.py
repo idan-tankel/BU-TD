@@ -7,9 +7,21 @@ from v26.models.SideAndComb import SideAndCombSharedBase, SideAndCombShared
 
 
 class BasicBlockLatSharedBase():
+    """
+    BasicBlockLatSharedBase _summary_
+    """    
     expansion = 1
 
     def __init__(self, inplanes, planes, stride, use_lateral):
+        """
+        __init__ _summary_
+
+        Args:
+            inplanes (_type_): _description_
+            planes (_type_): _description_
+            stride (_type_): _description_
+            use_lateral (_type_): _description_
+        """        
         super(BasicBlockLatSharedBase, self).__init__()
         # Both self.conv1 and self.downsample layers downsample the input when stride != 1
         self.conv1 = conv3x3(inplanes, planes, stride)
@@ -56,6 +68,15 @@ class BasicBlockLatShared(nn.Module):
             self.relu = activation_fun()
 
     def forward(self, inputs):
+        """
+        forward _summary_
+
+        Args:
+            inputs (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """        
         # TODO change
         x, laterals_in = inputs
         if laterals_in is not None:
@@ -90,18 +111,27 @@ class BasicBlockLatShared(nn.Module):
 
 
 class ResNetLatSharedBase():
+    """
+    ResNetLatSharedBase _summary_
+    """    
 
     def __init__(self, opts):
+        """
+        __init__ _summary_
+
+        Args:
+            opts (_type_): _description_
+        """        
         super(ResNetLatSharedBase, self).__init__()
-        self.activation_fun = opts.activation_fun
-        self.use_lateral = opts.use_lateral_tdbu  # incoming lateral
-        stride = opts.strides[0]
-        filters = opts.nfilters[0]
-        inplanes = opts.inshape[0]
-        inshape = np.array(opts.inshape)
+        self.activation_fun = opts.Losses.activation_fun
+        self.use_lateral = opts.Models.use_lateral_tdbu  # incoming lateral
+        stride = opts.Models.strides[0]
+        filters = opts.Models.nfilters[0]
+        inplanes = opts.Models.inshape[0]
+        inshape = np.array(opts.Models.inshape)
         self.use_bu1_flag = opts.use_bu1_flag
         if self.use_bu1_flag:
-            lastAdded_shape = opts.inshape
+            lastAdded_shape = opts.Models.inshape
             flag_scale = 2
             self.flag_shape = [-1, 1, lastAdded_shape[1] // flag_scale, lastAdded_shape[2] // flag_scale]
             bu1_bot_neurons = int(np.product(self.flag_shape[1:]))
@@ -120,10 +150,10 @@ class ResNetLatSharedBase():
         self.bot_lat = SideAndCombSharedBase(lateral_per_neuron=False, filters=filters)
 
         layers = []  # groups. each group has n blocks
-        for k in range(1, len(opts.strides)):
-            nblocks = opts.ns[k]
-            stride = opts.strides[k]
-            filters = opts.nfilters[k]
+        for k in range(1, len(opts.Models.strides)):
+            nblocks = opts.Models.ns[k]
+            stride = opts.Models.strides[k]
+            filters = opts.Models.nfilters[k]
             layers.append(self._make_layer(filters, nblocks, stride=stride))
             inshape = np.array([filters, inshape[1] // stride, inshape[2] // stride])
             inshape_lst = []
@@ -133,7 +163,7 @@ class ResNetLatSharedBase():
 
         self.alllayers = layers
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        filters = opts.nfilters[-1]
+        filters = opts.Models.nfilters[-1]
         if self.use_lateral:
             self.top_lat = SideAndCombSharedBase(lateral_per_neuron=False, filters=filters)
         inshape = np.array([filters, 1, 1])
@@ -148,6 +178,17 @@ class ResNetLatSharedBase():
             self.h_top_bu2 = nn.Linear(top_filters * 2, top_filters)
 
     def _make_layer(self, planes, blocks, stride=1):
+        """
+        _make_layer _summary_
+
+        Args:
+            planes (_type_): _description_
+            blocks (_type_): _description_
+            stride (int, optional): _description_. Defaults to 1.
+
+        Returns:
+            _type_: _description_
+        """        
         layers = []
         layers.append(BasicBlockLatSharedBase(self.inplanes, planes, stride, self.use_lateral))
         self.inplanes = planes * BasicBlockLatSharedBase.expansion
