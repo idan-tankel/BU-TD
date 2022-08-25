@@ -1,3 +1,4 @@
+from pyexpat import model
 import time
 
 import torch
@@ -38,7 +39,7 @@ class DatasetInfo():
     def reset_iter(self):
         self.dataset_iter = iter(self.dataset)
 
-    def do_epoch(self, epoch:int, opts, number_of_epochs):
+    def do_epoch(self, epoch:int, opts, number_of_epochs,model):
         """
         do_epoch Do a specific epoch of the dataset (validation/training/test)
 
@@ -55,13 +56,13 @@ class DatasetInfo():
         if self.needinit or self.checkpoints_per_epoch == 1:
             self.reset_iter()
             self.needinit = False
-            if self.istrain and opts.distributed:
+            if self.istrain and opts.Training.distributed:
                 opts.train_sampler.set_epoch(epoch)
                 # TODO: when aborted save cur_batches. next, here do for loop and pass over cur_batches
                 # and use train_sampler.set_epoch(epoch // checkpoints_per_epoch)
         start_time = time.time()
         for inputs in self.dataset_iter:
-            cur_loss, outs = self.batch_fun(inputs, opts)
+            cur_loss, outs = self.batch_fun(inputs, opts,model=model)
             with torch.no_grad():
                 # so that accuracies calculation will not accumulate gradients
                 self.measurements.update(inputs, outs, cur_loss.item())

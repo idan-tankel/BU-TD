@@ -3,7 +3,7 @@ import torch
 
 
 class BatchNorm(nn.Module):
-    def __init__(self, num_channels, num_tasks, dims=2):
+    def __init__(self, num_channels, num_tasks=1, dims=2):
         """
          creates batch_norm class.
          For each task stores its mean,var as consecutive trainings override this variables.

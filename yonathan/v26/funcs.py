@@ -14,6 +14,7 @@ from pathlib import Path
 import os
 import sys
 import numpy as np
+# from Configs.Config import Config
 
 from v26.models.flag_at import FlagAt
 
@@ -463,7 +464,8 @@ def set_datasets_measurements(datasets, measurements_class, model_opts, model):
         the_dataset.create_measurement(measurements_class, model_opts, model)
 
 
-def train_step(inputs: List, opts: SimpleNamespace):
+def train_step(inputs: List, opts,model):
+    # TODO get this out of funcs
     """
     train_step The actual training step
 
@@ -474,12 +476,12 @@ def train_step(inputs: List, opts: SimpleNamespace):
     Returns:
         (Torch.tensor,Torch.tensor): (loss,outs)
     """    
-    opts.model.train()
-    outs = opts.model(inputs)
-    loss = opts.loss_fun(inputs, outs)
-    opts.optimizer.zero_grad()
+    model.train()
+    outs = model(inputs)
+    loss = opts.Training.loss_fun(inputs, outs)
+    opts.Training.optimizer.zero_grad()
     loss.backward()
-    opts.optimizer.step()  # here changes the weights
+    opts.Training.optimizer.step()  # here changes the weights
     return loss, outs
 
 

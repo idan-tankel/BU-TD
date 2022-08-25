@@ -22,19 +22,12 @@ def create_dict(path: str) -> dict:
     """
     dict_language = {}
     cnt = 0
-    for ele in os.scandir(path):  # for language in Omniglot_raw find the number of characters in it.
-        dict_language[cnt] = folder_size(ele)  # Find number of characters in the folder.
+    # for language in Omniglot_raw find the number of characters in it.
+    for ele in os.scandir(path):
+        # Find number of characters in the folder.
+        dict_language[cnt] = folder_size(ele)
         cnt += 1
     return dict_language
-
-
-def instruct(struct: argparse, key: str) -> bool:
-    """
-    :param struct: a parser
-    :param key: key to check in the parser
-    :return: True iff key is one of the struct's keys.
-    """
-    return getattr(struct, key, None) is not None
 
 
 def flag_to_task(flag: torch) -> int:
@@ -42,7 +35,8 @@ def flag_to_task(flag: torch) -> int:
     :param flag: The flag.
     :return: The task the model solves.
     """
-    task = torch.argmax(flag, dim=1)[0]  # Finds the non zero entry in the one-hot vector
+    task = torch.argmax(flag, dim=1)[
+        0]  # Finds the non zero entry in the one-hot vector
     return task
 
 
@@ -56,12 +50,15 @@ def get_laterals(laterals: list[torch], layer_id: int, block_id: int) -> torch:
     if laterals is None:  # If BU1, there are not any lateral connections.
         return None
     if len(laterals) > layer_id:  # assert we access to an existing layer.
-        layer_laterals = laterals[layer_id]  # Get all lateral associate with the layer.
+        # Get all lateral associate with the layer.
+        layer_laterals = laterals[layer_id]
         if type(layer_laterals) == list and len(
                 layer_laterals) > block_id:  # If there are some several blocks in the layer we access according to block_id.
-            return layer_laterals[block_id]  # We return all lateral associate with the block_id.
+            # We return all lateral associate with the block_id.
+            return layer_laterals[block_id]
         else:
-            return layer_laterals  # If there is only 1 lateral connection in the block we return it.
+            # If there is only 1 lateral connection in the block we return it.
+            return layer_laterals
     else:
         return None
 
@@ -109,7 +106,7 @@ def conv3x3(in_channels: int, out_channels: int, stride: int = 1) -> nn.Module:
     return depthwise_separable_conv(in_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
 
 
-def conv3x3up(in_channels, out_channels,size, upsample_size=1) -> nn.Module:
+def conv3x3up(in_channels, out_channels, size, upsample_size=1) -> nn.Module:
     """
     Opposite to the conv3x3: it decreases the number of channels, and increases the inner channels.
     :param in_channels: The number of channels in the input. out_channels < in_channels
@@ -117,9 +114,10 @@ def conv3x3up(in_channels, out_channels,size, upsample_size=1) -> nn.Module:
     :param upsample_size: The factor to upsample the inner dimensions.
     :return: Module that Upsamples the tensor.
     """
-    layer = conv3x3(in_channels, out_channels)  # Changing the number of channels.
+    layer = conv3x3(
+        in_channels, out_channels)  # Changing the number of channels.
     if upsample_size > 1:
-        layer = nn.Sequential(nn.Upsample(size = size, mode='bilinear', align_corners=False),
+        layer = nn.Sequential(nn.Upsample(size=size, mode='bilinear', align_corners=False),
                               layer)  # Upsample the inner dimensions of the tensor.
     return layer
 

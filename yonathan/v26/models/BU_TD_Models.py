@@ -136,8 +136,8 @@ class BUTDModelShared(BUTDModel):
         #        opts.avg_pool_size = (7,14)
         self.tdmodel = TDModel(opts)
         self.use_bu1_flag = opts.use_bu1_flag
-        self.use_lateral_butd = opts.use_lateral_butd
-        self.use_lateral_tdbu = opts.use_lateral_tdbu
+        self.use_lateral_butd = opts.Models.use_lateral_butd
+        self.use_lateral_tdbu = opts.Models.use_lateral_tdbu
         self.inputs_to_struct = opts.inputs_to_struct
 
 

@@ -91,8 +91,9 @@ class ResNetLatShared(nn.Module):
             shared (_type_): _description_
         """        
         super(ResNetLatShared, self).__init__()
-        self.norm_layer = opts.Models.norm_fun
-        self.activation_fun = opts.Models.activation_fun
+        model_options_section = opts.Models
+        self.norm_layer = model_options_section.norm_fun
+        self.activation_fun = model_options_section.activation_fun
         self.inshapes = shared.inshapes
         self.use_lateral = shared.use_lateral  # incoming lateral
         filters = opts.Models.nfilters[0]
@@ -205,12 +206,12 @@ class ResNetTDLat(nn.Module):
     def __init__(self, opts):
         super(ResNetTDLat, self).__init__()
         block = BasicBlockTDLat
-        self.use_lateral = opts.use_lateral_butd
-        self.activation_fun = opts.activation_fun
+        self.use_lateral = opts.Models.use_lateral_butd
+        self.activation_fun = opts.Models.activation_fun
         self.use_td_flag = opts.use_td_flag
-        self.norm_layer = opts.norm_fun
+        self.norm_layer = opts.Models.norm_fun
 
-        top_filters = opts.nfilters[-1]
+        top_filters = opts.Models.nfilters[-1]
         self.top_filters = top_filters
         self.inplanes = top_filters
         if opts.use_td_flag:
@@ -226,19 +227,19 @@ class ResNetTDLat(nn.Module):
         #           self.top_lat = SideAndComb(lateral_per_neuron=False,filters=top_filters)
 
         layers = []
-        for k in range(len(opts.strides) - 1, 0, -1):
-            nblocks = opts.ns[k]
-            stride = opts.strides[k]
-            filters = opts.nfilters[k - 1]
+        for k in range(len(opts.Models.strides) - 1, 0, -1):
+            nblocks = opts.Models.ns[k]
+            stride = opts.Models.strides[k]
+            filters = opts.Models.nfilters[k - 1]
             layers.append(self._make_layer(
                 block, filters, nblocks, stride=stride))
 
         self.alllayers = nn.ModuleList(layers)
-        filters = opts.nfilters[0]
+        filters = opts.Models.nfilters[0]
         if self.use_lateral:
             self.bot_lat = SideAndComb(
                 False, filters, self.norm_layer, self.activation_fun)
-        self.use_final_conv = opts.use_final_conv
+        self.use_final_conv = opts.Models.use_final_conv
         if self.use_final_conv:
             # here we should have performed another convolution to match BU conv1, but
             # we don't, as that was the behaviour in TF. Unless use_final_conv=True

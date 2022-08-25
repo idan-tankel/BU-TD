@@ -5,6 +5,7 @@ import torch
 import argparse
 # import DataLoader
 from torch.utils.data import DataLoader
+dev = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 
 # from utils.training_functions import test_step\

@@ -6,8 +6,10 @@ import time
 import torch
 import shutil
 import argparse
+from Configs.Config import Config
 from torch.utils.data import DataLoader
 from torch import nn
+from enum import Enum
 
 
 class DatasetInfo:
@@ -53,68 +55,62 @@ class DatasetInfo:
         """
         self.dataset_iter = iter(self.dataset)
 
-    def do_epoch(self, opts: argparse, epoch: int):
-        """
-        :param opts:The model options.
-        :param epoch: The epoch_id
-        :return:
-        """
-        opts.logger.info(self.name)
-        nbatches_report = 10
-        aborted = False
-        self.measurements.reset()  # Reset the measurements class.
-        cur_batches = 0
-        if self.needinit or self.checkpoints_per_epoch == 1:
-            self.reset_iter()  # Reset the data loader to iterate from the beginning.
-            self.needinit = False  # The initialization is done.
-            if opts.distributed and self.sampler:
-                self.sampler.set_epoch(epoch)
-                # TODO: when aborted save cur_batches. next, here do for loop and pass over cur_batches
-                # and use train_sampler.set_epoch(epoch // checkpoints_per_epoch)
-        start_time = time.time()  # Count the beginning time.
-        for inputs in self.dataset_iter:  # Iterating over all dataset.
-            cur_loss, outs = self.batch_fun(opts, inputs)  # compute the model outputs and the current loss.
-            with torch.no_grad():
-                # so that accuracies calculation will not accumulate gradients
-                self.measurements.update(inputs, outs, cur_loss.item())  # update the loss and the accuracy.
-            cur_batches += 1  # Update the number of batches.
-            template = 'Epoch {} step {}/{} {} ({:.1f} estimated minutes/epoch)'  # Define a convenient template.
-            if cur_batches % nbatches_report == 0:
-                duration = time.time() - start_time  # Compute the step time.
-                start_time = time.time()
-                estimated_epoch_minutes = duration / 60 * self.nbatches / nbatches_report  # compute the proportion time.
-                opts.logger.info(template.format(epoch + 1, cur_batches, self.nbatches, self.measurements.print_batch(),
-                                                 estimated_epoch_minutes))  # Add the epoch_id, loss, accuracy, time for epoch.
-            """
-            if True:
-                if self.istrain and cur_batches > self.nbatches:
-                    aborted = True
-                    break
-            """
-        if not aborted:
-            self.needinit = True
-        self.measurements.add_history(epoch)  # Update the loss and accuracy history.
 
-
-def train_model(args: argparse, the_datasets: list, learned_params: list, task_id: int) -> None:
+class save_details_class(Enum):
     """
+    Enum class to define the save details.
+    """
+    train = 0
+    test = 1
+    val = 2
+    
+    # def __init__(self, opts):
+    #     """
+    #     :param opts: The options de decide the metric and the dataset to update the model according to.
+    #     """
+    #     self.optimum = -np.inf  # The initial optimum.
+    #     # The metric we should save according to.
+    #     self.epoch_save_idx = opts.Training.epoch_save_idx
+    #     if opts.dataset_id == 'train':
+    #         self.dataset_id = 0  # The dataset to save according to.
+    #     if opts.dataset_id == 'test':
+    #         self.dataset_id = 1
+    #     else:
+    #         self.dataset_id = 2
+    #     if self.epoch_save_idx == 'loss':
+    #         self.epoch_save_idx = 0
+    #     else:
+    #         self.epoch_save_idx = 1
+
+
+def train_model(args: Config, the_datasets: list, learned_params: list, task_id: int, model) -> None:
+    """
+    This function wrapped the training process. It's set up the optimizer, the loss function, the scheduler.
+    The main function within it is `fit` function.
+
+    # TODO : add the option to load the model as an argument and not from the argparse.
+
+
     :param args: The model options.
-    :param the_datasets: The datasets.
+    :param the_datasets: The datasets to train on
     :param learned_params: The parameters we train.
     :param task_id: The task_id
+    :param model: The model we fit.
     :return:
     """
     # TODO - separate this part from thr train_model.
-    if args.SGD:
-        optimizer = optim.SGD(learned_params, lr=args.initial_lr, momentum=arg.momentum, weight_decay=args.weight_decay)
-        if cycle_lr:
-            scheduler = optim.lr_scheduler.CyclicLR(optimizer, base_lr=args.base_lr, max_lr=args.max_lr,
-                                                    step_size_up=nbatches_train // 2, step_size_down=None,
+    if args.Models.SGD:
+        optimizer = optim.SGD(learned_params, lr=args.Training.lr,
+                              momentum=args.Training.momentum, weight_decay=args.Training.weight_decay)
+        if args.Training.cycle_lr:
+            scheduler = optim.lr_scheduler.CyclicLR(optimizer, base_lr=args.Training.lr, max_lr=args.Training.max_lr,
+                                                    step_size_up=args.nbatches_train // 2, step_size_down=None,
                                                     mode='triangular', gamma=1.0, scale_fn=None, scale_mode='cycle',
                                                     cycle_momentum=True, base_momentum=0.8, max_momentum=0.9,
                                                     last_epoch=-1)
     else:
-        optimizer = optim.Adam(learned_params, lr=args.base_lr, weight_decay=args.wd)
+        optimizer = optim.Adam(
+            learned_params, lr=args.base_lr, weight_decay=args.wd)
         if args.cycle_lr:
             scheduler = optim.lr_scheduler.CyclicLR(optimizer, base_lr=args.base_lr, max_lr=args.max_lr,
                                                     step_size_up=args.nbatches_train // 2, step_size_down=None,
@@ -122,11 +118,11 @@ def train_model(args: argparse, the_datasets: list, learned_params: list, task_i
                                                     cycle_momentum=False, last_epoch=-1)
 
     args.optimizer = optimizer
-    if not args.cycle_lr:
-        lmbda = lambda epoch: args.learning_rates_mult[epoch]
+    if not args.Training.cycle_lr:
+        def lmbda(epoch): return args.learning_rates_mult[epoch]
         scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lmbda)
     args.scheduler = scheduler
-    fit(args, the_datasets, task_id)
+    fit(args, the_datasets, task_id, model)
 
 
 def create_optimizer_and_sched(opts: argparse) -> tuple:
@@ -135,15 +131,17 @@ def create_optimizer_and_sched(opts: argparse) -> tuple:
     :return: optimizer, scheduler according to the options.
     """
     if opts.SGD:
-        optimizer = optim.SGD(learned_params, lr=opts.initial_lr, momentum=arg.momentum, weight_decay=opts.weight_decay)
-        if cycle_lr:
+        optimizer = optim.SGD(learned_params, lr=opts.initial_lr,
+                              momentum=arg.momentum, weight_decay=opts.weight_decay)
+        if opts.cycle_lr:
             scheduler = optim.lr_scheduler.CyclicLR(optimizer, base_lr=opts.base_lr, max_lr=opts.max_lr,
                                                     step_size_up=nbatches_train // 2, step_size_down=None,
                                                     mode='triangular', gamma=1.0, scale_fn=None, scale_mode='cycle',
                                                     cycle_momentum=True, base_momentum=0.8, max_momentum=0.9,
                                                     last_epoch=-1)
     else:
-        optimizer = optim.Adam(learned_params, lr=opts.base_lr, weight_decay=opts.wd)
+        optimizer = optim.Adam(
+            learned_params, lr=opts.base_lr, weight_decay=opts.wd)
         if opts.cycle_lr:
             scheduler = optim.lr_scheduler.CyclicLR(optimizer, base_lr=opts.base_lr, max_lr=opts.max_lr,
                                                     step_size_up=opts.nbatches_train // 2, step_size_down=None,
@@ -151,7 +149,7 @@ def create_optimizer_and_sched(opts: argparse) -> tuple:
                                                     cycle_momentum=False, last_epoch=-1)
 
     if not opts.cycle_lr:
-        lmbda = lambda epoch: opts.learning_rates_mult[epoch]
+        def lmbda(epoch): return opts.learning_rates_mult[epoch]
         scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lmbda)
     return optimizer, scheduler
 
@@ -212,7 +210,8 @@ def save_model_and_md(logger: logging, model_fname: str, metadata: dict, epoch: 
     :return:
     """
     tmp_model_fname = model_fname + '.tmp'  # Save into temporal directory,
-    logger.info('Saving model to %s' % model_fname)  # Send a message into the logger.
+    # Send a message into the logger.
+    logger.info('Saving model to %s' % model_fname)
     torch.save({'epoch': epoch, 'model_state_dict': opts.model.state_dict(),
                 'optimizer_state_dict': opts.optimizer.state_dict(),
                 'scheduler_state_dict': opts.scheduler.state_dict(), 'metadata': metadata, },
@@ -234,59 +233,47 @@ def load_model(opts: argparse, model_path: str, model_latest_fname: str, gpu=Non
     """
     if gpu is None:
         model_path = os.path.join(model_path, model_latest_fname)
-        checkpoint = torch.load(model_path)  # Loading the weights and the metadata.
+        # Loading the weights and the metadata.
+        checkpoint = torch.load(model_path)
     else:
         # Map model to be loaded to specified single gpu.
         loc = 'cuda:{}'.format(gpu)
         checkpoint = torch.load(model_path, map_location=loc)
-    opts.model.load_state_dict(checkpoint['model_state_dict'])  # Loading the epoch_id, the optimum and the data.
+    # Loading the epoch_id, the optimum and the data.
+    opts.model.load_state_dict(checkpoint['model_state_dict'])
     if load_optimizer_and_schedular:
-        opts.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])  # Load the optimizer state.
-        opts.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])  # Load the schedular state.
+        # Load the optimizer state.
+        opts.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        # Load the schedular state.
+        opts.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
     return checkpoint
 
 
-class save_details_class:
-    def __init__(self, opts):
-        """
-        :param opts: The options de decide the metric and the dataset to update the model according to.
-        """
-        self.optimum = -np.inf  # The initial optimum.
-        self.epoch_save_idx = opts.epoch_save_idx  # The metric we should save according to.
-        if opts.dataset_id == 'train':
-            self.dataset_id = 0  # The dataset to save according to.
-        if opts.dataset_id == 'test':
-            self.dataset_id = 1
-        else:
-            self.dataset_id = 2
-        if self.epoch_save_idx == 'loss':
-            self.epoch_save_idx = 0
-        else:
-            self.epoch_save_idx = 1
-
-
-def fit(opts: argparse, the_datasets: list, task: int) -> None:
+def fit(opts: argparse, the_datasets: list[DatasetInfo], task: int, model) -> None:
     """
     Fitting the model.
     iterate over the datasets and train (or test) them
     :param opts: The model options.
-    :param the_datasets: The train, test datasets.
+    :param the_datasets: The train, test datasets. List of DatasetInfo objects
     :param task: The task we learn.
+    :param model: The model.
     """
     logger = opts.logger
     #  if opts.first_node:
     logger.info('train_opts: %s', str(opts))
     optimizer = opts.optimizer  # Getting the optimizer.
     scheduler = opts.scheduler  # Getting the scheduler,
-    nb_epochs = opts.EPOCHS  # Getting the number of epoch we desire to train for,
+    # Getting the number of epoch we desire to train for,
+    nb_epochs = opts.Training.epochs
     model_dir = opts.model_dir  # Getting the model directory.
     model_ext = '.pt'
     model_basename = 'model'
     model_latest_fname = model_basename + '_latest' + model_ext
     model_latest_fname = os.path.join(model_dir, model_latest_fname)
-    save_details = save_details_class(opts)  # Contains the optimum.
+    # Contains the optimum.
+    save_details = save_details_class[opts.Training.dataset_to_save]
     last_epoch = -1
-    if opts.load_model_if_exists:  # If we want to continue started training.
+    if opts.Training.load_model_if_exists:  # If we want to continue an old training.
         if os.path.exists(model_latest_fname):
             logger.info('Loading model: %s' % model_latest_fname)
             checkpoint = load_model(opts, model_latest_fname, opts.gpu)
@@ -304,27 +291,34 @@ def fit(opts: argparse, the_datasets: list, task: int) -> None:
 
     st_epoch = last_epoch + 1
     end_epoch = nb_epochs
-    if instruct(opts, 'abort_after_epochs') and opts.abort_after_epochs > 0:
-        end_epoch = st_epoch + opts.abort_after_epochs
 
-    for epoch in range(st_epoch, end_epoch):  # Training for end_Epoch - st_epoch epochs.
+    # Training for end_Epoch - st_epoch epochs.
+    for epoch in range(st_epoch, end_epoch):
         #   if opts.first_node:
-        logger.info('Epoch {} learning rate: {}'.format(epoch + 1, optimizer.param_groups[0]['lr']))  # The current lr.
-        for the_dataset in the_datasets:  # Training/testing the model by the datasets.
-            the_dataset.do_epoch(opts, epoch)
-        opts.logger.info('Epoch {} done'.format(epoch + 1))  # logger info done the epoch.
+        # The current lr.
+        logger.info('Epoch {} learning rate: {}'.format(
+            epoch + 1, optimizer.param_groups[0]['lr']))
+        # Training/testing the model by the datasets.
+        for the_dataset in the_datasets:
+            the_dataset.do_epoch(opts=opts, epoch=epoch,number_of_epochs=nb_epochs,model=model)
+        # logger info done the epoch.
+        opts.logger.info('Epoch {} done'.format(epoch + 1))
         #
-        store_running_stats(opts.model, task)  # Storing the running stats to avoid forgetting.
-        logger.info('epoch {} done storing running stats'.format(epoch + 1))  # Adding to the logger.
+        # Storing the running stats to avoid forgetting.
+        # store_running_stats(opts.model, task)
+        # Adding to the logger.
+        # logger.info('epoch {} done storing running stats'.format(epoch + 1))
         #   print("Done storing running stats!")
         #
         for the_dataset in the_datasets:  # Printing the loss, accuracy per dataset.
-            logger.info('Epoch {}, {} {}'.format(epoch + 1, the_dataset.name, the_dataset.measurements.print_epoch()))
+            logger.info('Epoch {}, {} {}'.format(
+                epoch + 1, the_dataset.name, the_dataset.measurements.print_epoch()))
         if opts.scheduler is not None:  # Scheduler step.
             if not type(opts.scheduler) in [optim.lr_scheduler.CyclicLR, optim.lr_scheduler.OneCycleLR]:
                 if epoch < nb_epochs - 1:
                     # learning rate scheduler
-                    if type(opts.scheduler) is optim.lr_scheduler.ReduceLROnPlateau:  # Scheduler step in case we reduce lr by loss.
+                    # Scheduler step in case we reduce lr by loss.
+                    if type(opts.scheduler) is optim.lr_scheduler.ReduceLROnPlateau:
                         the_val_dataset = the_datasets[-1]
                         val_loss = the_val_dataset.measurements.results[-1, 0]
                         scheduler.step(val_loss)
@@ -336,12 +330,15 @@ def fit(opts: argparse, the_datasets: list, task: int) -> None:
             save_by_dataset = the_datasets[
                 save_details.dataset_id]  # Getting the dataset we update the model according to.
             measurements = np.array(save_by_dataset.measurements.results)
-            new_optimum = False  # Flag telling whether we overcome the old optimum.
-            epoch_save_value = measurements[epoch, save_details.epoch_save_idx]  # Getting the possible new optimum.
+            # Flag telling whether we overcome the old optimum.
+            new_optimum = False
+            # Getting the possible new optimum.
+            epoch_save_value = measurements[epoch, save_details.epoch_save_idx]
             if epoch_save_value > optimum:  # If we overcome the old optimum.
                 optimum = epoch_save_value  # Update the local optimum.
                 new_optimum = True  # Change the flag
-                logger.info('New optimum: %f' % optimum)  # Adding to the logger.
+                # Adding to the logger.
+                logger.info('New optimum: %f' % optimum)
                 save_details.optimum = optimum  # Update the optimum.
             metadata = dict()  # metadata dictionary.
             metadata['epoch'] = epoch
@@ -353,7 +350,8 @@ def fit(opts: argparse, the_datasets: list, task: int) -> None:
             model_latest_fname = os.path.join(model_dir, model_latest_fname)
             save_model_and_md(logger, model_latest_fname, metadata, epoch,
                               opts)  # Storing the metadata in the model_latest.
-            if new_optimum:  # If we have a new optimum, we store in an additional model to avoid overriding.
+            # If we have a new optimum, we store in an additional model to avoid overriding.
+            if new_optimum:
                 model_fname = model_basename + '%d' % (epoch + 1) + model_ext
                 model_fname = os.path.join(model_dir, model_fname)
                 shutil.copyfile(model_latest_fname, model_fname)

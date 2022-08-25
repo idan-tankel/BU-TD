@@ -3,6 +3,7 @@ from typing import List
 from datetime import datetime
 import torch.nn as nn
 import yaml
+import numpy as np
 from supplmentery.FlagAt import FlagAt
 from v26.functions.inits import init_model_options
 from supplmentery.batch_norm import BatchNorm
@@ -12,6 +13,23 @@ from supplmentery.batch_norm import BatchNorm
 
 
 class Config:
+    """
+     This class holds up the configuration of the Model, Losses, Datasets, Logging, Training...
+     Most of the Attrs are from the config.yaml file attached
+     
+     However, some of the attrs are "computed" as default in the __init__ function and in setup_flag function, and in some other functions under Model subclass
+
+        Attributes:
+            __config: the config.yaml file as a dict
+            Visibility: the Visibility Section
+            RunningSpecs: the RunningSpecs Section
+            Datasets: the Datasets Section
+            Logging: the Logging Section
+            Folders: Some saving options section
+            Lossses: the Losses Section - flags to use or not the losses
+            Models: the Models options, including stride, inshape, number of FC heads, etc.
+            Training: the Training options, including epochs, batch size, larning rate, etc.
+    """    
     def __init__(self):
         path = "config.yaml"
         full_path = os.path.join(os.path.dirname(__file__), path)
@@ -145,3 +163,4 @@ class Training:
     def __init__(self,config: dict):
         for key,value in config.items():
             self.__setattr__(key,value)
+        self.lr : float = float(config['lr'])

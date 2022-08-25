@@ -142,10 +142,10 @@ class Measurements(MeasurementsBase):
         self.model = model
         self.opts = opts
         self.inputs_to_struct = opts.inputs_to_struct
-        if self.opts.use_bu1_loss:  # If desired we also follow the occurrence loss.
+        if self.opts.Losses.use_bu1_loss:  # If desired we also follow the occurrence loss.
             super().add_name('Occurrence Acc')
 
-        if self.opts.use_bu2_loss:  # If desired we also follow the task loss.
+        if self.opts.Losses.use_bu2_loss:  # If desired we also follow the task loss.
             super().add_name('Task Acc')
 
         self.init_results()  # Initialize the matrices.
@@ -168,10 +168,10 @@ class Measurements(MeasurementsBase):
         :Resets all matrices.
         """
         super().reset()
-        if self.opts.use_bu1_loss:
+        if self.opts.Losses.use_bu1_loss:
             self.occurrence_accuracy = np.array(0.0)
             self.metrics += [self.occurrence_accuracy]
-        if self.opts.use_bu2_loss:
+        if self.opts.Losses.use_bu2_loss:
             self.task_accuracy = np.array(0.0)
             self.metrics += [self.task_accuracy]
 

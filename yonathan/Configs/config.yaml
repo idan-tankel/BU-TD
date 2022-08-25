@@ -49,10 +49,12 @@ Models:
   nfilters: [64, 96, 128, 256] # ResNet filters
   ns: [0, 2, 2, 2, 2] # the number of blocks in 
   ks: [7, 3, 3, 3, 3]
+  SGD: True # (`bool`) if True, use SGD, otherwise use Adam
   ntaskhead_fc: 1 # get out only 1 task!
   use_lateral_tdbu: True  # ('bool') use lateral connections in the TDBU
   use_lateral_butd: True # ('bool') use lateral connections in the TDBU
   # these 2 booleans are connected to the Losses section
+  use_final_conv: False
 
 
 # Some other model params are initialized in the function `init_model_options` under `v26.functions.inits.py`
@@ -63,8 +65,20 @@ Training:
   bs: 32 # batch size (int)
   num_workers: 2
   epochs: 200
-  lr: # the learning rate
+  momentum: 0.9 # (`float`) Momentum of the Adam optimizer
+  weight_decay: 0.0001 #(`float`) The weight decay of the Adam optimizer
+  lr: 2e-3 # (`float`)the initial learning rate # TODO support in also multiplication
+  max_lr: 0.002  # (`float`) the maximum learning rate
   distributed: False # whether to use distributed data within training - accross some GPUs using DistributedSampler of torch
+  cycle_lr: True # (`bool`) whether to cycle the learning rate
+
+  # checkpoints and saving options
+  epoch_save_idx: accuracy # (`str`) the metric to use for saving the model
   checkpoints_per_epoch: 1 # number of checkpoints of the model weights to save per epoch
+  dataset_to_save: 'val' # ['train','test','val'] the dataset to save the model weights to 
+  
+  
+  # other options
   multiprocessing_distributed: False #Whether to use multiprocessing_distributed data
+  load_model_if_exists: True # whether to load (from checkpoint) the model from an old training. Useful since some of the envs collapse during training....a
 
