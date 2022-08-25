@@ -7,6 +7,9 @@ import argparse
 from torch.utils.data import DataLoader
 dev = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
+# TODO note that there is very similar code in the `v26.accuracy_funcs.py` file and in `v26.functions.loses.py` file.
+
+
 
 # from utils.training_functions import test_step\
 # Accuracy#
@@ -20,10 +23,11 @@ def multi_label_accuracy_base(outs: object, samples: object, num_outputs: int = 
     """
     cur_batch_size = samples.image.shape[0]
     predictions = torch.zeros((cur_batch_size, num_outputs), dtype=torch.int).to(dev, non_blocking=True)
-    for k in range(num_outputs):
-        task_output = outs.task[:, :, k]  # For each task extract its predictions.
-        task_pred = torch.argmax(task_output, axis=1)  # Find the highest probability in the distribution
-        predictions[:, k] = task_pred  # assign for each task its predictions
+    predictions = torch.argmax(input=outs.task, dim=1, keepdim=False)
+    # for k in range(num_outputs):
+    #     task_output = outs.task[:, :, k]  # For each task extract its predictions.
+    #     task_pred = torch.argmax(task_output, axis=1)  # Find the highest probability in the distribution
+    #     predictions[:, k] = task_pred  # assign for each task its predictions
     label_task = samples.label_task
     task_accuracy = (predictions == label_task).float() / (
         num_outputs)  # Compare the number of matches and normalize by the batch size*num_outputs.
