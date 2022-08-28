@@ -101,6 +101,15 @@ class BUTDModel(nn.Module):
                                                        index_layer] * loss_weight_by_task[index_layer]
 
     def outs_to_struct(self, outs):
+        """
+        outs_to_struct _summary_
+
+        Args:
+            outs (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """        
         occurence_out, task_out, bu_out, bu2_out, *rest = outs
         outs_ns = SimpleNamespace(
             occurence=occurence_out, task=task_out, bu=bu_out, bu2=bu2_out)

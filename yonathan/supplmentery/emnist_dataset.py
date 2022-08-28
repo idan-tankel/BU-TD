@@ -1,12 +1,13 @@
-from PIL import Image
-import pickle
 import os
+import pickle
+import random  # torch random transforms uses random
+from types import SimpleNamespace
+
+import numpy as np
 import torch
 import torch.utils.data as data
 import torchvision.transforms as transforms
-from types import SimpleNamespace
-import numpy as np
-import random # torch random transforms uses random
+from PIL import Image
 
 
 class EMNISTAdjDatasetBase(data.Dataset):
@@ -89,6 +90,15 @@ class EMNISTAdjDataset(EMNISTAdjDatasetBase):
         return img,seg,label_existence,label_all,label_task,id, flag
 
 def inputs_to_struct(inputs):
+    """
+    inputs_to_struct _summary_
+
+    Args:
+        inputs (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """    
     img,label_existence,label_all,label_task,id, flag = inputs
     sample = SimpleNamespace()
     sample.image = img

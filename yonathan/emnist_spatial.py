@@ -1,4 +1,5 @@
 import os
+os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 import argparse
 from torch import device
 import torch.backends.cudnn as cudnn

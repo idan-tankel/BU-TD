@@ -6,6 +6,8 @@ import argparse
 # import DataLoader
 from torch.utils.data import DataLoader
 dev = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+from supplmentery.measurments import get_model_outs
+from v26.funcs import preprocess
 
 # TODO note that there is very similar code in the `v26.accuracy_funcs.py` file and in `v26.functions.loses.py` file.
 
@@ -53,7 +55,7 @@ class multi_label_loss_base:
          :param num_outputs: The number outputs the model should return(usually 1 or the number of characters in the image).
          :return:The loss on the batch.
          """
-        loss_tasks = torch.zeros(samples.label_task.shape).to(dev, non_blocking=True)
+        loss_tasks = torch.zeros(samples.label_task.shape).to(dev, non_blocking=False)
         for k in range(self.num_outputs):
             task_output = outs.task[:, :, k]  # For each task extract its last layer.
             label_task = samples.label_task[:, k]  # The label for the loss
@@ -73,17 +75,17 @@ def multi_label_loss(outs: object, samples: object) -> float:
 
 
 class UnifiedLossFun:
-    def __init__(self, opts: argparse) -> None:
+    def __init__(self, loss_opts: argparse) -> None:
         """
      :param opts: tells which losses to use and the loss functions.
      """
-        self.use_bu1_loss = opts.use_bu1_loss
-        self.use_td_loss = opts.use_td_loss
-        self.use_bu2_loss = opts.use_bu2_loss
-        self.bu1_loss = opts.bu1_loss
-        self.td_loss = opts.td_loss
-        self.bu2_classification_loss = opts.bu2_loss
-        self.inputs_to_struct = opts.inputs_to_struct
+        self.use_bu1_loss = loss_opts.use_bu1_loss
+        self.use_td_loss = loss_opts.use_td_loss
+        self.use_bu2_loss = loss_opts.use_bu2_loss
+        self.bu1_loss = loss_opts.bu1_loss
+        self.td_loss = loss_opts.td_loss
+        self.bu2_classification_loss = loss_opts.bu2_loss
+        self.inputs_to_struct = loss_opts.inputs_to_struct
 
     def __call__(self, model, inputs: list[torch], outs: list) -> float:
         """

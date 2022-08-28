@@ -1,13 +1,19 @@
 import os
 from typing import List
 from datetime import datetime
-import torch.nn as nn
+from torch import nn
 import yaml
 import numpy as np
+import torch
 from supplmentery.FlagAt import FlagAt
 from v26.functions.inits import init_model_options
 from supplmentery.batch_norm import BatchNorm
+from supplmentery.loss_and_accuracy import multi_label_loss_base,multi_label_loss,UnifiedLossFun,multi_label_accuracy_base
+from supplmentery.emnist_dataset import inputs_to_struct
 
+# from supplmentery.training_functions import create_optimizer_and_sched
+
+dev = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 # configuration class
 # from v26.models.flag_at import FlagAt
 
@@ -147,7 +153,13 @@ class Losses:
         self.use_bu1_loss = config['use_bu1_loss']
         self.use_bu2_loss = config['use_bu2_loss']
         self.activation_fun = nn.__getattribute__(config['activation_fun'])
-
+        self.bu1_loss = nn.BCEWithLogitsLoss(reduction='mean').to(dev)
+        self.bu2_loss = multi_label_loss
+        self.td_loss = nn.MSELoss(reduction='mean').to(dev)
+        self.inputs_to_struct = inputs_to_struct 
+        self.loss_fun = UnifiedLossFun(self)
+        self.task_accuracy = multi_label_accuracy_base
+        # the UnifiedLossFun is a wrapper around the loss functions, and it must be the last one here since it using all the arguments of self
 
 class Folders:
     def __init__(self, config: dict):
@@ -164,3 +176,4 @@ class Training:
         for key,value in config.items():
             self.__setattr__(key,value)
         self.lr : float = float(config['lr'])
+        self.optimizer

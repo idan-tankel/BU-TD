@@ -478,31 +478,32 @@ def train_step(inputs: List, opts,model):
     """    
     model.train()
     outs = model(inputs)
-    loss = opts.Training.loss_fun(inputs, outs)
+    loss = opts.Losses.loss_fun(model = model,inputs=inputs, outs=outs)
     opts.Training.optimizer.zero_grad()
     loss.backward()
     opts.Training.optimizer.step()  # here changes the weights
     return loss, outs
 
 
-def test_step(inputs, opts:SimpleNamespace):
+def test_step(inputs, model:nn.Module,opts:SimpleNamespace):
     """
     test_step Run the actual training step on the data, but without autograd (with torch.no_grad())
 
     Args:
         inputs (): 
+        model (`nn.Module`): The model itself
         opts (`SimpleNamespace`): Model options.
             The model options is a container holding also the model object (under ``opts.model``)
             and the model loss function (under ``opts.loss_fun``), and both are callable
 
     Returns:
         loss,outs (`torch.Tensor`,`torch.Tensor`): The loss value and the model outputs
-    """    
-    opts.model.eval()
+    """
+    model.eval()
     with torch.no_grad():
         # Here check the output - where more than 1 flag
-        outs = opts.model(inputs)
-        loss = opts.loss_fun(inputs, outs)
+        outs = model(inputs)
+        loss = opts.Losses.loss_fun(inputs, outs)
     return loss, outs
 
 

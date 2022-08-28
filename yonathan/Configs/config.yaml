@@ -39,17 +39,17 @@ Losses:
   use_bu2_loss: True
   activation_fun: 'ReLU' 
   # the name here must be the same as the name of the activation function under `torch.nn`
+  # there are some extra params set up in the `Config.py` file
 
 Models:
   features: "all"
   num_heads: "only_features"
   inshape: [3, 112, 224] # `[int,int,int]` the spahe of the incoming data. The inshape being a list rather than a tuple is simpler, since a YAML formatter would treat the tuple as a string, and accessing the elements of the tuple would just concat the string '('.
-  nclasses: [[47], [47], [47], [47]] # the number of classes within the dataset
+  nclasses: [[48], [48], [48], [48]] # the number of classes within the dataset
   strides: [2, 2, 1, 2]
   nfilters: [64, 96, 128, 256] # ResNet filters
   ns: [0, 2, 2, 2, 2] # the number of blocks in 
   ks: [7, 3, 3, 3, 3]
-  SGD: True # (`bool`) if True, use SGD, otherwise use Adam
   ntaskhead_fc: 1 # get out only 1 task!
   use_lateral_tdbu: True  # ('bool') use lateral connections in the TDBU
   use_lateral_butd: True # ('bool') use lateral connections in the TDBU
@@ -71,6 +71,8 @@ Training:
   max_lr: 0.002  # (`float`) the maximum learning rate
   distributed: False # whether to use distributed data within training - accross some GPUs using DistributedSampler of torch
   cycle_lr: True # (`bool`) whether to cycle the learning rate
+  optimizer: Adam  # (`str`) the optimizer to use. ['Adam','SGD']
+  
 
   # checkpoints and saving options
   epoch_save_idx: accuracy # (`str`) the metric to use for saving the model

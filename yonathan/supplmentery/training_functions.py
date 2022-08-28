@@ -99,7 +99,7 @@ def train_model(args: Config, the_datasets: list, learned_params: list, task_id:
     :return:
     """
     # TODO - separate this part from thr train_model.
-    if args.Models.SGD:
+    if args.Training.optimizer == 'SGD':
         optimizer = optim.SGD(learned_params, lr=args.Training.lr,
                               momentum=args.Training.momentum, weight_decay=args.Training.weight_decay)
         if args.Training.cycle_lr:
@@ -110,14 +110,14 @@ def train_model(args: Config, the_datasets: list, learned_params: list, task_id:
                                                     last_epoch=-1)
     else:
         optimizer = optim.Adam(
-            learned_params, lr=args.base_lr, weight_decay=args.wd)
-        if args.cycle_lr:
-            scheduler = optim.lr_scheduler.CyclicLR(optimizer, base_lr=args.base_lr, max_lr=args.max_lr,
+            learned_params, lr=args.Training.lr, weight_decay=args.Training.weight_decay)
+        if args.Training.cycle_lr:
+            scheduler = optim.lr_scheduler.CyclicLR(optimizer, base_lr=args.Training.lr, max_lr=args.Training.max_lr,
                                                     step_size_up=args.nbatches_train // 2, step_size_down=None,
                                                     mode='triangular', gamma=1.0, scale_fn=None, scale_mode='cycle',
                                                     cycle_momentum=False, last_epoch=-1)
 
-    args.optimizer = optimizer
+    args.Training.optimizer = optimizer
     if not args.Training.cycle_lr:
         def lmbda(epoch): return args.learning_rates_mult[epoch]
         scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lmbda)
@@ -125,9 +125,9 @@ def train_model(args: Config, the_datasets: list, learned_params: list, task_id:
     fit(args, the_datasets, task_id, model)
 
 
-def create_optimizer_and_sched(opts: argparse) -> tuple:
+def create_optimizer_and_sched(opts: Config) -> tuple:
     """
-    :param opts: The model options.
+    :param opts: The model options (specificly training options subsection).
     :return: optimizer, scheduler according to the options.
     """
     if opts.SGD:
@@ -261,7 +261,7 @@ def fit(opts: argparse, the_datasets: list[DatasetInfo], task: int, model) -> No
     logger = opts.logger
     #  if opts.first_node:
     logger.info('train_opts: %s', str(opts))
-    optimizer = opts.optimizer  # Getting the optimizer.
+    optimizer = opts.Training.optimizer  # Getting the optimizer.
     scheduler = opts.scheduler  # Getting the scheduler,
     # Getting the number of epoch we desire to train for,
     nb_epochs = opts.Training.epochs
