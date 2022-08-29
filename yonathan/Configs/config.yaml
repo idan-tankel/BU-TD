@@ -72,12 +72,12 @@ Training:
   distributed: False # whether to use distributed data within training - accross some GPUs using DistributedSampler of torch
   cycle_lr: True # (`bool`) whether to cycle the learning rate
   optimizer: Adam  # (`str`) the optimizer to use. ['Adam','SGD']
-  
-
   # checkpoints and saving options
+  save_model: True # (`bool`) whether to save the model
   epoch_save_idx: accuracy # (`str`) the metric to use for saving the model
   checkpoints_per_epoch: 1 # number of checkpoints of the model weights to save per epoch
   dataset_to_save: 'val' # ['train','test','val'] the dataset to save the model weights to 
+  
   
   
   # other options

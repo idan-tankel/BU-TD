@@ -503,7 +503,7 @@ def test_step(inputs, model:nn.Module,opts:SimpleNamespace):
     with torch.no_grad():
         # Here check the output - where more than 1 flag
         outs = model(inputs)
-        loss = opts.Losses.loss_fun(inputs, outs)
+        loss = opts.Losses.loss_fun(model=model,inputs=inputs,outs=outs)
     return loss, outs
 
 

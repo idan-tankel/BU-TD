@@ -62,7 +62,7 @@ class DatasetInfo():
                 # and use train_sampler.set_epoch(epoch // checkpoints_per_epoch)
         start_time = time.time()
         for inputs in self.dataset_iter:
-            cur_loss, outs = self.batch_fun(inputs, opts,model=model)
+            cur_loss, outs = self.batch_fun(inputs=inputs, opts=opts,model=model)
             with torch.no_grad():
                 # so that accuracies calculation will not accumulate gradients
                 self.measurements.update(inputs, outs, cur_loss.item())

@@ -1,3 +1,4 @@
+import enum
 import torch.optim as optim
 import logging
 import os
@@ -56,31 +57,31 @@ class DatasetInfo:
         self.dataset_iter = iter(self.dataset)
 
 
-class save_details_class(Enum):
+class save_details_class():
     """
     Enum class to define the save details.
     """
     train = 0
     test = 1
     val = 2
-    
-    # def __init__(self, opts):
-    #     """
-    #     :param opts: The options de decide the metric and the dataset to update the model according to.
-    #     """
-    #     self.optimum = -np.inf  # The initial optimum.
-    #     # The metric we should save according to.
-    #     self.epoch_save_idx = opts.Training.epoch_save_idx
-    #     if opts.dataset_id == 'train':
-    #         self.dataset_id = 0  # The dataset to save according to.
-    #     if opts.dataset_id == 'test':
-    #         self.dataset_id = 1
-    #     else:
-    #         self.dataset_id = 2
-    #     if self.epoch_save_idx == 'loss':
-    #         self.epoch_save_idx = 0
-    #     else:
-    #         self.epoch_save_idx = 1
+
+    def __init__(self, epoch_save_index: str, dataset_name: str):
+        """
+        :param opts: The options de decide the metric and the dataset to update the model according to.
+        """
+        self.optimum = -np.inf  # The initial optimum.
+        # The metric we should save according to.
+        self.epoch_save_idx = epoch_save_index
+        if dataset_name == 'train':
+            self.dataset_id = 0  # The dataset to save according to.
+        elif dataset_name == 'test':
+            self.dataset_id = 1
+        else:
+            self.dataset_id = 2
+        if self.epoch_save_idx == 'loss':
+            self.epoch_save_idx = 0
+        else:
+            self.epoch_save_idx = 1
 
 
 def train_model(args: Config, the_datasets: list, learned_params: list, task_id: int, model) -> None:
@@ -199,7 +200,7 @@ def from_network_transpose(samples, outs):
 '''
 
 
-def save_model_and_md(logger: logging, model_fname: str, metadata: dict, epoch: int, opts: argparse) -> None:
+def save_model_and_md(logger: logging, model_fname: str, metadata: dict, epoch: int, opts: argparse,model: nn.Module) -> None:
     """
     Saving the model weights and the metadata(e.g. running statistics of the batch norm layers)
     :param logger: The logger we write into.
@@ -212,8 +213,8 @@ def save_model_and_md(logger: logging, model_fname: str, metadata: dict, epoch: 
     tmp_model_fname = model_fname + '.tmp'  # Save into temporal directory,
     # Send a message into the logger.
     logger.info('Saving model to %s' % model_fname)
-    torch.save({'epoch': epoch, 'model_state_dict': opts.model.state_dict(),
-                'optimizer_state_dict': opts.optimizer.state_dict(),
+    torch.save({'epoch': epoch, 'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': opts.Training.optimizer.state_dict(),
                 'scheduler_state_dict': opts.scheduler.state_dict(), 'metadata': metadata, },
                tmp_model_fname)  # Saving the metadata.
     os.rename(tmp_model_fname, model_fname)  # Rename to the desired name.
@@ -253,10 +254,10 @@ def fit(opts: argparse, the_datasets: list[DatasetInfo], task: int, model) -> No
     """
     Fitting the model.
     iterate over the datasets and train (or test) them
-    :param opts: The model options.
+    :param opts: The model options. Saved as Config object
     :param the_datasets: The train, test datasets. List of DatasetInfo objects
     :param task: The task we learn.
-    :param model: The model.
+    :param model: The model object. An extention of nn.Module.
     """
     logger = opts.logger
     #  if opts.first_node:
@@ -271,9 +272,11 @@ def fit(opts: argparse, the_datasets: list[DatasetInfo], task: int, model) -> No
     model_latest_fname = model_basename + '_latest' + model_ext
     model_latest_fname = os.path.join(model_dir, model_latest_fname)
     # Contains the optimum.
-    save_details = save_details_class[opts.Training.dataset_to_save]
+    save_details = save_details_class(
+        epoch_save_index=opts.Training.epoch_save_idx, dataset_name=opts.Training.dataset_to_save)
     last_epoch = -1
-    if opts.Training.load_model_if_exists:  # If we want to continue an old training.
+    # If we want to continue an old training.
+    if opts.Training.load_model_if_exists:
         if os.path.exists(model_latest_fname):
             logger.info('Loading model: %s' % model_latest_fname)
             checkpoint = load_model(opts, model_latest_fname, opts.gpu)
@@ -300,7 +303,8 @@ def fit(opts: argparse, the_datasets: list[DatasetInfo], task: int, model) -> No
             epoch + 1, optimizer.param_groups[0]['lr']))
         # Training/testing the model by the datasets.
         for the_dataset in the_datasets:
-            the_dataset.do_epoch(opts=opts, epoch=epoch,number_of_epochs=nb_epochs,model=model)
+            the_dataset.do_epoch(opts=opts, epoch=epoch,
+                                 number_of_epochs=nb_epochs, model=model)
         # logger info done the epoch.
         opts.logger.info('Epoch {} done'.format(epoch + 1))
         #
@@ -325,7 +329,7 @@ def fit(opts: argparse, the_datasets: list[DatasetInfo], task: int, model) -> No
                     else:
                         scheduler.step()
 
-        if opts.save_model:  # Saving the model.
+        if opts.Training.save_model:  # Saving the model.
             optimum = save_details.optimum  # Getting the old optimum.
             save_by_dataset = the_datasets[
                 save_details.dataset_id]  # Getting the dataset we update the model according to.
@@ -349,7 +353,7 @@ def fit(opts: argparse, the_datasets: list[DatasetInfo], task: int, model) -> No
             model_latest_fname = model_basename + '_latest' + model_ext
             model_latest_fname = os.path.join(model_dir, model_latest_fname)
             save_model_and_md(logger, model_latest_fname, metadata, epoch,
-                              opts)  # Storing the metadata in the model_latest.
+                              opts,model=model)  # Storing the metadata in the model_latest.
             # If we have a new optimum, we store in an additional model to avoid overriding.
             if new_optimum:
                 model_fname = model_basename + '%d' % (epoch + 1) + model_ext
