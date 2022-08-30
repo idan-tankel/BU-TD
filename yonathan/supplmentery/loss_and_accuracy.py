@@ -97,7 +97,7 @@ class UnifiedLossFun:
         samples = self.inputs_to_struct(inputs)  # Make samples from the raw data.
         loss = 0.0  # The general loss.
         if self.use_bu1_loss:
-            loss_occ = self.bu1_loss(outs.occurrence_out,
+            loss_occ = self.bu1_loss(outs.occurence,
                                      samples.label_existence)  # compute the binary existence classification loss
             loss += loss_occ  # Add the occurrence loss.
         if self.use_td_loss:

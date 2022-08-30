@@ -35,7 +35,7 @@ strings:
 
 Losses:
   use_td_loss: False
-  use_bu1_loss: False
+  use_bu1_loss: True
   use_bu2_loss: True
   activation_fun: 'ReLU' 
   # the name here must be the same as the name of the activation function under `torch.nn`
@@ -48,8 +48,8 @@ Models:
   nclasses: [[48], [48], [48], [48]] # the number of classes within the dataset
   strides: [2, 2, 1, 2]
   nfilters: [64, 96, 128, 256] # ResNet filters
-  ns: [0, 2, 2, 2, 2] # the number of blocks in 
-  ks: [7, 3, 3, 3, 3]
+  ns: [0, 1, 1, 1] # the number of blocks in 
+  ks: [7, 3, 3, 3] # kernel size 
   ntaskhead_fc: 1 # get out only 1 task!
   use_lateral_tdbu: True  # ('bool') use lateral connections in the TDBU
   use_lateral_butd: True # ('bool') use lateral connections in the TDBU
@@ -62,12 +62,12 @@ Models:
 
 
 Training:
-  bs: 32 # batch size (int)
+  bs: 10 # batch size (int)
   num_workers: 2
   epochs: 200
   momentum: 0.9 # (`float`) Momentum of the Adam optimizer
   weight_decay: 0.0001 #(`float`) The weight decay of the Adam optimizer
-  lr: 2e-3 # (`float`)the initial learning rate # TODO support in also multiplication
+  lr: 0.0002 # (`float`)the initial learning rate # TODO support in also multiplication
   max_lr: 0.002  # (`float`) the maximum learning rate
   distributed: False # whether to use distributed data within training - accross some GPUs using DistributedSampler of torch
   cycle_lr: True # (`bool`) whether to cycle the learning rate

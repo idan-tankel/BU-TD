@@ -155,7 +155,7 @@ class Measurements(MeasurementsBase):
         outs = get_model_outs(self.model, outs)
         samples = self.inputs_to_struct(inputs)
         if self.opts.Losses.use_bu1_loss:
-            occurrence_pred = outs.occurrence_out > 0
+            occurrence_pred = outs.occurence > 0
             occurrence_accuracy = (occurrence_pred == samples.label_existence).type(torch.float).mean(axis=1)
             super().update_metric(self.occurrence_accuracy,
                                   occurrence_accuracy.sum().cpu().numpy())  # Update the occurrence metric.

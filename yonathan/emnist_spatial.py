@@ -66,12 +66,6 @@ def train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
     # Deciding which parameters will be trained: if True all the model otherwise,only the task embedding.
     if train_all_model:
         learned_params = model.parameters()
-    task_embedding = False
-    transfer_learning = False
-    if task_embedding:
-        learned_params = parser.model.module.task_embedding[embedding_idx]
-    if transfer_learning:
-        learned_params = parser.model.module.transfer_learning[embedding_idx]
     # Training the learned params of the model.
     # print(accuracy(parser, val_dl))
     training_functions.train_model(
@@ -85,7 +79,7 @@ def train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
 
 
 def main():
-    train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
+    train_emnist(embedding_idx=0, flag_at=FlagAt.TD,
                  processed_data='5_extended', path_loading=None)
 
 

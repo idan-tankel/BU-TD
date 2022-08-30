@@ -23,7 +23,8 @@ class OccurrenceHead(nn.Module):
 
     def __init__(self, opts):
         super(OccurrenceHead, self).__init__()
-        filters = opts.nclasses_existence
+        opts = opts.Models
+        filters = opts.nclasses[0][0]-1 # TODO-change to support to the 
         infilters = opts.nfilters[-1]
         self.fc = nn.Linear(infilters, filters)
 
