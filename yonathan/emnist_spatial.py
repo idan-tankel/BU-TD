@@ -1,17 +1,17 @@
+from supplmentery.create_model import create_model
+from Configs.Config import Config
+from supplmentery.get_dataset import get_dataset
+from supplmentery.FlagAt import FlagAt
+from supplmentery.Parser import *
+from supplmentery import measurments, training_functions, logger, visuialize_predctions
+import supplmentery
+from torch.utils.data import DataLoader
+import torch.backends.cudnn as cudnn
+from torch import device
+import argparse
 import os
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
-import argparse
-from torch import device
-import torch.backends.cudnn as cudnn
-from torch.utils.data import DataLoader
 # import supplmentery
-import supplmentery
-from supplmentery import measurments, training_functions, logger, visuialize_predctions
-from supplmentery.Parser import *
-from supplmentery.FlagAt import FlagAt
-from supplmentery.get_dataset import get_dataset
-from Configs.Config import Config
-from supplmentery.create_model import create_model
 # from {Package.module} import {class}
 
 
@@ -31,10 +31,11 @@ def train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
         processed_data (str, optional): _description_. Defaults to '5_extended'.
         path_loading (_type_, optional): _description_. Defaults to None.
         train_all_model (bool, optional): _description_. Defaults to True.
-    """                 
+    """
     # add some training options from config file
     config: Config = Config()
     config.Models.init_model_options()
+    config.flag_size = config.Models.nclasses[0][0] + 3 # directions
 
     if config.Visibility.interactive_session:
         os.environ['CUDA_VISIBLE_DEVICES'] = '0'
@@ -45,9 +46,6 @@ def train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
     # Getting the dataset for the training.
     # TODO initialize all model options from args (see `v26.functions.inits.py` under itsik branch)
 
-
-    
-
     data_path = os.path.join(
         '../data/new_samples', processed_data)
     [the_datasets, train_dl, test_dl, val_dl, train_dataset,
@@ -55,10 +53,8 @@ def train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
     # Printing the model and the hyper-parameters.
     logger.print_detail(parser)
     # creating the model according the parser.
-    model  = create_model(model_opts=parser)
-    measurments.set_datasets_measurements(
-        the_datasets, measurments.Measurements, parser, model=model)
-    
+    model = create_model(model_opts=parser)
+    measurments.set_datasets_measurements(the_datasets, measurments.Measurements, parser, model=model)
     cudnn.benchmark = True  # TODO:understand what it is.
     # Loading a pretrained model if exists.
     if path_loading is not None:
@@ -69,13 +65,8 @@ def train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
     # Training the learned params of the model.
     # print(accuracy(parser, val_dl))
     training_functions.train_model(
-        parser, the_datasets, learned_params, embedding_idx,model)
+        parser, the_datasets, learned_params, embedding_idx, model)
     visuialize_predctions.visualize(parser, train_dataset)
-
-
-
-
-
 
 
 def main():

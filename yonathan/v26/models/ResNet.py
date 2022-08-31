@@ -214,6 +214,9 @@ class ResNetTDLat(nn.Module):
         top_filters = opts.Models.nfilters[-1]
         self.top_filters = top_filters
         self.inplanes = top_filters
+        # TODO flag_size is missing
+        # When training on emnist flag_size should be `flag_size = ndirections + nclasses_existence` 
+        # When training on avatar flag_size should be `flag_size = nclasses_existence + nfeatures`
         if opts.use_td_flag:
             self.h_flag_td = nn.Sequential(nn.Linear(opts.flag_size, top_filters), self.norm_layer(top_filters, dims=1),
                                            self.activation_fun())
