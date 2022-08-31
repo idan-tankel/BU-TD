@@ -4,7 +4,7 @@ Visibility:
 
 RunningSpecs:
   distributed: False
-  FlagAt: NOFLAG
+  FlagAt: TD
   isFit: True
   processed_data: '5_extended' # The name of the model result directory
   
