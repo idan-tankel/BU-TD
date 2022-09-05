@@ -221,16 +221,17 @@ def save_model_and_md(logger: logging, model_fname: str, metadata: dict, epoch: 
     logger.info('Saved model')
 
 
-def load_model(opts: argparse, model_path: str, model_latest_fname: str, gpu=None,
+def load_model(opts: argparse, model_path: str, model_latest_fname: str,model: nn.Module, gpu=None,
                load_optimizer_and_schedular: bool = False) -> dict:
     """
     Loads and returns the model as a dictionary.
     :param opts: The model opts.
     :param model_path: The model path
     :param model_latest_fname: The model id in the folder.
+    :param model: The model object
     :param gpu:
     :param load_optimizer_and_schedular: Whether to load optimizer and schedular.
-    :return:
+    :return: The model from checkpoint.
     """
     if gpu is None:
         model_path = os.path.join(model_path, model_latest_fname)
@@ -241,7 +242,7 @@ def load_model(opts: argparse, model_path: str, model_latest_fname: str, gpu=Non
         loc = 'cuda:{}'.format(gpu)
         checkpoint = torch.load(model_path, map_location=loc)
     # Loading the epoch_id, the optimum and the data.
-    opts.model.load_state_dict(checkpoint['model_state_dict'])
+    model.load_state_dict(checkpoint['model_state_dict'])
     if load_optimizer_and_schedular:
         # Load the optimizer state.
         opts.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])

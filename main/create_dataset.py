@@ -251,7 +251,7 @@ def main() -> None:
             nsamples_val = cur_nexamples
 
         # print the number of sampled examples.
-        print('total of %d examples' % cur_nexamples)
+        print(f'total of {cur_nexamples} examples')
         # divide all the examples across several jobs. Each job generates samples from examples
         # The needed number of jobs.
         cur_njobs = min(njobs, np.ceil(

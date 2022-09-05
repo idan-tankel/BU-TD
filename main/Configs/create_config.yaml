@@ -20,7 +20,8 @@ num_rows_in_the_image: 1 # (`int`) The number of rows in the image
 
 
 # building traininga and validation set options
-nsamples_train: 50000 # (`int`) The number of samples to use for training (default=10000)
+# recall this is the number of images - the total number of samples by each dataset is dubled due to the `ngenerate` option
+nsamples_train: 10000 # (`int`) The number of samples to use for training (default=10000)
 nsamples_test: 2000 # (`int`) The number of samples to use for testing 
 nsamples_val: 2000 # (`int`) The number of samples to use for validation (default=2000)
 
@@ -30,6 +31,6 @@ use_only_valid_classes: True # (`bool`) If set to true, use only specific classe
 generalize: True # (`bool`) If set to true, use some samples for generalization (default=true)
 ndirections: 2 # (`int`) The number of directions to use for the training (default=2)
 create_all_directions: False # (`bool`) If set to true, create all the directions for the training (default=false)
-ngenerate: 5 # (`int`) The number of queries to create for the same image (default=5)
+ngenerate: 5 # (`int`) The number of samples to create for the same image (default=5)
 single_feat_to_generate: False # (`bool`) If set to true, create multiple queries on the same image (default=false)
 ntest_strings: 1 # (default=1) (`int`) The number of samples strings for the combinatorial test

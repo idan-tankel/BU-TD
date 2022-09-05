@@ -60,7 +60,7 @@ def train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
     if path_loading is not None or config.Training.load_existing_path:
         if path_loading is None:
             path_loading = config.Training.path_loading
-        training_functions.load_model(parser, results_dir, path_loading)
+        training_functions.load_model(parser, results_dir, path_loading,model=model)
     # Deciding which parameters will be trained: if True all the model otherwise,only the task embedding.
     if train_all_model:
         learned_params = model.parameters()
@@ -72,7 +72,7 @@ def train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
 
 
 def main():
-    # path_loading = r"/home/idanta/data/emnist/data/results/DS=5_extendedtime = 04.09.2022 14:48:57/model_latest.pt"
+    path_loading = r"/home/idanta/data/emnist/data/results/DS=5_extendedtime = 04.09.2022 14:48:57/model_latest.pt"
     train_emnist(embedding_idx=0, flag_at=FlagAt.TD,
                  processed_data='5_extended', path_loading=path_loading)
 
