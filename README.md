@@ -72,7 +72,7 @@ Shimon Ullman, Liav Assif, Alona Strugatski, Ben-Zion Vatashsky, Hila Levi, Aviv
 
 ## TODO 
 - change the design of `create_dataset` to be one big file with plugins to each dataset 
-    - mnist
+    - emnist
     - persons
     - clevr
     - omniglot
@@ -81,7 +81,7 @@ Shimon Ullman, Liav Assif, Alona Strugatski, Ben-Zion Vatashsky, Hila Levi, Aviv
 
 
  - PLAN
-    - The `tankel` branch will be the major branch, chaging the main
+    - The `beta` branch will be the major branch, chaging the main
     - Create a packages from `supplmentery` dir and `v26` dir
     - End up with a nice robust base version for the model
     - Scan the code for problems
