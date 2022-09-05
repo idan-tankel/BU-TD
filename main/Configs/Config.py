@@ -172,7 +172,10 @@ class Folders:
 
 
 class Training:
-    def __init__(self,config: dict):
+    """
+     _summary_
+    """    
+    def __init__(self,config: dict):        
         for key,value in config.items():
             self.__setattr__(key,value)
         self.lr : float = float(config['lr'])

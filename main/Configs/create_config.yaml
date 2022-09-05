@@ -20,7 +20,7 @@ num_rows_in_the_image: 1 # (`int`) The number of rows in the image
 
 
 # building traininga and validation set options
-nsamples_train: 10000 # (`int`) The number of samples to use for training (default=10000)
+nsamples_train: 50000 # (`int`) The number of samples to use for training (default=10000)
 nsamples_test: 2000 # (`int`) The number of samples to use for testing 
 nsamples_val: 2000 # (`int`) The number of samples to use for validation (default=2000)
 

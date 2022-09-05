@@ -27,10 +27,10 @@ def train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
 
     Args:
         embedding_idx (int, optional): _description_. Defaults to 0.
-        flag_at (_type_, optional): _description_. Defaults to FlagAt.SF.
+        flag_at (`FlagAt`, optional): . This flag determines the architecture specification to use.Defaults to FlagAt.SF.
         processed_data (str, optional): _description_. Defaults to '5_extended'.
-        path_loading (_type_, optional): _description_. Defaults to None.
-        train_all_model (bool, optional): _description_. Defaults to True.
+        path_loading (`str`, optional): A path to load existing model from with trained weights. Defaults to None.
+        train_all_model (bool, optional): Determines which training parameters to initialize. If set to false, only the task_embedding will be initialize. Defaults to True.
     """
     # add some training options from config file
     config: Config = Config()
@@ -57,7 +57,9 @@ def train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
     measurments.set_datasets_measurements(the_datasets, measurments.Measurements, parser, model=model)
     cudnn.benchmark = True  # TODO:understand what it is.
     # Loading a pretrained model if exists.
-    if path_loading is not None:
+    if path_loading is not None or config.Training.load_existing_path:
+        if path_loading is None:
+            path_loading = config.Training.path_loading
         training_functions.load_model(parser, results_dir, path_loading)
     # Deciding which parameters will be trained: if True all the model otherwise,only the task embedding.
     if train_all_model:
@@ -70,18 +72,11 @@ def train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
 
 
 def main():
+    # path_loading = r"/home/idanta/data/emnist/data/results/DS=5_extendedtime = 04.09.2022 14:48:57/model_latest.pt"
     train_emnist(embedding_idx=0, flag_at=FlagAt.TD,
-                 processed_data='5_extended', path_loading=None)
+                 processed_data='5_extended', path_loading=path_loading)
 
 
 if __name__ == "__main__":
     main()
 
-# Temp place
-##############################################
-# /home/sverkip/data/Omniglot/data/new_samples/T
-# print(num_params(learned_params))
-#
-# /home/sverkip/data/Omniglot/data/results/DS=Four_languages_embedding_idx=029.06.2022 11:55:49/model5.pt
-# 'DS=8_extended_exp[27, 5, 42]_embedding_idx=029.06.2022 15:21:58'
-###############################################
