@@ -72,8 +72,28 @@ Shimon Ullman, Liav Assif, Alona Strugatski, Ben-Zion Vatashsky, Hila Levi, Aviv
 
 ## TODO 
 - change the design of `create_dataset` to be one big file with plugins to each dataset 
-    - mnist
+    - emnist
     - persons
     - clevr
+    - omniglot
 - change the `create_dataset` file to be idempotent - namely, when running the file after the dataset is cretaed it won't be downloaded again 
 - change the behaviour of the download function path to not be relative
+
+
+ - PLAN
+    - The `beta` branch will be the major branch, chaging the main
+    - Create a packages from `supplmentery` dir and `v26` dir
+    - End up with a nice robust base version for the model
+    - Scan the code for problems
+    - Update documentation to the new training procedures
+    - create new `requirements` file for conda
+    
+
+- Long Time forward
+    - Create a workflow and a proper GitHUB action to invoke training / debugging / simple auto tests
+    - Transfer the use case of some np.array to torch framework
+
+
+## Contribute
+
+@yonatansverdlov @idan-tankel 
