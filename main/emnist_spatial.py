@@ -72,9 +72,8 @@ def train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
 
 
 def main():
-    path_loading = r"/home/idanta/data/emnist/data/results/DS=5_extendedtime = 04.09.2022 14:48:57/model_latest.pt"
     train_emnist(embedding_idx=0, flag_at=FlagAt.TD,
-                 processed_data='5_extended', path_loading=path_loading)
+                 processed_data='5_extended', path_loading=None)
 
 
 if __name__ == "__main__":

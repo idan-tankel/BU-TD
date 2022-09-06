@@ -123,7 +123,8 @@ def train_model(args: Config, the_datasets: list, learned_params: list, task_id:
         def lmbda(epoch): return args.learning_rates_mult[epoch]
         scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lmbda)
     args.scheduler = scheduler
-    fit(args, the_datasets, task_id, model)
+    fit(args, the_datasets, task_id, model=model,optimizer=optimizer, scheduler=scheduler)
+    # TODO find what the task_id can be (right/left)
 
 
 def create_optimizer_and_sched(opts: Config) -> tuple:
@@ -251,7 +252,7 @@ def load_model(opts: argparse, model_path: str, model_latest_fname: str,model: n
     return checkpoint
 
 
-def fit(opts: argparse, the_datasets: list[DatasetInfo], task: int, model) -> None:
+def fit(opts: argparse, the_datasets: list[DatasetInfo], task: int, model:nn.Module,optimizer,scheduler) -> None:
     """
     Fitting the model.
     iterate over the datasets and train (or test) them
@@ -259,12 +260,12 @@ def fit(opts: argparse, the_datasets: list[DatasetInfo], task: int, model) -> No
     :param the_datasets: The train, test datasets. List of DatasetInfo objects
     :param task: The task we learn.
     :param model: The model object. An extention of nn.Module.
+    :param optimizer: The optimizer object.
+    :param scheduler: The scheduler object.
     """
     logger = opts.logger
     #  if opts.first_node:
     logger.info('train_opts: %s', str(opts))
-    optimizer = opts.Training.optimizer  # Getting the optimizer.
-    scheduler = opts.scheduler  # Getting the scheduler,
     # Getting the number of epoch we desire to train for,
     nb_epochs = opts.Training.epochs
     model_dir = opts.model_dir  # Getting the model directory.

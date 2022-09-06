@@ -74,7 +74,7 @@ Training:
   cycle_lr: True # (`bool`) whether to cycle the learning rate
   optimizer: Adam  # (`str`) the optimizer to use. ['Adam','SGD']
   # checkpoints and saving options
-  load__existing_path: False # (`bool`) whether to load an existing model from the path specified in `path_loading`. Default to false
+  load_existing_path: False # (`bool`) whether to load an existing model from the path specified in `path_loading`. Default to false
   path_loading: "model_latest.pt" # (`str`) the path to load an existing model, pretrained (should be a .pt file)
   save_model: True # (`bool`) whether to save the model
   epoch_save_idx: accuracy # (`str`) the metric to use for saving the model

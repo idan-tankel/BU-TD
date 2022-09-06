@@ -40,7 +40,7 @@ def gen_sample(parser: argparse, sample_id: int, is_train: bool, aug_data: trans
     for char in example.chars:  # Iterate over each chosen character.
         # Adding the character to the image.
         image, info = addCharacterToExistingImage(
-            dataloader, image=image, char=char, num_examples_per_character=10)
+            dataloader, image=image, char=char, num_examples_per_character=2800)
         infos.append(info)  # Adding to the info about the characters.
     # TODO test if this is char size or letter size
     # TODO change this part to not support only omniglot

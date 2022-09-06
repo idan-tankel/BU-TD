@@ -31,8 +31,9 @@ def multi_label_accuracy_base(outs: object, samples: object, num_outputs: int = 
     #     task_pred = torch.argmax(task_output, axis=1)  # Find the highest probability in the distribution
     #     predictions[:, k] = task_pred  # assign for each task its predictions
     label_task = samples.label_task
-    task_accuracy = (predictions == label_task).float() / (
-        num_outputs)  # Compare the number of matches and normalize by the batch size*num_outputs.
+    # TODO change this to support multi head architecture.
+    task_accuracy = ((predictions[:,:1] == label_task).float() / (
+        num_outputs)).sum()  # Compare the number of matches and normalize by the batch size*num_outputs.
     return predictions, task_accuracy  # return the predictions and the accuracy.
 
 
