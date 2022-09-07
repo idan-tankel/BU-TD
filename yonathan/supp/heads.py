@@ -10,17 +10,18 @@ class HeadSingleTask(nn.Module):
     # Single task head.
     # allocates tasks according to the desired output size.
     # If all characters must be recognized size > 1 o.w. only 1 head be used.
-    def __init__(self, opts: argparse, out_folters, num_heads) -> None:
+    def __init__(self, opts: argparse, nclasses: list) -> None:
         """
         :param opts: decided the input channels.
         :param nclasses: decided the number of classes according to the task.
         """
         super(HeadSingleTask, self).__init__()
         layers = []
-        for _ in range(num_heads):  # according to  the output size we allocate the number of heads.if flag=NOFLAG all characters(usually 6) will be recognized,the loop will run 6 times.
-           # outfilters = nclasses[k]   # The desired number of classes according to the task.
+        for k in range(
+                len(nclasses)):  # according to  the output size we allocate the number of heads.if flag=NOFLAG all characters(usually 6) will be recognized,the loop will run 6 times.
+            outfilters = nclasses[k] + 1  # The desired number of classes according to the task.
             infilters = opts.nfilters[-1]  # The input size from the end of the BU2 stream.
-            layers.append(nn.Linear(infilters, out_folters))
+            layers.append(nn.Linear(infilters, outfilters))
         self.layers = nn.ModuleList(layers)
 
     def forward(self, inputs: torch) -> torch:
@@ -47,14 +48,8 @@ class MultiTaskHead(nn.Module):
         self.ntasks = opts.ntasks
         self.model_flag = opts.model_flag
         self.num_classes = opts.nclasses  # num_classes to create the task-heads according to.
-        Task_heads = []
         for i in range(self.ntasks):  # For each task create its task-head according to num_clases.
-            Task_heads = []
-            Task_heads.append(HeadSingleTask(opts, 224,num_heads = 2))
-            Task_heads.append(HeadSingleTask(opts, 224, num_heads=2))
-            Task_heads.append(HeadSingleTask(opts, self.num_classes[i][0], num_heads=1))
-            Task_heads = nn.ModuleList(Task_heads)
-            self.taskhead.append(Task_heads)
+            self.taskhead.append(HeadSingleTask(opts, self.num_classes[i]))
         self.taskhead = nn.ModuleList(self.taskhead)
 
     def forward(self, inputs: torch) -> torch:
@@ -65,8 +60,7 @@ class MultiTaskHead(nn.Module):
         (bu2_out, flag) = inputs
         task = flag_to_task(flag)  # #TODO- change flag_to_direction -> flag_to_task
         bu2_out = bu2_out.squeeze()  # Make it 1-dimensional.
-        task_out = self.taskhead[task][0](bu2_out)  # apply the appropriate task-head.
-        task_out =  task_out
+        task_out = self.taskhead[task](bu2_out)  # apply the appropriate task-head.
         return task_out
 
 
@@ -77,7 +71,7 @@ class OccurrenceHead(nn.Module):
         :param opts:
         """
         super(OccurrenceHead, self).__init__()
-        filters = opts.nclasses[0][0]  # The number of binary classifiers needed to recognize all characters.
+        filters = opts.nclasses_existence  # The number of binary classifiers needed to recognize all characters.
         infilters = opts.nfilters[-1]  # Output shape from the end of the BU1 stream.
         self.occurrence_transform = nn.Linear(infilters, filters)  # The linear transformation.
 

@@ -13,7 +13,7 @@ else:
     from supp.omniglot_dataset import OmniglotDatasetLabelSingleTask as dataset, inputs_to_struct as inputs_to_struct
 
 
-def get_dataset(embedding_idx: int, args: argparse, data_fname: str) -> list:
+def get_dataset(embedding_idx: int,direction:int, args: argparse, data_fname: str) -> list:
     """
     returns the datasets needed for the training according to the data_fname,embedding_idx
     :param embedding_idx: the embedding for the task,creates the flag according to the embedding.
@@ -32,7 +32,7 @@ def get_dataset(embedding_idx: int, args: argparse, data_fname: str) -> list:
     if args.num_gpus > 1:
         ubs = ubs * num_gpus
     inshape = (3, *IMAGE_SIZE)  # Inshape for the dataset
-    train_ds = dataset(os.path.join(data_fname, 'train'), nclasses, args.ntasks, embedding_idx, args.nargs,
+    train_ds = dataset(os.path.join(data_fname, 'train'), nclasses, args.ntasks, embedding_idx,direction, args.nargs,
                        nexamples=nsamples_train, split=True)
     # If normalize_image is True the mean of the dataset is subtracted from every image.
     batch_size = args.bs
@@ -49,9 +49,9 @@ def get_dataset(embedding_idx: int, args: argparse, data_fname: str) -> list:
         test_sampler = None
         batch_size = args.bs * ubs
     # Creating the dataset
-    train_ds = dataset(os.path.join(data_fname, 'train'), nclasses, args.ntasks, embedding_idx, args.nargs,
+    train_ds = dataset(os.path.join(data_fname, 'train'), nclasses, args.ntasks, embedding_idx,direction, args.nargs,
                        nexamples=nsamples_train, split=True, mean_image=mean_image)
-    test_ds = dataset(os.path.join(data_fname, 'test'), nclasses, args.ntasks, embedding_idx, args.nargs,
+    test_ds = dataset(os.path.join(data_fname, 'test'), nclasses, args.ntasks, embedding_idx,direction, args.nargs,
                       nexamples=nsamples_test, split=True, mean_image=mean_image)
     train_dl = DataLoader(train_ds, batch_size=batch_size, num_workers=args.workers, shuffle=True, pin_memory=True,
                           sampler=train_sampler)

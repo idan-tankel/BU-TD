@@ -17,13 +17,11 @@ def multi_label_accuracy_base(outs: object, samples: object, num_outputs: int = 
     """
     cur_batch_size = samples.image.shape[0]
     predictions = torch.zeros((cur_batch_size, num_outputs), dtype=torch.int).to(dev, non_blocking=True)
-    for k in range(num_outputs):
-        task_output = outs.task[:, :, k]  # For each task extract its predictions.
-        task_pred = torch.argmax(task_output, axis=1)  # Find the highest probability in the distribution
-        predictions[:, k] = task_pred  # assign for each task its predictions
+    task_output = outs.task  # For each task extract its predictions.
+    task_pred = torch.argmax(task_output, axis=1)  # Find the highest probability in the distribution
+    predictions = task_pred  # assign for each task its predictions
     label_task = samples.label_task
-    task_accuracy = (predictions == label_task).float() / (
-        num_outputs)  # Compare the number of matches and normalize by the batch size*num_outputs.
+    task_accuracy = (predictions == label_task).float() / ( num_outputs)  # Compare the number of matches and normalize by the batch size*num_outputs.
     return predictions, task_accuracy  # return the predictions and the accuracy.
 
 
@@ -47,12 +45,10 @@ class multi_label_loss_base:
          :return:The loss on the batch.
          """
         loss_tasks = torch.zeros(samples.label_task.shape).to(dev, non_blocking=True)
-        for k in range(self.num_outputs):
-            task_output = outs.task[:, :, k]  # For each task extract its last layer.
-            label_task = samples.label_task[:, k]  # The label for the loss
-            loss_task = self.classification_loss(task_output, label_task)  # compute the loss
-            loss_tasks[:, k] = loss_task  # Assign for each task its loss.
-        return loss_tasks  # return the task loss
+        task_output = outs.task.squeeze()  # For each task extract its last layer.
+        label_task = samples.label_task  # The label for the loss
+        loss_task = self.classification_loss(task_output, label_task)  # compute the loss
+        return loss_task  # return the task loss
 
 
 def multi_label_loss(outs: object, samples: object) -> float:
@@ -65,6 +61,7 @@ def multi_label_loss(outs: object, samples: object) -> float:
     return losses_task.mean()  # The average loss
 
 
+
 class UnifiedLossFun:
     def __init__(self, opts: argparse) -> None:
         """
@@ -75,9 +72,9 @@ class UnifiedLossFun:
         self.use_bu2_loss = opts.use_bu2_loss
         self.bu1_loss = opts.bu1_loss
         self.td_loss = opts.td_loss
-        self.bu2_classification_loss = opts.bu2_loss
+        self.bu2_loss = opts.bu2_loss
         self.inputs_to_struct = opts.inputs_to_struct
-
+ # outs_to_struct
     def __call__(self, model, inputs: list[torch], outs: list) -> float:
         """
         :param inputs: Input to the model.
@@ -85,12 +82,14 @@ class UnifiedLossFun:
         :return: The combined loss over all the stream.
         """
         outs = get_model_outs(model, outs)  # The output from all the streams.
-        samples = self.inputs_to_struct(inputs)  # Make samples from the raw data.
-        loss = 0  # The general loss.
+        samples = self.inputs_to_struct(inputs)  # Make samples
+
+        # from the raw data.
+        loss = 0.0  # The general loss.
         if self.use_bu1_loss:
-            loss_occ = self.bu1_loss(outs.occurence,
-                                     samples.label_existence)  # compute the binary existence classification loss
+            loss_occ = self.bu1_loss(outs.occurrence_out, samples.label_existence)  # compute the binary existence classification loss
             loss += loss_occ  # Add the occurrence loss.
+        # TODO - DELETE this option.
         if self.use_td_loss:
             loss_seg_td = self.td_loss(outs.td_head, samples.seg)  # compute the TD segmentation loss.
             loss_bu1_after_convergence = 1
@@ -98,10 +97,23 @@ class UnifiedLossFun:
             ratio = loss_bu1_after_convergence / loss_td_after_convergence
             loss += ratio * loss_seg_td  # Add the TD segmentation loss.
         if self.use_bu2_loss:
-            loss_task = self.bu2_classification_loss(outs, samples)  # Compute the BU2 loss.
+            loss_task = self.bu2_loss(outs, samples)  # Compute the BU2 loss.
             loss += loss_task
         return loss
 
+def regression_loss(outs, samples):
+    loss = 0.0
+    return nn.MSE
+
+def accuracy_reg(outs,samples):
+    x = outs.task[0]
+    y = outs.task[1]
+    x =224 * x
+    y = 224 * y
+    pred= torch.cat([x,y],dim=0)
+    pred = torch.round(pred)
+    task_accuracy = torch.norm(pred - samples.keypoint, p= 'inf')
+    return pred, task_accuracy
 
 def accuracy(opts: nn.Module, test_data_loader: DataLoader) -> float:
     """

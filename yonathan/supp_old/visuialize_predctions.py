@@ -31,22 +31,6 @@ def pause_image(fig=None) -> None:
         fig = plt.gcf()
     fig.waitforbuttonpress()
 
-class cyclic_inputs_to_strcut:
-    def __init__(self,inputs,stage):
-        img, label_all, label_existence,flag, flag_stage_1, flag_stage_2, flag_stage_3 ,label_task_stage_1, label_task_stage_2, label_task_stage_3  = inputs
-        self.image = img
-        self.label_all = label_all
-        self.label_existence = label_existence
-        self.general_flag = flag
-        if stage == 0:
-         self.label_task = label_task_stage_1
-         self.flag = flag_stage_1
-        if stage == 1:
-         self.label_task = label_task_stage_2
-         self.flag = flag_stage_2
-        if stage == 2:
-         self.label_task = label_task_stage_3
-         self.flag = flag_stage_3
 
 def visualize(opts, train_dataset):
     """
@@ -58,8 +42,8 @@ def visualize(opts, train_dataset):
     inputs = next(ds_iter)  # The first batch.
     _, outs = test_step(opts, inputs)  # Getting model outs
     model = opts.model
-    outs = get_model_outs(opts, outs)  # From output to struct.
-    samples = cyclic_inputs_to_strcut(inputs, stage = 0)  # From input to struct.
+    outs = get_model_outs(model, outs)  # From output to struct.
+    samples = inputs_to_struct(inputs)  # From input to struct.
     imgs = samples.image  # Getting the images.
     imgs = imgs.cpu().numpy()  # Moving to the cpu, and transforming to numpy.
     imgs = imgs.transpose(0, 2, 3, 1)  # Transpose to have the appropriate dimensions for an image.

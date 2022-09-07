@@ -10,6 +10,7 @@ class FlagAt(Enum):
     BU1_NOLAG = auto()
     SF = auto()
 
+# TODO - ADAPT TO ALL MODELS
 
 def setup_flag(parser):
     model_flag = parser.parse_args().model_flag

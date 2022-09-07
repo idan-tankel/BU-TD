@@ -209,7 +209,7 @@ class OmniglotDatasetLabelSingleTaskRight(OmniglotDataSetBase):
     The goal is given img,index idx to return img[index].
     """
 
-    def __init__(self, root: str, nclasses_existence: int, num_languages: int, embedding_idx: int, nargs: int,
+    def __init__(self, root: str, nclasses_existence: int, num_languages: int, embedding_idx: int,direction:int, nargs: int,
                  nexamples: int = None, split: bool = False, mean_image: torch = None) -> None:
         """
         :param root: path to the data language
@@ -227,6 +227,8 @@ class OmniglotDatasetLabelSingleTaskRight(OmniglotDataSetBase):
         self.num_languages = num_languages
         self.nargs = nargs
         self.nclasses_existence = nclasses_existence
+        self.direction = direction
+        self.obj_per_row = 6 
 
     def __getitem__(self, index):
         # Getting root to the sample
@@ -250,23 +252,20 @@ class OmniglotDatasetLabelSingleTaskRight(OmniglotDataSetBase):
     #    char_id = ((label_all == char).nonzero(as_tuple=False)[0][1])
         # Creating the flag including task and argument one hot embedding.
         lan_type_ohe = torch.nn.functional.one_hot(task_emb_id, self.num_languages)
-        # TODO CHAMGE TO SUPPORT ANY SIZE.
-        char_type_one = torch.nn.functional.one_hot(torch.tensor(char),240 )
+        char_type_one = torch.nn.functional.one_hot(torch.tensor(char), 240)
         # Concatenating into one flag.
         flag = torch.concat([lan_type_ohe, char_type_one], dim=0).float()
        # adj_type, char = flag
-        adj_type = 1
-        obj_per_row = 6
         edge_class = self.nclasses_existence
         r,c = (label_all == char).nonzero()
 
-        if adj_type == 0:
+        if self.direction == 0:
             # right
-            if c == (obj_per_row - 1):
+            if c == (self.obj_per_row - 1):
                 label_task = edge_class
             else:
                 label_task = label_all[r, c + 1]
-        if adj_type == 1:
+        if self.direction == 1:
             # left
             if c == 0:
                 label_task = edge_class
@@ -274,9 +273,6 @@ class OmniglotDatasetLabelSingleTaskRight(OmniglotDataSetBase):
                 label_task = label_all[r, c - 1]
 
         label_existence, label_all, label_task, id = map(torch.tensor, (label_existence, label_all, label_task, id))
-        label_existence = label_existence.float()
      #   label_task = torch.tensor(label_task).view(-1)
         label_task =label_task.view([-1])
-        label_task =torch.tensor(sample.keypoint).type(torch.LongTensor)
-       # label_task = torch.tensor(sample.keypoint)
         return img, label_all, label_existence, label_task, flag

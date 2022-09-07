@@ -142,7 +142,7 @@ class DataAugmentClass:
     """
     class performing the augmentation.
     """
-    def __init__(self, image:np.array, label_existence:np.array, aug_data:transforms):
+    def __init__(self, image:np.array, label_existence:np.array, aug_data:transforms,augment:bool):
         """
         Args:
             image: The image we want to augment.
@@ -153,6 +153,7 @@ class DataAugmentClass:
         self.labels = label_existence[np.newaxis]
         self.batch_range = range(1)
         self.aug_data = aug_data
+        self.augment = augment
 
     def get_batch_base(self):
         batch_data = get_batch_base(self)
@@ -173,7 +174,7 @@ def get_batch_base(aug_data_struct:DataAugmentClass)->SimpleNamespace:
 
     aug_data = aug_data_struct.aug_data
     augment_type = 'aug_package'
-    if aug_data.augment:
+    if aug_data_struct.augment:
         aug_seed = aug_data.aug_seed
         if augment_type == 'aug_package':
             aug = aug_data.aug
@@ -200,7 +201,7 @@ class CharacterTransforms:
         """
         minscale = 1
         maxscale = 1.5
-        minshift = 0
+        minshift = 2
         maxshift = .2 * parser.letter_size
         # place the chars on the image
         self.label_id = label_ids[samplei]

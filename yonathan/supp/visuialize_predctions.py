@@ -1,7 +1,9 @@
 from supp.training_functions import test_step
 from supp.omniglot_dataset import inputs_to_struct
 import numpy as np
-import matplotlib.pyplot as plt
+
+#import matplotlib.pyplot as plt
+
 from supp.FlagAt import *
 from supp.measurments import get_model_outs
 import torch

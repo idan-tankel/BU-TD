@@ -12,6 +12,28 @@ from matplotlib import pyplot as plt
 KEYPOINT_COLOR = (0, 255, 0)  # Green
 import cv2
 
+import os
+
+
+def fs(path):
+    size = 0
+    for _ in os.scandir(path):
+        size += 1
+    return size
+
+
+def create_dict(path):
+    dict_language = {}
+    cnt = 0
+    for ele in os.scandir(path):
+        path_new = ele
+        dict_language[cnt] = fs(path_new)
+        cnt += 1
+    return dict_language
+
+
+# %% augmentation
+
 def vis_keypoints(image, keypoints, color=KEYPOINT_COLOR, diameter=1):
     image = image.copy()
     image = image.transpose((1, 2, 0))
@@ -57,6 +79,7 @@ def gen_sample(parser:argparse, sample_id:int, is_train:bool, aug_data:transform
     image = image * 255
     image = image.astype(np.uint8)
     # Doing data augmentation
+    '''
     if is_train and augment_sample:
         aug_data = get_aug_data(image.shape)
         image, keypoints = augment_albumentations(image, aug_data, keypoints=keypoints)
@@ -64,14 +87,14 @@ def gen_sample(parser:argparse, sample_id:int, is_train:bool, aug_data:transform
 #        vis_keypoints(image,keypoints)
        # image = image.transpose(2, 0, 1)
    # image = image * 255
-
+   '''
     label_task, flag,keypoint = Get_label_task(example, infos, label_ordered, dataloader.nclasses,keypoints)
-    '''
+
     if is_train and augment_sample:
         # augment
-        data_augment = DataAugmentClass(image, label_existence, aug_data)
+        data_augment = DataAugmentClass(image, label_existence, aug_data,augment_sample)
         image = data_augment.get_batch_base()
-    '''
+
 
     # Storing the needed information about the sample.
     sample = Sample(infos, image, sample_id, label_existence, label_ordered, example.query_part_id, label_task, flag, is_train,keypoint)
@@ -107,13 +130,14 @@ def gen_samples(parser:argparse, dataloader:DataSet, job_id:int, range_start:int
         ranges = ranges.tolist()
         ranges.append(range_stop)
     rel_id = 0
+    cur_samples_dir = os.path.join(storage_dir, ds_type)  # Making the path.
+    if not os.path.exists(cur_samples_dir):  # creating the train/test/val paths is needed.
+        os.makedirs(cur_samples_dir)
     for k in range(len(ranges) - 1): # Splitting into consecutive jobs.
         range_start = ranges[k]
         range_stop = ranges[k + 1]
         print('%s: job %d. processing: %s-%d-%d' % (datetime.datetime.now(), job_id, ds_type, range_start, range_stop - 1))
-        cur_samples_dir = os.path.join(storage_dir, ds_type)  # Making the path.
-        if not os.path.exists(cur_samples_dir): # creating the train/test/val paths is needed.
-            os.makedirs(cur_samples_dir)
+        
         print('%s: storing in: %s' % (datetime.datetime.now(), cur_samples_dir))
         sys.stdout.flush()
         for samid in range(range_start, range_stop):
@@ -129,7 +153,7 @@ def gen_samples(parser:argparse, dataloader:DataSet, job_id:int, range_start:int
 def main(language_list:list)->None:
     # Getting the option parser.
     parser = Get_parser()
-    raw_data_set = DataSet(data_dir = '/home/sverkip/data/Create_dataset_adapting_to_all_datasets/data',dataset = 'emnist',raw_data_source=parser.path_data_raw,language_list=[49]) # Getting the raw data.
+    raw_data_set = DataSet(data_dir = '/home/sverkip/data/Create_dataset_adapting_to_all_datasets/data',dataset = 'emnist',raw_data_source=parser.path_data_raw,language_list = language_list) # Getting the raw data.
     parser.image_size = (raw_data_set.nchannels,*parser.image_size)
     njobs = parser.threads # The number of threads.
     num_rows_in_the_image   = parser.num_rows_in_the_image      # The number of rows in the image.
@@ -223,6 +247,9 @@ def main(language_list:list)->None:
         ranges = np.unique(ranges)
         all_args = []
         jobs_range = range(len(ranges) - 1)
+        cur_samples_dir = os.path.join(storage_dir, ds_type)  # Making the path.
+        if not os.path.exists(cur_samples_dir):  # creating the train/test/val paths is needed.
+            os.makedirs(cur_samples_dir)
         # Iterating for each job and generate the needed number of samples.
         for job_id in jobs_range:
             range_start = ranges[job_id]
@@ -247,6 +274,19 @@ def main(language_list:list)->None:
 # %%
 if __name__ == "__main__":
   #   tasks = [[27,5]]
-     tasks = [ [17] ]
-     for task in tasks:
-       main(task)
+  Data_source = '/home/sverkip/data/BU-TD/omniglot/data/omniglot_all_languages'
+  dictionary = create_dict(Data_source)
+  # print(dictionary)
+
+  dictionary = dict(sorted(dictionary.items(), key=lambda item: item[1]))
+  print(dict(sorted(dictionary.items(), key=lambda item: item[1])))
+  tasks = [ [list(dictionary.keys())[idx]] for idx in range(30,50)]
+  for task in tasks:
+    main(task)
+
+
+main(task)
+
+
+
+

@@ -20,8 +20,9 @@ def create_dict(path):
 
 # %% augmentation
 
-Data_source = '/home/sverkip/data/omniglot/data/omniglot_all_languages'
+Data_source = '/home/sverkip/data/BU-TD/omniglot/data/omniglot_all_languages'
 dictionary = create_dict(Data_source)
 # print(dictionary)
 print(dict(sorted(dictionary.items(), key=lambda item: item[1])))
-print(dictionary[27] + dictionary[5] + dictionary[42])
+
+

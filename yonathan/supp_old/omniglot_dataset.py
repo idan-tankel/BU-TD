@@ -94,24 +94,6 @@ class OmniglotDataSetBase(data.Dataset):
         return self.nexamples
 
 
-
-class cyclic_inputs_to_strcut:
-    def __init__(self,inputs,stage):
-        img, label_all, label_existence,flag, flag_stage_1, flag_stage_2, flag_stage_3 ,label_task_stage_1, label_task_stage_2, label_task_stage_3  = inputs
-        self.image = img
-        self.label_all = label_all
-        self.label_existence = label_existence
-        self.general_flag = flag
-        if stage == 0:
-         self.label_task = label_task_stage_1
-         self.flag = flag_stage_1
-        if stage == 1:
-         self.label_task = label_task_stage_2
-         self.flag = flag_stage_2
-        if stage == 2:
-         self.label_task = label_task_stage_3
-         self.flag = flag_stage_3
-
 class inputs_to_struct:
     def __init__(self, inputs: torch) -> None:
         """
@@ -124,6 +106,7 @@ class inputs_to_struct:
         self.label_existence = label_existence
         self.label_task = label_task
         self.flag = flag
+
 
 def struct_to_input(sample: object) -> tuple:
     """
@@ -226,36 +209,27 @@ class OmniglotDatasetLabelSingleTaskRight(OmniglotDataSetBase):
     The goal is given img,index idx to return img[index].
     """
 
-    def __init__(self, root: str, parser:argparse, embedding_idx: int,  nexamples: int = None, split: bool = False, mean_image: torch = None):
+    def __init__(self, root: str, nclasses_existence: int, num_languages: int, embedding_idx: int, nargs: int,
+                 nexamples: int = None, split: bool = False, mean_image: torch = None) -> None:
         """
         :param root: path to the data language
         :param nclasses_existence: #TODO-make an order in this class.
-        :param num_languages: number of languages in the data-set.
+        :param num_languages: number of characters in the language
         :param embedding_idx: the number of Task embedding
-        :param nexamples: The number of samples in the data-set.
-        :param split: Whether we split the data-set into folders.
-        :param mean_image: the mean image.
+        :param nexamples:
+        :param split:
+        :param nargs:
+        :param mean_image:
         """
-        super(OmniglotDatasetLabelSingleTaskRight, self).__init__(root, parser.nclasses[embedding_idx][0],parser.ntasks, nexamples, split,
+        super(OmniglotDatasetLabelSingleTaskRight, self).__init__(root, nclasses_existence, num_languages, nexamples, split,
                                                              mean_image)
         self.embedding_idx = embedding_idx
-        self.parser = parser
-        self.ntasks = parser.ntasks
-        self.direction = 0
-        self.obj_per_row = 6
-        self.grit_size = parser.grit_size
-        self.num_grits = int(np.ceil(224 / self.grit_size))
+        self.num_languages = num_languages
+        self.nargs = nargs
+        self.nclasses_existence = nclasses_existence
 
     def __getitem__(self, index):
-        """
-
-        Args:
-            index:
-
-        Returns:
-        """
         # Getting root to the sample
-        edge_class = self.nclasses_existence
         root = self.get_root_by_index(index)
         fname = os.path.join(root, '%d_img.jpg' % index)
         # Opening the image and converting to Tensor
@@ -273,54 +247,36 @@ class OmniglotDatasetLabelSingleTaskRight(OmniglotDataSetBase):
         char = flag[1].item()  # The referred character
         # Converting the emb id into tensor.
         task_emb_id = torch.tensor(self.embedding_idx)
+    #    char_id = ((label_all == char).nonzero(as_tuple=False)[0][1])
         # Creating the flag including task and argument one hot embedding.
-        lan_type_ohe = torch.nn.functional.one_hot(task_emb_id, self.ntasks)
-        # TODO CHANGE TO SUPPORT ANY SIZE.
-        char_type_one = torch.nn.functional.one_hot(torch.tensor(char),self.nclasses_existence)
+        lan_type_ohe = torch.nn.functional.one_hot(task_emb_id, self.num_languages)
+        # TODO CHAMGE TO SUPPORT ANY SIZE.
+        char_type_one = torch.nn.functional.one_hot(torch.tensor(char),240 )
         # Concatenating into one flag.
-        general_flag = torch.concat([lan_type_ohe, char_type_one], dim=0).float()
+        flag = torch.concat([lan_type_ohe, char_type_one], dim=0).float()
+       # adj_type, char = flag
+        adj_type = 1
+        obj_per_row = 6
+        edge_class = self.nclasses_existence
         r,c = (label_all == char).nonzero()
-        (r,c) = (r[0], c[0])
-        character_location = sample.keypoints[c]
-        # Getting the location and the character in the desired direction.
-        if self.direction == 0:
-            # right
-            if c == (self.obj_per_row - 1):
-                neighboor_location = [224,112]
-                neighboor_character = edge_class
-            else:
-                neighboor_location = list(sample.keypoints[c + 1])
-                neighboor_character = label_all[r,c + 1]
 
-        if self.direction == 1:
+        if adj_type == 0:
+            # right
+            if c == (obj_per_row - 1):
+                label_task = edge_class
+            else:
+                label_task = label_all[r, c + 1]
+        if adj_type == 1:
             # left
             if c == 0:
-                neighboor_location = [0,0]
-                neighboor_character = edge_class
+                label_task = edge_class
             else:
-                neighboor_location = sample.keypoints[c-1]
-                neighboor_character = label_all[r,c-1]
+                label_task = label_all[r, c - 1]
 
-        label_existence, label_all, neighboor_location,character_location, id = map(torch.tensor, (label_existence, label_all, neighboor_location,character_location, id))
+        label_existence, label_all, label_task, id = map(torch.tensor, (label_existence, label_all, label_task, id))
         label_existence = label_existence.float()
-        #Creating the label_task and the flag for stage 1.
-
-        flag_stage_1 = torch.nn.functional.one_hot(torch.tensor(char),self.nclasses_existence ).float() # The character we are working on.
-        label_task_stage_1 = character_location.long() # The location of the character on the image.
-        label_task_stage_1 = torch.ceil(torch.div(label_task_stage_1, self.grit_size)).long() # The location of the character on the grit.
-        # Creating the label_task and the flag for stage 2.
-        (x,y) = torch.ceil(torch.div(character_location, self.grit_size)).long() # getting the location of the character on the grit.
-        flag_stage_2_x = torch.nn.functional.one_hot(x, self.num_grits) # Making one hot embedding of the x coordinate.
-        flag_stage_2_y = torch.nn.functional.one_hot(y, self.num_grits) # Making one hot embedding of the y coordinate.
-        flag_stage_2 = torch.concat([flag_stage_2_x, flag_stage_2_y], dim=0).float() # Getting one flag.
-        label_task_stage_2 = torch.div(neighboor_location, self.grit_size).long() # The label task is the location of the neighbor on the grit.
-        # Creating the label_task and the flag for stage 3.
-        (x_location_neightboor, y_location_neighboor) = torch.div(neighboor_location, self.grit_size).long() # getting the location of the neighbor on the grit.
-        flag_stage_3_x = torch.nn.functional.one_hot(x_location_neightboor, self.num_grits) # Making one hot embedding of the x coordinate.
-        flag_stage_3_y = torch.nn.functional.one_hot(y_location_neighboor, self.num_grits ) # Making one hot embedding of the y coordinate.
-        flag_stage_3 = torch.concat([ flag_stage_3_x, flag_stage_3_y], dim=0).float() # Making a one flag.
-        label_task_stage_3 = neighboor_character # The label task of stage 3 is the neighbor character.
-        return  img, label_all, label_existence,general_flag, flag_stage_1, flag_stage_2, flag_stage_3 ,label_task_stage_1, label_task_stage_2, label_task_stage_3
-
-
-
+     #   label_task = torch.tensor(label_task).view(-1)
+        label_task =label_task.view([-1])
+        label_task =torch.tensor(sample.keypoint).type(torch.LongTensor)
+       # label_task = torch.tensor(sample.keypoint)
+        return img, label_all, label_existence, label_task, flag
