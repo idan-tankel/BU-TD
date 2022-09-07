@@ -15,49 +15,72 @@ from supp.visuialize_predctions import *
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
+def Get_learned_params(model, training_flag, embedding_idx):
+    learned_params = []
+    if training_flag.task_embedding:
+        learned_params.extend(model.module.task_embedding[embedding_idx] )
+    if training_flag.head_learning:
+        learned_params.extend(model.module.transfer_learning[embedding_idx])
+    if training_flag.train_arg:
+        learned_params.extend(model.module.tdmodel.argument_embedding[embedding_idx])
+    if training_flag.train_all_model:
+        learned_params = model.parameters()
+    return learned_params
 
-def train_omniglot(embedding_idx, flag_at, processed_data, raw_data,model_name= None, path_loading=None, train_all_model=True,train_arg=False,transfer_learning=False,task_embedding=False,load_model_if_exists = False):
-    # Getting the options for creating the model and the hyper-parameters.
-    results_dir = '/home/sverkip/data/omniglot/data/results'
-    parser = GetParser(flag_at, raw_data, processed_data, embedding_idx, results_dir,train_arg,1,model_name,load_model_if_exists)
-    # Getting the dataset for the training.
-    data_path = os.path.join('/home/sverkip/data/omniglot/data/new_samples', processed_data)
-    [the_datasets, train_dl, test_dl, train_dataset, test_dataset] = get_dataset(embedding_idx, parser,
-                                                                                 data_fname=data_path)
-    # Printing the model and the hyper-parameters.
-    if True:  # TODO-replace with condition.
-        print_detail(parser)
-    # creating the model according the parser.
-    #  create_model(parser)
+def train_omniglot(parser, embedding_idx, the_datasets, training_flag):
     set_datasets_measurements(the_datasets, Measurements, parser, parser.model)
     cudnn.benchmark = True  # TODO:understand what it is.
-    # Loading a pretrained model if exists.
-    if path_loading is not None and parser.load_model_if_exists == False:
-        model_path = os.path.join(results_dir,path_loading)
-        load_model(parser, model_path);
     # Deciding which parameters will be trained: if True all the model otherwise,only the task embedding.
-    if train_all_model:
-        learned_params = parser.model.parameters()
-
-    if task_embedding:
-        learned_params = parser.model.module.task_embedding[embedding_idx]
-    if transfer_learning:
-        learned_params = parser.model.module.transfer_learning[embedding_idx]
+    learned_params = Get_learned_params(parser.model, training_flag,embedding_idx)
     # Training the learned params of the model.
+    create_optimizer_and_sched(parser,learned_params)
+
     train_model(parser, the_datasets, learned_params, embedding_idx)
-    print(accuracy(parser, test_dl))
-    visualize(parser, train_dataset)
 
+class Training_flag:
+    def __init__(self,train_all_model, train_arg,task_embedding,head_learning):
+        self.train_all_model = train_all_model
+        self.train_arg = train_arg
+        self.task_embedding = task_embedding
+        self.head_learning = head_learning
 
-def main():
-    train_omniglot(embedding_idx = 0, flag_at = FlagAt.SF, processed_data = '6_extended_Digits',
-                   raw_data = '/home/sverkip/data/omniglot/data/omniglot_all_languages',model_name = '4R', path_loading = None,  train_all_model = True, train_arg = False,    task_embedding = False, transfer_learning = False,
-                   load_model_if_exists = False)
+def main(language_idx,train_right,train_left):
+    parser = GetParser(language_idx)
 
-main()
+    print_detail(parser)
 
+    embedding_idx = 0
+    data_path = '/home/sverkip/data/BU-TD/yonathan/data/samples/new_samples/6_extended_' + str(language_idx)
+
+    # Create the data for right.
+    [the_datasets, _, test_dl, _, _] = get_dataset(embedding_idx, 0 , parser, data_fname=data_path)
+    path_loading = '5R/model24.pt'
+    model_path = parser.results_dir
+    load_model(parser, model_path, path_loading, load_optimizer_and_schedular=False);
+    # Training Right.
+
+    if train_right:
+        parser.EPOCHS = 15
+        training_flag = Training_flag(train_all_model=False,train_arg = True, task_embedding = False, head_learning = True)
+        train_omniglot(parser,embedding_idx = 0,the_datasets = the_datasets,training_flag = training_flag)
+        acc = accuracy(parser, test_dl)
+        print("Done training right, with accuracy : " + str(acc))
+    # Training Left.
+    if train_left:
+        parser.EPOCHS = 80
+        [the_datasets, _, test_dl, _, _ ] = get_dataset(embedding_idx, 1, parser, data_fname=data_path)
+        training_flag = Training_flag(train_all_model = False, train_arg = False, task_embedding = True, head_learning = True)
+        train_omniglot(parser, embedding_idx = 0, the_datasets = the_datasets, training_flag=training_flag)
+        acc = accuracy(parser, test_dl)
+    print("Done training left, with accuracy : " + str(acc))
+
+main(10,True,True)
+
+# 6_extended_[27, 5, 42, 18].
 # Temp place
 ##############################################
+# print(accuracy(parser, test_dl))
+# visualize(parser, train_dataset)
 # /home/sverkip/data/Omniglot/data/new_samples/T
 # print(num_params(learned_params))
 # print(accuracy_one_language(args.model, args.test_dl))

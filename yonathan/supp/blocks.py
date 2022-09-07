@@ -132,7 +132,6 @@ class Modulation(nn.Module):  # Modulation layer.
         else:
             self.size = [-1, inshapes, 1, 1]  # If channel modulation matches the number of channels
         inshapes = np.prod(inshapes)
-        # TODO - CHECK WITH BIAS = FALSE.
         for i in range(ntasks):  # allocating for every task its task embedding
             layer = nn.Linear(1, inshapes)
             self.task_embedding[i].extend(list(layer.parameters()))
@@ -338,11 +337,11 @@ class InitialTaskEmbedding(nn.Module):
         self.model_flag = opts.model_flag
         self.use_td_flag = opts.use_td_flag
         self.task_embedding = [[] for _ in range(self.ntasks)]
+        self.argument_embedding = [[] for _ in range(self.ntasks)]
         self.norm_layer = opts.norm_fun
         self.activation_fun = opts.activation_fun
         self.use_SF = opts.use_SF
-        self.nclasses = opts.nclasses 
-        self.train_arg = opts.train_arg
+        self.nclasses = opts.nclasses
         if self.model_flag is FlagAt.SF:
             self.h_flag_task_td = []  # The task embedding.
             self.h_flag_arg_td = []
@@ -353,8 +352,7 @@ class InitialTaskEmbedding(nn.Module):
                 self.task_embedding[i].extend(layer.parameters())
                 layer = nn.Sequential(nn.Linear(self.nclasses[i][0], self.top_filters // 2), self.norm_layer(self.top_filters // 2, dims=1, num_tasks=self.ntasks),  self.activation_fun())
                 self.h_flag_arg_td.append(layer)
-                if self.train_arg:
-                 self.task_embedding[i].extend(layer.parameters())
+                self.argument_embedding[i].extend(layer.parameters())
             self.h_flag_task_td = nn.ModuleList(self.h_flag_task_td)
             self.h_flag_arg_td = nn.ModuleList(self.h_flag_arg_td)
             # The argument embedding.

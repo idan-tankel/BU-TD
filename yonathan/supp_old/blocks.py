@@ -7,10 +7,9 @@ from supp.FlagAt import *
 
 class ChannelModulation(nn.Module):
     # The layer performs the channel modulation on the lateral connection
-    def __init__(self, nchannels: int) :
+    def __init__(self, nchannels: int) -> None:
         """
-        Args:
-            nchannels: The number of channels to perform channel-modulation on.
+        :param nchannels: The number of channels to perform channel-modulation on.
         """
         super(ChannelModulation, self).__init__()
         self.nchannels = nchannels
@@ -20,21 +19,18 @@ class ChannelModulation(nn.Module):
 
     def forward(self, inputs: torch) -> torch:
         """
-        Performs the channel modulation on the skip connection.
-        Args:
-            inputs: tensor of shape [N,C,H,W]
-
-        Returns: tensor of shape [N,C,H,W]
-
+        :param inputs: receives tensor of shape [N,C,H,W]
+        :return: tensor of shape [N,C,H,W]
         """
         return inputs * self.weights  # performs the channel-modulation.
 
 
-def init_module_weights(modules: nn.Module):
+def init_module_weights(modules: nn.Module) -> None:
+    # same as our paper's experiments
     """
     Initializes all model layers according to the distributions above.
-    Args:
-        modules: all model's layers
+    :param modules: all model's layers
+    :return: None
 
     """
     for m in modules:
@@ -49,17 +45,17 @@ def init_module_weights(modules: nn.Module):
         elif isinstance(m, ChannelModulation):
             nn.init.xavier_uniform_(m.weights)  # init your weights here...
 
+
 class SideAndComb(nn.Module):
     # performs the lateral connection BU1 -> TD or TD -> BU2
     def __init__(self, filters: int, norm_layer: nn.Module, activation_fun: nn.Module, orig_relus: bool,
-                 ntasks: int):
+                 ntasks: int) -> None:
         """
-        Args:
-            filters: The number of filters in the channel-modulation layer.
-            norm_layer: Batch norm instance.
-            activation_fun: usually relu.
-            orig_relus: If True we use the activation_fun after the batch norm on the lateral connection.
-            ntasks: The number of tasks we desire to solve.
+        :param filters: The number of filters in the channel-modulation layer
+        :param norm_layer: Batch norm instance
+        :param activation_fun: usually relu
+        :param orig_relus: whether to use the activation_fun after the batch norm on the lateral connection
+        :param ntasks: number of possible tasks
         """
         super(SideAndComb, self).__init__()
         self.side = ChannelModulation(filters)  # channel-modulation layer.
@@ -72,12 +68,8 @@ class SideAndComb(nn.Module):
 
     def forward(self, inputs: torch) -> torch:
         """
-        Performing the skip connection.
-        Args:
-            inputs: two tensors both of shape [B,C,H,W].
-
-        Returns: tensor of shape [B,C,H,W] .
-
+        :param inputs: two tensors both of shape [B,C,H,W]
+        :return: tensor of shape [B,C,H,W]
         """
         x, lateral = inputs
         side_val = self.side(lateral)  # channel-modulation(CM)
@@ -91,29 +83,19 @@ class SideAndComb(nn.Module):
 
 class SideAndCombSharedBase(nn.Module):
     # TODO-understand the difference between them.
-    def __init__(self, num_channels:int):
-        """
-        Args:
-             num_channels : The number of channels in the skip connection.
-        """
+    def __init__(self, filters):
         super(SideAndCombSharedBase, self).__init__()
-        self.side = ChannelModulation(num_channels)
-        self.filters = num_channels
+        self.side = ChannelModulation(filters)
+        self.filters = filters
 
 # TODO - This can be deleted as there is no shared part between the lateral connections of BU1,BU2
-
 class SideAndCombShared(nn.Module):
     # performs the lateral connection BU1 -> TD or TD -> BU2.
-    # Very similar to SideAndComb.
-    def __init__(self, shared:nn.Module, norm_layer:nn.Module, activation_fun:nn.Module, orig_relus:bool, ntasks:int):
-        """
-        Args:
-            shared: The shared part between BU1, BU2.
-            norm_layer: The norm layer type.
-            activation_fun: The activation function we apply.
-            orig_relus: If true we use a relu activation before the skip connection.
-            ntasks: The number of tasks.
-        """
+    # Very similar to SideAndComb so the functionality is the same.
+    # In this class the channel_modulation is shared between ?
+    # TODO-understand where this is shared.
+
+    def __init__(self, shared, norm_layer, activation_fun, orig_relus, ntasks):
         super(SideAndCombShared, self).__init__()
         self.side = shared.side
         self.ntasks = ntasks
@@ -124,13 +106,6 @@ class SideAndCombShared(nn.Module):
         self.relu2 = activation_fun()
 
     def forward(self, inputs):
-        """
-        Args:
-            inputs: x of shape [N,C,H,W] an input to the model, the skip lateral connection of shape [N,C,H,W]
-
-        Returns: tensor of shape [N,C,H,W].
-
-        """
         x, lateral = inputs
         side_val = self.side(lateral)
         side_val = self.norm(side_val)
@@ -142,15 +117,12 @@ class SideAndCombShared(nn.Module):
 
 
 class Modulation(nn.Module):  # Modulation layer.
-    # The class performing the pixel/channel modulation part.
     def __init__(self, inshapes: list, pixel_modulation: bool, ntasks: int) -> None:
-        """
-        Args:
-            inshapes: shape according to allocate params.
-            pixel_modulation: If True we perform pixel modulation o.w. channel modulation.
-            ntasks: The number of tasks we desire to solve.
-        """
         super(Modulation, self).__init__()  # TODO-ask someone about this super
+        """
+        :param inshapes: shape according to allocate params.
+        :param pixel_modulation: whether to perform pixel modulation or channel modulation.
+        """
         self.inshapes = inshapes
         self.pixel_modulation = pixel_modulation
         self.task_embedding = [[] for _ in range(ntasks)]
@@ -169,12 +141,10 @@ class Modulation(nn.Module):  # Modulation layer.
 
     def forward(self, inputs: torch, flag: torch) -> torch:
         """
-        Args:
-            inputs: torch of shape [B,C,H,W].
-            flag: torch of shape [B,S]
 
-        Returns: torch of shape [B,C,H,W].
-
+        :param inputs: torch of shape [B,C,H,W].
+        :param flag: torch of shape [B,S]
+        :return: torch of shape [B,C,H,W].
         """
         task_idx = flag_to_task(flag)
         flag_task = flag[:, task_idx].view(-1, 1)
@@ -183,100 +153,20 @@ class Modulation(nn.Module):  # Modulation layer.
         inputs = inputs * (1 - task_emb)  # perform the modulation.
         return inputs
 
-class BUStream(nn.Module):
-    def __init__(self, opts: argparse, shared: nn.Module, is_bu2: bool) -> None:
-        """
-        Args:
-            opts: The model options.
-            shared: The shared part between BU1, BU2.
-            is_bu2: If True we are on the BU2 stream o.w. the BU1 stream.
-        """
-        super(BUStream, self).__init__()
-        self.block = opts.bu_block_type
-        self.inshapes = opts.bu_inshapes
-        self.ntasks = opts.ntasks
-        self.task_embedding = [[] for _ in range(self.ntasks)]
-        self.norm_layer = opts.norm_fun
-        self.activation_fun = opts.activation_fun
-        self.model_flag = opts.model_flag
-        self.inshapes = shared.inshapes_one_list
-        self.orig_relus = opts.orig_relus
-        self.use_lateral = shared.use_lateral
-        self.filters = opts.nfilters[0]
-        self.InitialBlock = BUInitialBlock(opts, shared)
-        layers = []
-        for shared_layer in shared.alllayers:  # For each shared layer we create associate BU layer.
-            layers.append(self._make_layer(shared_layer, self.inshapes, is_bu2))
-        self.alllayers = nn.ModuleList(layers)
-        self.avgpool = shared.avgpool  # Avg pool layer.
-        if self.use_lateral:
-            self.top_lat = SideAndCombShared(shared.top_lat, self.norm_layer, self.activation_fun, self.orig_relus, self.ntasks)
-
-        init_module_weights(self.modules())
-
-    def _make_layer(self, blocks: nn.Module, inshapes: list, is_bu2: bool) -> nn.ModuleList:
-        """
-        Args:
-            blocks: The shared blocks between BU1, BU2.
-            inshapes: The shape of the input tensor to the block.
-            is_bu2: if true the layer is part of the BU2 stream o.w. from the BU1 stream.
-
-        Returns: A ResNet shared layer.
-
-        """
-        norm_layer = self.norm_layer
-        layers = []
-        for shared_block in blocks:
-            # Create Basic BU block.
-            layer = self.block(shared_block, norm_layer, self.activation_fun, inshapes, self.ntasks, self.model_flag,    is_bu2, self.orig_relus)
-            if self.model_flag is FlagAt.SF and is_bu2:
-                # Adding the task embedding of the BU2 stream.
-                for i in range(self.ntasks):
-                    self.task_embedding[i].extend(layer.task_embedding[i])
-            layers.append(layer)
-        return nn.ModuleList(layers)
-
-    def forward(self, inputs: list[torch]) -> tuple:
-        """
-        Args:
-            inputs: x the model input, flags the flag telling which task and argument we are solving, laterals_in the
-
-        Returns:  The output of the stream.
-
-        """
-        x, flags, laterals_in = inputs  # The input is the image, the flag and the lateral from the previous stream.
-        laterals_out = []  # The laterals for the second stream.
-        x = self.InitialBlock((x, flags, laterals_in))  # Compute the initial block in ResNet.
-        laterals_out.append(x)
-        for layer_id, layer in enumerate(self.alllayers):
-            layer_lats_out = []
-            for block_id, block in enumerate(layer):
-                lateral_layer_id = layer_id + 1
-                cur_lat_in = get_laterals(laterals_in, lateral_layer_id,
-                                          block_id)  # Get the laterals associate with the layer,block_id.
-                x, block_lats_out = block((x, flags, cur_lat_in))  # Compute the block with the lateral connection.
-                layer_lats_out.append(block_lats_out)
-
-            laterals_out.append(layer_lats_out)
-        x = self.avgpool(x)  # Avg pool.
-        lateral_in = get_laterals(laterals_in, lateral_layer_id + 1, None)
-        if self.use_lateral and lateral_in is not None:
-            x = self.top_lat((x, lateral_in))  # last lateral connection before the the loss.
-        laterals_out.append(x)
-        return x, laterals_out
 
 class BasicBlockBUShared(nn.Module):
     # Basic block of the shared part between BU1,BU2.
     # Based at most on the ResNet pytorch's implementation.
     expansion = 1
+
     def __init__(self, in_channels: int, out_channels: int, stride: int, use_lateral: bool,idx:int=0) -> None:
         """
-        Args:
-            in_channels: in channel from the previous block.
-            out_channels: out channel of the block for the Next block.
-            stride: The stride.
-            use_lateral: If true perform the lateral connection from the previous stream.
-            idx: The block idx.
+
+        :param in_channels: in channel from the previous block.
+        :param out_channels: out channel of the block for the Next block
+        :param stride: stride to perform
+        :param use_lateral: whether to perform the lateral connection from the previous stream.
+        :param idx : The block index.
         """
         super(BasicBlockBUShared, self).__init__()
         self.in_channels = in_channels
@@ -292,16 +182,15 @@ class BasicBlockBUShared(nn.Module):
                                  stride)  # performs downsmaple on the lateral connection to match the shape after conv1.
         self.downsample = downsample
         if self.use_lateral:
-            self.lat1 = SideAndCombSharedBase(num_channels = in_channels)  # The lateral connection from the previous stream.
-            self.lat2 = SideAndCombSharedBase(num_channels = out_channels)  # The lateral connection from the previous stream.
-            self.lat3 = SideAndCombSharedBase(num_channels = out_channels)  # The lateral connection from the previous stream.
+            self.lat1 = SideAndCombSharedBase(filters=in_channels)  # The lateral connection from the previous stream.
+            self.lat2 = SideAndCombSharedBase(filters=out_channels)  # The lateral connection from the previous stream.
+            self.lat3 = SideAndCombSharedBase(filters=out_channels)  # The lateral connection from the previous stream.
 
 class BUInitialBlock(nn.Module):
     def __init__(self, opts: argparse, shared: nn.Module) -> None:
         """
-        Args:
-            opts: The model options.
-            shared: The shared part between BU1, BU2.
+        :param opts: The model options.
+        :param shared: The shared part between BU1, BU2.
         """
         super(BUInitialBlock, self).__init__()
         self.filters = opts.nfilters[0]
@@ -316,11 +205,8 @@ class BUInitialBlock(nn.Module):
 
     def forward(self, inputs: list[torch]) -> torch:
         """
-        Args:
-            inputs: The images, flags, the lateral connections(if exists).
-
-        Returns: The output of the first block.
-
+        :param inputs: The images, flags, the lateral connections(if exists).
+        :return: The output if the first block.
         """
         x, flags, laterals_in = inputs  # The input is the image, the flag and the lateral from the previous stream.
         x = self.conv1(x)  # Compute conv1.
@@ -331,17 +217,17 @@ class BUInitialBlock(nn.Module):
 
 class BasicBlockBU(nn.Module):
     # Basic block of the BU1,BU2 streams.
-    def __init__(self, shared: nn.Module, norm_layer: nn.Module, activation_fun: nn.Module, inshapes: torch,   ntasks: int, flag_at: FlagAt, is_bu2: bool, orig_relus):
+    def __init__(self, shared: nn.Module, norm_layer: nn.Module, activation_fun: nn.Module, inshapes: torch,
+                 ntasks: int, flag_at: FlagAt, is_bu2: bool, orig_relus) -> None:
         """
-        Args:
-            shared: the shared layers between BU1, BU2.
-            norm_layer: an instance of norm layer.
-            activation_fun: an instance of activation_fun.
-            inshapes: The input shape of the block.
-            ntasks: Number of tasks the model should deal with.
-            flag_at: The model flag.
-            is_bu2: if true the block is part of the BU2 stream o.w. of the BU1 stream.
-            orig_relus: If True we use relu after the skip connection.
+        :param shared: the shared conv layers between BU1, BU2.
+        :param norm_layer: an instance of norm layer.
+        :param activation_fun: an instance of activation_fun.
+        :param inshapes: The input shape of the block.
+        :param ntasks: Number of tasks the model should deal with.
+        :param flag_at: Flag
+        :param is_bu2: is the stream is BU1 or BU2.
+        :param orig_relus: whether to use relu after the skip connection.
         """
         super(BasicBlockBU, self).__init__()
         self.orig_relus = orig_relus
@@ -392,13 +278,10 @@ class BasicBlockBU(nn.Module):
         if self.orig_relus:
             self.relu = activation_fun()
 
-    def forward(self, inputs:list[torch])->tuple:
+    def forward(self, inputs):
         """
-        Args:
-            inputs: The inputs are: the tensor output(of shape [B,C,H,W] from the previous block or an image, flag of shape[B,S] , the lateral connections from the last stream (if exists),list of 3 tensors.
-
-        Returns: the output from the block, the laterals connection for the next stream.
-
+        :param inputs: The inputs are: the tensor output(of shape [B,C,H,W] from the previous block or an image, flag of shape[B,S] , the lateral connections from the last stream (if exists),list of 3 tensors.
+        :return: tensor
         """
         x, flag, laterals_in = inputs  # The inputs are the x(from the previous block or an image) , flag , the lateral connection from the last stream (if exists).
         if laterals_in is not None:
@@ -438,74 +321,7 @@ class BasicBlockBU(nn.Module):
             x = self.relu(x)
         return x, laterals_out
 
-class InitialEmbedding(nn.Module):
-    def __init__(self,opts,heads):
-        """
-        Args:
-            opts: The model options.
-            heads: The list of heads we create our Task Head according to.
-        """
-        super(InitialEmbedding, self).__init__()
-        self.top_filters = opts.nfilters[-1]
-        self.nheads = len(heads)
-        self.norm_layer = opts.norm_fun
-        self.activation_fun = opts.activation_fun
-        self.ntasks = opts.ntasks
-        self.top_filters = opts.nfilters[-1]
-        self.model_flag = opts.model_flag
-        self.use_td_flag = opts.use_td_flag
-        self.task_embedding = [[] for _ in range(self.ntasks)]
-        self.norm_layer = opts.norm_fun
-        self.activation_fun = opts.activation_fun
-        self.use_SF = opts.use_SF
-        self.nclasses = opts.nclasses
-        self.grit_size = opts.grit_size
-        self.num_grits = int(np.ceil(224 / self.grit_size))
-        all_layers = []
-        for i in range(len(heads)):
-            layer = nn.Sequential(nn.Linear(heads[i], self.top_filters // self.nheads),  self.norm_layer(self.top_filters // self.nheads, dims=1, num_tasks=self.ntasks),  self.activation_fun())
-            all_layers.append(layer)
 
-        self.h_top_td = nn.Sequential(nn.Linear(self.top_filters * 2, self.top_filters),   self.norm_layer(self.top_filters, dims=1, num_tasks=self.ntasks),  self.activation_fun())
-        all_layers = nn.ModuleList(all_layers)
-        self.layers = all_layers
-        
-    def forward(self,inputs:tuple)->tuple:
-        """
-        Args:
-            inputs: bu_out - the output from the BU1 stream , general_flag - the task, arg flag, stage_flag -  the flag fror the streams , stage - the stage we are solving.
-
-        Returns: The input for the first up-sampling block.
-
-        """
-        (bu_out, general_flag, stage_flag, stage) = inputs
-        task = general_flag[:, :self.ntasks]  # The task vector.
-        if stage == 0:
-            num_heads = 1
-            emb_inputs = [stage_flag]
-        if stage == 1:
-            num_heads = 3
-            emb_inputs = [stage_flag[:, :self.num_grits], stage_flag[:, self.num_grits : ], task]
-        if stage == 2:
-            num_heads = 2
-            emb_inputs = [stage_flag[:, :self.num_grits], stage_flag[:, self.num_grits : ]]
-
-        outs = []
-        for i in range(num_heads):
-            out = self.layers[i](emb_inputs[i])
-            outs.append(out)
-        top_td = torch.cat(outs, dim = 1).squeeze()
-
-        top_td_embed = top_td
-        h_side_top_td = bu_out.squeeze()
-        top_td = torch.cat((h_side_top_td, top_td), dim=1)
-        top_td = torch.flatten(top_td, 1)
-        top_td = self.h_top_td(top_td)  # The projection layer.
-        top_td = top_td.view((-1, self.top_filters, 1, 1))
-        x = top_td
-        return x, top_td_embed, top_td
-
-# TODO - MAKE SURE THE SIZE IS CORRECT.
 class InitialTaskEmbedding(nn.Module):
     """
     The Initial Task embedding at the top of the TD stream.
@@ -514,8 +330,7 @@ class InitialTaskEmbedding(nn.Module):
 
     def __init__(self, opts: argparse) -> None:
         """
-        Args:
-            opts: The model options we initialize the module according to.
+        :param opts:Initialize the module according to the opts.
         """
         super(InitialTaskEmbedding, self).__init__()
         self.ntasks = opts.ntasks
@@ -523,67 +338,88 @@ class InitialTaskEmbedding(nn.Module):
         self.model_flag = opts.model_flag
         self.use_td_flag = opts.use_td_flag
         self.task_embedding = [[] for _ in range(self.ntasks)]
-        self.arg_embedding  = [[] for _ in range(self.ntasks)]
         self.norm_layer = opts.norm_fun
         self.activation_fun = opts.activation_fun
         self.use_SF = opts.use_SF
-        self.nclasses = opts.nclasses
-        self.emb_layers = []
-        self.grit_size = opts.grit_size
-        self.num_grits = int(np.ceil(224 / self.grit_size))
+        self.nclasses = opts.nclasses 
+        self.train_arg = opts.train_arg
         if self.model_flag is FlagAt.SF:
-         for i in range(self.ntasks):
-             layer_stage_1 = InitialEmbedding(opts,self.nclasses[i])
-             self.arg_embedding.extend(layer_stage_1.layers.parameters())
-             layer_stage_2 = InitialEmbedding(opts, [self.num_grits, self.num_grits, self.ntasks])
-             self.arg_embedding.extend(layer_stage_2.layers[:2].parameters())
-             self.task_embedding.extend(layer_stage_2.layers[2].parameters())
-             layer_stage_3 = InitialEmbedding(opts, [self.num_grits, self.num_grits])
-             self.arg_embedding.extend(layer_stage_3.layers.parameters())
+            self.h_flag_task_td = []  # The task embedding.
+            self.h_flag_arg_td = []
+            self.h_top_td = nn.Sequential(nn.Linear(self.top_filters * 2, self.top_filters),  self.norm_layer(self.top_filters, dims=1, num_tasks=self.ntasks), self.activation_fun())
+            for i in range(self.ntasks):
+                layer = nn.Sequential(nn.Linear(1, self.top_filters // 2), self.norm_layer(self.top_filters // 2, dims=1, num_tasks=self.ntasks),  self.activation_fun())
+                self.h_flag_task_td.append(layer)
+                self.task_embedding[i].extend(layer.parameters())
+                layer = nn.Sequential(nn.Linear(self.nclasses[i][0], self.top_filters // 2), self.norm_layer(self.top_filters // 2, dims=1, num_tasks=self.ntasks),  self.activation_fun())
+                self.h_flag_arg_td.append(layer)
+                if self.train_arg:
+                 self.task_embedding[i].extend(layer.parameters())
+            self.h_flag_task_td = nn.ModuleList(self.h_flag_task_td)
+            self.h_flag_arg_td = nn.ModuleList(self.h_flag_arg_td)
+            # The argument embedding.
 
-             Task_emb = nn.ModuleList([layer_stage_1,layer_stage_2,layer_stage_3])
-             self.emb_layers.append(Task_emb)
-        self.emb_layers = nn.ModuleList(self.emb_layers)
+            # The projection layer.
+
 
         if self.model_flag is FlagAt.TD:
             # The task embedding.
-            self.h_flag_task_td = nn.Sequential(nn.Linear(self.ntasks, self.top_filters // 2),     self.norm_layer(self.top_filters // 2, dims=1, num_tasks=self.ntasks),  self.activation_fun())
+            self.h_flag_task_td = nn.Sequential(nn.Linear(self.ntasks, self.top_filters // 2),
+                                                self.norm_layer(self.top_filters // 2, dims=1, num_tasks=self.ntasks),
+                                                self.activation_fun())
             # The argument embedding.
-            self.h_flag_arg_td = nn.Sequential(nn.Linear(opts.nargs, self.top_filters // 2),    self.norm_layer(self.top_filters // 2, dims=1, num_tasks=self.ntasks),     self.activation_fun())
+            self.h_flag_arg_td = nn.Sequential(nn.Linear(opts.nargs, self.top_filters // 2),
+                                               self.norm_layer(self.top_filters // 2, dims=1, num_tasks=self.ntasks),
+                                               self.activation_fun())
             # The projection layer.
-            self.h_top_td = nn.Sequential(nn.Linear(self.top_filters * 2, self.top_filters),     self.norm_layer(self.top_filters, dims=1, num_tasks=self.ntasks),    self.activation_fun())
+            self.h_top_td = nn.Sequential(nn.Linear(self.top_filters * 2, self.top_filters),
+                                          self.norm_layer(self.top_filters, dims=1, num_tasks=self.ntasks),
+                                          self.activation_fun())
 
     def forward(self, inputs: tuple) -> tuple:
         """
-        Args:
-            inputs: bu_out-the output from the BU1 stream, flag the task and argument one hot vectors.
-
-        Returns: The initial task embedding to the top of the TD network.
-
+        :param inputs: bu_out-the output from the BU1 stream, flag the task and argument one hot vectors.
+        :return: The initial task embedding to the top of the TD network.
         """
-        ( _ , general_flag , _ , stage) = inputs
-        task_id = flag_to_task(general_flag)
-        return self.emb_layers[task_id][stage](inputs)
-
+        (bu_out, flag) = inputs
+        task = flag[:, :self.ntasks]  # The task vector.
+        arg = flag[:, self.ntasks:]  # The argument vector.
+        task_id = flag_to_task(flag)
+        flag_task = flag[:, task_id].view(-1, 1)
+        if self.use_SF:
+            top_td_task = self.h_flag_task_td[task_id](
+                flag_task)  # Take the specific task embedding to avoid forgetting.
+        else:
+            top_td_task = self.h_flag_task_td(task)
+        top_td_task = top_td_task.view((-1, self.top_filters // 2, 1, 1))
+        top_td_arg = self.h_flag_arg_td[task_id](arg)  # Embed the argument.
+        top_td_arg = top_td_arg.view((-1, self.top_filters // 2, 1, 1))
+        top_td = torch.cat((top_td_task, top_td_arg), dim=1)  # Concatenate the flags
+        top_td_embed = top_td
+        h_side_top_td = bu_out
+        top_td = torch.cat((h_side_top_td, top_td), dim=1)
+        top_td = torch.flatten(top_td, 1)
+        top_td = self.h_top_td(top_td)  # The projection layer.
+        top_td = top_td.view((-1, self.top_filters, 1, 1))
+        x = top_td
+        return x, top_td_embed, top_td
 
 class BasicBlockTD(nn.Module):
     # Basic block of the TD stream.
     # The same architecture as in BU just instead of downsampling by stride factor we upsample by stride factor.
     expansion = 1
 
-    def __init__(self, in_channels, out_channels, stride, norm_layer, activation_fun, use_lateral, inshapes, ntasks,   orig_relus,index):
+    def __init__(self, in_channels, out_channels, stride, norm_layer, activation_fun, use_lateral, inshapes, ntasks,
+                 orig_relus,index):
         """
-        Args:
-            in_channels: Input channels from the last block.
-            out_channels: The output channels of the block.
-            stride: The stride to up-sample according to.
-            norm_layer: An instance of norm layer.
-            activation_fun: An instance of an activation fun.
-            use_lateral: If True perform a lateral connection from the last stream if exists.
-            inshapes: The input shape
-            ntasks: Number of tasks the model will deal with
-            orig_relus: Whether to use relu after the skip connection.
-            index: The index of the block.
+        :param in_channels: in channels from the last block.
+        :param out_channels: the out channels of the block.
+        :param stride: the stride to upsample according
+        :param norm_layer: an instance of norm layer
+        :param activation_fun: an instance of activation fun
+        :param use_lateral: whether to perform lateral connection from the last stream
+        :param ntasks: Number of tasks the model will deal with
+        :param orig_relus: whether to use relu after the skip connection.
         """
         super(BasicBlockTD, self).__init__()
         self.ntasks = ntasks
@@ -617,11 +453,8 @@ class BasicBlockTD(nn.Module):
 
     def forward(self, inputs):
         """
-        Args:
-            inputs: x - the output from the last block, the flag and the lateral connections from the last stream if exists.
-
-        Returns: The output of the block.
-
+        :param inputs: The inputs are: the tensor output(of shape from the previous block or an image, flag, the lateral connections from the last stream (if exists),list of 3 tensors.
+        :return: tensor
         """
         x, flag, laterals_in = inputs
         if laterals_in is not None:

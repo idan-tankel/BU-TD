@@ -9,7 +9,7 @@ from supp.create_model import *
 from supp.batch_norm import *
 from torch.utils.data import DataLoader
 
-#TODO - CHANGE LOAD_MODEL_IF_EXISTS.
+
 class DatasetInfo:
     """encapsulates a (train/test/validation) dataset with its appropriate train or test function and Measurement class"""
 
@@ -129,7 +129,7 @@ def train_model(args: argparse, the_datasets: list, learned_params: list, task_i
     fit(args, the_datasets, task_id)
 
 
-def create_optimizer_and_sched(opts: argparse) -> tuple:
+def create_optimizer_and_sched(opts: argparse,learned_params:list) -> tuple:
     """
     :param opts: The model options.
     :return: optimizer, scheduler according to the options.
@@ -153,6 +153,8 @@ def create_optimizer_and_sched(opts: argparse) -> tuple:
     if not opts.cycle_lr:
         lmbda = lambda epoch: opts.learning_rates_mult[epoch]
         scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lmbda)
+    opts.optimizer = optimizer
+    opts.scheduler = scheduler
     return optimizer, scheduler
 
 
@@ -221,8 +223,8 @@ def save_model_and_md(logger: logging, model_fname: str, metadata: dict, epoch: 
     logger.info('Saved model')
 
 
-def load_model(opts: argparse, model_path: str, gpu=None,
-               load_optimizer_and_schedular: bool = False) -> dict: # TODO - CHANGE TO BE ADAPTIVE ACCORDING TO THE LOAD_MODEL_IF_EXISTS FLAG.
+def load_model(opts: argparse, model_path: str, model_latest_fname: str, gpu=None,
+               load_optimizer_and_schedular: bool = False) -> dict:
     """
     Loads and returns the model as a dictionary.
     :param opts: The model opts.
@@ -233,7 +235,7 @@ def load_model(opts: argparse, model_path: str, gpu=None,
     :return:
     """
     if gpu is None:
-     #   model_path = os.path.join(model_path, model_latest_fname)
+        model_path = os.path.join(model_path, model_latest_fname)
         checkpoint = torch.load(model_path)  # Loading the weights and the metadata.
     else:
         # Map model to be loaded to specified single gpu.
@@ -245,21 +247,6 @@ def load_model(opts: argparse, model_path: str, gpu=None,
         opts.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])  # Load the schedular state.
     return checkpoint
 
-def Load_model_if_exists(opts, logger, model_latest_fname, the_datasets):
-    if os.path.exists(model_latest_fname):
-        logger.info('Loading model: %s' % model_latest_fname)
-        checkpoint = load_model(opts, model_latest_fname, opts.gpu)  # TODO CHANGE TO ONLY OPTS.
-        metadata = checkpoint['metadata']
-        for the_dataset in the_datasets:
-            the_dataset.measurements.results = metadata[the_dataset.name]
-        optimum = metadata['optimum']
-        last_epoch = metadata['epoch']
-        if opts.distributed:
-            # synchronize point so all distributed processes would have the same weights
-            import torch.distributed as dist
-            dist.barrier()
-        logger.info('restored model with optimum %f' % optimum)
-        logger.info('continuing from epoch: %d' % (last_epoch + 2))
 
 class save_details_class:
     def __init__(self, opts):
@@ -301,9 +288,22 @@ def fit(opts: argparse, the_datasets: list, task: int) -> None:
     model_latest_fname = os.path.join(model_dir, model_latest_fname)
     save_details = save_details_class(opts)  # Contains the optimum.
     last_epoch = -1
-  #  model_latest_path = model_basename + '_latest' + model_ext
     if opts.load_model_if_exists:  # If we want to continue started training.
-        Load_model_if_exists(opts, logger, model_latest_fname, the_datasets)
+        if os.path.exists(model_latest_fname):
+            logger.info('Loading model: %s' % model_latest_fname)
+            checkpoint = load_model(opts, model_latest_fname, opts.gpu)
+            metadata = checkpoint['metadata']
+            for the_dataset in the_datasets:
+                the_dataset.measurements.results = metadata[the_dataset.name]
+            optimum = metadata['optimum']
+            last_epoch = metadata['epoch']
+            if opts.distributed:
+                # synchronize point so all distributed processes would have the same weights
+                import torch.distributed as dist
+                dist.barrier()
+            logger.info('restored model with optimum %f' % optimum)
+            logger.info('continuing from epoch: %d' % (last_epoch + 2))
+
     st_epoch = last_epoch + 1
     end_epoch = nb_epochs
     if instruct(opts, 'abort_after_epochs') and opts.abort_after_epochs > 0:

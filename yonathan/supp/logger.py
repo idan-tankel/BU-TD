@@ -64,12 +64,12 @@ def save_script(opts):
         import __main__ as main
         # copy the running script
         script_fname = main.__file__
-        dst = shutil.copy(script_fname, model_dir)
+        shutil.copy(script_fname, model_dir)
         if opts.distributed:
             # if distributed then also copy the actual script
             script_base_fname = opts.module + '.py'
             script_base_fname = os.path.join(os.path.dirname(script_fname),script_base_fname)
-            dst = shutil.copy(script_base_fname, model_dir)
+            shutil.copy(script_base_fname, model_dir)
 
         # copy funcs folder
         mods = [m.__name__ for m in sys.modules.values() if 'supp' in m.__name__]
@@ -77,7 +77,8 @@ def save_script(opts):
             mods=mods[0]
             mods = mods.split('.')
             funcs_version=mods[0]
-            dst = shutil.copytree(funcs_version, os.path.join(model_dir,funcs_version))
+            if not os.path.exists(os.path.join(model_dir,funcs_version)):
+             shutil.copytree(funcs_version, os.path.join(model_dir,funcs_version))
 
 
 def print_detail(args):
@@ -86,7 +87,7 @@ def print_detail(args):
     args.first_node = first_node
     if first_node:
         if not os.path.exists(args.model_dir):
-         os.makedirs(args.model_dir)
+          os.makedirs(args.model_dir)
     if args.distributed:
         import torch.distributed as dist
         dist.barrier()
@@ -94,7 +95,7 @@ def print_detail(args):
     log_init(args)
     if first_node:
         print_info(args)
-        save_script(args) # CHANGE TO SUPPORT IF EXISTS
+        save_script(args)
     log_msgs = []
     for msg in log_msgs:
         logger.info(msg)

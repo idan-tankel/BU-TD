@@ -29,10 +29,11 @@ class TDModel(nn.Module):
         self.use_final_conv = opts.use_final_conv
         upsample_size = opts.avg_pool_size  # before avg pool we have 7x7x512
         self.task_embedding = [[] for _ in range(self.ntasks)]
+        self.argument_embedding = [[] for _ in range(self.ntasks)]
         self.InitialTaskEmbedding = InitialTaskEmbedding(opts)
         for i in range(self.ntasks):
             self.task_embedding[i].extend(self.InitialTaskEmbedding.task_embedding[i])
-
+            self.argument_embedding[i].extend(self.InitialTaskEmbedding.argument_embedding[i])
         self.top_upsample = nn.Upsample(scale_factor=upsample_size, mode='bilinear',
                                         align_corners=False)  # Upsample layer to make at of the shape before the avgpool.
         layers = []
@@ -260,7 +261,7 @@ class BUModel(nn.Module):
         """
         super(BUModel, self).__init__()
         bu_shared = BUStreamShared(opts)
-        self.trunk = BUStream(opts, bu_shared, is_bu2=False)  # In the BUModel there is only BU stream.
+        self.trunk = BUStream(opts, bu_shared, is_bu2=True)  # In the BUModel there is only BU stream.
 
     def forward(self, inputs: list[torch]) -> tuple:
         """
@@ -362,6 +363,7 @@ class BUTDModelShared(BUTDModel):
         self.inputs_to_struct = opts.inputs_to_struct
         self.task_embedding = [[] for _ in range(self.ntasks)]  # Container to store the task embedding.
         self.transfer_learning = [[] for _ in range(self.ntasks)]
+        self.argument_embedding = [[] for _ in range(self.ntasks)]
         self.model_flag = opts.model_flag  # The model type
         self.use_bu1_loss = opts.use_bu1_loss  # Whether to use the Occurrence loss.
         self.use_td_flag = opts.use_td_flag
@@ -380,11 +382,11 @@ class BUTDModelShared(BUTDModel):
         self.Head = MultiTaskHead(opts)  # The task-head to transform the last layer output to the number of classes.
         if self.model_flag is FlagAt.SF:  # Storing the Task embedding.
             for i in range(self.ntasks):
-                self.task_embedding[i].extend(list(self.Head.taskhead[i].parameters()))
                 self.task_embedding[i].extend(self.bumodel2.task_embedding[i])
                 self.task_embedding[i].extend(self.tdmodel.task_embedding[i])
+                self.argument_embedding[i].extend(self.tdmodel.argument_embedding[i])
                 self.transfer_learning[i].extend(list(self.Head.taskhead[i].parameters()))
-                self.transfer_learning[i].extend(self.tdmodel.task_embedding[i])
+
         else:
             for i in range(self.ntasks):
                 self.task_embedding[i].extend(list(self.Head.taskhead[i].parameters()))

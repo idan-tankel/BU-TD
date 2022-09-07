@@ -3,18 +3,17 @@ import torch
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import argparse
-from supp.Data_and_structs import *
 
-def get_model_outs(opts: nn.Module, outs: list[torch]) -> object:
+def get_model_outs(model: nn.Module, outs: list[torch]) -> object:
     """
     :param model: The model
     :param outs: The list of outputs of the model from all the streams.
     :return: struct containing all tensor in the list
     """
-    if type(opts.model) is torch.nn.DataParallel or type(opts.model) is torch.nn.parallel.DistributedDataParallel:
-        return opts.model.module.outs_to_struct(opts)(outs)  # Use outs_to_struct to transform from list -> struct
+    if type(model) is torch.nn.DataParallel or type(model) is torch.nn.parallel.DistributedDataParallel:
+        return model.module.outs_to_struct(model.module)(outs)  # Use outs_to_struct to transform from list -> struct
     else:
-        return opts.model.outs_to_struct(opts)(outs)
+        return model.outs_to_struct(outs)
 
 class MeasurementsBase:
     """
@@ -64,7 +63,6 @@ class MeasurementsBase:
         """
         :return: the average loss until the current stage.
         """
-
         return np.array(self.metrics) / self.nexamples
 
     # store the epoch's metrics
@@ -141,41 +139,30 @@ class Measurements(MeasurementsBase):
         super(Measurements, self).__init__(opts)
         self.model = model
         self.opts = opts
-        self.inputs_to_struct = cyclic_inputs_to_strcut
-        self.stages = opts.stages
+        self.inputs_to_struct = opts.inputs_to_struct
         if self.opts.use_bu1_loss:  # If desired we also follow the occurrence loss.
             super().add_name('Occurrence Acc')
 
         if self.opts.use_bu2_loss:  # If desired we also follow the task loss.
-            if 0 in self.stages:
-             super().add_name('Task Acc Stage 0')
-            if 1 in self.stages:
-             super().add_name('Task Acc Stage 1')
-            if 2 in opts.stages:
-             super().add_name('Task Acc Stage 2')
+            super().add_name('Task Acc')
 
         self.init_results()  # Initialize the matrices.
 
     def update(self, inputs: list[torch], outs: list[torch], loss: float) -> None:
         super().update(inputs, outs, loss)
-        # TODO - SUPPORT ALL ACCURACIES.
-        for stage in self.opts.stages:
-            model_outs = get_model_outs(self.opts, outs)
-
-            samples = self.inputs_to_struct(inputs,stage = stage)
-            if self.opts.use_bu1_loss:
-                occurrence_pred = outs.occurrence_out > 0
-                occurrence_accuracy = (occurrence_pred == samples.label_existence).type(torch.float).mean(axis=1)
-                super().update_metric(self.occurrence_accuracy,occurrence_accuracy.sum().cpu().numpy())  # Update the occurrence metric.
-            # TODO CHANGE IT.
-            # TODO CHANGE INTO REAL ACCURACY.
-            # TODO change it into stage dependent.
-            if self.opts.use_bu2_loss:
-                preds, task_accuracy = self.opts.task_accuracy(model_outs[stage],samples, stage = self.stages[0])
-              #  task_accuracy = torch.zeros([1])
-                stage_task_accuracy = getattr(self,'Task_Acc_Stage_'+str(stage))
-                super().update_metric(stage_task_accuracy, task_accuracy.sum().cpu().numpy())  # Update the task metric.
-
+        outs = get_model_outs(self.model, outs)
+        samples = self.inputs_to_struct(inputs)
+        if self.opts.use_bu1_loss:
+            occurrence_pred = outs.occurrence_out > 0
+            occurrence_accuracy = (occurrence_pred == samples.label_existence).type(torch.float).mean(axis=1)
+            super().update_metric(self.occurrence_accuracy,
+                                  occurrence_accuracy.sum().cpu().numpy())  # Update the occurrence metric.
+        # TODO CHNAGE IT.
+        # TODO CHANGE INTO REAL ACCURACY.
+        if self.opts.use_bu2_loss:
+            preds, task_accuracy = self.opts.task_accuracy(outs,samples)
+          #  task_accuracy = torch.zeros([1])
+            super().update_metric(self.task_accuracy, task_accuracy.sum().cpu().numpy())  # Update the task metric.
 
     def reset(self) -> None:
         """
@@ -185,19 +172,9 @@ class Measurements(MeasurementsBase):
         if self.opts.use_bu1_loss:
             self.occurrence_accuracy = np.array(0.0)
             self.metrics += [self.occurrence_accuracy]
-
         if self.opts.use_bu2_loss:
-            if 0 in self.stages:
-             self.Task_Acc_Stage_0 = np.array(0.0)
-             self.metrics +=  [self.Task_Acc_Stage_0]
-            if 1 in self.stages:
-             self.Task_Acc_Stage_1 = np.array(0.0)
-             self.metrics += [self.Task_Acc_Stage_1]
-            if 2 in self.stages:
-             self.Task_Acc_Stage_2 = np.array(0.0)
-             self.metrics += [self.Task_Acc_Stage_2]
-          #  self.metrics += [self.Task_Acc_Stage_0, self.Task_Acc_Stage_1, self.Task_Acc_Stage_2]
-
+            self.task_accuracy = np.array(0.0)
+            self.metrics += [self.task_accuracy]
 
 
 def set_datasets_measurements(datasets: object, measurements_class: type, model_opts: argparse, model: nn.Module):

@@ -3,7 +3,6 @@ from supp.heads import *
 from supp.blocks import *
 from supp.general_functions import *
 from supp.FlagAt import *
-from supp.Data_and_structs import *
 from types import SimpleNamespace
 import numpy as np
 
@@ -30,11 +29,10 @@ class TDModel(nn.Module):
         self.use_final_conv = opts.use_final_conv
         upsample_size = opts.avg_pool_size  # before avg pool we have 7x7x512
         self.task_embedding = [[] for _ in range(self.ntasks)]
-        self.arg_embedding = [[] for _ in range(self.ntasks)]
         self.InitialTaskEmbedding = InitialTaskEmbedding(opts)
         for i in range(self.ntasks):
             self.task_embedding[i].extend(self.InitialTaskEmbedding.task_embedding[i])
-            self.arg_embedding[i].extend(self.InitialTaskEmbedding.arg_embedding[i])
+
         self.top_upsample = nn.Upsample(scale_factor=upsample_size, mode='bilinear',
                                         align_corners=False)  # Upsample layer to make at of the shape before the avgpool.
         layers = []
@@ -83,10 +81,10 @@ class TDModel(nn.Module):
         :param inputs:bu_out:the output from the BU1 stream, flag the task+arg flag , laterals_in the laterals from the BU1 stream.
         :return:
         """
-        bu_out, general_flag, stage_flag, stage, laterals_in = inputs
+        bu_out, flag, laterals_in = inputs
         laterals_out = []
         if self.use_td_flag:
-            (x, top_td_embed, top_td) = self.InitialTaskEmbedding((bu_out, general_flag,stage_flag, stage))  # Compute the initial task embedding.
+            (x, top_td_embed, top_td) = self.InitialTaskEmbedding((bu_out, flag))  # Compute the initial task embedding.
         else:
             x = bu_out
         laterals_out.append(x)
@@ -107,7 +105,7 @@ class TDModel(nn.Module):
                 reverse_lateral_in = lateral_in[::-1]  # Inverting the laterals to match the desired shape.
                 for block, cur_lat_in in zip(layer, reverse_lateral_in):  # Iterating over all blocks in the layer.
                     reverse_cur_lat_in = cur_lat_in[::-1]  # Inverting the laterals to match the desired shape.
-                    x, block_lats_out = block((x, general_flag,
+                    x, block_lats_out = block((x, flag,
                                                reverse_cur_lat_in))  # Compute the block output using x, the flag and the lateral connections.
                     layer_lats_out.append(block_lats_out)  # Add the lateral output for the next stream.
                 reverse_layer_lats_out = layer_lats_out[::-1]
@@ -122,7 +120,7 @@ class TDModel(nn.Module):
             outs += [top_td_embed, top_td]  # Add the top embeddings to the output if needed.
         return outs
 
-class BUStreamBUStream(nn.Module):
+class BUStream(nn.Module):
     def __init__(self, opts: argparse, shared: nn.Module, is_bu2: bool) -> None:
         super(BUStream, self).__init__()
         self.block = opts.bu_block_type
@@ -201,6 +199,7 @@ class BUStreamShared(nn.Module):
         layers = []
         self.activation_fun = opts.activation_fun
         self.use_lateral = opts.use_lateral_tdbu
+        self.use_bu1_flag = opts.use_bu1_flag
         self.block = opts.bu_shared_block_type
         stride = opts.strides[0]
         filters = opts.nfilters[0]
@@ -213,7 +212,7 @@ class BUStreamShared(nn.Module):
         self.inplanes = filters
         inshape = np.array([filters,np.int(np.ceil(inshape[1] / stride)),np.int(np.ceil(inshape[2] / stride))])  # The first shape.
         inshapes.append([inshape])
-        self.bot_lat = SideAndCombSharedBase(num_channels=filters)
+        self.bot_lat = SideAndCombSharedBase(filters=filters)
         num_blocks = 0
         for k in range(1, len(opts.strides)):
             nblocks = opts.ns[k]
@@ -232,7 +231,7 @@ class BUStreamShared(nn.Module):
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))  # Average pool before the classification.
         filters = opts.nfilters[-1]
         if self.use_lateral:
-            self.top_lat = SideAndCombSharedBase(num_channels =filters)
+            self.top_lat = SideAndCombSharedBase(filters=filters)
         inshape = np.array([filters, 1, 1])  # Add the shape of the last layer.
         inshapes.append(inshape)
         self.inshapes = inshapes
@@ -273,39 +272,38 @@ class BUModel(nn.Module):
 
 
 class BUTDModel(nn.Module):
-    def forward(self, samples: list[torch], stage:int ) -> list[torch]:
+    def forward(self, inputs: list[torch]) -> list[torch]:
         """
         :param inputs: The images, all labels including the task_occurrence, segmentation_task, the label_task.
         :return: The output from all streams in order to compute the appropriate loss.
         """
-      #  samples = self.inputs_to_struct(inputs)  # Transform the input to struct.
+        samples = self.inputs_to_struct(inputs)  # Transform the input to struct.
         images = samples.image
-        general_flags = samples.general_flag
-        model_inputs = [images, general_flags, None]  # The input to the BU1 stream is just the images and the flags.
+        flags = samples.flag
+        model_inputs = [images, flags, None]  # The input to the BU1 stream is just the images and the flags.
         bu_out, bu_laterals_out = self.bumodel1(model_inputs)
         if self.use_bu1_loss:
             occurrence_out = self.occhead(bu_out)  # Compute the occurrence head output.
         else:
             occurrence_out = None
-        stage_flag = samples.flag
-        model_inputs = [bu_out,general_flags,stage_flag,stage]
+        model_inputs = [bu_out, flags]
         if self.use_lateral_butd:
             model_inputs += [bu_laterals_out]
         else:
             model_inputs += [None]
-        
-        td_outs = self.tdmodel( model_inputs)  # The input to the TD stream is the bu_out, flags, the lateral connections.
+        td_outs = self.tdmodel(
+            model_inputs)  # The input to the TD stream is the bu_out, flags, the lateral connections.
         td_out, td_laterals_out, *td_rest = td_outs
         if self.use_td_loss:  # Compute the TD head output.
             td_head_out = self.imagehead(td_out)
-        model_inputs = [images, general_flags]
+        model_inputs = [images, flags]
         if self.use_lateral_tdbu:
             model_inputs += [td_laterals_out]
         else:
             model_inputs += [[td_out]]
         bu2_out, bu2_laterals_out = self.bumodel2(
             model_inputs)  # The input to the TD stream is the images, flags, the lateral connections.
-        head_input = (bu2_out, general_flags,stage)
+        head_input = (bu2_out, flags)
         task_out = self.Head(head_input)  # Compute the classification layer.
         outs = [occurrence_out, task_out, bu_out, bu2_out]
         if self.use_td_loss:
@@ -314,6 +312,42 @@ class BUTDModel(nn.Module):
             td_top_embed, td_top = td_rest
             outs += [td_top_embed]
         return outs  # Return all the outputs from all streams.
+
+    class outs_to_struct:
+        """
+        Struct transforming the model output list to struct.
+        """
+
+        def __init__(self, model: nn.Module) -> None:
+            """
+            :param model:Containing the flags to create the model according to.
+            """
+            self.use_td_loss = model.use_td_loss
+            self.use_td_flag = model.use_td_flag
+            self.occurrence_out = None
+            self.task_out = None
+            self.bu_out = None
+            self.bu2_out = None
+            self.td_head_out = None
+            self.td_top_embe = None
+
+        def __call__(self, outs: list[torch]) -> object:
+            """
+            :param outs: List of all model streams output.
+            :return: Struct instance.
+            """
+            occurrence_out, task_out, bu_out, bu2_out, *rest = outs
+            self.occurrence_out = occurrence_out
+            self.task = task_out
+            self.bu = bu_out
+            self.bu2 = bu2_out
+            if self.use_td_loss:
+                td_head_out, *rest = rest
+                self.td_head = td_head_out
+            if self.use_td_flag:
+                td_top_embed = rest[0]
+                self.td_top_embed = td_top_embed
+            return self
 
 
 class BUTDModelShared(BUTDModel):
@@ -328,8 +362,6 @@ class BUTDModelShared(BUTDModel):
         self.inputs_to_struct = opts.inputs_to_struct
         self.task_embedding = [[] for _ in range(self.ntasks)]  # Container to store the task embedding.
         self.transfer_learning = [[] for _ in range(self.ntasks)]
-        self.arg_embedding = [[] for _ in range(self.ntasks)]
-        self.Head_learning = [[] for _ in range(self.ntasks)]
         self.model_flag = opts.model_flag  # The model type
         self.use_bu1_loss = opts.use_bu1_loss  # Whether to use the Occurrence loss.
         self.use_td_flag = opts.use_td_flag
@@ -351,51 +383,12 @@ class BUTDModelShared(BUTDModel):
                 self.task_embedding[i].extend(list(self.Head.taskhead[i].parameters()))
                 self.task_embedding[i].extend(self.bumodel2.task_embedding[i])
                 self.task_embedding[i].extend(self.tdmodel.task_embedding[i])
-                self.arg_embedding[i].extend(self.tdmodel.arg_embedding[i])
-
                 self.transfer_learning[i].extend(list(self.Head.taskhead[i].parameters()))
-                self.transfer_learning[i].extend(self.tdmodel.arg_embedding[i])
-                self.Head_learning[i].extend(list(self.Head.taskhead[i].parameters()))
+                self.transfer_learning[i].extend(self.tdmodel.task_embedding[i])
         else:
             for i in range(self.ntasks):
                 self.task_embedding[i].extend(list(self.Head.taskhead[i].parameters()))
 
-
-
-class CYCLICBUTDMODELSHARED(nn.Module):
-    def __init__(self,opts):
-        super(CYCLICBUTDMODELSHARED, self).__init__()
-        self.model = BUTDModelShared(opts)
-        self.use_td_loss = opts.use_td_flag
-        self.use_td_flag = opts.use_td_flag
-        self.stages = opts.stages
-        self.outs_to_struct = cyclic_outs_to_struct
-        self.task_embedding = self.model.task_embedding
-        self.transfer_learning = self.model.transfer_learning
-        self.Head_learning = self.model.Head_learning
-
-    def forward(self, inputs: list[torch]) -> list[torch]:
-        stages = self.stages
-        outs = {}
-        if 0 in stages:
-         samples_stage_1 = cyclic_inputs_to_strcut(inputs,stage = 0)
-         out_stage_1 = self.model(samples_stage_1,stage = 0 )
-         outs[0] = out_stage_1
-        # print("Done stage 0!")
-        #
-        if 1 in stages:
-         samples_stage_2 = cyclic_inputs_to_strcut(inputs, stage = 1)
-         out_stage_2 = self.model(samples_stage_2,stage = 1)
-         outs[1] = out_stage_2
-       #  print("Done stage 1!")
-        #
-        if 2 in stages:
-         samples_stage_3 = cyclic_inputs_to_strcut(inputs, stage = 2)
-         out_stage_3 = self.model(samples_stage_3,stage = 2)
-         outs[2] = out_stage_3
-       #  print("Done stage 2!")
-        #
-        return outs
 
 class BUTDModelDuplicate(BUTDModel):
     """
@@ -419,7 +412,7 @@ class BUTDModelDuplicate(BUTDModel):
         self.use_bu1_flag = opts.use_bu1_flag
         self.use_lateral_butd = opts.use_lateral_butd
         self.use_lateral_tdbu = opts.use_lateral_tdbu
-        self.inputs_to_struct = v
+        self.inputs_to_struct = opts.inputs_to_struct
 
 
 class BUTDModelSeparate(BUTDModel):
