@@ -20,13 +20,21 @@ dev = device("cuda") if torch.cuda.is_available() else device("cpu")
 # this is not used here
 
 
-def train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
+def train_emnist(embedding_idx=1, flag_at=FlagAt.SF,
                  processed_data='5_extended', path_loading=None,  train_all_model=True):
     """
     train_emnist This is the main training function under the main function
+    This function is used to train the model on the EMNIST dataset
+    Stages:
+    1. Get the config using the Config class
+    2. call dataset using the get_dataset function
+    3. create the model using the create_model function (and the flagAt specified)
+    4. initialize the learned parameters
+    5. train the model using the `training_functions.train function` - that function logs results and all stuff needed
+    6. save the model using the training_functions.save_model function
 
     Args:
-        embedding_idx (int, optional): _description_. Defaults to 0.
+        embedding_idx (int, optional): An enumeration to the direction head to take and to train on. Defaults to 0.
         flag_at (`FlagAt`, optional): . This flag determines the architecture specification to use.Defaults to FlagAt.SF.
         processed_data (str, optional): _description_. Defaults to '5_extended'.
         path_loading (`str`, optional): A path to load existing model from with trained weights. Defaults to None.
@@ -72,8 +80,8 @@ def train_emnist(embedding_idx=0, flag_at=FlagAt.SF,
 
 
 def main():
-    train_emnist(embedding_idx=0, flag_at=FlagAt.TD,
-                 processed_data='5_extended', path_loading=None)
+    train_emnist(embedding_idx=1, flag_at=FlagAt.TD,
+                 processed_data='6_extended', path_loading=None)
 
 
 if __name__ == "__main__":

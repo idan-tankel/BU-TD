@@ -143,7 +143,7 @@ class EMNISTAdjDatasetNew2(EMNISTAdjDatasetBase):
         # label_task = sample.label_task
         # TODO understand this part
         id = sample.id
-        flag[0] = self.direction
+        # flag[0] = self.direction
         adj_type, char = flag
         r, c = (label_all == char).nonzero()
         r = r[0]

@@ -7,7 +7,7 @@ RunningSpecs:
   FlagAt: TD
   flag_size:
   isFit: True
-  processed_data: '5_extended' # The name of the model result directory
+  processed_data: '6_extended' # The name of the model result directory
   
 
 Datasets:
