@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 # from supp.FlagAt import *
 # from supp.measurments import get_model_outs
-from supplmentery.measurments import get_model_outs
+from supplmentery.get_model_outs import get_model_outs
 from supplmentery.emnist_dataset import inputs_to_struct
 from supplmentery.training_functions import test_step
 import torch

@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader
 import torch.backends.cudnn as cudnn
 from torch import device
 import argparse
+import wandb
 import os
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 # import supplmentery
@@ -62,7 +63,7 @@ def train_emnist(embedding_idx=1, flag_at=FlagAt.SF,
     logger.print_detail(parser)
     # creating the model according the parser.
     model = create_model(model_opts=parser)
-    measurments.set_datasets_measurements(the_datasets, measurments.Measurements, parser, model=model)
+    measurments.set_datasets_measurements(datasets=the_datasets, measurements_class=measurments.Measurements, model_opts=parser, model=model)
     cudnn.benchmark = True  # TODO:understand what it is.
     # Loading a pretrained model if exists.
     if path_loading is not None or config.Training.load_existing_path:

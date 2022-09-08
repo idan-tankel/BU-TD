@@ -160,6 +160,7 @@ class Losses:
         self.loss_fun = UnifiedLossFun(self)
         self.task_accuracy = multi_label_accuracy_base
         # the UnifiedLossFun is a wrapper around the loss functions, and it must be the last one here since it using all the arguments of self
+        # since there are not much accuracy functions written here, the multi_label_accuracy_base is hard coded most of the time
 
 class Folders:
     def __init__(self, config: dict):

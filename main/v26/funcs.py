@@ -464,7 +464,7 @@ def set_datasets_measurements(datasets, measurements_class, model_opts, model):
         the_dataset.create_measurement(measurements_class, model_opts, model)
 
 
-def train_step(inputs: List, opts,model):
+def train_step(inputs: List, opts,model,optimizer):
     # TODO get this out of funcs
     """
     train_step The actual training step

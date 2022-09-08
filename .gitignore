@@ -38,3 +38,5 @@ data*
 *.amlignore.amltmp
 .vscode/settings.json
 .vscode/settings.json
+# wandb
+wandb/*

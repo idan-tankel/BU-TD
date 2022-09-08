@@ -6,7 +6,7 @@ import argparse
 # import DataLoader
 from torch.utils.data import DataLoader
 dev = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-from supplmentery.measurments import get_model_outs
+from supplmentery.get_model_outs import get_model_outs
 from v26.funcs import preprocess
 
 # TODO note that there is very similar code in the `v26.accuracy_funcs.py` file and in `v26.functions.loses.py` file.
