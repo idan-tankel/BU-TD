@@ -5,6 +5,7 @@ import torch.nn as nn
 import argparse
 
 
+
 def get_model_outs(model: nn.Module, outs: list[torch]) -> object:
     """
     :param model: The model
@@ -39,7 +40,7 @@ class MeasurementsBase:
 
     # update metrics for current batch and epoch (cumulative)
     # here we update the basic metric (loss). Subclasses should also call update_metric()
-    def update(self, inputs: list[torch], outs: list[torch], loss: float) -> None:
+    def update(self, inputs: list[torch], loss: float) -> None:
         """
         :param inputs:The input to the model in the current stage.
         :param loss: The loss computed on the batch.
@@ -55,7 +56,7 @@ class MeasurementsBase:
     def update_metric(self, metric: np.array, batch_sum: np.array) -> None:
         """
         :param metric: float np.array
-        :param batch_sum: float np.array
+        :param batch_sum: float np.array The result of the metric over the batch.
         :return:
         """
         self.metrics_cur_batch += [batch_sum]
@@ -151,14 +152,14 @@ class Measurements(MeasurementsBase):
         self.init_results()  # Initialize the matrices.
 
     def update(self, inputs: list[torch], outs: list[torch], loss: float) -> None:
-        super().update(inputs, outs, loss)
+        MeasurementsBase.update(self,inputs=inputs, loss=loss)
         outs = get_model_outs(self.model, outs)
         samples = self.inputs_to_struct(inputs)
         if self.opts.Losses.use_bu1_loss:
             occurrence_pred = outs.occurence > 0
             occurrence_accuracy = (occurrence_pred == samples.label_existence).type(torch.float).mean(axis=1)
-            super().update_metric(self.occurrence_accuracy,
-                                  occurrence_accuracy.sum().cpu().numpy())  # Update the occurrence metric.
+            MeasurementsBase.update_metric(self=self,metric=self.occurrence_accuracy,
+                                  batch_sum=occurrence_accuracy.sum().cpu().numpy())  # Update the occurrence metric.
         if self.opts.Losses.use_bu2_loss:
             preds, task_accuracy = self.opts.Losses.task_accuracy(outs, samples)
             super().update_metric(self.task_accuracy, task_accuracy.sum().cpu().numpy())  # Update the task metric.

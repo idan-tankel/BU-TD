@@ -31,6 +31,6 @@ use_only_valid_classes: True # (`bool`) If set to true, use only specific classe
 generalize: True # (`bool`) If set to true, use some samples for generalization (default=true)
 ndirections: 2 # (`int`) The number of directions to use for the training (default=2)
 create_all_directions: True # (`bool`) If set to true, create all the directions for the training (default=false)
-ngenerate: 5 # (`int`) The number of samples to create for the same image (default=5)
+ngenerate: 5 # (`int`) The number of samples to create for the same image (default=5) which would lead to the same number of queries later
 single_feat_to_generate: False # (`bool`) If set to true, create multiple queries on the same image (default=false)
 ntest_strings: 1 # (default=1) (`int`) The number of samples strings for the combinatorial test

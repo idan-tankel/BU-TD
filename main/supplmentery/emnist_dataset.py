@@ -91,23 +91,15 @@ class EMNISTAdjDataset(EMNISTAdjDatasetBase):
 
 def inputs_to_struct(inputs):
     """
-    inputs_to_struct _summary_
+    inputs_to_struct Structure the inputs from a list to more complex object
 
     Args:
-        inputs (_type_): _description_
+        inputs (`List[torch.Tensor]`): Long list of tensors representing all the inputs - image,label_existence,label_all,label_task,id,flag
 
     Returns:
         _type_: _description_
     """    
-    img,label_existence,label_all,label_task,id, flag = inputs
-    sample = SimpleNamespace()
-    sample.image = img
-    sample.label_occurence = label_existence
-    sample.label_existence = label_existence
-    sample.label_all = label_all
-    sample.label_task = label_task
-    sample.id = id
-    sample.flag = flag
+    sample = SimpleNamespace(image = inputs[0], label_existence = inputs[1], label_all = inputs[2], label_task = inputs[3], id = inputs[4], flag = inputs[5])
     return sample
 
 class EMNISTAdjDatasetNew2(EMNISTAdjDatasetBase):
@@ -123,7 +115,7 @@ class EMNISTAdjDatasetNew2(EMNISTAdjDatasetBase):
         self.direction = direction
 
     def __getitem__(self, index):
-        obj_per_row = 5
+        obj_per_row = 6 # TODO edit this value to be the same as in the config file of create_dataset.py since this it cause exception
         obj_per_col = 1
         nclasses_existence = 47
         edge_class = nclasses_existence
@@ -143,7 +135,6 @@ class EMNISTAdjDatasetNew2(EMNISTAdjDatasetBase):
         # label_task = sample.label_task
         # TODO understand this part
         id = sample.id
-        # flag[0] = self.direction
         adj_type, char = flag
         r, c = (label_all == char).nonzero()
         r = r[0]
@@ -151,24 +142,25 @@ class EMNISTAdjDatasetNew2(EMNISTAdjDatasetBase):
         # find the adjacent char
         if adj_type == 0:
             # right
+            # TODO when trying to find the right element of the 
             if c == (obj_per_row - 1):
                 label_task = edge_class
             else:
                 label_task = label_all[r, c + 1] # see line 129 in `itsik/code/v26/avatar_dataset.py` file
-        if adj_type == 1:
+        elif adj_type == 1:
             # left
             if c == 0:
                 label_task = edge_class
             else:
                 label_task = label_all[r, c - 1]
-        if adj_type == 2:
+        elif adj_type == 2:
             # Up
             if r==0:
                 label_task = edge_class
                 self.UP=self.UP+1
             else:
                 label_task = label_all[r-1, c]
-        if adj_type == 3:
+        elif adj_type == 3:
             #Down
             if r==obj_per_col-1:
                 label_task = edge_class

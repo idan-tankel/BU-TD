@@ -8,53 +8,12 @@ import torch
 import shutil
 import argparse
 from Configs.Config import Config
+from v26.models.DatasetInfo import DatasetInfo
 from torch.utils.data import DataLoader
 from torch import nn
 from enum import Enum
 
 
-class DatasetInfo:
-    """encapsulates a (train/test/validation) dataset with its appropriate train or test function and Measurement class"""
-
-    def __init__(self, istrain: bool, data_set: DataLoader, nbatches: int, name: str, checkpoints_per_epoch: int = 1,
-                 sampler=None) -> None:
-        """
-        :param istrain: Whether we should fit the dataset.
-        :param data_set: The data set.
-        :param nbatches: Number of batches in the data_set.
-        :param name: The dataset name
-        :param checkpoints_per_epoch: Number of checkpoints in the epoch.
-        :param sampler: #TODO-not clear.
-        """
-        self.dataset = data_set
-        self.nbatches = nbatches
-        self.istrain = istrain
-        self.checkpoints_per_epoch = checkpoints_per_epoch
-        if self.istrain and checkpoints_per_epoch > 1:
-            self.nbatches = self.nbatches // checkpoints_per_epoch
-        if istrain:  # If we fit the data_loader we choose each step to be train_step including backward step,schedular step.
-            self.batch_fun = train_step
-        else:  # otherwise we just do a forward pass and don't update the model and the schedular.
-            self.batch_fun = test_step
-        self.name = name
-        self.dataset_iter = None
-        self.needinit = True
-        self.sampler = sampler
-
-    def create_measurement(self, measurements_class: type, parser: argparse, model: nn.Module) -> None:
-        """
-        We create measurment object to handle our matrcies.
-        :param measurements_class: The measurement class should handle the desired matrices.
-        :param parser: The option parser.
-        :param model: The model we fit.
-        """
-        self.measurements = measurements_class(parser, model)
-
-    def reset_iter(self) -> None:
-        """
-        :crate a dataset iterator.
-        """
-        self.dataset_iter = iter(self.dataset)
 
 
 class save_details_class():
@@ -123,7 +82,7 @@ def train_model(args: Config, the_datasets: list, learned_params: list, task_id:
         def lmbda(epoch): return args.learning_rates_mult[epoch]
         scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lmbda)
     args.scheduler = scheduler
-    fit(args, the_datasets, task_id, model=model,optimizer=optimizer, scheduler=scheduler)
+    fit(args, the_datasets, model=model,optimizer=optimizer, scheduler=scheduler)
     # TODO find what the task_id can be (right/left)
 
 
@@ -252,13 +211,12 @@ def load_model(opts: argparse, model_path: str, model_latest_fname: str,model: n
     return checkpoint
 
 
-def fit(opts: argparse, the_datasets: list[DatasetInfo], task: int, model:nn.Module,optimizer,scheduler) -> None:
+def fit(opts: argparse, the_datasets: list[DatasetInfo],  model:nn.Module,optimizer,scheduler) -> None:
     """
     Fitting the model.
     iterate over the datasets and train (or test) them
     :param opts: The model options. Saved as Config object
     :param the_datasets: The train, test datasets. List of DatasetInfo objects
-    :param task: The task we learn.
     :param model: The model object. An extention of nn.Module.
     :param optimizer: The optimizer object.
     :param scheduler: The scheduler object.

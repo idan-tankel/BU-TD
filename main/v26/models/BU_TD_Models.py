@@ -102,13 +102,13 @@ class BUTDModel(nn.Module):
 
     def outs_to_struct(self, outs):
         """
-        outs_to_struct _summary_
+        outs_to_struct 
 
         Args:
-            outs (_type_): _description_
+            outs (List): The unstructured model outs
 
         Returns:
-            _type_: _description_
+            `SimpleNamespace`: The structured model outs
         """        
         occurence_out, task_out, bu_out, bu2_out, *rest = outs
         outs_ns = SimpleNamespace(
