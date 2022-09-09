@@ -1,5 +1,5 @@
 from supp.training_functions import test_step
-from supp.omniglot_dataset import inputs_to_struct
+#from supp.omniglot_dataset import inputs_to_struct
 import numpy as np
 
 #import matplotlib.pyplot as plt

@@ -10,6 +10,13 @@ class FlagAt(Enum):
     BU1_NOLAG = auto()
     SF = auto()
 
+class DsType(Enum):
+    CIFAR10 = auto()
+    EMNIST = ()
+    FASHIOMMNIST = ()
+    CIFAR100 = ()
+    OMNIGLOT = ()
+    
 
 def setup_flag(parser):
     model_flag = parser.parse_args().model_flag

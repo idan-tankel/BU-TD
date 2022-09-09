@@ -12,7 +12,7 @@ def get_model_outs(model: nn.Module, outs: list[torch]) -> object:
     :return: struct containing all tensor in the list
     """
     if type(model) is torch.nn.DataParallel or type(model) is torch.nn.parallel.DistributedDataParallel:
-        return model.module.outs_to_struct(model.module)(outs)  # Use outs_to_struct to transform from list -> struct
+        return model.module.outs_to_struct(outs)  # Use outs_to_struct to transform from list -> struct
     else:
         return model.outs_to_struct(outs)
 
@@ -141,7 +141,7 @@ class Measurements(MeasurementsBase):
         super(Measurements, self).__init__(opts)
         self.model = model
         self.opts = opts
-        self.inputs_to_struct = opts.inputs_to_struct
+        self.inputs_to_struct = model.module.inputs_to_struct
         if self.opts.use_bu1_loss:  # If desired we also follow the occurrence loss.
             super().add_name('Occurrence Acc')
 
@@ -155,7 +155,7 @@ class Measurements(MeasurementsBase):
         outs = get_model_outs(self.model, outs)
         samples = self.inputs_to_struct(inputs)
         if self.opts.use_bu1_loss:
-            occurrence_pred = outs.occurrence > 0
+            occurrence_pred = outs.occurence_out > 0
             occurrence_accuracy = (occurrence_pred == samples.label_existence).type(torch.float).mean(axis=1)
             super().update_metric(self.occurrence_accuracy,
                                   occurrence_accuracy.sum().cpu().numpy())  # Update the occurrence metric.
