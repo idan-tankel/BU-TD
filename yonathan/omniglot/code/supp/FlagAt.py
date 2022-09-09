@@ -1,6 +1,5 @@
 from enum import Enum, auto
 
-
 class FlagAt(Enum):
     BU1 = auto()
     TD = auto()
@@ -9,7 +8,14 @@ class FlagAt(Enum):
     BU1_SIMPLE = auto()
     BU1_NOLAG = auto()
     SF = auto()
-
+    
+class DsType(Enum):
+    Emnist = auto()
+    FashionMnist = auto()
+    Omniglot = auto()
+    Cifar10 = auto()
+    Cifar100 = auto()
+    
 
 def setup_flag(parser):
     model_flag = parser.parse_args().model_flag
@@ -37,11 +43,7 @@ def setup_flag(parser):
         use_bu2_flag = False
         use_SF = False
 
-    parser.add_argument('--use_bu1_flag', default=use_bu1_flag, type=staticmethod,
-                        help='The unified loss function of all training')  #
-    parser.add_argument('--use_td_flag', default=use_td_flag, type=staticmethod,
-                        help='The unified loss function of all training')  #
-    parser.add_argument('--use_bu2_flag', default=use_bu2_flag, type=staticmethod,
-                        help='The unified loss function of all training')  #
-    parser.add_argument('--use_SF', default=use_SF, type=staticmethod,
-                        help='The unified loss function of all training')  #
+    parser.add_argument('--use_bu1_flag', default=use_bu1_flag, type=staticmethod, help='The unified loss function of all training')  #
+    parser.add_argument('--use_td_flag', default=use_td_flag, type=staticmethod, help='The unified loss function of all training')  #
+    parser.add_argument('--use_bu2_flag', default=use_bu2_flag, type=staticmethod, help='The unified loss function of all training')  #
+    parser.add_argument('--use_SF', default=use_SF, type=staticmethod, help='The unified loss function of all training')  #

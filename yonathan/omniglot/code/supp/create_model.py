@@ -19,9 +19,9 @@ def create_model(args: argparse) -> nn.Module:
     Returns:
 
     """
-    if args.model_flag is FlagAt.BU1_SIMPLE:
+    if args.ds_type is DsType.Cifar10:
         model = BUModelSimple(args)
-    else:
+    if args.ds_type is DsType.Emnist or args.ds_type is DsType.Omniglot:
         model = BUTDModelShared(args)
     if not torch.cuda.is_available():
         logger.info('using CPU, this will be slow')

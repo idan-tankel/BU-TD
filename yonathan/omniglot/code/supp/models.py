@@ -5,10 +5,11 @@ from supp.general_functions import *
 from supp.FlagAt import *
 from types import SimpleNamespace
 import numpy as np
+from types import SimpleNamespace
 
 
 class TDModel(nn.Module):
-    def __init__(self, opts: argparse) -> None:
+    def __init__(self, opts: argparse,bu_inshapes) -> None:
         """
         :param opts: The options to create the model according to.
         """
@@ -25,7 +26,7 @@ class TDModel(nn.Module):
         self.inplanes = opts.nfilters[-1]
         self.ntasks = opts.ntasks
         self.use_td_flag = opts.use_td_flag
-        self.inshapes = opts.bu_inshapes
+        self.inshapes = bu_inshapes
         self.use_final_conv = opts.use_final_conv
         upsample_size = opts.avg_pool_size  # before avg pool we have 7x7x512
         self.task_embedding = [[] for _ in range(self.ntasks)]
@@ -33,7 +34,9 @@ class TDModel(nn.Module):
         self.InitialTaskEmbedding = InitialTaskEmbedding(opts)
         for i in range(self.ntasks):
             self.task_embedding[i].extend(self.InitialTaskEmbedding.task_embedding[i])
-            self.argument_embedding[i].extend(self.InitialTaskEmbedding.argument_embedding[i])
+            if opts.ds_type is DsType.Omniglot:
+        
+             self.argument_embedding[i].extend(self.InitialTaskEmbedding.argument_embedding[i])
         self.top_upsample = nn.Upsample(scale_factor=upsample_size, mode='bilinear',
                                         align_corners=False)  # Upsample layer to make at of the shape before the avgpool.
         layers = []
@@ -125,7 +128,7 @@ class BUStream(nn.Module):
     def __init__(self, opts: argparse, shared: nn.Module, is_bu2: bool) -> None:
         super(BUStream, self).__init__()
         self.block = opts.bu_block_type
-        self.inshapes = opts.bu_inshapes
+        self.inshapes = shared.inshapes
         self.ntasks = opts.ntasks
         self.task_embedding = [[] for _ in range(self.ntasks)]
         self.norm_layer = opts.norm_fun
@@ -255,13 +258,13 @@ class BUStreamShared(nn.Module):
 
 
 class BUModel(nn.Module):
-    def __init__(self, opts: argparse) -> None:
+    def __init__(self, opts: argparse,use_embedding:bool) -> None:
         """
         :param opts: opts to create the model according to.
         """
         super(BUModel, self).__init__()
         bu_shared = BUStreamShared(opts)
-        self.trunk = BUStream(opts, bu_shared, is_bu2=True)  # In the BUModel there is only BU stream.
+        self.trunk = BUStream(opts, bu_shared, is_bu2=use_embedding)  # In the BUModel there is only BU stream.
 
     def forward(self, inputs: list[torch]) -> tuple:
         """
@@ -318,13 +321,12 @@ class BUTDModel(nn.Module):
         """
         Struct transforming the model output list to struct.
         """
-
-        def __init__(self, model: nn.Module) -> None:
+        def __init__(self, use_td_loss, use_td_flag) -> None:
             """
             :param model:Containing the flags to create the model according to.
             """
-            self.use_td_loss = model.use_td_loss
-            self.use_td_flag = model.use_td_flag
+            self.use_td_loss = use_td_loss
+            self.use_td_flag = use_td_flag
             self.occurrence_out = None
             self.task_out = None
             self.bu_out = None
@@ -338,7 +340,7 @@ class BUTDModel(nn.Module):
             :return: Struct instance.
             """
             occurrence_out, task_out, bu_out, bu2_out, *rest = outs
-            self.occurrence_out = occurrence_out
+            self.occurence_out = occurrence_out
             self.task = task_out
             self.bu = bu_out
             self.bu2 = bu2_out
@@ -350,6 +352,15 @@ class BUTDModel(nn.Module):
                 self.td_top_embed = td_top_embed
             return self
 
+    def inputs_to_struct(self,inputs):
+        struct = SimpleNamespace()
+        img, label_task, flag, label_all, label_existence = inputs
+        struct.image = img
+        struct.label_all = label_all
+        struct.label_existence = label_existence
+        struct.label_task = label_task
+        struct.flag = flag
+        return struct
 
 class BUTDModelShared(BUTDModel):
     def __init__(self, opts: argparse) -> None:
@@ -360,7 +371,8 @@ class BUTDModelShared(BUTDModel):
         self.ntasks = opts.ntasks
         self.use_lateral_butd = opts.use_lateral_butd
         self.use_lateral_tdbu = opts.use_lateral_tdbu
-        self.inputs_to_struct = opts.inputs_to_struct
+       # self.inputs_to_struct = BUTDModel.inputs_to_struct
+        self.outs_to_struct = BUTDModel.outs_to_struct(use_td_loss = opts.use_td_loss, use_td_flag = opts.use_td_flag)
         self.task_embedding = [[] for _ in range(self.ntasks)]  # Container to store the task embedding.
         self.transfer_learning = [[] for _ in range(self.ntasks)]
         self.argument_embedding = [[] for _ in range(self.ntasks)]
@@ -372,9 +384,9 @@ class BUTDModelShared(BUTDModel):
         bu_shared = BUStreamShared(opts)  # The shared part between BU1, BU2.
         pre_top_shape = bu_shared.inshapes[-2][-1]
         opts.avg_pool_size = tuple(pre_top_shape[1:].tolist())
-        opts.bu_inshapes = bu_shared.inshapes
+        self.bu_inshapes = bu_shared.inshapes
         self.bumodel1 = BUStream(opts, bu_shared, is_bu2=False)  # The BU1 stream.
-        self.tdmodel = TDModel(opts)  # The TD stream.
+        self.tdmodel = TDModel(opts,bu_shared.inshapes)  # The TD stream.
         self.use_td_loss = opts.use_td_loss  # Whether to use the TD segmentation loss..
         if self.use_td_loss:
             self.imagehead = ImageHead(opts)
@@ -386,75 +398,22 @@ class BUTDModelShared(BUTDModel):
                 self.task_embedding[i].extend(self.tdmodel.task_embedding[i])
                 self.argument_embedding[i].extend(self.tdmodel.argument_embedding[i])
                 self.transfer_learning[i].extend(list(self.Head.taskhead[i].parameters()))
-
         else:
             for i in range(self.ntasks):
                 self.task_embedding[i].extend(list(self.Head.taskhead[i].parameters()))
-
-
-class BUTDModelDuplicate(BUTDModel):
-    """
-    The same as BUTDModelShared but model1 == model2.
-    """
-
-    def __init__(self, opts):
-        super(BUTDModelDuplicate, self).__init__()
-        self.occhead = OccurrenceHead(opts)
-        self.taskhead = MultiLabelHead(opts)
-        self.use_td_loss = opts.use_td_loss
-        if self.use_td_loss:
-            self.imagehead = ImageHead(opts)
-        bu_shared = BUStreamShared(opts)
-        self.bumodel1 = BUStream(opts, bu_shared, is_bu2=False)
-        opts.use_top_flag = opts.use_bu2_flag
-        self.bumodel2 = self.bumodel1
-        pre_top_shape = bu_shared.inshapes[-2][-1]
-        opts.avg_pool_size = tuple(pre_top_shape[1:].tolist())
-        self.tdmodel = TDModel(opts)
-        self.use_bu1_flag = opts.use_bu1_flag
-        self.use_lateral_butd = opts.use_lateral_butd
-        self.use_lateral_tdbu = opts.use_lateral_tdbu
-        self.inputs_to_struct = opts.inputs_to_struct
-
-
-class BUTDModelSeparate(BUTDModel):
-    """
-    The same as BUTDShared in the architecture but model1, model2 are not constrained to share the same weights.
-    """
-    def __init__(self, opts):
-        super(BUTDModelSeparate, self).__init__()
-        self.occhead = OccurrenceHead(opts)
-        self.taskhead = MultiLabelHead(opts)
-        self.use_td_loss = opts.use_td_loss
-        if self.use_td_loss:
-            self.imagehead = ImageHead(opts)
-        bu_shared1 = BUStreamShared(opts)
-        self.bumodel1 = BUStream(opts, bu_shared1, is_bu2=False)
-        opts.use_top_flag = opts.use_bu2_flag
-        bu_shared2 = BUStreamShared(opts)
-        self.bumodel2 = BUStream(opts, bu_shared2, is_bu2=True)
-        pre_top_shape = bu_shared1.inshapes[-2][-1]
-        opts.avg_pool_size = tuple(pre_top_shape[1:].tolist())
-        self.tdmodel = TDModel(opts)
-        self.use_bu1_flag = opts.use_bu1_flag
-        self.use_lateral_butd = opts.use_lateral_butd
-        self.use_lateral_tdbu = opts.use_lateral_tdbu
-        self.inputs_to_struct = opts.inputs_to_struct
-
 
 class BUModelSimple(nn.Module):
     """
     Only BU network.
     """
-
     def __init__(self, opts):
         super(BUModelSimple, self).__init__()
-        self.occhead = OccurrenceHead(opts)
-        self.taskhead = MultiLabelHead(opts)
-        self.bumodel = BUModel(opts)
-        pre_top_shape = self.bumodel.trunk.inshapes[-2][-1]
+        self.taskhead = MultiTaskHead(opts)
+        self.bumodel = BUModel(opts,use_embedding=False)
+        pre_top_shape = self.bumodel.trunk.inshapes[-2][1:]
         opts.avg_pool_size = tuple(pre_top_shape[1:].tolist())
-        self.inputs_to_struct = opts.inputs_to_struct
+       # self.inputs_to_struct = BUModelSimple.inputs_to_struct
+       # self.outs_to_struct = BUModelSimple.outs_to_struct
 
     def forward(self, inputs):
         samples = self.inputs_to_struct(inputs)
@@ -462,11 +421,17 @@ class BUModelSimple(nn.Module):
         flags = samples.flag
         model_inputs = [images, flags, None]
         bu_out, _ = self.bumodel(model_inputs)
-        occurrence_out = self.occhead(bu_out)
-        task_out = self.taskhead(bu_out)
-        return occurrence_out, task_out, bu_out
+        task_out = self.taskhead((bu_out,flags))
+        return task_out, bu_out
 
     def outs_to_struct(self, outs):
-        occurrence_out, task_out, bu_out = outs
-        outs_ns = SimpleNamespace(occurrence=occurrence_out, task=task_out, bu=bu_out)
+        task_out, bu_out = outs
+        outs_ns = SimpleNamespace(task=task_out, bu=bu_out)
         return outs_ns
+
+
+    def inputs_to_struct(self,inputs):
+        image, label_task, flag = inputs
+        struct = SimpleNamespace(image = image, label_task = label_task, flag = flag)
+        return struct
+

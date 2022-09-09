@@ -264,7 +264,7 @@ class save_details_class:
         if self.epoch_save_idx == 'loss':
             self.epoch_save_idx = 0
         else:
-            self.epoch_save_idx = 1
+            self.epoch_save_idx = 2
 
 
 def fit(opts: argparse, the_datasets: list, task: int) -> None:

@@ -76,7 +76,7 @@ class UnifiedLossFun:
         self.bu1_loss = opts.bu1_loss
         self.td_loss = opts.td_loss
         self.bu2_classification_loss = opts.bu2_loss
-        self.inputs_to_struct = opts.inputs_to_struct
+        self.inputs_to_struct = opts.model.module.inputs_to_struct
 
     def __call__(self, model, inputs: list[torch], outs: list) -> float:
         """
@@ -88,10 +88,10 @@ class UnifiedLossFun:
         samples = self.inputs_to_struct(inputs)  # Make samples from the raw data.
         loss = 0  # The general loss.
         if self.use_bu1_loss:
-            loss_occ = self.bu1_loss(outs.occurence,
-                                     samples.label_existence)  # compute the binary existence classification loss
-            loss += loss_occ  # Add the occurrence loss.
-        if self.use_td_loss:
+            loss_occ = self.bu1_loss(outs.occurence_out,               
+                                     samples.label_existence)  # compute the binary existence classification loss             
+            loss += loss_occ  # Add the occurrence loss.                                
+        if self.use_td_loss:              
             loss_seg_td = self.td_loss(outs.td_head, samples.seg)  # compute the TD segmentation loss.
             loss_bu1_after_convergence = 1
             loss_td_after_convergence = 100
@@ -114,7 +114,7 @@ def accuracy(opts: nn.Module, test_data_loader: DataLoader) -> float:
     for inputs in test_data_loader:  # Running over all inputs
         inputs = preprocess(inputs)  # Move to the cuda.
         num_samples += len(inputs[0])  # Update the number of samples.
-        samples = opts.inputs_to_struct(inputs)  # Make it struct.
+        samples = opts.model.module.inputs_to_struct(inputs)  # Make it struct.
         opts.model.eval() #
         outs = opts.model(inputs)  # Compute the output.
         outs = get_model_outs(opts.model, outs)  # From output to struct

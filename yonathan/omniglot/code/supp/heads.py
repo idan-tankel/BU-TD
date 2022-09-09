@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch
 from supp.general_functions import *
 from supp.FlagAt import *
-from supp.omniglot_dataset import *
+from supp.datasets import *
 import argparse
 
 
@@ -17,9 +17,8 @@ class HeadSingleTask(nn.Module):
         """
         super(HeadSingleTask, self).__init__()
         layers = []
-        for k in range(
-                len(nclasses)):  # according to  the output size we allocate the number of heads.if flag=NOFLAG all characters(usually 6) will be recognized,the loop will run 6 times.
-            outfilters = nclasses[k] + 1  # The desired number of classes according to the task.
+        for k in range(opts.nheads):  # according to  the output size we allocate the number of heads.if flag=NOFLAG all characters(usually 6) will be recognized,the loop will run 6 times.
+            outfilters = nclasses + 1  # The desired number of classes according to the task.
             infilters = opts.nfilters[-1]  # The input size from the end of the BU2 stream.
             layers.append(nn.Linear(infilters, outfilters))
         self.layers = nn.ModuleList(layers)
@@ -32,9 +31,11 @@ class HeadSingleTask(nn.Module):
         """
         x = inputs
         outs = []
+        x = x.squeeze()
         for layer in self.layers:
             y = layer(x)  # Transforms the shape according to the number of classes.
             outs.append(y)
+        outs = outs
         return torch.stack(outs, dim=-1)  # stacks all tensor into one tensor
 
 
@@ -61,6 +62,8 @@ class MultiTaskHead(nn.Module):
         task = flag_to_task(flag)  # #TODO- change flag_to_direction -> flag_to_task
         bu2_out = bu2_out.squeeze()  # Make it 1-dimensional.
         task_out = self.taskhead[task](bu2_out)  # apply the appropriate task-head.
+        if len(task_out.shape) == 2:
+            task_out = task_out.unsqueeze(dim = 2)
         return task_out
 
 
@@ -71,14 +74,14 @@ class OccurrenceHead(nn.Module):
         :param opts:
         """
         super(OccurrenceHead, self).__init__()
-        filters = opts.nclasses_existence  # The number of binary classifiers needed to recognize all characters.
+        filters = opts.nclasses[0]  # The number of binary classifiers needed to recognize all characters.
         infilters = opts.nfilters[-1]  # Output shape from the end of the BU1 stream.
         self.occurrence_transform = nn.Linear(infilters, filters)  # The linear transformation.
-
+  
     def forward(self, inputs: torch) -> torch:
-        """
-        :param inputs: [B,infilters]
-        :return:       [B,nclasses_existence]
+        """                                 
+        :param inputs: [B,infilters]                            
+        :return:       [B,nclasses_existence]                  
         """
         x = inputs.squeeze()
         x = self.occurrence_transform(x)

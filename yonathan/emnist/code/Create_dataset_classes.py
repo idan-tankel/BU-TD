@@ -134,7 +134,7 @@ def get_aug_data(IMAGE_SIZE):
     aug_data.color_add_range = int(0.2 * 255)
     aug_data.rotate_deg = 10
     aug_data.xtrans = 0.1 * IMAGE_SIZE[1]
-    aug_data.ytrans = 0.05 * IMAGE_SIZE[0]
+    aug_data.ytrans = 0.03 * IMAGE_SIZE[0]
     aug_data.image_size = IMAGE_SIZE
     return aug_data
 

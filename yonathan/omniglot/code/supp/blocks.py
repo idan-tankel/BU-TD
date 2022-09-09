@@ -337,11 +337,14 @@ class InitialTaskEmbedding(nn.Module):
         self.model_flag = opts.model_flag
         self.use_td_flag = opts.use_td_flag
         self.task_embedding = [[] for _ in range(self.ntasks)]
-        self.argument_embedding = [[] for _ in range(self.ntasks)]
         self.norm_layer = opts.norm_fun
         self.activation_fun = opts.activation_fun
         self.use_SF = opts.use_SF
         self.nclasses = opts.nclasses
+        if opts.ds_type is DsType.Omniglot:
+          train_arg_emb = True
+        else:
+          train_arg_emb = False
         if self.model_flag is FlagAt.SF:
             self.h_flag_task_td = []  # The task embedding.
             self.h_flag_arg_td = []
@@ -350,16 +353,20 @@ class InitialTaskEmbedding(nn.Module):
                 layer = nn.Sequential(nn.Linear(1, self.top_filters // 2), self.norm_layer(self.top_filters // 2, dims=1, num_tasks=self.ntasks),  self.activation_fun())
                 self.h_flag_task_td.append(layer)
                 self.task_embedding[i].extend(layer.parameters())
-                layer = nn.Sequential(nn.Linear(self.nclasses[i][0], self.top_filters // 2), self.norm_layer(self.top_filters // 2, dims=1, num_tasks=self.ntasks),  self.activation_fun())
+            if train_arg_emb:
+             self.argument_embedding = [[] for _ in range(self.ntasks)]
+             for i in range(self.ntasks):
+                layer = nn.Sequential(nn.Linear(self.nclasses[i], self.top_filters // 2), self.norm_layer(self.top_filters // 2, dims=1, num_tasks=self.ntasks),  self.activation_fun())
                 self.h_flag_arg_td.append(layer)
                 self.argument_embedding[i].extend(layer.parameters())
+             self.h_flag_arg_td = nn.ModuleList(self.h_flag_arg_td)
+            else:
+             self.h_flag_arg_td = nn.Sequential(nn.Linear(self.nclasses[0], self.top_filters // 2), self.norm_layer(self.top_filters // 2, dims=1, num_tasks=self.ntasks),  self.activation_fun())
             self.h_flag_task_td = nn.ModuleList(self.h_flag_task_td)
-            self.h_flag_arg_td = nn.ModuleList(self.h_flag_arg_td)
+
             # The argument embedding.
 
             # The projection layer.
-
-
         if self.model_flag is FlagAt.TD:
             # The task embedding.
             self.h_flag_task_td = nn.Sequential(nn.Linear(self.ntasks, self.top_filters // 2),

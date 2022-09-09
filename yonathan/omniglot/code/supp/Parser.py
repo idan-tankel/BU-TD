@@ -1,4 +1,3 @@
-
 from supp.FlagAt import *
 from datetime import datetime
 from supp.general_functions import create_dict
@@ -8,20 +7,45 @@ import torch.nn as nn
 import argparse
 from supp.blocks import *
 from supp.create_model import create_model
-from supp.omniglot_dataset import inputs_to_struct as inputs_to_struct
-from supp.omniglot_dataset import get_omniglot_dictionary
+#from supp.omniglot_dataset import inputs_to_struct as inputs_to_struct
+from supp.datasets import get_omniglot_dictionary
 from typing import Callable
 
-def GetParser(language_idx):
+def GetParser(ds_type , lr = 0.001,wd = 0.0001,lr_decay = 1.0,language_idx = 0,use_bu1_loss = True):
     parser = argparse.ArgumentParser()
     num_gpus = torch.cuda.device_count()
-    parser.add_argument('--wd', default=0.00001, type=float, help='The weight decay of the Adam optimizer')
+    parser.add_argument('--ds_type', default=ds_type, type=FlagAt, help='Flag that defines the model type')
+    parser.add_argument('--wd', default=wd, type=float, help='The weight decay of the Adam optimizer')
     parser.add_argument('--SGD', default=False, type=bool, help='Whether to use SGD or Adam optimizer')
-    parser.add_argument('--lr', default=1e-3 * 2, type=float, help='Base lr for the SGD optimizer ')
-    parser.add_argument('--checkpoints_per_epoch', default = 1, type=int,
-                        help='Number of model saves per epoch')
-    parser.add_argument('--initial_tasks', default=[27, 5, 42, 18,33], type=list,
-                        help='The initial tasks to train first')
+    parser.add_argument('--lr', default=lr, type=float, help='Base lr for the SGD optimizer ')
+    parser.add_argument('--checkpoints_per_epoch', default = 1, type=int,  help='Number of model saves per epoch')
+    raw_data_path = '/home/sverkip/data/BU-TD/yonathan/omniglot/data/RAW'
+    if ds_type is DsType.Omniglot:
+        initial_tasks = [27, 5, 42, 18,33]
+        ntasks = 51
+        nclasses = get_omniglot_dictionary(initial_tasks,ntasks, raw_data_path)
+        results_dir = '/home/sverkip/data/BU-TD/yonathan/omniglot/data/results/omniglot'
+        dataset_id = 'test'
+
+    if ds_type is DsType.Emnist:
+        initial_tasks = [0]
+        ntasks = 4
+        nclasses = [47 for _ in range(ntasks)]
+        results_dir = '/home/sverkip/data/BU-TD/yonathan/omniglot/data/results/emnist'
+        dataset_id = 'val'
+        
+    if ds_type is DsType.Cifar10:
+        initial_tasks = [0]
+        ntasks = 6
+        nclasses = [ 10 for _ in range(ntasks)]
+        results_dir = '/home/sverkip/data/BU-TD/yonathan/omniglot/data/results/cifar'
+
+    if ds_type is DsType.Cifar100:
+        initial_tasks = [0]
+        ntasks = 6
+        nclasses = [10 for _ in range(ntasks)]
+    
+    parser.add_argument('--initial_tasks', default = initial_tasks, type=list, help='The initial tasks to train first')
     parser.add_argument('--bs', default=10, type=int, help='The training batch size')
     parser.add_argument('--scale_batch_size', default=num_gpus * parser.parse_args().bs, type=int,
                         help='scale batch size')
@@ -41,12 +65,14 @@ def GetParser(language_idx):
     parser.add_argument('--max_lr', default=0.002, type=float,
                         help='Max lr of the cyclic Adam optimizer before the lr returns to the base_lr')
     parser.add_argument('--momentum ', default=0.9, type=float, help='Momentum of the Adam optimizer')
+
     parser.add_argument('--model_flag', default =FlagAt.SF, type=FlagAt, help='Flag that defines the model type')
-    parser.add_argument('--ntasks', default=51, type=int, help='Number of tasks the model should handle')
+    parser.add_argument('--ntasks', default=ntasks, type=int, help='Number of tasks the model should handle')
     parser.add_argument('--nargs', default=6, type=int, help='Number of possible position arguments in the image')
     parser.add_argument('--activation_fun', default=nn.ReLU, type=nn.Module, help='Non Linear activation function')
-    parser.add_argument('--use_bu1_loss', default=False, type=bool,
+    parser.add_argument('--use_bu1_loss', default = use_bu1_loss, type=bool,
                         help='Whether to use the binary classification loss at the end of the BU1 stream')
+
     parser.add_argument('--use_td_loss', default=False, type=bool,
                         help='Whether to use the segmentation loss at the end of the TD stream')
     parser.add_argument('--use_bu2_loss', default=True, type=bool,
@@ -63,21 +89,20 @@ def GetParser(language_idx):
     parser.add_argument('--ns', default=[0, 1, 1, 1], type=list, help='Number of blocks per filter size')
     parser.add_argument('--inshape', default=(3, 112, 224), type=tuple, help='The input image shape')
     parser.add_argument('--norm_fun', default=BatchNorm, type=nn.Module, help='The used batch normalization')
-    parser.add_argument('--EPOCHS', default = 10, type=int, help='Number of epochs in the training')
+    parser.add_argument('--EPOCHS', default = 100, type=int, help='Number of epochs in the training')
     parser.add_argument('--num_gpus', default=num_gpus, type=int, help='number of used gpus')
     # Change to another function
     ##########################################
-    results_dir =  '/home/sverkip/data/BU-TD/omniglot/data/results/'
-    raw_data_path = '/home/sverkip/data/BU-TD/omniglot/data/omniglot_all_languages'
+
+
     now = datetime.now()
     dt_string = now.strftime("%d.%m.%Y %H:%M:%S")
-    model_path = "Model"+str(language_idx)
+    model_path = "Model"+str(language_idx)+dt_string
     parser.add_argument('--results_dir', default = results_dir, type=str, help='The direction the model will be stored')
     model_dir = os.path.join(results_dir, model_path)
     ##########################################
     parser.add_argument('--model_dir', default=model_dir, type=str, help='The direction the model will be stored')
-    parser.add_argument('--nclasses', default=get_omniglot_dictionary(parser.parse_args(), raw_data_path), type=list,
-                        help='The sizes of the Linear layers')
+    parser.add_argument('--nclasses', default = nclasses, type=list, help='The sizes of the Linear layers')
     #  if Parser.flag_at is FlagAt.BU1_SIMPLE:
     #           Parser.ns = 3 * np.array(parser.ns)
     parser.add_argument('--logfname', default='log.txt', type=str, help='The name of the log file')
@@ -85,14 +110,14 @@ def GetParser(language_idx):
     parser.add_argument('--task_accuracy', default=multi_label_accuracy_base, type=Callable,
                         help='The accuracy function')
     parser.add_argument('--ubs', default=1, type=int, help='The accuracy function')
+    parser.add_argument('--nheads', default=1, type=int, help='The accuracy function')
     learning_rates_mult = np.ones(parser.parse_args().EPOCHS)
     #  learning_rates_mult = get_multi_gpu_learning_rate(learning_rates_mult,num_gpus, 1,1)
     # Change to general: get_multi_gpu_learning_rate(learning_rates_mult,num_gpus, Parser.scale_batch_size,Parser.ubs)
  #   if checkpoints_per_epoch > 1:
   #      learning_rates_mult = np.repeat(learning_rates_mult, heckpoints_per_epoch)
     setup_flag(parser)
-    parser.add_argument('--inputs_to_struct', default=inputs_to_struct, type=object,
-                        help='struct transforming the list of data into struct.')
+  #  parser.add_argument('--inputs_to_struct', default=inputs_to_struct, type=object, help='struct transforming the list of data into struct.')
     parser.add_argument('--learning_rates_mult', default=learning_rates_mult, type=list,
                         help='The scaled learning rated')
     parser.add_argument('--load_model_if_exists', default=False, type=bool,
@@ -108,18 +133,18 @@ def GetParser(language_idx):
                         help='The loss used at the end of the td stream')
     parser.add_argument('--bu2_classification_loss', default=nn.CrossEntropyLoss(reduction='none').to(dev),
                         type=nn.Module, help='The loss used at the end of the bu2 stream')
-    parser.add_argument('--loss_fun', default=UnifiedLossFun(parser.parse_args()), type=Callable,
-                        help='The unified loss function of all training')
     parser.add_argument('--model', default=create_model(parser.parse_args()), type=nn.Module,
                         help='The model we fit')
+    parser.add_argument('--loss_fun', default=UnifiedLossFun(parser.parse_args()), type=Callable,
+                        help='The unified loss function of all training')
+
     parser.add_argument('--epoch_save_idx', default='accuracy', type=str,
                         help='The metric we update the best model according to(usually loss/accuracy)')
-    parser.add_argument('--dataset_id', default='test', type=str,
+    parser.add_argument('--dataset_id', default=dataset_id, type=str,
                         help='The dataset we update the best model according to(usually val/test)')
     #  self.epoch_save_idx = 'accuracy'
     #   self.dataset_id = 'test'
     return parser.parse_args()
-
 
 def get_multi_gpu_learning_rate(learning_rates_mult, num_gpus, scale_batch_size, ubs):
     # In pytorch gradients are summed across multi-GPUs (and not averaged) so

@@ -15,6 +15,7 @@ from typing import Callable
 def GetParser(language_idx):
     parser = argparse.ArgumentParser()
     num_gpus = torch.cuda.device_count()
+    parser.add_argument('--ds_type', default=DsType.CIFAR10, type=float, help='The weight decay of the Adam optimizer')
     parser.add_argument('--wd', default=0.00001, type=float, help='The weight decay of the Adam optimizer')
     parser.add_argument('--SGD', default=False, type=bool, help='Whether to use SGD or Adam optimizer')
     parser.add_argument('--lr', default=1e-3 * 2, type=float, help='Base lr for the SGD optimizer ')
