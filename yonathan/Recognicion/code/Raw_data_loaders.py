@@ -58,11 +58,12 @@ def get_raw_data(download_dir:str, dataset:str)->tuple:
         test_raw_data = torchvision.datasets.CIFAR100(download_dir, train=False, download=True)
         rotate = (2,0,1)
         nchannels = 3
-    if dataset == 'FashionEmnist': # The fashion mnist dataset.
+    if dataset == 'FashionMnist': # The fashion mnist dataset.
         train_raw_data = torchvision.datasets.FashionMNIST(download_dir, train=True, download=True)
         test_raw_data = torchvision.datasets.FashionMNIST(download_dir, train=False, download=True)
         rotate = (0,1)
         nchannels = 1
+        shape = (1,28,28)
     # From dataset to list.
     images = []
     labels = []
@@ -79,7 +80,7 @@ def get_raw_data(download_dir:str, dataset:str)->tuple:
     for idx in range(len(labels)):
         index = labels[idx]
         img = images[idx].transpose(rotate)
-        if dataset == 'emnist':
+        if dataset == 'emnist' or dataset == 'FashionMnist':
          img = img.reshape(shape)
         images_arranged[index].append(img)
         labels_arranged[index].append(index)
@@ -97,7 +98,8 @@ class DataSet(data.Dataset):
             language_list: The language list for the Omniglot dataset.
             raw_data_source: # The Raw data source for the Omniglot dataset.
         """
-        assert dataset in ['emnist', 'cifar10', 'cifar100', 'FashionEmnist', 'omniglot']
+        assert dataset in ['emnist', 'cifar10', 'cifar100', 'FashionMnist', 'omniglot']
+        data_dir = os.path.join(data_dir,'RAW')
         download_raw_data_dir = os.path.join(data_dir, f'{dataset}_raw', ) # The path we download the raw data into.
         if dataset != 'omniglot':
          self.images, self.labels, self.letter_size, self.nchannels = get_raw_data(download_raw_data_dir, dataset = dataset)

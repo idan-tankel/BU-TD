@@ -20,20 +20,32 @@ def get_dataset_for_spatial_realtions(args,data_fname, embedding_idx: int,direct
      from supp.datasets import OmniglotDataset as dataset
     else:
      from supp.datasets import EmnistDataSet as dataset
-    use_val = False
-    path_fname = os.path.join(data_fname, 'conf')
+    # TODO - ADOPT FOR EACH DATASET.
+    use_val = True
+    new_data_format = True
+    if not new_data_format:
+      path_fname = os.path.join(data_fname, 'conf')
+    else:
+        path_fname = os.path.join(data_fname, 'MetaData')
     # TODO - MAKE IT INTO A METADATA data.
     # Opening the conf file and retrieve number of samples, img shape,number of objects per image.
+
     with open(path_fname, "rb") as new_data_file:
-        nsamples_train, nsamples_test, nsamples_val, nclasses, _ ,IMAGE_SIZE, num_rows_in_the_image, obj_per_row, num_chars_per_image,ndirections, valid_classes= pickle.load(
-            new_data_file)
+        if new_data_format:
+         MetaData = pickle.load(new_data_file)
+        else:
+         nsamples_train, nsamples_test, nsamples_val, nclasses, _ ,image_size, num_rows_in_the_image, obj_per_row, num_chars_per_image,ndirections, valid_classes =  pickle.load(new_data_file)
+    if new_data_format:
+     image_size = MetaData.image_size
+     nsamples_train = MetaData.nsamples_train
+     nsamples_test = MetaData.nsamples_test
+
     # If number of gpus>1 creating larger batch size.
     ubs = args.ubs  # unified batch scale
     if args.num_gpus > 1:
         ubs = ubs * num_gpus
-    inshape = (3, *IMAGE_SIZE)  # Inshape for the dataset
-    train_ds = dataset(os.path.join(data_fname, 'train'), args.nclasses, args.ntasks, embedding_idx,direction, args.nargs,
-                       nexamples=nsamples_train, split=True)
+    inshape = (3, *image_size)  # Inshape for the dataset
+    train_ds = dataset(os.path.join(data_fname, 'train'), args.nclasses, args.ntasks, embedding_idx,direction, args.nargs, nexamples=nsamples_train, split=True)
     # If normalize_image is True the mean of the dataset is subtracted from every image.
     batch_size = args.bs
     if args.normalize_image:
@@ -85,11 +97,11 @@ def get_dataset_for_spatial_realtions(args,data_fname, embedding_idx: int,direct
     if use_val:
      the_val_dataset = DatasetInfo(False, val_dataset, nbatches_val, 'Val', 1, val_sampler)
     if use_val:
-     the_datasets =the_datasets.append(the_val_dataset)
+     the_datasets.append(the_val_dataset)
     # Storing tht parameters into the Parser
     args.img_channels = 3
-    args.IMAGE_SIZE = IMAGE_SIZE
-    args.inshape = (args.img_channels, *args.IMAGE_SIZE)
+    args.image_size = image_size
+    args.inshape = (args.img_channels, *args.image_size)
     args.ubs = ubs
     args.nbatches_train = nbatches_train
     args.nbatches_val = nbatches_val

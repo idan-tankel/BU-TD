@@ -249,23 +249,30 @@ def load_model(opts: argparse, model_path: str, model_latest_fname: str, gpu=Non
 
 
 class save_details_class:
+    #TODO - CHNAGE TO THE CAE OF OCCURENCE LOSS.
     def __init__(self, opts):
         """
         :param opts: The options de decide the metric and the dataset to update the model according to.
         """
         self.optimum = -np.inf  # The initial optimum.
-        self.epoch_save_idx = opts.epoch_save_idx  # The metric we should save according to.
-        if opts.dataset_id == 'train':
-            self.dataset_id = 0  # The dataset to save according to.
-        if opts.dataset_id == 'test':
-            self.dataset_id = 1
-        else:
-            self.dataset_id = 2
-        if self.epoch_save_idx == 'loss':
-            self.epoch_save_idx = 0
-        else:
-            self.epoch_save_idx = 2
+        self.saving_metric = opts.saving_metric  # The metric we should save according to.
+        self.dataset_saving_by = opts.dataset_saving_by
 
+        if self.dataset_saving_by == 'train':
+            self.dataset_id = 0  # The dataset to save according to.
+
+        elif self.dataset_saving_by == 'test' and (opts.ds_type is DsType.Emnist or opts.ds_type is DsType.FashionMnist):
+            self.dataset_id = 2
+        else:
+            self.dataset_id = 1
+
+        if self.saving_metric == 'loss':
+            self.metric_idx = 0
+
+        elif self.saving_metric == 'accuracy' and (opts.ds_type is DsType.Emnist or opts.ds_type is DsType.FashionMnist):
+            self.metric_idx = 2
+        else:
+           self.metric_idx = 1
 
 def fit(opts: argparse, the_datasets: list, task: int) -> None:
     """
@@ -336,11 +343,10 @@ def fit(opts: argparse, the_datasets: list, task: int) -> None:
 
         if opts.save_model:  # Saving the model.
             optimum = save_details.optimum  # Getting the old optimum.
-            save_by_dataset = the_datasets[
-                save_details.dataset_id]  # Getting the dataset we update the model according to.
+            save_by_dataset = the_datasets[save_details.dataset_id]  # Getting the dataset we update the model according to.
             measurements = np.array(save_by_dataset.measurements.results)
             new_optimum = False  # Flag telling whether we overcome the old optimum.
-            epoch_save_value = measurements[epoch, save_details.epoch_save_idx]  # Getting the possible new optimum.
+            epoch_save_value = measurements[epoch, save_details.metric_idx]  # Getting the possible new optimum.
             if epoch_save_value > optimum:  # If we overcome the old optimum.
                 optimum = epoch_save_value  # Update the local optimum.
                 new_optimum = True  # Change the flag
