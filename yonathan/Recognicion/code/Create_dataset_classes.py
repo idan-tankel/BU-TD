@@ -233,3 +233,20 @@ class CharacterTransforms:
 
     def update(self):
         return None
+
+class MetaData:
+    def __init__(self,nsamples_train, nsamples_test, nsamples_val, nclasses,  letter_size,image_size, num_rows_in_the_image, obj_per_row, num_chars_per_image,ndirections, valid_classes):
+        self.nsamples_train = nsamples_train
+        self.nsamples_test = nsamples_test
+        self.nsamples_val = nsamples_val
+        self.nclasses = nclasses
+        self.letter_size = letter_size
+        self.image_size = image_size
+        self.num_rows_in_the_image = num_rows_in_the_image
+        self.obj_per_row = obj_per_row
+        self.num_chars_per_image = num_chars_per_image
+        self.ndirections = ndirections
+        self.valid_classes = valid_classes
+
+
+

@@ -150,10 +150,10 @@ def gen_samples(parser:argparse, dataloader:DataSet, job_id:int, range_start:int
             rel_id += 1
     print('%s: Done' % (datetime.datetime.now()))
 
-def main(language_list:list)->None:
+def main(ds_type, language_list:list)->None:
     # Getting the option parser.
-    parser = Get_parser()
-    raw_data_set = DataSet(data_dir = '/home/sverkip/data/BU-TD/yonathan/emnist/data/samples',dataset = 'emnist',raw_data_source=parser.path_data_raw,language_list = language_list) # Getting the raw data.
+    parser = Get_parser(ds_type)
+    raw_data_set = DataSet(data_dir = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/'+ds_type,dataset = ds_type,raw_data_source=parser.path_data_raw_for_omniglot,language_list = language_list) # Getting the raw data.
     parser.image_size = (raw_data_set.nchannels,*parser.image_size)
     njobs = parser.threads # The number of threads.
     num_rows_in_the_image   = parser.num_rows_in_the_image      # The number of rows in the image.
@@ -266,12 +266,14 @@ def main(language_list:list)->None:
     print('done') # Done creating and storing the samples.
     # store the dataset's properties.
     with open(conf_data_fname, "wb") as new_data_file:
-        pickle.dump((nsamples_train, nsamples_test, nsamples_val, nclasses,  parser.letter_size, parser.image_size, num_rows_in_the_image, obj_per_row, num_chars_per_image,ndirections, valid_classes), new_data_file)
+        struct = MetaData(nsamples_train, nsamples_test, nsamples_val, nclasses,  parser.letter_size, parser.image_size, num_rows_in_the_image, obj_per_row, num_chars_per_image,ndirections, valid_classes)
+        pickle.dump(struct, new_data_file)
     #TBD - SAVE ALSO THE UTILS.
     # copy the generating script
     script_fname = mainmod.__file__
     shutil.copy(script_fname, storage_dir)
 # %%
+'''
 if __name__ == "__main__":
   #   tasks = [[27,5]]
   Data_source = '/home/sverkip/data/BU-TD/omniglot/data/omniglot_all_languages'
@@ -283,9 +285,21 @@ if __name__ == "__main__":
   tasks = [ [list(dictionary.keys())[idx]] for idx in range(30,50)]
   for task in tasks:
     main(task)
+'''
 
+def main_Emnist():
+    main(ds_type = 'emnist', language_list =[0])
 
-main(task)
+def main_Omniglot():
+    Data_source = '/home/sverkip/data/BU-TD/omniglot/data/omniglot_all_languages'
+    dictionary = create_dict(Data_source)
+    return main(0)
+
+def main_FashionEmnist():
+    main(ds_type='FashionMnist', language_list=[0])
+
+main_FashionEmnist()
+#main_Emnist()
 
 
 

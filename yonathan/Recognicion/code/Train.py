@@ -65,73 +65,46 @@ def main_omniglot(language_idx,train_right,train_left):
     parser = GetParser(opts=opts, language_idx=language_idx)
     print_detail(parser)
     embedding_idx = 0
-    data_path = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/omniglot/samples/6_extended_' + str(language_idx)
+    data_path = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/omniglot/samples/6_extended_'+ str(language_idx)
     # Create the data for right.
-    [the_datasets, _, _, test_dl, _, _, _] = get_dataset_for_spatial_realtions(parser, data_path, embedding_idx=0,
-                                                                               direction=0)
+    [the_datasets, _,  test_dl, _ , _ , _, _] = get_dataset_for_spatial_realtions(parser, data_path, embedding_idx=0, direction=0)
     # Training Right.
-
-    path_loading = '5R/model24.pt'
+    path_loading = 'Model24_right/model10_right.pt'
     model_path = parser.results_dir
     load_model(parser, model_path, path_loading, load_optimizer_and_schedular=False);
-    load_running_stats(parser.model, task_emb_id = 1);
-#    acc = accuracy(parser, test_dl)
-  #  print("Done training right, with accuracy : " + str(acc))
-    #    Emnist_R_L
+   # load_running_stats(parser.model, task_emb_id = 1);
+ #   acc = accuracy(parser, test_dl)
+ #   print("Done training right, with accuracy : " + str(acc))
     if train_right:
         parser.EPOCHS = 20
-
-        training_flag = Training_flag(train_all_model=True, train_arg=True, task_embedding=True, head_learning=True)
+        training_flag = Training_flag(train_all_model=False, train_arg=True, task_embedding=False, head_learning=True)
         train_omniglot(parser, embedding_idx=0, the_datasets=the_datasets, training_flag=training_flag)
-    #  acc = accuracy(parser, test_dl)
-    # print("Done training right, with accuracy : " + str(acc))
-    # Training Left.
 
     if train_left:
         parser.EPOCHS = 100
-        [the_datasets, _, _, _, _, _, _] = get_dataset_for_spatial_realtions(parser, data_path, embedding_idx=1,
-                                                                             direction=1)
+        [the_datasets, _, _, _, _, _, _] = get_dataset_for_spatial_realtions(parser, data_path, embedding_idx = 1, direction =1 )
         training_flag = Training_flag(train_all_model=False, train_arg=False, task_embedding=True, head_learning=True)
         train_omniglot(parser, embedding_idx=1, the_datasets=the_datasets, training_flag=training_flag)
-
-    print("Done training left, with accuracy : " + str(acc))
-      #  acc = accuracy(parser, test_dl)
-    #print("Done training left, with accuracy : " + str(acc))
 
 def main_emnist(language_idx,train_right,train_left):
     opts = Model_Options_By_Flag_And_DsType(Flag = Flag.SF, DsType = DsType.Emnist)
     parser = GetParser(opts = opts, language_idx = language_idx)
     print_detail(parser)
     embedding_idx = 0
-    data_path = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/emnist/samples/6_extended_test_' + str(language_idx)
+    data_path = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/emnist/samples/6_extended' + str(language_idx)
     # Create the data for right.
     [the_datasets, _, _,test_dl,_, _, _] = get_dataset_for_spatial_realtions(parser, data_path,embedding_idx =  0, direction =  0)
     # Training Right.
-    '''
-    path_loading = 'Model_without_bias/model_latest_left.pt'
-    model_path = parser.results_dir
-    load_model(parser, model_path, path_loading, load_optimizer_and_schedular=False);
-    load_running_stats(parser.model, task_emb_id = 1);
-    acc = accuracy(parser, test_dl)
-    print("Done training right, with accuracy : " + str(acc))
-    '''
-#    Emnist_R_L
     if train_right:
-
         parser.EPOCHS = 20
-
         training_flag = Training_flag(train_all_model=True, train_arg=True, task_embedding=True, head_learning=True)
         train_omniglot(parser, embedding_idx = 0, the_datasets=the_datasets, training_flag=training_flag)
-      #  acc = accuracy(parser, test_dl)
-       # print("Done training right, with accuracy : " + str(acc))
-    # Training Left.
 
     if train_left:
         parser.EPOCHS = 100
         [the_datasets, _, _, _,_, _, _] = get_dataset_for_spatial_realtions(parser, data_path, embedding_idx =  1, direction =  1)
         training_flag = Training_flag(train_all_model=False, train_arg=False, task_embedding=True, head_learning=True)
         train_omniglot(parser, embedding_idx = 1, the_datasets=the_datasets, training_flag=training_flag)
-
     print("Done training left, with accuracy : " + str(acc))
 
 def main_FashionEmnist(language_idx,train_right,train_left):
@@ -139,39 +112,40 @@ def main_FashionEmnist(language_idx,train_right,train_left):
     parser = GetParser(opts = opts, language_idx = language_idx)
     print_detail(parser)
     embedding_idx = 0
-    data_path = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/emnist/samples/6_extended_test_' + str(language_idx)
+    data_path = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/FashionMnist/samples/6_extended_test_' + str(language_idx)
     # Create the data for right.
     [the_datasets, _, _,test_dl,_, _, _] = get_dataset_for_spatial_realtions(parser, data_path,embedding_idx =  0, direction =  0)
-    # Training Right.
-    '''
-    path_loading = 'Model_without_bias/model_latest_left.pt'
-    model_path = parser.results_dir
-    load_model(parser, model_path, path_loading, load_optimizer_and_schedular=False);
-    load_running_stats(parser.model, task_emb_id = 1);
-    acc = accuracy(parser, test_dl)
-    print("Done training right, with accuracy : " + str(acc))
-    '''
-#    Emnist_R_L
     if train_right:
-
         parser.EPOCHS = 20
-
         training_flag = Training_flag(train_all_model=True, train_arg=True, task_embedding=True, head_learning=True)
         train_omniglot(parser, embedding_idx = 0, the_datasets=the_datasets, training_flag=training_flag)
-      #  acc = accuracy(parser, test_dl)
-       # print("Done training right, with accuracy : " + str(acc))
-    # Training Left.
 
     if train_left:
         parser.EPOCHS = 100
         [the_datasets, _, _, _,_, _, _] = get_dataset_for_spatial_realtions(parser, data_path, embedding_idx =  1, direction =  1)
         training_flag = Training_flag(train_all_model=False, train_arg=False, task_embedding=True, head_learning=True)
         train_omniglot(parser, embedding_idx = 1, the_datasets=the_datasets, training_flag=training_flag)
-
     print("Done training left, with accuracy : " + str(acc))
 
 # TODO - CHNAGE THE RESULTS DIR INTO 4 DIRS.
-#main_FashionEmnist(0, True, True)
-main_omniglot(24,True,True)
-main_emnist(0,True,True)
+main_FashionEmnist(0, True, True)
+#main_omniglot(24,False,True)
+#main_emnist(0,True,True)
 #main_cifar10()
+
+
+
+
+
+
+
+
+
+'''
+path_loading = 'Model_without_bias/model_latest_left.pt'
+model_path = parser.results_dir
+load_model(parser, model_path, path_loading, load_optimizer_and_schedular=False);
+load_running_stats(parser.model, task_emb_id = 1);
+acc = accuracy(parser, test_dl)
+print("Done training right, with accuracy : " + str(acc))
+'''

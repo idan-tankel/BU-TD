@@ -10,7 +10,7 @@ from supp.create_model import create_model
 from supp.datasets import get_omniglot_dictionary
 from typing import Callable
 
-def GetParser(opts , lr = 0.001,wd = 0.0001,lr_decay = 1.0,language_idx = 0):
+def GetParser(opts , lr = 0.001,wd = 0.00001,lr_decay = 1.0,language_idx = 0):
     parser = argparse.ArgumentParser()
     num_gpus = torch.cuda.device_count()
     parser.add_argument('--ds_type', default = opts.ds_type, type=DsType, help='Flag that defines the model type')
@@ -26,6 +26,7 @@ def GetParser(opts , lr = 0.001,wd = 0.0001,lr_decay = 1.0,language_idx = 0):
     parser.add_argument('--scale_batch_size', default=num_gpus * parser.parse_args().bs, type=int,  help='scale batch size')
     parser.add_argument('--gpu', default = None, type=any, help='Not clear - query!')  # TODO-understand what is gpu.
     parser.add_argument('--distributed', default=False, type=bool,   help='Whether to use distributed data')  # TODO-understand what is distributed.
+    parser.add_argument('--saving_metric', default='accuracy', type = str,   help='Whether to use distributed data')  # TODO-understand what is distributed.
     parser.add_argument('--multiprocessing_distributed', default=False, type=bool,   help='Whether to use multiprocessing_distributed data')  # TODO-understand what it is.
     parser.add_argument('--workers', default=2, type=int, help='Number of workers to use')
     parser.add_argument('--avg_grad', default=False, type=bool,    help='Whether to average the gradient by the batch size')
@@ -80,7 +81,7 @@ def GetParser(opts , lr = 0.001,wd = 0.0001,lr_decay = 1.0,language_idx = 0):
     parser.add_argument('--model', default=create_model(parser.parse_args()), type=nn.Module,    help='The model we fit')
     parser.add_argument('--loss_fun', default=UnifiedLossFun(parser.parse_args()), type=Callable,  help='The unified loss function of all training')
     parser.add_argument('--epoch_save_idx', default='accuracy', type=str,    help='The metric we update the best model according to(usually loss/accuracy)')
-    parser.add_argument('--dataset_id', default=opts.dataset_id, type=str,    help='The dataset we update the best model according to(usually val/test)')
+    parser.add_argument('--dataset_saving_by', default=opts.dataset_saving_by, type=str,    help='The dataset we update the best model according to(usually val/test)')
     return parser.parse_args()
 
 def get_multi_gpu_learning_rate(learning_rates_mult, num_gpus, scale_batch_size, ubs):

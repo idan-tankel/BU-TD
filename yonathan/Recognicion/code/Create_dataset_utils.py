@@ -326,10 +326,10 @@ def Get_data_dir(parser, store_folder,language_list):
     """
     base_storage_dir = '%d_' % (parser.nchars_per_row *parser.num_rows_in_the_image)
     base_storage_dir += 'extended_test_' + str(language_list[0])
-    store_dir = os.path.join(store_folder, 'new_samples')
+    store_dir = store_folder
     base_samples_dir = os.path.join(store_dir, base_storage_dir)
     if not os.path.exists(base_samples_dir):
         os.makedirs(base_samples_dir, exist_ok=True)
     storage_dir = base_samples_dir
-    conf_data_fname = os.path.join(storage_dir, 'conf')
+    conf_data_fname = os.path.join(storage_dir, 'MetaData')
     return conf_data_fname, storage_dir

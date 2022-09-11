@@ -77,7 +77,7 @@ class Model_Options_By_Flag_And_DsType:
             initial_tasks = [0]
             ntasks = 4
             nclasses = [47 for _ in range(ntasks)]
-            results_dir = '/home/sverkip/data/BU-TD/yonathan/omniglot/data/results/emnist'
+            results_dir = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/emnist/results'
             dataset_id = 'val'
             use_bu1_loss = True
             model_arch = 'BUTDModelShared'
@@ -86,8 +86,8 @@ class Model_Options_By_Flag_And_DsType:
             initial_tasks = [0]
             ntasks = 4
             nclasses = [10 for _ in range(ntasks)]
-            results_dir = '/home/sverkip/data/BU-TD/yonathan/omniglot/data/results/FashionMnist'
-            dataset_id = 'val'
+            results_dir = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/FashionMnist/results'
+            dataset_id = 'test'
             use_bu1_loss = True
             model_arch = 'BUTDModelShared'
 
@@ -111,7 +111,7 @@ class Model_Options_By_Flag_And_DsType:
         self.nclasses = nclasses
         self.results_dir = results_dir
         self.use_bu1_loss = use_bu1_loss
-        self.dataset_id = dataset_id
+        self.dataset_saving_by = dataset_id
         self.model_arch = model_arch
 
     def setup_flag(self):
