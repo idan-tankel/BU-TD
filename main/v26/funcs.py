@@ -485,7 +485,7 @@ def train_step(inputs: List, opts,model,optimizer):
     return loss, outs
 
 
-def test_step(inputs, model:nn.Module,opts:SimpleNamespace):
+def test_step(inputs, model:nn.Module,opts:SimpleNamespace,optimizer=None,scheduler=None):
     """
     test_step Run the actual training step on the data, but without autograd (with torch.no_grad())
 

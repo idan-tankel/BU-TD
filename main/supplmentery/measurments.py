@@ -133,6 +133,7 @@ class Measurements(MeasurementsBase):
         if self.opts.Losses.use_bu2_loss:  # If desired we also follow the task loss.
             MeasurementsBase.add_name(self=self,name='Task Acc')
         # update the number of measurements.
+        self.results = np.full((1, len(self.names)), np.nan)
 
     def update(self, inputs: list[torch.TensorType], outs: list[torch.TensorType], loss: float) -> None:
         """

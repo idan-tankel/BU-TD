@@ -264,7 +264,7 @@ def fit(opts: argparse, the_datasets: list[DatasetInfo],  model:nn.Module,optimi
         # Training/testing the model by the datasets.
         for the_dataset in the_datasets:
             the_dataset.do_epoch(opts=opts, epoch=epoch,
-                                 number_of_epochs=nb_epochs, model=model,optimizer=optimizer)
+                                 number_of_epochs=nb_epochs, model=model,optimizer=optimizer,scheduler=scheduler)
         # logger info done the epoch.
         opts.logger.info('Epoch {} done'.format(epoch + 1))
         #
