@@ -2,7 +2,6 @@ import os
 import argparse
 import torch.backends.cudnn as cudnn
 from torch.utils.data import DataLoader
-# from utils.funcs import *
 from supp.Parser import *
 from supp.get_dataset import *
 from supp.create_model import *
@@ -54,7 +53,7 @@ def train_cifar10(parser, embedding_idx, the_datasets):
 
 def main_cifar10(lr = 0.01, wd = 0.0, lr_decay = 1.0,language_idx = 0):
     parser = GetParser(DsType.Cifar10,lr , wd, lr_decay, language_idx,use_bu1_loss = False)
-    print_detail(parser)                       
+    print_detail(parser)
     data_path = '/home/sverkip/data/BU-TD/yonathan/training_cifar10/data/processed'
     # Create the data for right.
     [the_datasets, _, test_dl, _, _] = get_dataset_cifar(parser,data_path)
@@ -62,35 +61,35 @@ def main_cifar10(lr = 0.01, wd = 0.0, lr_decay = 1.0,language_idx = 0):
 
 def main_omniglot(language_idx,train_right,train_left):
     opts = Model_Options_By_Flag_And_DsType(Flag=Flag.SF, DsType=DsType.Omniglot)
-    parser = GetParser(opts=opts, language_idx=language_idx)
+    parser = GetParser(opts=opts, language_idx=0)
     print_detail(parser)
     embedding_idx = 0
-    data_path = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/omniglot/samples/6_extended_'+ str(language_idx)
+    data_path = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/omniglot/samples/6_extended_testing_0'
     # Create the data for right.
-    [the_datasets, _,  test_dl, _ , _ , _, _] = get_dataset_for_spatial_realtions(parser, data_path, embedding_idx=0, direction=0)
+    [the_datasets, _,  test_dl, _ , _ , _, _] = get_dataset_for_spatial_realtions(parser, data_path, embedding_idx = 0, direction = 1)
     # Training Right.
-    path_loading = 'Model24_right/model10_right.pt'
+    path_loading = 'Model012.09.2022 10:36:12/model14_right.pt'
     model_path = parser.results_dir
     load_model(parser, model_path, path_loading, load_optimizer_and_schedular=False);
-   # load_running_stats(parser.model, task_emb_id = 1);
- #   acc = accuracy(parser, test_dl)
- #   print("Done training right, with accuracy : " + str(acc))
+    load_running_stats(parser.model, task_emb_id = 0);
+  #  acc = accuracy(parser, test_dl)
+  #  print("Done training right, with accuracy : " + str(acc))
     if train_right:
         parser.EPOCHS = 20
-        training_flag = Training_flag(train_all_model=False, train_arg=True, task_embedding=False, head_learning=True)
+        training_flag = Training_flag(train_all_model=True, train_arg=True, task_embedding=False, head_learning=True)
         train_omniglot(parser, embedding_idx=0, the_datasets=the_datasets, training_flag=training_flag)
 
     if train_left:
         parser.EPOCHS = 100
-        [the_datasets, _, _, _, _, _, _] = get_dataset_for_spatial_realtions(parser, data_path, embedding_idx = 1, direction =1 )
+        [the_datasets, _, _, _, _, _, _] = get_dataset_for_spatial_realtions(parser, data_path, embedding_idx = 0, direction = 1 )
         training_flag = Training_flag(train_all_model=False, train_arg=False, task_embedding=True, head_learning=True)
-        train_omniglot(parser, embedding_idx=1, the_datasets=the_datasets, training_flag=training_flag)
+        train_omniglot(parser, embedding_idx = 0, the_datasets=the_datasets, training_flag=training_flag)
 
 def main_emnist(language_idx,train_right,train_left):
     opts = Model_Options_By_Flag_And_DsType(Flag = Flag.SF, DsType = DsType.Emnist)
     parser = GetParser(opts = opts, language_idx = language_idx)
     print_detail(parser)
-    embedding_idx = 0
+
     data_path = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/emnist/samples/6_extended' + str(language_idx)
     # Create the data for right.
     [the_datasets, _, _,test_dl,_, _, _] = get_dataset_for_spatial_realtions(parser, data_path,embedding_idx =  0, direction =  0)
@@ -111,8 +110,7 @@ def main_FashionEmnist(language_idx,train_right,train_left):
     opts = Model_Options_By_Flag_And_DsType(Flag = Flag.SF, DsType = DsType.FashionMnist)
     parser = GetParser(opts = opts, language_idx = language_idx)
     print_detail(parser)
-    embedding_idx = 0
-    data_path = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/FashionMnist/samples/6_extended_test_' + str(language_idx)
+    data_path = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/FashionMnist/samples/6_extended_testing_' + str(language_idx)
     # Create the data for right.
     [the_datasets, _, _,test_dl,_, _, _] = get_dataset_for_spatial_realtions(parser, data_path,embedding_idx =  0, direction =  0)
     if train_right:
@@ -128,8 +126,8 @@ def main_FashionEmnist(language_idx,train_right,train_left):
     print("Done training left, with accuracy : " + str(acc))
 
 # TODO - CHNAGE THE RESULTS DIR INTO 4 DIRS.
-main_FashionEmnist(0, True, True)
-#main_omniglot(24,False,True)
+#main_FashionEmnist(0, True, True)
+main_omniglot(24,True,True)
 #main_emnist(0,True,True)
 #main_cifar10()
 

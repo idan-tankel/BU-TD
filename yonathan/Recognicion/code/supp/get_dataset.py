@@ -6,6 +6,10 @@ from torch.utils.data import DataLoader
 from supp.FlagAt import *
 from supp.training_functions import *
 from supp.data_functions import *
+import sys
+sys.path.append(r'/home/sverkip/data/BU-TD/yonathan/Recognicion/code/create_dataset')
+#from yonathan.Recognicion.code.create_dataset import Create_dataset_classes
+from Create_dataset_classes import MetaData
 
 def get_dataset_for_spatial_realtions(args,data_fname, embedding_idx: int,direction:int) -> list:
     """
@@ -21,24 +25,26 @@ def get_dataset_for_spatial_realtions(args,data_fname, embedding_idx: int,direct
     else:
      from supp.datasets import EmnistDataSet as dataset
     # TODO - ADOPT FOR EACH DATASET.
-    use_val = True
+
     new_data_format = True
     if not new_data_format:
       path_fname = os.path.join(data_fname, 'conf')
     else:
-        path_fname = os.path.join(data_fname, 'MetaData')
+      path_fname = os.path.join(data_fname, 'MetaData')
     # TODO - MAKE IT INTO A METADATA data.
     # Opening the conf file and retrieve number of samples, img shape,number of objects per image.
 
     with open(path_fname, "rb") as new_data_file:
         if new_data_format:
-         MetaData = pickle.load(new_data_file)
+         from_dump_MetaData = pickle.load(new_data_file)
         else:
          nsamples_train, nsamples_test, nsamples_val, nclasses, _ ,image_size, num_rows_in_the_image, obj_per_row, num_chars_per_image,ndirections, valid_classes =  pickle.load(new_data_file)
     if new_data_format:
-     image_size = MetaData.image_size
-     nsamples_train = MetaData.nsamples_train
-     nsamples_test = MetaData.nsamples_test
+     image_size = from_dump_MetaData.image_size
+     nsamples_train = from_dump_MetaData.nsamples_train
+     nsamples_test = from_dump_MetaData.nsamples_test
+     nsamples_val = from_dump_MetaData.nsamples_val
+     args.generelize = args.generelize and nsamples_val > 0
 
     # If number of gpus>1 creating larger batch size.
     ubs = args.ubs  # unified batch scale
@@ -66,27 +72,25 @@ def get_dataset_for_spatial_realtions(args,data_fname, embedding_idx: int,direct
                        nexamples=nsamples_train, split=True, mean_image=mean_image)
     test_ds = dataset(os.path.join(data_fname, 'test'), args.nclasses, args.ntasks, embedding_idx,direction, args.nargs,
                       nexamples=nsamples_test, split=True, mean_image=mean_image)
-    if use_val:
+    if args.generelize:
      val_ds = dataset(os.path.join(data_fname, 'val'), args.nclasses, args.ntasks, embedding_idx, direction, args.nargs, nexamples=nsamples_test, split=True, mean_image=mean_image)
     else:
      val_ds = None
-    train_dl = DataLoader(train_ds, batch_size=batch_size, num_workers=args.workers, shuffle=True, pin_memory=True,
-                          sampler=train_sampler)
-    test_dl = DataLoader(test_ds, batch_size=batch_size, num_workers=args.workers, shuffle=False, pin_memory=True,
-                         sampler=test_sampler)
-    if use_val:
+    train_dl = DataLoader(train_ds, batch_size=batch_size, num_workers=args.workers, shuffle=True, pin_memory=True,  sampler=train_sampler)
+    test_dl = DataLoader(test_ds, batch_size=batch_size, num_workers=args.workers, shuffle=False, pin_memory=True, sampler=test_sampler)
+    if args.generelize:
      val_dl = DataLoader(val_ds, batch_size=batch_size, num_workers=args.workers, shuffle=False, pin_memory=True,  sampler=test_sampler)
     else:
      val_dl = None
     nbatches_train = len(train_dl)
     nbatches_test = len(test_dl)
-    if use_val:
+    if args.generelize:
      nbatches_val = len(val_dl)
     else:
      nbatches_val = 0
     train_dataset = WrappedDataLoader(train_dl, preprocess)
     test_dataset = WrappedDataLoader(test_dl, preprocess)
-    if use_val:
+    if args.generelize:
      val_dataset = WrappedDataLoader(val_dl, preprocess)
     else:
      val_dataset = None
@@ -94,9 +98,9 @@ def get_dataset_for_spatial_realtions(args,data_fname, embedding_idx: int,direct
     the_train_dataset = DatasetInfo(True, train_dataset, nbatches_train, 'Train', args.checkpoints_per_epoch,   train_sampler)
     the_test_dataset = DatasetInfo(False, test_dataset, nbatches_test, 'Test', 1, test_sampler)
     the_datasets = [the_train_dataset, the_test_dataset]
-    if use_val:
+    if args.generelize:
      the_val_dataset = DatasetInfo(False, val_dataset, nbatches_val, 'Val', 1, val_sampler)
-    if use_val:
+    if args.generelize:
      the_datasets.append(the_val_dataset)
     # Storing tht parameters into the Parser
     args.img_channels = 3

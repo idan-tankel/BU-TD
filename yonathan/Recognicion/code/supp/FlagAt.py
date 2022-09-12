@@ -70,6 +70,7 @@ class Model_Options_By_Flag_And_DsType:
             nclasses = get_omniglot_dictionary(initial_tasks, ntasks, raw_data_path)
             results_dir = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/omniglot/results'
             dataset_id = 'test'
+            generelize = False
             use_bu1_loss = False
             model_arch = 'BUTDModelShared'
 
@@ -81,9 +82,11 @@ class Model_Options_By_Flag_And_DsType:
             dataset_id = 'val'
             use_bu1_loss = True
             model_arch = 'BUTDModelShared'
+            generelize = True
 
         if self.ds_type is DsType.FashionMnist:
             initial_tasks = [0]
+            generelize = False
             ntasks = 4
             nclasses = [10 for _ in range(ntasks)]
             results_dir = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/FashionMnist/results'
@@ -104,8 +107,6 @@ class Model_Options_By_Flag_And_DsType:
             ntasks = 6
             nclasses = [10 for _ in range(ntasks)]
 
-
-
         self.initial_tasks = initial_tasks
         self.ntasks = ntasks
         self.nclasses = nclasses
@@ -113,6 +114,7 @@ class Model_Options_By_Flag_And_DsType:
         self.use_bu1_loss = use_bu1_loss
         self.dataset_saving_by = dataset_id
         self.model_arch = model_arch
+        self.generelize = generelize
 
     def setup_flag(self):
         if self.Flag is Flag.SF:

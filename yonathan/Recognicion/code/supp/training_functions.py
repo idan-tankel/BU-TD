@@ -128,7 +128,6 @@ def train_model(args: argparse, the_datasets: list, learned_params: list, task_i
     args.scheduler = scheduler
     fit(args, the_datasets, task_id)
 
-
 def create_optimizer_and_sched(opts: argparse,learned_params:list) -> tuple:
     """
     :param opts: The model options.
@@ -249,7 +248,6 @@ def load_model(opts: argparse, model_path: str, model_latest_fname: str, gpu=Non
 
 
 class save_details_class:
-    #TODO - CHNAGE TO THE CAE OF OCCURENCE LOSS.
     def __init__(self, opts):
         """
         :param opts: The options de decide the metric and the dataset to update the model according to.
@@ -257,11 +255,10 @@ class save_details_class:
         self.optimum = -np.inf  # The initial optimum.
         self.saving_metric = opts.saving_metric  # The metric we should save according to.
         self.dataset_saving_by = opts.dataset_saving_by
-
         if self.dataset_saving_by == 'train':
             self.dataset_id = 0  # The dataset to save according to.
 
-        elif self.dataset_saving_by == 'test' and (opts.ds_type is DsType.Emnist or opts.ds_type is DsType.FashionMnist):
+        elif self.dataset_saving_by == 'test' and (opts.ds_type is DsType.Emnist or opts.ds_type is DsType.FashionMnist) and opts.generelize:
             self.dataset_id = 2
         else:
             self.dataset_id = 1
