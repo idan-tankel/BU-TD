@@ -65,10 +65,18 @@ class multi_label_loss_base:
          # chech whenever the flag is 1 or 0 for each example in the batch
         loss_tasks = torch.zeros(samples.label_task.shape).to(dev, non_blocking=False)
         direction_one_hot = samples.flag[:,0:4].type(torch.int64)
-        direction_map = direction_one_hot.argmax(dim=1).view(-1,1,1)
+        # since the directions are encoded as one hot vectors
+        # we can use simple BMM to get the output by the correct direction and zero out all 
+        # without using more complex functions as gather...
+
+
+
+        # direction_map = direction_one_hot.argmax(dim=1).view(-1,1,1)
         # use gather and scatter of torch to get the loss of each task
         # task_output = [outs.task[k,:,directions_flags[k]] for k in range(samples.flag.shape[0])]
-        task_output = outs.task.gather(dim=2,index=direction_map.repeat(1,48,1))
+        # task_output = outs.task.gather(dim=2,index=direction_map.repeat(1,48,1))
+        
+        task_output = torch.bmm(outs.task,direction_one_hot.unsqueeze(2).type(torch.float))
         task_output = task_output.squeeze(dim=2)
         # TODO convert this part to scatter_add_
         label_task = samples.label_task.squeeze(dim=1).type(torch.LongTensor).to(dev)
