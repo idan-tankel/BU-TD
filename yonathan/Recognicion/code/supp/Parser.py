@@ -14,13 +14,12 @@ def GetParser(opts , lr = 0.001,wd = 0.00001,lr_decay = 1.0,language_idx = 0):
     parser = argparse.ArgumentParser()
     num_gpus = torch.cuda.device_count()
     parser.add_argument('--ds_type', default = opts.ds_type, type=DsType, help='Flag that defines the model type')
+    parser.add_argument('--generelize', default=opts.generelize, type = bool, help='Flag that defines the model type')
     parser.add_argument('--wd', default=wd, type=float, help='The weight decay of the Adam optimizer')
     parser.add_argument('--SGD', default=False, type=bool, help='Whether to use SGD or Adam optimizer')
     parser.add_argument('--lr', default=lr, type=float, help='Base lr for the SGD optimizer ')
     parser.add_argument('--checkpoints_per_epoch', default = 1, type=int,  help='Number of model saves per epoch')
     parser.add_argument('--use_td_flag', default = opts.use_td_flag, type=bool, help='The unified loss function of all training')  #
- #   parser.add_argument('--Flag', default=opts.Flag, type = Flag,  help='The unified loss function of all training')  #
- #   parser.add_argument('--use_SF', default=use_SF, type=bool, help='The unified loss function of all training')  #
     parser.add_argument('--initial_tasks', default = opts.initial_tasks, type=list, help='The initial tasks to train first')
     parser.add_argument('--bs', default=10, type=int, help='The training batch size')
     parser.add_argument('--scale_batch_size', default=num_gpus * parser.parse_args().bs, type=int,  help='scale batch size')

@@ -20,7 +20,7 @@ def create_dict(path):
 
 # %% augmentation
 
-Data_source = '/home/sverkip/data/BU-TD/yonathan/omniglot/data/RAW'
+Data_source = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/omniglot/RAW'
 dictionary = create_dict(Data_source)
 # print(dictionary)
 print(dict(sorted(dictionary.items(), key=lambda item: item[1])))
