@@ -69,11 +69,8 @@ class MeasurementsBase:
         :param data: Computed metrics
         :return: The metrics in the desired format.
         """
-        data_str = ''
-        for name, metric in zip(self.names, data):  # For each metric name we concatenate the name with its value.
-            data_str += '{}: {:.2f}, '.format(name, metric)
-        data_str = data_str[:-2]
-        return data_str
+        results_as_dict = dict(zip(self.names, data))
+        return results_as_dict
 
     def print_batch(self):
         """

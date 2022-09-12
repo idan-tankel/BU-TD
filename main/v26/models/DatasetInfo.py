@@ -39,6 +39,8 @@ class DatasetInfo():
             model (nn.Module): The model to train on
         """        
         self.measurements = measurements_class(model_opts, model)
+        # TODO focus only on one measurements class so the source would be easier to understand
+        # The default value by now is supplmentery.measurments.Measurements
 
     def reset_iter(self):
         self.dataset_iter = iter(self.dataset)
@@ -77,7 +79,7 @@ class DatasetInfo():
                 start_time = time.time()
                 # print(duration,self.nbatches)
                 estimated_epoch_minutes = duration / 60 * self.nbatches / nbatches_report
-                wandb.log({"epoch":epoch + 1,"step":cur_batches,"loss":self.measurements.print_batch()})
+                wandb.log(dict({"epoch":epoch + 1,"step":cur_batches}) | self.measurements.print_batch())
                 logger.info(
                     template.format(epoch + 1, number_of_epochs, cur_batches, self.nbatches,
                                     self.measurements.print_batch(),
