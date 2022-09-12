@@ -79,10 +79,12 @@ class DatasetInfo():
                 start_time = time.time()
                 # print(duration,self.nbatches)
                 estimated_epoch_minutes = duration / 60 * self.nbatches / nbatches_report
-                wandb.log(dict({"epoch":epoch + 1,"step":cur_batches}) | self.measurements.print_batch())
+                metrics_dict = self.measurements.print_batch()
+                wandb.log(metrics_dict)
+                wandb.log(dict({"epoch":epoch + 1,"step":cur_batches}) | metrics_dict)
                 logger.info(
                     template.format(epoch + 1, number_of_epochs, cur_batches, self.nbatches,
-                                    self.measurements.print_batch(),
+                                    {key : round(metrics_dict[key], 2) for key in metrics_dict},
                                     estimated_epoch_minutes))
 
             if True:
