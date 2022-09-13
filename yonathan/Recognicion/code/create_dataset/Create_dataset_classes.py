@@ -5,9 +5,6 @@ import random
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from types import SimpleNamespace
-import albumentations as A
-
-cv2_BORDER_CONSTANT = 0
 
 class CharInfo:
     def __init__(self,label:int, label_idx:int, im:np.array, stx:int, endx:int, sty:int, endy:int, edge_to_the_right:bool):
@@ -94,36 +91,6 @@ class GetAugData:
         aug.append(iaa.Add(  (-color_add_range,color_add_range)))  # only for the image not the segmentation
         self.aug = aug
         self.image_size = image_size
-
-def augment_albumentations(img, aug_data, keypoints=None):
-    # seed = aug_data.seed
-    rotate_deg = aug_data.rotate_deg
-  #  color_add_range = aug_data.color_add_range
-    # xtrans  = aug_data.xtrans
-    # ytrans  = aug_data.ytrans
-    xtrans = 0.05
-    ytrans = 0.05
-    # A.Rotate(border_mode=cv2_BORDER_CONSTANT,value=(255,255,255),p=1),
-    ssr = A.ShiftScaleRotate(shift_limit=xtrans, scale_limit=0, rotate_limit=rotate_deg, interpolation=1,
-                              value=(0, 0, 0), mask_value=(0, 0, 0),
-                             shift_limit_x=None, shift_limit_y=None, always_apply=False, p=1)
-    rbc = A.RandomBrightnessContrast(p=1)
-    if keypoints is not None:
-       # keypoints = [keypoints]
-        keypoint_params = A.KeypointParams(format='xy', remove_invisible=False, angle_in_degrees=True)
-    else:
-        keypoint_params = None
-
-    transform = A.Compose([ssr, rbc], keypoint_params=keypoint_params)
-
-    transformed = transform(image=img, keypoints=keypoints)
-    transformed_image = transformed["image"]
-    if keypoints != None:
-     transformed_keypoints = transformed["keypoints"]
-    else:
-     transformed_keypoints = None
-    return transformed_image, transformed_keypoints
-
 
 def get_aug_data(IMAGE_SIZE):
     aug_data = SimpleNamespace()
@@ -225,23 +192,17 @@ class CharacterTransforms:
 
 
        # self.middle_point = int(self.middle_point)
-        self.edge_to_the_right = origc == parser.nchars_per_row - 1 or samplei == parser.sample_nchars - 1
+        self.edge_to_the_right = origc == parser.nchars_per_row - 1 or samplei == parser.num_characters_per_sample - 1
 
     def update(self):
         return None
 
 class MetaData:
-    def __init__(self,nsamples_train, nsamples_test, nsamples_val, nclasses,  letter_size,image_size, num_rows_in_the_image, obj_per_row, num_chars_per_image,ndirections, valid_classes):
+    def __init__(self,parser, nsamples_train, nsamples_test, nsamples_val, valid_classes):
         self.nsamples_train = nsamples_train
         self.nsamples_test = nsamples_test
         self.nsamples_val = nsamples_val
-        self.nclasses = nclasses
-        self.letter_size = letter_size
-        self.image_size = image_size
-        self.num_rows_in_the_image = num_rows_in_the_image
-        self.obj_per_row = obj_per_row
-        self.num_chars_per_image = num_chars_per_image
-        self.ndirections = ndirections
+        self.parser = parser
         self.valid_classes = valid_classes
 
 
