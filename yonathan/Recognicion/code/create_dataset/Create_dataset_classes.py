@@ -6,6 +6,7 @@ from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from types import SimpleNamespace
 
+
 class CharInfo:
     def __init__(self,label:int, label_idx:int, im:np.array, stx:int, endx:int, sty:int, endy:int, edge_to_the_right:bool):
         """
@@ -162,9 +163,9 @@ class CharacterTransforms:
             samplei: The sample id.
             sample_chars: The sampled characters list
         """
-        minscale = 1
+        minscale = 1.0
         maxscale = 1.5
-        minshift = 2
+        minshift = 2.0
         maxshift = .2 * parser.letter_size
         # place the chars on the image
         self.label_id = label_ids[samplei]
@@ -189,13 +190,7 @@ class CharacterTransforms:
         midx = int(np.rint(self.location_x + (self.scale * self.letter_size)/2))
         midy = int(np.rint(self.location_y + (self.scale * self.letter_size)/2))
         self.middle_point = (midx,midy)
-
-
-       # self.middle_point = int(self.middle_point)
         self.edge_to_the_right = origc == parser.nchars_per_row - 1 or samplei == parser.num_characters_per_sample - 1
-
-    def update(self):
-        return None
 
 class MetaData:
     def __init__(self,parser, nsamples_train, nsamples_test, nsamples_val, valid_classes):
@@ -204,6 +199,3 @@ class MetaData:
         self.nsamples_val = nsamples_val
         self.parser = parser
         self.valid_classes = valid_classes
-
-
-
