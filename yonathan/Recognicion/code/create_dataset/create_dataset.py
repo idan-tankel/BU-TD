@@ -2,7 +2,7 @@ from torchvision import transforms
 from Create_dataset_funcs import gen_samples, Get_valid_classes, Make_data_dir, Create_raw_examples, Split_data_into_jobs_and_generate_samples, Save_script_if_needed
 from Create_dataset_classes import MetaData
 from parser import Get_parser
-from Raw_data import Get_raw_data, DataSet
+from Raw_data import Get_raw_data, DataSet, DsType
 import os
 import pickle
 import numpy as np
@@ -52,18 +52,14 @@ def main(ds_type, language_list:list)->None:
     Save_script_if_needed(storage_dir)
 
 def main_Omniglot():
-   main(ds_type='omniglot', language_list=[9])
+   main(ds_type=DsType.Omniglot, language_list= [9])
 
 def main_FashionEmnist():
-    main(ds_type='FashionMnist', language_list=[0])
+    main(ds_type=DsType.FashionMnist, language_list = [0])
 
 def main_mnist():
-    main(ds_type='Emnist', language_list=[0])
+    main(ds_type=DsType.Emnist, language_list = [0])
 
 main_FashionEmnist()
 #main_Omniglot()
 #main_Emnist()
-
-
-
-

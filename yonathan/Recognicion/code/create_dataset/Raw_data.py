@@ -7,6 +7,12 @@ import torchvision
 from skimage import io
 from torchvision import transforms
 import skimage.io
+from enum import Enum, auto
+
+class DsType(Enum):
+    Emnist = auto()
+    Omniglot = auto()
+    FashionMnist = auto()
 
 def Get_raw_data(download_dir:str, dataset:str,language_list, raw_data_source)->tuple:
     """
@@ -17,7 +23,7 @@ def Get_raw_data(download_dir:str, dataset:str,language_list, raw_data_source)->
     """
     # Getting the raw train, test data.
 
-    if dataset == 'omniglot':
+    if dataset == DsType.Omniglot:
         letter_size = 28
         nchannels = 1
         transform = transforms.Compose(
@@ -37,7 +43,7 @@ def Get_raw_data(download_dir:str, dataset:str,language_list, raw_data_source)->
         shape = (1, 28, 28)
         rotate = (0, 1)
         nchannels = 1
-        if dataset == 'emnist':
+        if dataset == DsType.Emnist:
             train_raw_dataset = torchvision.datasets.EMNIST(download_dir, split='balanced', train=True, download=True)
             test_raw_dataset = torchvision.datasets.EMNIST(download_dir, split='balanced', train=False, download=True)
         else:
@@ -64,7 +70,7 @@ class DataSet(data.Dataset):
             language_list: The language list for the Omniglot dataset.
             raw_data_source: # The Raw data source for the Omniglot dataset.
         """
-        assert dataset in ['emnist', 'cifar10', 'cifar100', 'FashionMnist', 'omniglot']
+        assert dataset in [DsType.Emnist,DsType.Omniglot,DsType.FashionMnist]
         data_dir = os.path.join(data_dir,'RAW')
         download_raw_data_dir = os.path.join(data_dir, f'{dataset}_raw', ) # The path we download the raw data into.
         self.images, self.labels, self.letter_size, self.nchannels = Get_raw_data(download_raw_data_dir, dataset = dataset,language_list = language_list,raw_data_source = raw_data_source)

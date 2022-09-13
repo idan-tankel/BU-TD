@@ -1,4 +1,5 @@
 import argparse
+
 def Get_parser(ds_type, nchars_per_row = 6, num_rows_in_the_image = 1):
     parser = argparse.ArgumentParser()
     parser.add_argument('--path_data_raw_for_omniglot', default='/home/sverkip/data/BU-TD/yonathan/Recognicion/data/omniglot/RAW', type=str, help='The Raw data path')
