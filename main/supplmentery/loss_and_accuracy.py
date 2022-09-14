@@ -23,6 +23,9 @@ def multi_label_accuracy_base(outs: object, samples: object, num_outputs: int = 
     :param samples: The samples we train in the current step.
     :param num_outputs: The number outputs the model should return(usually 1 or the number of characters in the image).
     :return: The predictions and the accuracy on the batch.
+
+
+    NOTE - the outs and the samples are structured - after inputs_to_struct function and get_model_outs function.
     """
     cur_batch_size = samples.image.shape[0]
     predictions = torch.zeros((cur_batch_size, num_outputs), dtype=torch.int).to(dev, non_blocking=True)
@@ -158,13 +161,3 @@ def accuracy(opts: nn.Module, test_data_loader: DataLoader) -> float:
     return num_correct_pred / num_samples  # Compute the mean.
 
 
-'''
-def multi_label_accuracy(outs, samples, nclasses):
-    preds, task_accuracy = multi_label_accuracy_base(outs, samples)
-    task_accuracy = task_accuracy.mean(axis=1)
-    return preds, task_accuracy
-
-def multi_label_accuracy_weighted_loss(outs, samples):
-    preds, task_accuracy = multi_label_accuracy_base(outs, samples)
-    return preds, task_accuracy
-'''

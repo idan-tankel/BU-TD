@@ -11,9 +11,10 @@ from supplmentery.emnist_dataset import inputs_to_struct
 from supplmentery.training_functions import test_step
 import torch
 from supplmentery.FlagAt import FlagAt
+from supplmentery.loss_and_accuracy import multi_label_accuracy_base
 
 
-def flag_to_comp(flag: torch, ntasks: int) -> tuple:
+def flag_to_comp(flag: torch, ntasks=4) -> tuple:
     """
 
     :param flag: The flag we wish to compose.
@@ -51,6 +52,7 @@ def visualize(opts, train_dataset,model):
     _, outs = test_step(opts, inputs,model=model)  # Getting model outs
     outs = get_model_outs(model, outs)  # From output to struct.
     samples = inputs_to_struct(inputs)  # From input to struct.
+    predictions,task_accuracy = multi_label_accuracy_base(outs=outs,samples=samples)
     imgs = samples.image  # Getting the images.
     imgs = imgs.cpu().numpy()  # Moving to the cpu, and transforming to numpy.
     imgs = imgs.transpose(0, 2, 3, 1)  # Transpose to have the appropriate dimensions for an image.
@@ -69,12 +71,12 @@ def visualize(opts, train_dataset,model):
         plt.imshow(img.astype(np.uint8))  # Showing the image with the title.
         flag = samples.flag[k]
 
-        adj_type, char = flag_to_comp(flag,  ntasks=2)  # Compose to the task and argument.
+        adj_type, char = flag_to_comp(flag,ntasks=4)  # Compose to the task and argument.
 
         if opts.RunningSpecs.FlagAt is FlagAt.NOFLAG:
             tit = 'Right of all'
         else:
-            ins_st = 'The character in the place: %s' % (char.item())
+            ins_st = 'The character classified as: %s' % (char.item())
             tit = ins_st
         plt.title(tit)  # Adding the task to the title.
 
@@ -93,20 +95,21 @@ def visualize(opts, train_dataset,model):
             print(pred_st)
         else:
             gt_val = samples.label_task[k][0].item()  # The ground truth label.
-            pred_val = outs.task[k].argmax().item()  # The predicted value.
-            if gt_val == pred_val:
+            pred_val = torch.argmax(input=outs.task[k],dim=0)
+            # predicted value per direction
+            if gt_val == pred_val[adj_type]:
                 font = {'color': 'blue'}  # If the prediction is correct the color is blue.
             else:
                 font = {'color': 'red'}  # If the prediction is incorrect the color is blue.
 
-            gt_str = 'Ground Truth: %s' % gt_val
-            pred_str = 'Prediction: %s' % pred_val
-            print(char, gt_val, pred_val)
+            gt_str = f'Ground Truth: {gt_val}'
+            pred_str = f'Prediction: {pred_val}' 
+            print(char, gt_val, pred_val[adj_type])
         if opts.Losses.use_td_loss:
             tit_str = gt_str
             plt.title(tit_str)
         else:
-            tit_str = gt_str + '\n' + pred_str  # plotting the ground truth + the predicted values.
+            tit_str = gt_str + '\n' + pred_str[adj_type]  # plotting the ground truth + the predicted values.
             plt.title(tit_str, fontdict=font)
         plt.imshow(imgs[k].astype(np.uint8))  # Showing the image with the GT + predicted values.
         if opts.Losses.use_td_loss:

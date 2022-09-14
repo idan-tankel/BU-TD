@@ -40,6 +40,7 @@ class Sample:
         This class represent a single sample in the dataset
         
         TODO: add also method to this class [create_example?]
+        TODO: when creating the inputs, we still call them as a unstructured and use the inputs_to_struct method
         
         Attributes:
             infos: All information about all characters in the image.
