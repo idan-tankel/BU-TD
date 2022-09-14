@@ -5,7 +5,6 @@ import torch
 from torch import nn
 from ..funcs import train_step, test_step, logger
 from Configs.Config import Config
-wandb.init(project="my-test-project")
 
 class DatasetInfo():
     '''encapsulates a (train/test/validation) dataset with its appropriate train or test function and Measurement class

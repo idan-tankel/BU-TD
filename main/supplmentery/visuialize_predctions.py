@@ -1,6 +1,8 @@
 # from supp.training_functions import test_step
 # from supp.emnist_dataset import inputs_to_struct
 import numpy as np
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 # from supp.FlagAt import *
 # from supp.measurments import get_model_outs
@@ -8,6 +10,7 @@ from supplmentery.get_model_outs import get_model_outs
 from supplmentery.emnist_dataset import inputs_to_struct
 from supplmentery.training_functions import test_step
 import torch
+from supplmentery.FlagAt import FlagAt
 
 
 def flag_to_comp(flag: torch, ntasks: int) -> tuple:
@@ -35,23 +38,24 @@ def pause_image(fig=None) -> None:
     fig.waitforbuttonpress()
 
 
-def visualize(opts, train_dataset):
+def visualize(opts, train_dataset,model):
     """
     visualizes the first batch in the train_dataset.
     :param opts: The model options.
     :param train_dataset: The train_dataset we want to visualize.
+    :param model: The model we want to visualize.
     """
+    
     ds_iter = iter(train_dataset)  # iterator over the train_dataset.
     inputs = next(ds_iter)  # The first batch.
-    _, outs = test_step(opts, inputs)  # Getting model outs
-    model = opts.model
+    _, outs = test_step(opts, inputs,model=model)  # Getting model outs
     outs = get_model_outs(model, outs)  # From output to struct.
     samples = inputs_to_struct(inputs)  # From input to struct.
     imgs = samples.image  # Getting the images.
     imgs = imgs.cpu().numpy()  # Moving to the cpu, and transforming to numpy.
     imgs = imgs.transpose(0, 2, 3, 1)  # Transpose to have the appropriate dimensions for an image.
     fig = plt.figure(figsize=(15, 4))  # Defining the plot.
-    if opts.use_td_loss:
+    if opts.Losses.use_td_loss:
         n = 3
     else:
         n = 2
@@ -65,9 +69,9 @@ def visualize(opts, train_dataset):
         plt.imshow(img.astype(np.uint8))  # Showing the image with the title.
         flag = samples.flag[k]
 
-        adj_type, char = flag_to_comp(flag, opts.ntasks)  # Compose to the task and argument.
+        adj_type, char = flag_to_comp(flag,  ntasks=2)  # Compose to the task and argument.
 
-        if opts.model_flag is FlagAt.NOFLAG:
+        if opts.RunningSpecs.FlagAt is FlagAt.NOFLAG:
             tit = 'Right of all'
         else:
             ins_st = 'The character in the place: %s' % (char.item())
@@ -77,7 +81,7 @@ def visualize(opts, train_dataset):
         ax = plt.subplot(1, n, 2)
         ax.axis('off')
 
-        if opts.model_flag is FlagAt.NOFLAG:
+        if opts.RunningSpecs.FlagAt is FlagAt.NOFLAG:
             pred = outs.task[k].argmax(axis=0)
             gt = samples.label_task[k]
             gt_st = [cl2let[let] for let in gt]
@@ -98,14 +102,14 @@ def visualize(opts, train_dataset):
             gt_str = 'Ground Truth: %s' % gt_val
             pred_str = 'Prediction: %s' % pred_val
             print(char, gt_val, pred_val)
-        if opts.use_td_loss:
+        if opts.Losses.use_td_loss:
             tit_str = gt_str
             plt.title(tit_str)
         else:
             tit_str = gt_str + '\n' + pred_str  # plotting the ground truth + the predicted values.
             plt.title(tit_str, fontdict=font)
         plt.imshow(imgs[k].astype(np.uint8))  # Showing the image with the GT + predicted values.
-        if opts.use_td_loss:
+        if opts.Losses.use_td_loss:
             ax = plt.subplot(1, n, 3)
             ax.axis('off')
             image_tdk = np.array(outs.td_head[k])

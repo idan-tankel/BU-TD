@@ -17,7 +17,7 @@ num_gpus=torch.cuda.device_count()
 
 
 
-def get_dataset(direction:int,args: Config,data_fname):
+def get_dataset(direction:int,args: Config,data_fname,batch_size=None):
     """
     get_dataset _summary_
 
@@ -75,8 +75,8 @@ def get_dataset(direction:int,args: Config,data_fname):
         train_sampler = None
         test_sampler = None
         val_sampler = None
-        ubs=1
-        batch_size = args.Training.bs * ubs
+    if batch_size is None:
+        batch_size = args.Training.bs
 
     train_dl = DataLoader(train_ds, batch_size=batch_size, num_workers=args.Training.num_workers, shuffle=True,
                           pin_memory=True, sampler=train_sampler)

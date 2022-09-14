@@ -1,6 +1,7 @@
 from typing import Tuple
 from torch import nn
-
+from torch import device,cuda
+dev = device("cuda") if cuda.is_available() else device("cpu")
 
 class depthwise_separable_conv(nn.Module):
     """

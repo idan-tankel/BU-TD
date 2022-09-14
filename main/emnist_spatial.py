@@ -7,6 +7,8 @@ from supplmentery import measurments, training_functions, logger, visuialize_pre
 from torch.utils.data import DataLoader
 import torch.backends.cudnn as cudnn
 from torch import device
+import wandb
+wandb.init(project="my-test-project")
 import os
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 # import supplmentery
@@ -40,6 +42,10 @@ def train_emnist(embedding_idx=1, flag_at=FlagAt.SF,
     """
     # add some training options from config file
     config: Config = Config()
+    # save the config file to wandb.ai
+    # This config file will be available in the website as well as meta information on the specific commit / version of the model
+    # The model checkpoints are still saved on the local machine
+    wandb.save('Configs/config.yaml')
     config.Models.init_model_options()
     config.flag_size = config.Models.nclasses[0][0] + 3 # directions
 
@@ -79,7 +85,7 @@ def train_emnist(embedding_idx=1, flag_at=FlagAt.SF,
 
 def main():
     train_emnist(embedding_idx=1, flag_at=FlagAt.TD,
-                 processed_data='6_extended', path_loading=None)
+                 processed_data='6_extended', path_loading='/home/idanta/data/emnist/data/results/latest/model_latest.pt')
 
 
 if __name__ == "__main__":

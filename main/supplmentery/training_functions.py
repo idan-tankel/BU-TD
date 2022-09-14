@@ -134,17 +134,17 @@ def train_step(opts: argparse, inputs: list[torch]) -> tuple:
     return loss, outs  # Return the loss and the output.
 
 
-def test_step(opts: argparse, inputs: list[torch]) -> tuple:
+def test_step(opts: argparse, inputs: list[torch],model:nn.Module) -> tuple:
     """
     Making a test step in which we don't update the model.
     :param opts: model options.
     :param inputs: The inputs
     :return: The loss and the model output.
     """
-    opts.model.eval()  # Move the model to evaluation mode in order to not change the running statistics of the batch layers.
+    model.eval()  # Move the model to evaluation mode in order to not change the running statistics of the batch layers.
     with torch.no_grad():  # Don't need to compute grads.
-        outs = opts.model(inputs)  # Compute the model outputs.
-        loss = opts.loss_fun(opts.model, inputs, outs)  # Compute the loss.
+        outs = model(inputs)  # Compute the model outputs.
+        loss = opts.Losses.loss_fun(model, inputs, outs)  # Compute the loss.
     return loss, outs  # Return the loss and the output.
 
 
