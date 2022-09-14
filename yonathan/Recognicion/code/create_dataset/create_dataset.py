@@ -66,6 +66,8 @@ def main_kmnist():
 def main_SVHN():
     main(ds_type=DsType("SVHN"), language_list=[0])
 
-main_SVHN()
+main_FashionEmnist()
+
+#main_SVHN()
 #main_Omniglot()
 #main_Emnist()

@@ -1,13 +1,6 @@
 import torch.utils.data as data
-import os
-import torch
-from skimage import io
-import numpy as np
 import skimage.transform
-from skimage import color
 from PIL import Image
-import pickle
-import imgaug as ia
 from Raw_data import *
 from Create_dataset_classes import *
 import matplotlib.pyplot as plt
@@ -97,16 +90,16 @@ def gen_sample(parser: argparse, sample_id: int, ds_type: str, aug_data: transfo
     augment_sample = parser.augment_sample
     is_train = ds_type == 'train'
     image = 0 * np.ones(parser.image_size, dtype=np.float32)
-    infos = []  # Stores all the information about the characters.
-    keypoints = []
+   # infos = []  # Stores all the information about the characters.
+#    keypoints = []
     for char in example.chars:  # Iterate over each chosen character.
-        image, info = AddCharacterToExistingImage(dataloader, image, char)  # Adding the character to the image.
-        infos.append(info)  # Adding to the info about the characters.
-        keypoints.append(char.middle_point)
+        image = AddCharacterToExistingImage(dataloader, image, char)  # Adding the character to the image.
+       # infos.append(info)  # Adding to the info about the characters.
+     #   keypoints.append(char.middle_point)
     # Making label_existence flag.
-    label_existence = Get_label_existence(infos, dataloader.nclasses)
+    label_existence = Get_label_existence(example, dataloader.nclasses)
     # the characters in order as seen in the image
-    label_ordered = Get_label_ordered(infos)
+    label_ordered = Get_label_ordered(example)
     # instruction and task label
     # even for grayscale images, store them as 3 channels RGB like
     if image.shape[0] == 1:
@@ -115,14 +108,14 @@ def gen_sample(parser: argparse, sample_id: int, ds_type: str, aug_data: transfo
     image = image * 255
     image = image.astype(np.uint8)
     # Doing data augmentation
-    label_task, flag, keypoint = Get_label_task(example, infos, label_ordered, dataloader.nclasses, keypoints)
+    label_task, flag = Get_label_task(example, label_ordered, dataloader)
 
     if is_train and augment_sample:
         # augment
         data_augment = DataAugmentClass(image, label_existence, aug_data, augment_sample)
         image = data_augment.get_batch_base()
     # Storing the needed information about the sample.
-    sample = Sample(infos, image, sample_id, label_existence, label_ordered, example.query_part_id, label_task, flag, is_train, keypoint)
+    sample = Sample( image, sample_id, label_existence, label_ordered, example.query_part_id, label_task, flag, is_train)
     return sample  # Returning the sample we are going to store.
 
 def gen_samples(parser: argparse, dataloader: DataSet, job_id: int, range_start: int, range_stop: int, examples: list, storage_dir: str, ds_type: str) -> None:
@@ -205,7 +198,7 @@ def Split_data_into_jobs_and_generate_samples(parser, raw_data_set, examples, st
         with Pool(cur_njobs) as process:
             process.starmap(gen_samples, all_args)  # Calling the generation function.
 
-def Get_label_ordered(infos:list)->np.array:
+def Get_label_ordered(example:list)->np.array:
     """
     Args:
         infos: The information about all characters.
@@ -215,17 +208,16 @@ def Get_label_ordered(infos:list)->np.array:
     
     row = list()
     rows = [] #A ll the rows.
-    for k in range(len(infos)): # Iterate for each character in the image.
-        info = infos[k]
-        char = info.label
-        row.append(char) # All the characters in the row.
-        if info.edge_to_the_right:
+    for char in example.chars: # Iterate for each character in the image.
+        character = char.label
+        row.append(character) # All the characters in the row.
+        if char.edge_to_the_right:
             rows.append(row)
             row = list()
     label_ordered = np.array(rows)
     return label_ordered
 
-def Get_label_existence(infos:list, nclasses:int)->np.array:
+def Get_label_existence(example:list, nclasses:int)->np.array:
     """
     Args:
         infos: The information about the sample.
@@ -234,8 +226,8 @@ def Get_label_existence(infos:list, nclasses:int)->np.array:
     Returns: The label_existence flag, telling for each entry whether the character is in the image.
     """
     label = np.zeros(nclasses) # Initially all zeros.
-    for info in infos: # for each character in the image.
-        label[info.label] = 1 # Set 1 in the label.
+    for char in example.chars: # for each character in the image.
+        label[char.label] = 1 # Set 1 in the label.
     label_existence = np.array(label)
     return label_existence
 
@@ -249,7 +241,7 @@ def pause_image(fig=None) -> None:
         fig = plt.gcf()
     fig.waitforbuttonpress()
 
-def AddCharacterToExistingImage(DataLoader:DataSet, image:np.array, char:CharInfo)->tuple:
+def AddCharacterToExistingImage(DataLoader:DataSet, image:np.array, char:CharacterTransforms)->tuple:
     """
     Function Adding a character to a given image.
     Args:
@@ -282,10 +274,10 @@ def AddCharacterToExistingImage(DataLoader:DataSet, image:np.array, char:CharInf
     rng = mask > 0
     part[rng] = mask[rng] * im[rng] + (1 - mask[rng]) * part[rng] # Change the part, yielding changing the original image.
     edge_to_the_right = char.edge_to_the_right
-    info = CharInfo(label, label_id,  im, stx, endx, sty, endy, edge_to_the_right)
-    return image, info # Return the image, the character info.
+  #  info = CharInfo(label, label_id,  im, stx, endx, sty, endy, edge_to_the_right)
+    return image # Return the image, the character info.
 
-def Get_label_task(example:ExampleClass, infos:list,label_ordered:np.array,nclasses:int,keypoints:list)->tuple:
+def Get_label_task(example:ExampleClass, label_ordered:np.array,data_loader:data.Dataset)->tuple:
     """
     Args:
         example: The sample example.
@@ -297,12 +289,12 @@ def Get_label_task(example:ExampleClass, infos:list,label_ordered:np.array,nclas
     Returns: The label_task, the flag.
     """
     query_part_id = example.query_part_id # The index we create about.
-    info = infos[query_part_id] # The character information in the index.
-    char = info.label # The label of the character.
+    char = example.chars[query_part_id] # The character information in the index.
+    character = char.label # The label of the character.
     rows, obj_per_row = label_ordered.shape # The number of rows, the number of characters in evert row.
     adj_type = example.adj_type # The direction we query about.
-    edge_class = nclasses # The label of the edge class is the number of characters.
-    r, c = (label_ordered == char).nonzero() # Find the row and the index of the character.
+    edge_class = data_loader. nclasses # The label of the edge class is the number of characters.
+    r, c = (label_ordered == character).nonzero() # Find the row and the index of the character.
     r = r[0]
     c = c[0]
     # find the adjacent char
@@ -319,8 +311,8 @@ def Get_label_task(example:ExampleClass, infos:list,label_ordered:np.array,nclas
         else:
             label_task = label_ordered[r, c - 1] # Otherwise we return the character appearing in the left.
     flag = np.array([adj_type, char]) # The flag.
-    keypoint = keypoints[c]
-    return label_task,flag,keypoint
+
+    return label_task,flag
 
 def Get_valid_pairs_for_the_combinatorial_test(parser:argparse, nclasses:int,valid_classes:list,num_chars_to_sample)->tuple:
     """
