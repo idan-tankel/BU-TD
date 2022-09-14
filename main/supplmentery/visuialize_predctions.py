@@ -49,6 +49,7 @@ def visualize(opts, train_dataset,model):
     
     ds_iter = iter(train_dataset)  # iterator over the train_dataset.
     inputs = next(ds_iter)  # The first batch.
+    inputs[5][:,:4] = torch.ones_like(inputs[5][:,:4])
     _, outs = test_step(opts, inputs,model=model)  # Getting model outs
     outs = get_model_outs(model, outs)  # From output to struct.
     samples = inputs_to_struct(inputs)  # From input to struct.
@@ -102,14 +103,14 @@ def visualize(opts, train_dataset,model):
             else:
                 font = {'color': 'red'}  # If the prediction is incorrect the color is blue.
 
-            gt_str = f'Ground Truth: {gt_val}'
+            gt_str = f'Ground Truth: {samples.label_all[k]}'
             pred_str = f'Prediction: {pred_val}' 
             print(char, gt_val, pred_val[adj_type])
         if opts.Losses.use_td_loss:
             tit_str = gt_str
             plt.title(tit_str)
         else:
-            tit_str = gt_str + '\n' + pred_str[adj_type]  # plotting the ground truth + the predicted values.
+            tit_str = f'{gt_str} \n {pred_str} \n {pred_str[adj_type]}'  # plotting the ground truth + the predicted values.
             plt.title(tit_str, fontdict=font)
         plt.imshow(imgs[k].astype(np.uint8))  # Showing the image with the GT + predicted values.
         if opts.Losses.use_td_loss:

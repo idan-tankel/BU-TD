@@ -59,7 +59,7 @@ def train_emnist(embedding_idx=1, flag_at=FlagAt.SF,
     data_path = os.path.join(
         '../data/new_samples', processed_data)
     [the_datasets, train_dl, test_dl, val_dl, train_dataset,
-        test_dataset] = get_dataset(direction=embedding_idx, args=parser, data_fname=data_path,batch_size=1)\
+        test_dataset] = get_dataset(direction=embedding_idx, args=parser, data_fname=data_path,batch_size=10)
     # in inference time the batch size should be 1
     # Printing the model and the hyper-parameters.
     logger.print_detail(parser)

@@ -85,7 +85,7 @@ def train_emnist(embedding_idx=1, flag_at=FlagAt.SF,
 
 def main():
     train_emnist(embedding_idx=1, flag_at=FlagAt.TD,
-                 processed_data='6_extended', path_loading='/home/idanta/data/emnist/data/results/latest/model_latest.pt')
+                 processed_data='6_extended') 
 
 
 if __name__ == "__main__":
