@@ -7,12 +7,6 @@ import torchvision
 from skimage import io
 from torchvision import transforms
 import skimage.io
-from enum import Enum, auto
-
-class DsType(Enum):
-    Emnist = auto()
-    Omniglot = auto()
-    FashionMnist = auto()
 
 def Get_raw_data(download_dir:str, dataset:str,language_list, raw_data_source)->tuple:
     """
@@ -23,7 +17,7 @@ def Get_raw_data(download_dir:str, dataset:str,language_list, raw_data_source)->
     """
     # Getting the raw train, test data.
 
-    if dataset == DsType.Omniglot:
+    if dataset.ds_name == 'omniglot':
         letter_size = 28
         nchannels = 1
         transform = transforms.Compose(
@@ -40,17 +34,30 @@ def Get_raw_data(download_dir:str, dataset:str,language_list, raw_data_source)->
         num_labels = len(images_arranged) // 20
         labels_arranged = sum([num_images_per_label * [i] for i in range(num_labels)], [])
     else:
-        shape = (1, 28, 28)
+
         rotate = (0, 1)
         nchannels = 1
-        if dataset == DsType.Emnist:
+        if dataset.ds_name == 'emnist':
             train_raw_dataset = torchvision.datasets.EMNIST(download_dir, split='balanced', train=True, download=True)
             test_raw_dataset = torchvision.datasets.EMNIST(download_dir, split='balanced', train=False, download=True)
-        else:
+
+        elif dataset.ds_name == 'fashionmnist':
             train_raw_dataset = torchvision.datasets.FashionMNIST(download_dir, train=True, download=True)
             test_raw_dataset = torchvision.datasets.FashionMNIST(download_dir, train=False, download=True)
-        images = [np.array(train_raw_dataset[i][0]).reshape(shape) for i in range(len(train_raw_dataset))]
-        images.extend([np.array(test_raw_dataset[i][0]).reshape(shape) for i in range(len(test_raw_dataset))])
+
+        if dataset.ds_name == 'kmnist':
+            train_raw_dataset = torchvision.datasets.KMNIST(download_dir, train=True, download=True)
+            test_raw_dataset = torchvision.datasets.KMNIST(download_dir, train=False, download=True)
+
+        if dataset.ds_name =='SVHN' :
+            shape = (3, 32, 32)
+            train_raw_dataset = torchvision.datasets.SVHN(download_dir, split = 'extra', download = True)
+            test_raw_dataset = torchvision.datasets.SVHN(download_dir, split = 'test', download = True)
+            len_train_raw_dataset = 50000
+            len_test_raw_dataset = 10000
+
+        images = [np.array(train_raw_dataset[i][0]).reshape(shape) for i in range(len_train_raw_dataset)]
+        images.extend([np.array(test_raw_dataset[i][0]).reshape(shape) for i in range(len_test_raw_dataset)])
         labels = [train_raw_dataset[i][1] for i in range(len(train_raw_dataset))]
         labels.extend([test_raw_dataset[i][1] for i in range(len(test_raw_dataset))])
         letter_size = images[0].shape[1]
@@ -70,7 +77,6 @@ class DataSet(data.Dataset):
             language_list: The language list for the Omniglot dataset.
             raw_data_source: # The Raw data source for the Omniglot dataset.
         """
-        assert dataset in [DsType.Emnist,DsType.Omniglot,DsType.FashionMnist]
         data_dir = os.path.join(data_dir,'RAW')
         download_raw_data_dir = os.path.join(data_dir, f'{dataset}_raw', ) # The path we download the raw data into.
         self.images, self.labels, self.letter_size, self.nchannels = Get_raw_data(download_raw_data_dir, dataset = dataset,language_list = language_list,raw_data_source = raw_data_source)

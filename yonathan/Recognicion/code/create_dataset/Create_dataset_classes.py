@@ -6,6 +6,11 @@ from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from types import SimpleNamespace
 
+class DsType:
+    def __init__(self,ds_name):
+        assert ds_name in ['emnist','fashionmnist','omniglot','kmnist','SVHN']
+        self.ds_name = ds_name
+
 
 class CharInfo:
     def __init__(self,label:int, label_idx:int, im:np.array, stx:int, endx:int, sty:int, endy:int, edge_to_the_right:bool):
