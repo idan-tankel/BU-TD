@@ -43,7 +43,10 @@ def Get_raw_data(download_dir:str, dataset:str,language_list, raw_data_source)->
 
         elif dataset.ds_name == 'fashionmnist':
             train_raw_dataset = torchvision.datasets.FashionMNIST(download_dir, train=True, download=True)
+            len_train_raw_dataset = len(train_raw_dataset)
             test_raw_dataset = torchvision.datasets.FashionMNIST(download_dir, train=False, download=True)
+            len_test_raw_dataset = len(test_raw_dataset)
+            shape = (1,28,28)
 
         if dataset.ds_name == 'kmnist':
             train_raw_dataset = torchvision.datasets.KMNIST(download_dir, train=True, download=True)
