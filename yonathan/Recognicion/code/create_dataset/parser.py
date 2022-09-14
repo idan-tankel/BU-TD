@@ -3,7 +3,7 @@ import argparse
 def Get_parser(ds_type, nchars_per_row = 6, num_rows_in_the_image = 1):
     parser = argparse.ArgumentParser()
     parser.add_argument('--path_data_raw_for_omniglot', default='/home/sverkip/data/BU-TD/yonathan/Recognicion/data/omniglot/RAW', type=str, help='The Raw data path')
-    parser.add_argument('--store_folder', default='/home/sverkip/data/BU-TD/yonathan/Recognicion/data/'+ds_type+'/samples/', type=str,help='The storing path')
+    parser.add_argument('--store_folder', default='/home/sverkip/data/BU-TD/yonathan/Recognicion/data/'+ds_type.ds_name+'/samples/', type=str,help='The storing path')
     parser.add_argument('--job_chunk_size', default=1000, type=int, help='The number of samples each jobs processes')
     parser.add_argument('--folder_split', default=True, type=bool, help='Whether to split the folder into parts.')
     parser.add_argument('--folder_size', default=1000, type=int, help=' The folder size')

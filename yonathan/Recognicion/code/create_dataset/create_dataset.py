@@ -1,8 +1,8 @@
 from torchvision import transforms
 from Create_dataset_funcs import gen_samples, Get_valid_classes, Make_data_dir, Create_raw_examples, Split_data_into_jobs_and_generate_samples, Save_script_if_needed
-from Create_dataset_classes import MetaData
+from Create_dataset_classes import MetaData, DsType
 from parser import Get_parser
-from Raw_data import Get_raw_data, DataSet, DsType
+from Raw_data import Get_raw_data, DataSet
 import os
 import pickle
 import numpy as np
@@ -10,7 +10,7 @@ import numpy as np
 def main(ds_type, language_list:list)->None:
     # Getting the option parser.
     parser = Get_parser(ds_type)
-    raw_data_set = DataSet(data_dir = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/'+ds_type,dataset = ds_type,raw_data_source=parser.path_data_raw_for_omniglot,language_list = language_list) # Getting the raw data.
+    raw_data_set = DataSet(data_dir = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/' + ds_type.ds_name, dataset = ds_type,raw_data_source=parser.path_data_raw_for_omniglot,language_list = language_list) # Getting the raw data.
     parser.image_size = (raw_data_set.nchannels,*parser.image_size) # The number of threads.
     nsamples_test = parser.nsamples_test           # The number of test samples we desire to create.
     nsamples_train = parser.nsamples_train         # The number of train samples we desire to create.
@@ -55,11 +55,17 @@ def main_Omniglot():
    main(ds_type=DsType.Omniglot, language_list= [9])
 
 def main_FashionEmnist():
-    main(ds_type=DsType.FashionMnist, language_list = [0])
+    main(ds_type = DsType("fashionmnist"), language_list = [0])
 
 def main_mnist():
     main(ds_type=DsType.Emnist, language_list = [0])
 
-main_FashionEmnist()
+def main_kmnist():
+    main(ds_type = DsType("kmnist"), language_list = [0])
+
+def main_SVHN():
+    main(ds_type=DsType("SVHN"), language_list=[0])
+
+main_SVHN()
 #main_Omniglot()
 #main_Emnist()
