@@ -1,3 +1,4 @@
+from statistics import mode
 from supplmentery.create_model import create_model
 from Configs.Config import Config
 from supplmentery.get_dataset import get_dataset
@@ -6,6 +7,7 @@ from supplmentery.Parser import *
 from supplmentery import measurments, training_functions, logger, visuialize_predctions
 from torch.utils.data import DataLoader
 import torch.backends.cudnn as cudnn
+from supplmentery.loss_and_accuracy import accuracy
 from torch import device
 import wandb
 import os
@@ -76,7 +78,7 @@ def train_emnist(embedding_idx=1, flag_at=FlagAt.SF,
     if train_all_model:
         learned_params = model.parameters()
     # Training the learned params of the model.
-    # print(accuracy(parser, val_dl))
+    print(accuracy(parser, val_dl,model,4))
     visuialize_predctions.visualize(parser, train_dataset,model=model)
 
 

@@ -8,7 +8,7 @@ import torch
 from supplmentery.FlagAt import FlagAt
 from v26.functions.inits import init_model_options
 from supplmentery.batch_norm import BatchNorm
-from supplmentery.loss_and_accuracy import multi_label_loss_base,multi_label_loss,UnifiedLossFun,multi_label_accuracy_base
+from supplmentery.loss_and_accuracy import multi_label_loss,UnifiedLossFun,multi_label_accuracy_base
 from supplmentery.emnist_dataset import inputs_to_struct
 
 # from supplmentery.training_functions import create_optimizer_and_sched

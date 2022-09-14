@@ -49,6 +49,7 @@ def visualize(opts, train_dataset,model):
     
     ds_iter = iter(train_dataset)  # iterator over the train_dataset.
     inputs = next(ds_iter)  # The first batch.
+    # TODO split this into interface to setup model flags on inference level.
     inputs[5][:,:4] = torch.ones_like(inputs[5][:,:4])
     _, outs = test_step(opts, inputs,model=model)  # Getting model outs
     outs = get_model_outs(model, outs)  # From output to struct.

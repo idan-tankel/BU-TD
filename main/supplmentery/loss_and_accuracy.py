@@ -6,6 +6,7 @@ import numpy as np
 import argparse
 # import DataLoader
 from torch.utils.data import DataLoader
+from multipledispatch import dispatch
 dev = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 from supplmentery.get_model_outs import get_model_outs
 from v26.funcs import preprocess
@@ -139,8 +140,8 @@ class UnifiedLossFun:
             loss += loss_task
         return loss
 
-
-def accuracy(opts: nn.Module, test_data_loader: DataLoader) -> float:
+@dispatch(object,DataLoader,nn.Module)
+def accuracy(opts:object, test_data_loader: DataLoader,model:nn.Module) -> float:
     """
     :param opts:The model options to compute its accuracy.
     :param test_data_loader: The data.
@@ -153,11 +154,32 @@ def accuracy(opts: nn.Module, test_data_loader: DataLoader) -> float:
         num_samples += len(inputs[0])  # Update the number of samples.
         samples = opts.inputs_to_struct(inputs)  # Make it struct.
         
-        outs = opts.model(inputs)  # Compute the output.
-        outs = get_model_outs(opts.model, outs)  # From output to struct
-        opts.model.eval()
+        outs = model(inputs)  # Compute the output.
+        outs = get_model_outs(model, outs)  # From output to struct
+        model.eval()
         ( _ , task_accuracy_batch) = multi_label_accuracy_base(outs, samples)  # Compute the accuracy on the batch
         num_correct_pred += task_accuracy_batch.sum()  # Sum all accuracies on the batches.
     return num_correct_pred / num_samples  # Compute the mean.
 
 
+# for compound instructions
+@dispatch(object,DataLoader,nn.Module,int)
+def accuracy(opts: object, test_data_loader: DataLoader,model:nn.Module,ntasks:int) -> float:
+    """
+    :param opts:The model options to compute its accuracy.
+    :param test_data_loader: The data.
+    :return:The computed accuracy.
+    """
+    num_correct_pred, num_samples = (0.0, 0.0)
+
+    for inputs in test_data_loader:  # Running over all inputs
+        inputs = preprocess(inputs)  # Move to the cuda.
+        num_samples += len(inputs[0])  # Update the number of samples.
+        samples = opts.inputs_to_struct(inputs)  # Make it struct.
+        inputs[5][:,:ntasks] = torch.ones_like(inputs[5][:,:ntasks]) # flag modification to ones only
+        outs = model(inputs)  # Compute the output.
+        outs = get_model_outs(model, outs)  # From output to struct
+        model.eval()
+        ( _ , task_accuracy_batch) = multi_label_accuracy_base(outs, samples)  # Compute the accuracy on the batch
+        num_correct_pred += task_accuracy_batch.sum()  # Sum all accuracies on the batches.
+    return num_correct_pred / num_samples  # Compute the mean.
