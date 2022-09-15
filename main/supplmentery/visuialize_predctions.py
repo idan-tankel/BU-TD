@@ -1,8 +1,9 @@
 # from supp.training_functions import test_step
 # from supp.emnist_dataset import inputs_to_struct
+from hashlib import blake2b
 import numpy as np
 import matplotlib
-matplotlib.use('TkAgg')
+matplotlib.use('tkAgg')
 import matplotlib.pyplot as plt
 # from supp.FlagAt import *
 # from supp.measurments import get_model_outs
@@ -66,6 +67,7 @@ def visualize(opts, train_dataset,model):
     for k in range(len(samples.image)):  # For each image in the batch, show it and its task and label.
         fig.clf()
         fig.tight_layout()
+        fig.set_facecolor(color='black')
         ax = plt.subplot(1, n, 1)
         ax.axis('off')
         img = imgs[k]  # Getting the k'th image.

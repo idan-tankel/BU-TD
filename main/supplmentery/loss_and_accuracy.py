@@ -164,7 +164,7 @@ def accuracy(opts:object, test_data_loader: DataLoader,model:nn.Module) -> float
 
 # for compound instructions
 @dispatch(object,DataLoader,nn.Module,int)
-def accuracy(opts: object, test_data_loader: DataLoader,model:nn.Module,ntasks:int) -> float:
+def accuracy(opts: object, data_loader: DataLoader,model:nn.Module,ntasks:int) -> float:
     """
     :param opts:The model options to compute its accuracy.
     :param test_data_loader: The data.
@@ -172,7 +172,7 @@ def accuracy(opts: object, test_data_loader: DataLoader,model:nn.Module,ntasks:i
     """
     num_correct_pred, num_samples = (0.0, 0.0)
 
-    for inputs in test_data_loader:  # Running over all inputs
+    for inputs in data_loader:  # Running over all inputs
         inputs = preprocess(inputs)  # Move to the cuda.
         num_samples += len(inputs[0])  # Update the number of samples.
         samples = opts.inputs_to_struct(inputs)  # Make it struct.
