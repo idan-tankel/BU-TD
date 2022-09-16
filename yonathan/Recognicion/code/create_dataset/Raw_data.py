@@ -72,7 +72,7 @@ def Get_raw_data(download_dir:str, dataset:str,language_list, raw_data_source)->
     return images_arranged, labels_arranged, letter_size,nchannels
 
 class DataSet(data.Dataset):
-    def __init__(self, data_dir:str, dataset:str,language_list:list,raw_data_source:str):
+    def __init__(self,parser, data_dir:str, dataset:str,language_list:list,raw_data_source:str):
         """
         Args:
             data_dir: The data we want to store the raw data into, in order to not re-download the raw data again.
@@ -85,6 +85,7 @@ class DataSet(data.Dataset):
         self.images, self.labels, self.letter_size, self.nchannels = Get_raw_data(download_raw_data_dir, dataset = dataset,language_list = language_list,raw_data_source = raw_data_source)
         self.nclasses = len(set(self.labels))
         self.num_examples_per_character = len(self.labels) // self.nclasses
+        parser.image_size = (self.nchannels,*parser.image_size)
 
     def __getitem__(self, index:int)->tuple:
         """

@@ -14,7 +14,7 @@ def Get_parser(ds_type, nchars_per_row = 6, num_rows_in_the_image = 1):
     parser.add_argument('--nsamples_train', default = 20, type=int, help='The number of samples in the train set')
     parser.add_argument('--nsamples_test', default = 20, type=int, help='The number of samples in the test set')
     parser.add_argument('--nsamples_val', default = 20, type=int, help='The number of samples in the val set')
-    parser.add_argument('--generalize', default = False, type=bool, help='Whether to create the combinatorial generalization set')
+    parser.add_argument('--generalize', default = True, type=bool, help='Whether to create the combinatorial generalization set')
     parser.add_argument('--use_only_valid_classes', default = False, type=bool, help='Whether to use only specific classes')
     parser.add_argument('--ndirections', default = 2, type=int, help='Number of directions to create from')
     parser.add_argument('--image_size', default = [112, 224], type=list, help='The image size')

@@ -107,7 +107,9 @@ class DataAugmentClass:
                 aug_data.aug_seed += 1
         return batch_images[0]
 
-class CharacterTransforms:
+# TODO - RECEIVE THE CHARINFO OF ALL PREVIOUS CHARS.
+
+class CharInfo:
     def __init__(self,parser:argparse, prng:random,label_ids:list,samplei:int,sample_chars:int ):
         """
         Args:
