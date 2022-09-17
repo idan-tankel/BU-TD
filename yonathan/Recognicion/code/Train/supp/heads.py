@@ -35,7 +35,6 @@ class HeadSingleTask(nn.Module):
         outs = outs
         return torch.stack(outs, dim=-1)  # stacks all tensor into one tensor
 
-
 class MultiTaskHead(nn.Module):
     def __init__(self, opts: argparse):
         """

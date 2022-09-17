@@ -2,17 +2,20 @@ import torch
 import torch.nn as nn
 import argparse
 from supp.heads import MultiTaskHead, OccurrenceHead
-from supp.blocks import SideAndCombSharedBase, BUInitialBlock, SideAndCombShared, init_module_weights, InitialTaskEmbedding, SideAndComb
+from supp.blocks import BUInitialBlock, init_module_weights, InitialTaskEmbedding, SideAndComb
 from supp.general_functions import depthwise_separable_conv, get_laterals, num_params
 from supp.FlagAt import Flag, DsType
 from types import SimpleNamespace
 import numpy as np
 
 class TDModel(nn.Module):
-    def __init__(self, opts: argparse,bu_inshapes:list) -> None:
+    def __init__(self, opts: argparse,bu_inshapes:list):
         """
-        :param opts: The options to create the model according to.
+        Args:
+            opts: The model options.
+            bu_inshapes: The inshapes of the BU model for the up-sampling.
         """
+
         super(TDModel, self).__init__()
         self.block = opts.td_block_type
         self.use_lateral = opts.use_lateral_butd
@@ -28,7 +31,6 @@ class TDModel(nn.Module):
         self.opts = opts
         self.ndirections = opts.ndirections
         self.inshapes = bu_inshapes
-        self.use_final_conv = opts.use_final_conv # DELETE THIS OPTION.
         self.upsample_size = opts.avg_pool_size  # before avg pool we have 7x7x512
         self.direction_embedding = [[] for _ in range(self.ntasks)]
         self.lang_embedding = [[] for _ in range(self.ntasks)]
@@ -51,40 +53,37 @@ class TDModel(nn.Module):
         filters = opts.nfilters[0]
         if self.use_lateral:
             self.bot_lat = SideAndComb(opts,filters)
-        '''
-        if self.use_final_conv:
-            conv1 = conv2d_fun(filters, filters, kernel_size=7, stride=1, padding=3, bias=False)
-            self.conv1 = nn.Sequential(conv1, self.norm_layer(filters), self.activation_fun())
-        '''
         init_module_weights(self.modules())
 
     def _make_layer(self, planes: int, num_blocks: int, stride: int = 1, index:int=0):
         """
-        :param block: Basic TD stream block.
-        :param planes: channels_out of the block.
-        :param blocks: Number of blocks in the layer.
-        :param flag: Model_flag.
-        :param stride: The stride.
-        :param inshapes: Input shape.
-        :param ntasks: Number of tasks the model should handle.
-        :return:
+        Args:
+            planes: The out planes of the block.
+            num_blocks: Number of identical blocks in the layer.
+            stride: The stride of the last block in the layer.
+            index: The index of the block.
+
+        Returns: A ResNet layer.
+
         """
         layers = []
         for _ in range(1, num_blocks):  # Create shape preserving blocks.
             newblock = self.block(self.opts, self.inplanes, 1, stride, self.inshapes, index=index, use_lateral=self.use_lateral)
             layers.append(newblock)
         # Create Upsampling block.
-        # opts,in_channels, out_channels, stride, inshapes,index
-        newblock = self.block(self.opts,self.inplanes, planes, stride, self.inshapes, index = index,use_lateral = self.use_lateral)
+        newblock = self.block(self.opts,self.inplanes, planes, stride, self.inshapes, index = index)
         layers.append(newblock)
         self.inplanes = planes * self.block.expansion
         return nn.ModuleList(layers)
 
     def forward(self, inputs: list[torch]) -> list[torch]:
         """
-        :param inputs:bu_out:the output from the BU1 stream, flag the task+arg flag , laterals_in the laterals from the BU1 stream.
-        :return:
+        Args:
+            inputs: The output from the last layer if exists, lateral connections, and the flag.
+
+        Returns: The TD-Model outs.
         """
+
         bu_out, flag, laterals_in = inputs
         laterals_out = []
         if self.use_td_flag:
@@ -124,7 +123,14 @@ class TDModel(nn.Module):
         return outs
 
 class BUStream(nn.Module):
-    def __init__(self, opts: argparse, shared: nn.Module, is_bu2: bool) -> None:
+    def __init__(self, opts: argparse, shared: nn.Module, is_bu2: bool):
+        """
+        Args:
+            opts: The model options.
+            shared: The shared part between BU1, BU2.
+            is_bu2: Whether the stream is BU1, or BU2.
+        """
+
         super(BUStream, self).__init__()
         self.block = opts.bu_block_type
         self.inshapes = shared.inshapes_devided_by_blocks
@@ -138,28 +144,30 @@ class BUStream(nn.Module):
         self.orig_relus = opts.orig_relus
         self.use_lateral = shared.use_lateral
         self.filters = opts.nfilters[0]
+        self.is_bu2 = is_bu2
         self.InitialBlock = BUInitialBlock(opts, shared)
         layers = []
         for shared_layer in shared.alllayers:  # For each shared layer we create associate BU layer.
-            layers.append(self._make_layer(shared_layer, self.inshapes, is_bu2))
+            layers.append(self._make_layer(shared_layer, self.inshapes))
         self.alllayers = nn.ModuleList(layers)
         self.avgpool = shared.avgpool  # Avg pool layer.
-        if self.use_lateral:
-            self.top_lat = SideAndCombShared(opts,shared.top_lat)
-
+        if self.use_lateral and is_bu2:
+            self.top_lat = SideAndComb(opts,shared.top_lat_shape)
         init_module_weights(self.modules())
 
-    def _make_layer(self, blocks: nn.Module, inshapes: list, is_bu2: bool) -> nn.ModuleList:
+    def _make_layer(self, blocks: nn.Module, inshapes: list) -> nn.ModuleList:
         """
-        :param blocks: Shred layers between BU1, BU2.
-        :param inshapes: The input shape of the model.
-        :param is_bu2: Whether BU1 or BU2.
-        :return: A ResNet shared layer.
+        Args:
+            blocks: The Shared block between BU1, BU2.
+            inshapes: The layer inshape.
+
+        Returns:
+
         """
         layers = []
         for shared_block in blocks:
             # Create Basic BU block.
-            layer = self.block(self.opts, shared_block,inshapes, is_bu2)
+            layer = self.block(self.opts, shared_block,inshapes, self.is_bu2)
             if self.model_flag is Flag.SF and is_bu2:
                 # Adding the task embedding of the BU2 stream.
                 for i in range(self.ntasks):
@@ -169,7 +177,14 @@ class BUStream(nn.Module):
             layers.append(layer)
         return nn.ModuleList(layers)
 
-    def forward(self, inputs: list[torch]) -> tuple:
+    def forward(self, inputs: list[torch]) -> list[torch]:
+        """
+        Args:
+            inputs: The Image, the flag and the lateral connections if exist.
+
+        Returns: The stream output and the lateral connections.
+        """
+
         x, flags, laterals_in = inputs  # The input is the image, the flag and the lateral from the previous stream.
         laterals_out = []  # The laterals for the second stream.
         x = self.InitialBlock((x, flags, laterals_in))  # Compute the initial block in ResNet.
@@ -190,10 +205,12 @@ class BUStream(nn.Module):
         return x, laterals_out
 
 class BUStreamShared(nn.Module):
-    def __init__(self, opts: argparse) -> None:
+    def __init__(self, opts: argparse):
         """
-        :param opts: The parameters to create the model according to.
+        Args:
+            opts: The model options.
         """
+
         super(BUStreamShared, self).__init__()
         block_id = 0
         layers = []
@@ -205,13 +222,10 @@ class BUStreamShared(nn.Module):
         inplanes = opts.inshape[0]
         inshape = np.array(opts.inshape)
         inshapes = []  # The shapes of all tensors in all blocks.
-     #   inshapes_one_list = []
         self.conv1 = depthwise_separable_conv(inplanes, filters, kernel_size=7, stride=stride, padding=3,   bias=False)  # The first conv layer as in ResNet.
         self.inplanes = filters
         inshape = np.array([filters,np.int(np.ceil(inshape[1] / stride)),np.int(np.ceil(inshape[2] / stride))])  # The first shape.
         inshapes.append([inshape])
-     #   inshapes_one_list.append(inshape)
-        self.bot_lat = SideAndCombSharedBase(filters=filters)
         num_blocks = 0
         for k in range(1, len(opts.strides)):
             nblocks = opts.ns[k]
@@ -224,13 +238,12 @@ class BUStreamShared(nn.Module):
             block_id = block_id + nblocks
             for _ in range(nblocks):
                 inshape_lst.append(inshape)
-#                inshapes_one_list.append(inshape)
             inshapes.append(inshape_lst)
         self.alllayers = layers
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))  # Average pool before the classification.
         filters = opts.nfilters[-1]
         if self.use_lateral:
-            self.top_lat = SideAndCombSharedBase(filters=filters)
+            self.top_lat_shape = filters
         inshape = np.array([filters, 1, 1])  # Add the shape of the last layer.
         inshapes.append([inshape])
         self.inshapes_devided_by_blocks = inshapes
@@ -238,11 +251,14 @@ class BUStreamShared(nn.Module):
 
     def _make_layer(self, planes: int, nblocks: int, stride: int = 1,num_blocks:int=0) -> nn.Module:
         """
-        :param planes: Channels_out of the layer.
-        :param nblocks: num blocks in the layer.
-        :param stride:  The stride
-        :param num_blocks: Num blocks created so far.
-        :return:
+        Args:
+            planes: Channels_out of the layer.
+            nblocks: num blocks in the layer.
+            stride: The stride OF the first block.
+            num_blocks: Number of blocks created so far.
+
+        Returns: A ResNet layer.
+
         """
         layers = []
         layers.append(self.block(self.inplanes, planes, stride, self.use_lateral,num_blocks))  # Add an initial block
@@ -252,26 +268,34 @@ class BUStreamShared(nn.Module):
         return layers
 
 class BUModel(nn.Module):
-    def __init__(self, opts: argparse,use_embedding:bool) -> None:
+    def __init__(self, opts: argparse,use_embedding:bool):
         """
-        :param opts: opts to create the model according to.
+        Args:
+            opts: The model options.
+            use_embedding: Whether to access embedding in the stream.
         """
+
         super(BUModel, self).__init__()
         bu_shared = BUStreamShared(opts)
         self.trunk = BUStream(opts, bu_shared, is_bu2 = use_embedding)  # In the BUModel there is only BU stream.
 
-    def forward(self, inputs: list[torch]) -> tuple:
+    def forward(self, inputs: list[torch]) -> list[torch]:
         """
-        :param inputs: Only the images.
-        :return: The output + lateral connections.
+        Args:
+            inputs: The BU model inputs.
+
+        Returns: The Model output + lateral connections for the next stream.
+
         """
+
         trunk_out, laterals_out = self.trunk(inputs)
         return trunk_out, laterals_out
 
 class BUTDModelShared(nn.Module):
-    def __init__(self, opts: argparse) -> None:
+    def __init__(self, opts: argparse):
         """
-        :param opts: opts to create the model according to.
+        Args:
+            opts: The model options.
         """
         super(BUTDModelShared, self).__init__()
         self.ntasks = opts.ntasks
@@ -315,9 +339,13 @@ class BUTDModelShared(nn.Module):
 
     def forward(self, inputs: list[torch]) -> list[torch]:
         """
-        :param inputs: The images, all labels including the task_occurrence, segmentation_task, the label_task.
-        :return: The output from all streams in order to compute the appropriate loss.
+        Args:
+            inputs: The input from the dataset.
+
+        Returns: The output from all streams.
+
         """
+
         samples = self.inputs_to_struct(inputs)  # Transform the input to struct.
         images = samples.image
         flags = samples.flag
@@ -334,8 +362,10 @@ class BUTDModelShared(nn.Module):
             model_inputs += [None]
         td_outs = self.tdmodel(  model_inputs)  # The input to the TD stream is the bu_out, flags, the lateral connections.
         td_out, td_laterals_out, *td_rest = td_outs
+        #TODO - GET RID OF THIS OPTION!
         if self.use_td_loss:  # Compute the TD head output.
             td_head_out = self.imagehead(td_out)
+
         model_inputs = [images, flags]
         if self.use_lateral_tdbu:
             model_inputs += [td_laterals_out]
