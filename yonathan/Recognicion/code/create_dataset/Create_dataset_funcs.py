@@ -3,10 +3,15 @@ import skimage.transform as transforms
 from PIL import Image
 from Raw_data import DataSet
 import os
+import numpy as np
+from imgaug import augmenters as iaa
+from imgaug import parameters as iap
 import skimage
-from Create_dataset_classes import *
+import random
+from Create_dataset_classes import Sample, ExampleClass, CharInfo, DataAugmentClass, MetaData
 import datetime
 import pickle
+import argparse
 import sys
 from multiprocessing import Pool
 import shutil
@@ -128,7 +133,7 @@ def gen_samples(parser: argparse, dataloader: DataSet, job_id: int, range_start:
     augment_sample = parser.augment_sample
     if is_train and augment_sample:  # Creating the augmentation transform.
         # create a separate augmentation per job since we always update aug_data.aug_seed
-        aug_data = GetAugData(image_size)
+        aug_data = AugData_transform()
         aug_data.aug_seed = range_start
         aug_data.augment = True
     # divide the job into several smaller parts and run them sequentially
@@ -441,6 +446,22 @@ def Make_data_dir(parser:argparse, store_folder:str,language_list:list)->tuple:
     Meta_data_fname = os.path.join(base_samples_dir, 'MetaData')
     return base_samples_dir, Meta_data_fname
 
+def create_samples(parser, ds_types, nexamples_vec,image_ids,storage_dir, valid_pairs, valid_classes, CG_chars_list, raw_data_set ):
+    num_samples_per_data_type_dict = {}
+    for k, (ds_type, cur_nexamples) in enumerate(zip(ds_types, nexamples_vec)):
+        examples = Create_raw_examples(parser, image_ids, k, ds_type, cur_nexamples, valid_pairs, valid_classes,CG_chars_list, raw_data_set.num_examples_per_character)
+        cur_nexamples = len(examples)
+        if ds_type == 'train': # Update the new number of samples.
+          num_samples_per_data_type_dict['train'] = cur_nexamples
+        elif ds_type == 'test':
+          num_samples_per_data_type_dict['test'] = cur_nexamples
+        elif ds_type =='val':
+          num_samples_per_data_type_dict['val'] = cur_nexamples
+        print('total of %d examples' % cur_nexamples) # print the number of sampled examples.
+        # divide all the examples across several jobs. Each job generates samples from examples
+        Split_data_into_jobs_and_generate_samples(parser,raw_data_set, examples, storage_dir, ds_type)
+    return num_samples_per_data_type_dict
+
 def create_samples_for_all_data_set_types_and_save_meta_dat_and_code_script(parser, raw_data_set, ds_type, language_list, ):
     nsamples_test = parser.nsamples_test  # The number of test samples we desire to create.
     nsamples_train = parser.nsamples_train  # The number of train samples we desire to create.
@@ -456,30 +477,18 @@ def create_samples_for_all_data_set_types_and_save_meta_dat_and_code_script(pars
     if generalize:  # if we want also the CG dataset we add its name to the ds_type and the number of needed samples.
         nexamples_vec.append(nsamples_val)
         ds_types.append('val')
-        valid_pairs, test_chars_list = Get_valid_pairs_for_the_combinatorial_test(parser, nclasses, valid_classes)
+        valid_pairs, CG_chars_list = Get_valid_pairs_for_the_combinatorial_test(parser, nclasses, valid_classes)
     else:
-        nsamples_val = 0
-        valid_pairs, test_chars_list = None, []
+        valid_pairs, CG_chars_list = None, []
     # Iterating over all dataset types, and its number of desired number of samples.
-    for k, (ds_type, cur_nexamples) in enumerate(zip(ds_types, nexamples_vec)):
-        examples = Create_raw_examples(parser, image_ids, k, ds_type, cur_nexamples, valid_pairs, valid_classes,test_chars_list, raw_data_set.num_examples_per_character)
-        cur_nexamples = len(examples)
-        if ds_type == 'train': # Update the new number of samples.
-             nsamples_train = cur_nexamples
-        elif ds_type == 'test':
-            nsamples_test = cur_nexamples
-        elif nsamples_val > 0 :
-            nsamples_val = cur_nexamples
-        print('total of %d examples' % cur_nexamples) # print the number of sampled examples.
-        # divide all the examples across several jobs. Each job generates samples from examples
-        Split_data_into_jobs_and_generate_samples(parser,raw_data_set, examples, storage_dir, ds_type)
+    nsamples_per_data_type_dict = create_samples(parser, ds_types, nexamples_vec, image_ids, storage_dir, valid_pairs, valid_classes, CG_chars_list, raw_data_set )
     print('Done creating and storaging the samples, we are left only with saving the meta data and the code script.')  # Done creating and storing the samples.
-    Save_meta_data_and_code_script(meta_data_fname, storage_dir, parser, nsamples_train, nsamples_test,   nsamples_val, valid_classes)
+    Save_meta_data_and_code_script(meta_data_fname, storage_dir, parser,  nsamples_per_data_type_dict, valid_classes)
     print('Done saving the source code and the meta data!')
 
-def Save_meta_data_and_code_script(meta_data_fname,storage_dir, parser, nsamples_train, nsamples_test, nsamples_val, valid_classes):
+def Save_meta_data_and_code_script(meta_data_fname, storage_dir, parser, nsamples_per_data_type_dict, valid_classes):
     with open(meta_data_fname, "wb") as new_data_file:
-        struct = MetaData(parser, nsamples_train, nsamples_test, nsamples_val, valid_classes)
+        struct = MetaData(parser, nsamples_per_data_type_dict, valid_classes)
         pickle.dump(struct, new_data_file)
     Save_script_if_needed(storage_dir)
 
@@ -492,3 +501,12 @@ def Save_script_if_needed(storage_dir:str):
     storage_dir = os.path.join(storage_dir, 'code')
     if not os.path.exists(storage_dir):
      shutil.copytree(code_folder_path, storage_dir, copy_function=shutil.copy)
+
+def AugData_transform():
+   # self.aug_seed = 0
+    color_add_range = int(0.2 * 255)
+    rotate_deg = 7
+    # translate by -20 to +20 percent (per axis))
+    aug = iaa.Sequential([iaa.Affine(translate_percent={"x": (-0.05, 0.05), "y": (-0.1, 0.1)},    rotate=(-rotate_deg, rotate_deg), mode='edge', name='affine'), ], random_state=0)
+    aug.append(iaa.Add((-color_add_range, color_add_range)))  # only for the image not the segmentation
+    return aug
