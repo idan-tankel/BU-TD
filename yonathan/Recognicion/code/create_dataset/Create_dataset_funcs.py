@@ -127,7 +127,7 @@ def gen_samples(parser: argparse, dataloader: DataSet, job_id: int, range_start:
         ds_type: The data-set type.
 
     """
-    image_size = parser.image_size  # The image size.
+  #  image_size = parser.image_size  # The image size.
     aug_data = None  # The augmentation transform.
     is_train = ds_type == 'train'  # Whether the dataset is of type train.
     augment_sample = parser.augment_sample
