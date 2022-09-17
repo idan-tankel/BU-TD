@@ -2,9 +2,7 @@ import numpy as np
 from torchvision import transforms
 import argparse
 import random
-from imgaug import augmenters as iaa
-from imgaug import parameters as iap
-from types import SimpleNamespace
+
 
 class DsType:
     """
@@ -53,27 +51,6 @@ class ExampleClass:
         self.adj_type = adj_type
         self.chars = chars
 
-class GetAugData:
-    # Class returning for a given image size a data augmentation transform.
-    def __init__(self,image_size:tuple):
-        """
-        Args:
-            image_size: The image size.
-        """
-        # augmentation init
-        self.aug_seed = 0
-        color_add_range = int(0.2 * 255)
-        rotate_deg = 2
-        # translate by -20 to +20 percent (per axis))
-        aug = iaa.Sequential( [iaa.Affine(  translate_percent={   "x": (-0.05, 0.05),  "y": (-0.1, 0.1) },  rotate=(-rotate_deg, rotate_deg), mode='edge', name='affine'), ], random_state=0)
-        aug_nn_interpolation = aug.deepcopy()
-        aff_aug = aug_nn_interpolation.find_augmenters_by_name('affine')[0]
-        aff_aug.order = iap.Deterministic(0)
-        self.aug_nn_interpolation = aug_nn_interpolation
-        # this will be used to add random color to the segmented avatar but not the segmented background.
-        aug.append(iaa.Add(  (-color_add_range,color_add_range)))  # only for the image not the segmentation
-        self.aug = aug
-        self.image_size = image_size
 
 class DataAugmentClass:
     """
@@ -96,15 +73,14 @@ class DataAugmentClass:
         batch_range = self.batch_range
         batch_images = self.images[batch_range]
 
-        aug_data = self.aug_data
+        aug = self.aug_data
         augment_type = 'aug_package'
         if self.augment:
-            aug_seed = aug_data.aug_seed
+            aug_seed = aug.aug_seed
             if augment_type == 'aug_package':
-                aug = aug_data.aug
                 aug.seed_(aug_seed)
                 batch_images = aug.augment_images(batch_images)
-                aug_data.aug_seed += 1
+                aug.aug_seed += 1
         return batch_images[0]
 
 # TODO - RECEIVE THE CHARINFO OF ALL PREVIOUS CHARS.
@@ -139,6 +115,7 @@ class CharInfo:
         sty = r * parser.letter_size + y
         sty = max(0, sty)
         sty = min(sty, imageh - new_size)
+
         self.label_id = label_ids[samplei]
         self.label = sample_chars[samplei]
         self.letter_size = letter_size
@@ -148,9 +125,7 @@ class CharInfo:
         self.edge_to_the_right = origc == parser.nchars_per_row - 1 or samplei == parser.num_characters_per_sample - 1
 
 class MetaData:
-    def __init__(self,parser, nsamples_train, nsamples_test, nsamples_val, valid_classes):
-        self.nsamples_train = nsamples_train
-        self.nsamples_test = nsamples_test
-        self.nsamples_val = nsamples_val
+    def __init__(self,parser, nsampes_per_data_type_dict, valid_classes):
+        self.nsamples_dict = nsampes_per_data_type_dict
         self.parser = parser
         self.valid_classes = valid_classes

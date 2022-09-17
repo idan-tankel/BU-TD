@@ -1,7 +1,5 @@
 import os
-import pickle
 import numpy as np
-import torch
 import torch.utils.data as data
 import torchvision
 from skimage import io

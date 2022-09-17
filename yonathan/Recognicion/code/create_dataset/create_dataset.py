@@ -9,7 +9,6 @@ def main(ds_type, language_list:list)->None:
     raw_data_set = DataSet(parser,data_dir = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/' + ds_type.ds_name, dataset = ds_type,raw_data_source=parser.path_data_raw_for_omniglot,language_list = language_list) # Getting the raw data.
     create_samples_for_all_data_set_types_and_save_meta_dat_and_code_script(parser,raw_data_set, ds_type,language_list=language_list)
 
-
 def main_Omniglot():
    main(ds_type=DsType("omniglot"), language_list= [49])
    main(ds_type=DsType("omniglot"), language_list=[24])
