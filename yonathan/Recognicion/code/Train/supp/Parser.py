@@ -12,7 +12,8 @@ from supp.blocks import BasicBlockTD, BasicBlockBU, BasicBlockBUShared
 from supp.create_model import create_model
 from supp.data_functions import dev
 
-def GetParser(opts ,model_path, lr = 0.001,wd = 0.00001,lr_decay = 1.0,language_idx = 0):
+def GetParser(opts ,model_path, lr = 0.001,wd = 0.0001,lr_decay = 1.0,language_idx = 0):
+def GetParser(opts ,model_path, lr = 0.001,wd = 0.0001,lr_decay = 1.0,language_idx = 0):
     parser = argparse.ArgumentParser()
     num_gpus = torch.cuda.device_count()
     parser.add_argument('--ds_type', default = opts.ds_type, type=DsType, help='Flag that defines the model type')

@@ -59,7 +59,7 @@ def main_omniglot(language_idx,train_right,train_left):
     parser = GetParser(opts=opts,model_path = path, language_idx=0)
     print_detail(parser)
     embedding_idx = 0
-    data_path = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/omniglot/samples/6_extended_24'
+    data_path = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/omniglot/samples/5R'
     # Create the data for right.
     # Training Right.
     path_loading = '5R_double_embedding/model_best_right.pt'
@@ -72,7 +72,7 @@ def main_omniglot(language_idx,train_right,train_left):
         load_running_stats(parser.model, lan_id = 0 ,direction_id = 0);
         acc = accuracy(parser, test_dl)
         print("Done training right, with accuracy : " + str(acc))
-        training_flag = Training_flag(train_all_model = False, train_arg=True,direction_emb = False,lang_emb = True, head_learning=True)
+        training_flag = Training_flag(train_all_model = True, train_arg=True,direction_emb = False,lang_emb = True, head_learning=True)
         train_omniglot(parser, direction_id = 0, the_datasets=the_datasets, training_flag=training_flag, lang_id = 0)
 
     if train_left:
