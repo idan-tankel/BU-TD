@@ -10,15 +10,15 @@ def main(ds_type, language_list:list)->None:
     create_samples_for_all_data_set_types_and_save_meta_dat_and_code_script(parser,raw_data_set, ds_type,language_list=language_list)
 
 def main_Omniglot():
-   main(ds_type=DsType("omniglot"), language_list= [49])
-   main(ds_type=DsType("omniglot"), language_list=[24])
-   main(ds_type=DsType("omniglot"), language_list=[35])
+       list = [5,18,27,33,42]
+       main(ds_type=DsType("omniglot"), language_list = list)
+
 
 def main_FashionEmnist():
     main(ds_type = DsType("fashionmnist"), language_list = [0])
 
 def main_mnist():
-    main(ds_type=DsType.Emnist, language_list = [0])
+    main(ds_type=DsType("emnist"), language_list = [0])
 
 def main_kmnist():
     main(ds_type = DsType("kmnist"), language_list = [0])

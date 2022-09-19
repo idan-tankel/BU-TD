@@ -114,8 +114,8 @@ class TDModel(nn.Module):
                 laterals_out.append(reverse_layer_lats_out)  # Add all the layer's laterals.
             lateral_in = reverse_laterals_in[-1]
             x = self.bot_lat((x, lateral_in))  # Compute lateral connection + channel modulation.
-        if self.use_final_conv:  # Compute the last conv layer.
-            x = self.conv1(x)
+    #    if self.use_final_conv:  # Compute the last conv layer.
+     #       x = self.conv1(x)
         laterals_out.append(x)
         outs = [x, laterals_out[::-1]]  # Output the output of the stream + the lateral connections.
         if self.use_td_flag:
@@ -168,7 +168,7 @@ class BUStream(nn.Module):
         for shared_block in blocks:
             # Create Basic BU block.
             layer = self.block(self.opts, shared_block,inshapes, self.is_bu2)
-            if self.model_flag is Flag.SF and is_bu2:
+            if self.model_flag is Flag.SF and self.is_bu2:
                 # Adding the task embedding of the BU2 stream.
                 for i in range(self.ntasks):
                     self.lang_embedding[i].extend(layer.lang_embedding[i])
@@ -319,9 +319,9 @@ class BUTDModelShared(nn.Module):
         self.bu_inshapes = bu_shared.inshapes_devided_by_blocks
         self.bumodel1 = BUStream(opts, bu_shared, is_bu2=False)  # The BU1 stream.
         self.tdmodel = TDModel(opts,bu_shared.inshapes_devided_by_blocks)  # The TD stream.
-        self.use_td_loss = opts.use_td_loss  # Whether to use the TD segmentation loss..
-        if self.use_td_loss:
-            self.imagehead = ImageHead(opts)
+#        self.use_td_loss = opts.use_td_loss  # Whether to use the TD segmentation loss..
+     #   if self.use_td_loss:
+    #        self.imagehead = ImageHead(opts)
         self.bumodel2 = BUStream(opts, bu_shared, is_bu2=True)  # The BU2 stream.
         self.Head = MultiTaskHead(opts)  # The task-head to transform the last layer output to the number of classes.
         if self.model_flag is Flag.SF:  # Storing the Task embedding.
@@ -345,7 +345,6 @@ class BUTDModelShared(nn.Module):
         Returns: The output from all streams.
 
         """
-
         samples = self.inputs_to_struct(inputs)  # Transform the input to struct.
         images = samples.image
         flags = samples.flag
@@ -363,9 +362,10 @@ class BUTDModelShared(nn.Module):
         td_outs = self.tdmodel(  model_inputs)  # The input to the TD stream is the bu_out, flags, the lateral connections.
         td_out, td_laterals_out, *td_rest = td_outs
         #TODO - GET RID OF THIS OPTION!
+        '''
         if self.use_td_loss:  # Compute the TD head output.
             td_head_out = self.imagehead(td_out)
-
+        '''
         model_inputs = [images, flags]
         if self.use_lateral_tdbu:
             model_inputs += [td_laterals_out]
@@ -379,12 +379,20 @@ class BUTDModelShared(nn.Module):
 
 class inputs_to_struct:
     def __init__(self,inputs):
-        img, label_task, flag, label_all, label_existence = inputs
+        """
+        struct transforming from list of tensors to struct.
+        Args:
+            inputs: The model inputs including the raw image, the label task, the label all, the label existence and the TD flag.
+        """
+        img, label_task, label_all, label_existence,char_type_one, task_embd_ohe, arg_emb_ohe, direction_ohe = inputs
         self.image = img
         self.label_all = label_all
         self.label_existence = label_existence
         self.label_task = label_task
-        self.flag = flag
+        self.flag = [char_type_one,task_embd_ohe,arg_emb_ohe,direction_ohe ]
+       # self.task_embd_ohe = task_embd_ohe
+      #  self.arg_emb_ohe = arg_emb_ohe
+     #   self.direction_ohe = arg_emb_ohe
 
 class outs_to_struct():
     """
@@ -392,8 +400,11 @@ class outs_to_struct():
     """
     def __init__(self, outs: list[torch]) -> None:
         """
-        :param model:Containing the flags to create the model according to.
+        # Struct transforming the model output list to struct.
+        Args:
+            outs: The Model outs containing the BU1 stream out, BU2 stream out and the final output for the classification.
         """
+
         occurrence_out, task_out, bu_out, bu2_out = outs
         self.occurence_out = occurrence_out
         self.task = task_out
@@ -405,6 +416,10 @@ class BUModelSimple(nn.Module):
     Only BU network.
     """
     def __init__(self, opts):
+        """
+        Args:
+            opts: The model options.
+        """
         super(BUModelSimple, self).__init__()
         self.taskhead = MultiTaskHead(opts)
         self.bumodel = BUModel(opts,use_embedding=False)
@@ -412,6 +427,13 @@ class BUModelSimple(nn.Module):
         opts.avg_pool_size = tuple(pre_top_shape[1:].tolist())
 
     def forward(self, inputs):
+        """
+        Args:
+            inputs: The model input, containing the image and a flag.
+
+        Returns:
+
+        """
         samples = self.inputs_to_struct(inputs)
         images = samples.image
         flags = samples.flag
@@ -421,11 +443,26 @@ class BUModelSimple(nn.Module):
         return task_out, bu_out
 
     def outs_to_struct(self, outs):
+        """
+        Args:
+            outs: Model outs containing the task out and the BU2 out.
+
+        Returns: Struct containing the model outs.
+
+        """
         task_out, bu_out = outs
         outs_ns = SimpleNamespace(task=task_out, bu=bu_out)
         return outs_ns
 
     def inputs_to_struct(self,inputs):
+        """
+        Struct tasking list of inputs and transform into a struct.
+        Args:
+            inputs:  image, label_task, flag
+
+        Returns: A struct containing the model inputs.
+
+        """
         image, label_task, flag = inputs
         struct = SimpleNamespace(image = image, label_task = label_task, flag = flag)
         return struct

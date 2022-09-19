@@ -74,7 +74,7 @@ class Model_Options_By_Flag_And_DsType:
             generelize = False
             use_bu1_loss = False
             model_arch = 'BUTDModelShared'
-            use_double_emb = True
+            use_double_emb = False
             ndirections = 2
 
         if self.ds_type is DsType.Emnist:
@@ -86,6 +86,9 @@ class Model_Options_By_Flag_And_DsType:
             use_bu1_loss = True
             model_arch = 'BUTDModelShared'
             generelize = True
+            use_double_emb = False
+            ndirections = 4
+
 
         if self.ds_type is DsType.FashionMnist:
             initial_tasks = [0]

@@ -29,7 +29,7 @@ def multi_label_accuracy_base(outs: object, samples: object, num_outputs: int = 
 # TODO-change to support the NOFLAG MODE.
 # loss_task_multi_label = nn.CrossEntropyLoss(reduction='none').to(dev)
 class multi_label_loss_base:
-    def __init__(self, parser=None, num_outputs=1):
+    def __init__(self, num_outputs=1):
         """
         :param parser:
         :param num_outputs:
@@ -69,13 +69,13 @@ class UnifiedLossFun:
      :param opts: tells which losses to use and the loss functions.
      """
         self.use_bu1_loss = opts.use_bu1_loss
-        self.use_td_loss = opts.use_td_loss
         self.use_bu2_loss = opts.use_bu2_loss
         self.bu1_loss = opts.bu1_loss
         self.td_loss = opts.td_loss
         self.bu2_classification_loss = opts.bu2_loss
         self.inputs_to_struct = opts.model.module.inputs_to_struct
         self.opts = opts
+     #   self.regulizer = opts.regulizer
 
     def __call__(self, model, inputs: list[torch], outs: list) -> float:
         """
@@ -83,26 +83,22 @@ class UnifiedLossFun:
         :param outs: Output from the model.
         :return: The combined loss over all the stream.
         """
-        outs = get_model_outs(self.opts, outs)  # The output from all the streams.
+        outs = get_model_outs(self.opts.model, outs)  # The output from all the streams.
         samples = self.inputs_to_struct(inputs)  # Make samples from the raw data.
         loss = 0  # The general loss.
         if self.use_bu1_loss:
-            loss_occ = self.bu1_loss(outs.occurence_out,               
-                                     samples.label_existence)  # compute the binary existence classification loss             
-            loss += loss_occ  # Add the occurrence loss.                                
-        if self.use_td_loss:              
-            loss_seg_td = self.td_loss(outs.td_head, samples.seg)  # compute the TD segmentation loss.
-            loss_bu1_after_convergence = 1
-            loss_td_after_convergence = 100
-            ratio = loss_bu1_after_convergence / loss_td_after_convergence
-            loss += ratio * loss_seg_td  # Add the TD segmentation loss.
+            loss_occ = self.bu1_loss(outs.occurence_out, samples.label_existence)  # compute the binary existence classification loss
+            loss += loss_occ  # Add the occurrence loss.
+
         if self.use_bu2_loss:
             loss_task = self.bu2_classification_loss(outs, samples)  # Compute the BU2 loss.
             loss += loss_task
+   #     loss_new = self.opts.regulizer.penalty()
+     #   print(loss_new)
         return loss
 
 
-def accuracy(opts: nn.Module, test_data_loader: DataLoader) -> float:
+def accuracy(model: nn.Module, test_data_loader: DataLoader) -> float:
     """
     :param opts:The model options to compute its accuracy.
     :param test_data_loader: The data.
@@ -113,10 +109,10 @@ def accuracy(opts: nn.Module, test_data_loader: DataLoader) -> float:
     for inputs in test_data_loader:  # Running over all inputs
         inputs = preprocess(inputs)  # Move to the cuda.
         num_samples += len(inputs[0])  # Update the number of samples.
-        samples = opts.model.module.inputs_to_struct(inputs)  # Make it struct.
-        opts.model.eval() #
-        outs = opts.model(inputs)  # Compute the output.
-        outs = get_model_outs(opts, outs)  # From output to struct
+        samples = model.module.inputs_to_struct(inputs)  # Make it struct.
+        model.eval() #
+        outs = model(inputs)  # Compute the output.
+        outs = get_model_outs(model, outs)  # From output to struct
         (preds, task_accuracy_batch) = multi_label_accuracy_base(outs, samples)  # Compute the accuracy on the batch
         num_correct_pred += task_accuracy_batch.sum()  # Sum all accuracies on the batches.
     return num_correct_pred / num_samples  # Compute the mean.

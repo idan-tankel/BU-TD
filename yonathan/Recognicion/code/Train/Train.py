@@ -11,6 +11,8 @@ from supp.training_functions import load_model, create_optimizer_and_sched, trai
 from supp.general_functions import num_params
 from supp.measurments import Measurements
 from supp.batch_norm import load_running_stats
+from supp.data_functions import dev
+from supp.reg import Regulizer
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
@@ -46,7 +48,8 @@ def train_omniglot(parser, direction_id,lang_id, the_datasets, training_flag):
     create_optimizer_and_sched(parser,learned_params)
     train_model(parser, the_datasets, learned_params, direction_id = direction_id , lang_id = lang_id)
 
-def main_omniglot(language_idx,train_right,train_left):
+def main_omniglot(language_idx,train_right,train_left,wd):
+    # TODO - ARRANGE THIS MAIN FUCNTION, ON MONDAY!
     """
     Args:
         language_idx:
@@ -55,41 +58,27 @@ def main_omniglot(language_idx,train_right,train_left):
     Returns:
     """
     opts = Model_Options_By_Flag_And_DsType(Flag=Flag.SF, DsType=DsType.Omniglot)
-    path = "Model"
-    parser = GetParser(opts=opts,model_path = path, language_idx=0)
+    path = "Model_{}_{}=".format(language_idx, wd)
+    parser = GetParser(opts=opts,model_path = path, language_idx=0,wd = wd)
     print_detail(parser)
     embedding_idx = 0
-    data_path = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/omniglot/samples/5R'
+    data_path = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/omniglot/samples/6_extended_testing_new_changes_beta_'+str(language_idx)
     # Create the data for right.
-    # Training Right.
-    path_loading = '5R_double_embedding/model_best_right.pt'
+    path_loading = 'Model5R_wd=e-4/model_best_right.pt'
     model_path = parser.results_dir
-  #  load_model(parser, model_path, path_loading, load_optimizer_and_schedular=False);
+ #   load_model(parser.model, model_path, path_loading, load_optimizer_and_schedular=False);
     if train_right:
         parser.EPOCHS = 100
-        [the_datasets, _, test_dl, _, _, _, _] = get_dataset_for_spatial_realtions(parser, data_path, lan_idx = 0, direction_idx = 0)
-     #   load_model(parser, model_path, path_loading, load_optimizer_and_schedular=False);
-        load_running_stats(parser.model, lan_id = 0 ,direction_id = 0);
-        acc = accuracy(parser, test_dl)
-        print("Done training right, with accuracy : " + str(acc))
-        training_flag = Training_flag(train_all_model = True, train_arg=True,direction_emb = False,lang_emb = True, head_learning=True)
-        train_omniglot(parser, direction_id = 0, the_datasets=the_datasets, training_flag=training_flag, lang_id = 0)
+        [the_datasets, _, test_dl, _, _, _, _] = get_dataset_for_spatial_realtions(parser, data_path, lan_idx = 0, direction_idx=0,arg_idx = language_idx+1)
+        training_flag = Training_flag(train_all_model = False, train_arg=True,direction_emb = False,lang_emb = False, head_learning=True)
+        train_omniglot(parser, direction_id = 0, the_datasets=the_datasets, training_flag=training_flag, lang_id = language_idx+1)
 
     if train_left:
         parser.EPOCHS = 100
-        [the_datasets, _, _, _, _, _, _] = get_dataset_for_spatial_realtions(parser, data_path, lan_idx = 0, direction_idx = 1 )
-        training_flag = Training_flag(train_all_model=False, train_arg=False,direction_emb = True,lang_emb = False, head_learning=True)
+        [the_datasets, _, _, _, _, _, _] = get_dataset_for_spatial_realtions(parser, data_path, lan_idx=0, direction_idx=1)
+        training_flag = Training_flag(train_all_model = False, train_arg = False,direction_emb = True,lang_emb = False, head_learning=True)
         train_omniglot(parser, direction_id = 1, the_datasets=the_datasets, training_flag=training_flag, lang_id = 0)
 
-main_omniglot(35,True,True)
 
-
-
-'''
-path_loading = 'Model_without_bias/model_latest_left.pt'
-model_path = parser.results_dir
-load_model(parser, model_path, path_loading, load_optimizer_and_schedular=False);
-load_running_stats(parser.model, task_emb_id = 1);
-acc = accuracy(parser, test_dl)
-print("Done training right, with accuracy : " + str(acc))
-'''
+main_omniglot(1, True, True,wd=1e-4)
+#main_emnist(0,0,False,True,wd=1e-4)

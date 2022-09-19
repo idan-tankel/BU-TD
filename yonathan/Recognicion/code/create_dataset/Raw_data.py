@@ -18,8 +18,7 @@ def Get_raw_data(download_dir:str, dataset:str,language_list, raw_data_source)->
     if dataset.ds_name == 'omniglot':
         letter_size = 28
         nchannels = 1
-        transform = transforms.Compose(
-            [transforms.ToTensor(), transforms.functional.invert, transforms.Resize([28, 28])])
+        transform = transforms.Compose( [transforms.ToTensor(), transforms.functional.invert, transforms.Resize([28, 28])])
         images_arranged = []
         for lan_idx in language_list:
             language_list = os.listdir(raw_data_source)
@@ -36,8 +35,31 @@ def Get_raw_data(download_dir:str, dataset:str,language_list, raw_data_source)->
         rotate = (0, 1)
         nchannels = 1
         if dataset.ds_name == 'emnist':
-            train_raw_dataset = torchvision.datasets.EMNIST(download_dir, split='balanced', train=True, download=True)
-            test_raw_dataset = torchvision.datasets.EMNIST(download_dir, split='balanced', train=False, download=True)
+            train_raw_dataset = torchvision.datasets.EMNIST(
+                download_dir,
+                download=True,
+                split='balanced',
+                train=True,
+                transform=torchvision.transforms.Compose([
+                    lambda img: torchvision.transforms.functional.rotate(img, -90),
+                    lambda img: torchvision.transforms.functional.hflip(img),
+                    torchvision.transforms.ToTensor()
+                ])
+            )
+            test_raw_dataset = torchvision.datasets.EMNIST(
+                download_dir,
+                download=True,
+                split='balanced',
+                train=False,
+                transform=torchvision.transforms.Compose([
+                    lambda img: torchvision.transforms.functional.rotate(img, -90),
+                    lambda img: torchvision.transforms.functional.hflip(img),
+                    torchvision.transforms.ToTensor()
+                ])
+            )
+            len_train_raw_dataset = len(train_raw_dataset)
+            len_test_raw_dataset = len(test_raw_dataset)
+            shape = (1, 28, 28)
 
         elif dataset.ds_name == 'fashionmnist':
             train_raw_dataset = torchvision.datasets.FashionMNIST(download_dir, train=True, download=True)
@@ -57,7 +79,7 @@ def Get_raw_data(download_dir:str, dataset:str,language_list, raw_data_source)->
             len_train_raw_dataset = 50000
             len_test_raw_dataset = 10000
 
-        images = [np.array(train_raw_dataset[i][0]).reshape(shape) for i in range(len_train_raw_dataset)]
+        images = [np.array(train_raw_dataset[i][0]) for i in range(len_train_raw_dataset)]
         images.extend([np.array(test_raw_dataset[i][0]).reshape(shape) for i in range(len_test_raw_dataset)])
         labels = [train_raw_dataset[i][1] for i in range(len(train_raw_dataset))]
         labels.extend([test_raw_dataset[i][1] for i in range(len(test_raw_dataset))])
@@ -79,7 +101,7 @@ class DataSet(data.Dataset):
             raw_data_source: # The Raw data source for the Omniglot dataset.
         """
         data_dir = os.path.join(data_dir,'RAW')
-        download_raw_data_dir = os.path.join(data_dir, f'{dataset}_raw', ) # The path we download the raw data into.
+        download_raw_data_dir = os.path.join(data_dir, f'{dataset.ds_name}_raw', ) # The path we download the raw data into.
         self.images, self.labels, self.letter_size, self.nchannels = Get_raw_data(download_raw_data_dir, dataset = dataset,language_list = language_list,raw_data_source = raw_data_source)
         self.nclasses = len(set(self.labels))
         self.num_examples_per_character = len(self.labels) // self.nclasses
