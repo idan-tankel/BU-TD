@@ -100,7 +100,7 @@ class Modulation(nn.Module):  # Modulation layer.
             self.size = [-1, size, 1, 1]  # If channel modulation matches the number of channels
         inshapes = np.prod(size)
         for i in range(ntasks):  # allocating for every task its task embedding
-            layer = nn.Linear(1,inshapes,bias - True)
+            layer = nn.Linear(1,inshapes,bias = True)
             self.task_embedding[i].extend(list(layer.parameters()))
             self.modulation.append(layer)
         self.modulation = nn.ModuleList(self.modulation)
@@ -224,11 +224,11 @@ class BasicBlockBU(nn.Module):
         norm_layer = opts.norm_fun
         activation_fun = opts.activation_fun
         nchannels = inshapes[self.idx+1][0]  # computing the shape for the channel and pixel modulation.
-        ndirections = opts.ndirections
+        self.ndirections = opts.ndirections
         self.use_double_emb = opts.use_double_emb
         self.nembs = 2 if self.use_double_emb else 1
         self.lang_embedding = [[] for _ in range(self.ntasks)]
-        self.direction_embedding = [[] for _ in range(ndirections)]
+        self.direction_embedding = [[] for _ in range(self.ndirections)]
         if self.flag_at is Flag.SF and self.is_bu2:  # If BU2 stream create the task embedding.
            shape_first_block = inshapes[self.idx + 1]
            shape_second_block = inshapes[self.idx + 1]
@@ -243,7 +243,7 @@ class BasicBlockBU(nn.Module):
             shape_first_block = inshapes[self.idx + 1]
             shape_second_block = inshapes[self.idx + 1]
             self.second_embedding = create_task_embedding(shape_first_block, shape_second_block,  self.ntasks)
-            for i in range(ndirections):
+            for i in range(self.ndirections):
               self.direction_embedding[i].extend(self.second_embedding[0].task_embedding[i])
               self.direction_embedding[i].extend(self.second_embedding[1].task_embedding[i])
               self.direction_embedding[i].extend(self.second_embedding[2].task_embedding[i])
@@ -284,26 +284,23 @@ class BasicBlockBU(nn.Module):
         inp = x  # save the inp for the skip to the end of the block
         x = self.conv1(x)  # perform conv1
 
-        if self.flag_at is Flag.SF and self.is_bu2 and self.nembs > 1:
-            flag_direction = flag[:, flag.shape[1] - 2:]
-            x = self.second_embedding[0](x, flag_direction)
-            x = self.second_embedding[1](x, flag_direction)
+        if self.flag_at is Flag.SF and self.is_bu2:  # perform the task embedding if needed.
+            lan_flag = flag[0]  # The task vector.
+            x = self.original_embedding[0](x, lan_flag)
+            x = self.original_embedding[1](x, lan_flag)
 
         if laterals_in is not None:  # perform lateral skip connection.
             x = self.lat2((x, lateral2_in))
 
-        if self.flag_at is Flag.SF and self.is_bu2:  # perform the task embedding if needed.
-            lan_flag = flag[:, :self.ntasks]  # The task vector.
-            x = self.original_embedding[0](x, lan_flag)
-            x = self.original_embedding[1](x, lan_flag)
+
 
         laterals_out.append(x)
         x = self.conv2(x)  # perform conv2
 
-        if self.flag_at is Flag.SF and self.is_bu2 and self.nembs > 1:
-            flag_direction = flag[:, flag.shape[1] - 2:]
-            x = self.second_embedding[2](x, flag_direction)
-            x = self.second_embedding[3](x, flag_direction)
+        if self.flag_at is Flag.SF and self.is_bu2:  # perform the task embedding if needed.
+            lan_flag = flag[0]  # The task vector.
+            x = self.original_embedding[2](x, lan_flag)
+            x = self.original_embedding[3](x, lan_flag)
 
         if laterals_in is not None:  # perform lateral skip connection.
             x = self.lat3((x, lateral3_in))
@@ -318,10 +315,7 @@ class BasicBlockBU(nn.Module):
         if self.orig_relus:  # Perform relu activation.
             x = self.relu(x)
 
-        if self.flag_at is Flag.SF and self.is_bu2:  # perform the task embedding if needed.
-            lan_flag = flag[:, :self.ntasks]  # The task vector.
-            x = self.original_embedding[2](x, lan_flag)
-            x = self.original_embedding[3](x, lan_flag)
+
 
         return [x, laterals_out]
 
@@ -376,7 +370,7 @@ class InitialTaskEmbedding(nn.Module):
               self.direction_td = nn.ModuleList(self.direction_td)
 
             else:
-             self.h_flag_arg_td = nn.Sequential(nn.Linear(self.nclasses[0], self.top_filters // 2), self.norm_layer(self.top_filters // 2, dims=1, num_tasks=self.ntasks),  self.activation_fun())
+             self.h_flag_arg_td = nn.Sequential(nn.Linear(self.nclasses[0], self.top_filters // 2), self.norm_layer(opts,self.top_filters // 2, dims=1),  self.activation_fun())
             self.h_flag_task_td = nn.ModuleList(self.h_flag_task_td)
 
         if self.model_flag is Flag.TD:
@@ -395,27 +389,33 @@ class InitialTaskEmbedding(nn.Module):
         Returns: The block output.
         """
         [bu_out, flag] = inputs
-        lan_flag = flag[:, :self.ntasks]  # The task vector.
-        arg_flag = flag[:, self.ntasks:flag.shape[1] - self.ndirections]  # The argument vector.
-        direction_flag = flag[:,flag.shape[1]-2:]
-
+        #
+        arg_ohe = flag[0]
+        #
+        lan_flag = flag[1]
         lan_id = flag_to_task(lan_flag)
-        direction_id = flag_to_task(direction_flag)
+        #
 
-        lan_ones = flag[:, lan_id].view(-1, 1)
-        direction_ones = flag[:, direction_id].view(-1, 1)
+        arg_flag = flag[2]
+        arg_id = flag_to_task(arg_flag)
+        #
+        direction_flag = flag[3]
+        direction_id = flag_to_task(direction_flag)
+        #
+        ones = lan_flag[:, lan_id].view(-1, 1)
+         #
 
         if self.model_flag is Flag.SF:
-            top_td_task = self.h_flag_task_td[lan_id](lan_ones)  # Take the specific task embedding to avoid forgetting.
+            top_td_task = self.h_flag_task_td[lan_id](ones)  # Take the specific task embedding to avoid forgetting.
         else:
             top_td_task = self.h_flag_task_td(task)
         if self.use_double_emb :
             top_td_direction = self.direction_td[direction_id](direction_ones).view((-1, self.top_filters //self.nheads, 1, 1))
         top_td_task = top_td_task.view((-1, self.top_filters // self.nheads , 1, 1))
         if self.train_arg_emb:
-         top_td_arg = self.h_flag_arg_td[lan_id](arg_flag)  # Embed the argument.
+         top_td_arg = self.h_flag_arg_td[arg_id](arg_ohe)  # Embed the argument.
         else:
-         top_td_arg = self.h_flag_arg_td(arg)  # Embed the argument.
+         top_td_arg = self.h_flag_arg_td(arg_flag)  # Embed the argument.
         top_td_arg = top_td_arg.view((-1, self.top_filters // self.nheads , 1, 1))
         top_td = torch.cat((top_td_task, top_td_arg), dim = 1)  # Concatenate the flags
         if self.use_double_emb:

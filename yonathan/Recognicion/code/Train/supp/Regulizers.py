@@ -20,7 +20,7 @@ def get_regularizer(model, model_old, device, opts, old_state):
         return EWC(model, model_old, device, fisher=fisher,
                    alpha=opts.reg_alpha,
                    normalize= not opts.reg_no_normalize)
-    elif name == 'pi':
+    elif name == 'si':
         score = old_state["score"] if resume else None
         return PI(model, model_old, device, score=score,
                   normalize=not opts.reg_no_normalize)

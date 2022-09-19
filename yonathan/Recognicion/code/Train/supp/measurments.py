@@ -4,13 +4,13 @@ from torch.utils.data import DataLoader
 import torch.nn as nn
 import argparse
 
-def get_model_outs(opts: nn.Module, outs: list[torch]) -> object:
+def get_model_outs(model: nn.Module, outs: list[torch]) -> object:
     """
     :param model: The model
     :param outs: The list of outputs of the model from all the streams.
     :return: struct containing all tensor in the list
     """
-    model = opts.model
+  #  model = opts.model
   #  print(model.module.outs_to_struct())
     if type(model) is torch.nn.DataParallel or type(model) is torch.nn.parallel.DistributedDataParallel:
 
@@ -153,7 +153,7 @@ class Measurements(MeasurementsBase):
 
     def update(self, inputs: list[torch], outs: list[torch], loss: float) -> None:
         super().update(inputs, outs, loss)
-        outs = get_model_outs(self.opts, outs)
+        outs = get_model_outs(self.opts.model, outs)
         samples = self.inputs_to_struct(inputs)
         if self.opts.use_bu1_loss:
             occurrence_pred = outs.occurence_out > 0

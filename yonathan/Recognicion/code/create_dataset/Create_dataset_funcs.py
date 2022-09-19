@@ -439,7 +439,7 @@ def Make_data_dir(parser:argparse, store_folder:str,language_list:list)->tuple:
 
     """
     base_storage_dir = '%d_' % (parser.nchars_per_row * parser.num_rows_in_the_image)
-    base_storage_dir += 'extended_testing_new_changes_beta_' + str(language_list[0])
+    base_storage_dir += 'extended_testing_new_changes_beta_' + '5R'
     base_samples_dir = os.path.join(store_folder, base_storage_dir)
     if not os.path.exists(base_samples_dir):
         os.makedirs(base_samples_dir, exist_ok=True)
