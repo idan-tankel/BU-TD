@@ -20,11 +20,11 @@ def GetParser(opts ,model_path, lr = 0.001,wd = 0.0001,lr_decay = 1.0,language_i
     parser.add_argument('--ndirections', default=opts.ndirections, type=int, help='Flag that defines the model type')
     #TODO - CHANGE TO READ ALSO FROM THE METADATA FILE.
     parser.add_argument('--generelize', default=opts.generelize, type = bool, help='Flag that defines the model type')
-    parser.add_argument('--use_reg', default=opts.generelize, type=bool, help='Flag that defines the model type')
+    parser.add_argument('--use_reg', default = False, type=bool, help='Flag that defines the model type')
     parser.add_argument('--regulizer_type', default=EWC, type=bool, help='Flag that defines the model type')
    # parser.add_argument('--model_old', default=None, type=bool, help='Flag that defines the model type')
     parser.add_argument('--regulizer', default=None, type=any, help='Flag that defines the model type')
-    parser.add_argument('--lambda', default = 0.0, type = float, help='Flag that defines the model type')
+    parser.add_argument('--lamda', default = 0.0, type = float, help='Flag that defines the model type')
     parser.add_argument('--wd', default=wd, type=float, help='The weight decay of the Adam optimizer')
     parser.add_argument('--SGD', default=False, type=bool, help='Whether to use SGD or Adam optimizer')
     parser.add_argument('--lr', default=lr, type=float, help='Base lr for the SGD optimizer ')
@@ -62,12 +62,13 @@ def GetParser(opts ,model_path, lr = 0.001,wd = 0.0001,lr_decay = 1.0,language_i
     parser.add_argument('--norm_fun', default=BatchNorm, type=nn.Module, help='The used batch normalization')
     parser.add_argument('--EPOCHS', default = 100, type=int, help='Number of epochs in the training')
     parser.add_argument('--num_gpus', default=num_gpus, type=int, help='number of used gpus')
+    parser.add_argument('--reg', default=None, type=any, help='number of used gpus')
     # Change to another function
     ##########################################
     now = datetime.now()
     dt_string = now.strftime("%d.%m.%Y %H:%M:%S")
-    model_path = "Model"+dt_string
     parser.add_argument('--results_dir', default = opts.results_dir, type=str, help='The direction the model will be stored')
+    model_path = model_path+dt_string
     model_dir = os.path.join(opts.results_dir, model_path)
     ##########################################
     parser.add_argument('--model_dir', default=model_dir, type=str, help='The direction the model will be stored')
@@ -88,7 +89,6 @@ def GetParser(opts ,model_path, lr = 0.001,wd = 0.0001,lr_decay = 1.0,language_i
     parser.add_argument('--bu2_classification_loss', default=nn.CrossEntropyLoss(reduction='none').to(dev),   type=nn.Module, help='The loss used at the end of the bu2 stream')
     parser.add_argument('--model_old', default=create_model(parser.parse_args()), type=nn.Module, help='The model we fit')
     parser.add_argument('--model', default=create_model(parser.parse_args()), type=nn.Module,    help='The model we fit')
-
     parser.add_argument('--loss_fun', default=UnifiedLossFun(parser.parse_args()), type=Callable,  help='The unified loss function of all training')
     parser.add_argument('--epoch_save_idx', default='accuracy', type=str,    help='The metric we update the best model according to(usually loss/accuracy)')
     parser.add_argument('--dataset_saving_by', default=opts.dataset_saving_by, type=str,    help='The dataset we update the best model according to(usually val/test)')

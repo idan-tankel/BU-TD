@@ -77,7 +77,7 @@ class UnifiedLossFun:
         self.opts = opts
      #   self.regulizer = opts.regulizer
 
-    def __call__(self, model, inputs: list[torch], outs: list) -> float:
+    def __call__(self,opts, inputs: list[torch], outs: list) -> float:
         """
         :param inputs: Input to the model.
         :param outs: Output from the model.
@@ -93,8 +93,9 @@ class UnifiedLossFun:
         if self.use_bu2_loss:
             loss_task = self.bu2_classification_loss(outs, samples)  # Compute the BU2 loss.
             loss += loss_task
-   #     loss_new = self.opts.regulizer.penalty()
-     #   print(loss_new)
+        if opts.use_reg:
+         loss_new = opts.reg.regulizer.ewc_loss()
+         loss += loss_new
         return loss
 
 

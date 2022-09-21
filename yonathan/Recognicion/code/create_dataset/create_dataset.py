@@ -10,8 +10,9 @@ def main(ds_type, language_list:list)->None:
     create_samples_for_all_data_set_types_and_save_meta_dat_and_code_script(parser,raw_data_set, ds_type,language_list=language_list)
 
 def main_Omniglot():
-       list = [5,18,27,33,42]
-       main(ds_type=DsType("omniglot"), language_list = list)
+    list = [22, 24, 25, 26, 28, 30, 35, 39, 41, 45]
+    for i in list:
+        main(ds_type=DsType("omniglot"), language_list=[i])
 
 
 def main_FashionEmnist():
@@ -27,4 +28,8 @@ def main_SVHN():
     main(ds_type=DsType("SVHN"), language_list=[0])
 
 main_Omniglot()
+
+list = [22, 24, 25, 26, 28, 30, 35, 39, 41, 45]
+for i in list:
+    main(ds_type=DsType("omniglot"), language_list=[i])
 

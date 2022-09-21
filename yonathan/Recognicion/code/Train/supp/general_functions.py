@@ -115,6 +115,7 @@ def num_params(params: list) -> int:
     :return: Number of leaned parameters.
     """
     nparams = 0
+
     for param in params:  # For each parameter in the model we sum its parameters
         cnt = 1
         for p in param.shape:  # The number of params in each weight is the product if its shape.

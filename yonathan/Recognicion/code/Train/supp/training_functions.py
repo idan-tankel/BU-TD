@@ -191,7 +191,7 @@ def test_step(opts: argparse, inputs: list[torch]) -> tuple:
     opts.model.eval()  # Move the model to evaluation mode in order to not change the running statistics of the batch layers.
     with torch.no_grad():  # Don't need to compute grads.
         outs = opts.model(inputs)  # Compute the model outputs.
-        loss = opts.loss_fun(opts.model, inputs, outs)  # Compute the loss.
+        loss = opts.loss_fun(opts, inputs, outs)  # Compute the loss.
     return loss, outs  # Return the loss and the output.
 
 

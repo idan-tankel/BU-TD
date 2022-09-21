@@ -32,7 +32,7 @@ class TDModel(nn.Module):
         self.ndirections = opts.ndirections
         self.inshapes = bu_inshapes
         self.upsample_size = opts.avg_pool_size  # before avg pool we have 7x7x512
-        self.direction_embedding = [[] for _ in range(self.ntasks)]
+        self.direction_embedding = [[] for _ in range(self.ndirections)]
         self.lang_embedding = [[] for _ in range(self.ntasks)]
         self.argument_embedding = [[] for _ in range(self.ntasks)]
         self.InitialTaskEmbedding = InitialTaskEmbedding(opts)
@@ -384,12 +384,12 @@ class inputs_to_struct:
         Args:
             inputs: The model inputs including the raw image, the label task, the label all, the label existence and the TD flag.
         """
-        img, label_task, label_all, label_existence,char_type_one, task_embd_ohe, arg_emb_ohe, direction_ohe = inputs
+        img, flag, label_task, label_all, label_existence = inputs
         self.image = img
         self.label_all = label_all
         self.label_existence = label_existence
         self.label_task = label_task
-        self.flag = [char_type_one,task_embd_ohe,arg_emb_ohe,direction_ohe ]
+        self.flag = flag
        # self.task_embd_ohe = task_embd_ohe
       #  self.arg_emb_ohe = arg_emb_ohe
      #   self.direction_ohe = arg_emb_ohe
