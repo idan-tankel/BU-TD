@@ -2,6 +2,7 @@ import torch
 import argparse
 import torch.nn as nn
 from supp.general_functions import flag_to_task
+from supp.FlagAt import DsType
 
 class HeadSingleTask(nn.Module):
     # Single task head.
@@ -47,6 +48,7 @@ class MultiTaskHead(nn.Module):
         super(MultiTaskHead, self).__init__()
 
         self.ntasks = opts.ntasks
+        self.opts= opts
         self.model_flag = opts.model_flag
         self.num_classes = opts.nclasses  # num_classes to create the task-heads according to.
         self.ndirections = opts.ndirections
@@ -67,12 +69,27 @@ class MultiTaskHead(nn.Module):
         """
 
         (bu2_out, flag) = inputs
-        lan_flag = flag[2]
-        task = flag_to_task(lan_flag)  # #TODO- change flag_to_direction -> flag_to_task
-        direction_flag = flag[3]
-        direction_idx = flag_to_task(direction_flag)
+
+        if self.opts.ds_type == DsType.Omniglot:
+            ########################
+            direction_flag = flag[:, :self.ndirections]
+            arg_flag = flag[:, flag.shape[1] - self.ntasks:]
+            emb_flag = flag[:, flag.shape[1] - self.ntasks * 2:flag.shape[1] - self.ntasks]
+            arg = flag[:, self.ndirections:flag.shape[1] - 2 * self.ntasks]
+            lan_id = flag_to_task(emb_flag)
+            arg_id = flag_to_task(arg_flag)
+            ones = emb_flag[:, lan_id].view([-1, 1])
+            ##################
+            task_id = arg_id
+            direction_idx = flag_to_task(direction_flag)
+
+        else:
+            direction_flag = flag[:, :self.ntasks]
+            direction_idx = flag_to_task(direction_flag)  # #TODO- change flag_to_direction -> flag_to_task
+            task_id = 0
+
         bu2_out = bu2_out.squeeze()  # Make it 1-dimensional.
-        task_out = self.taskhead[task][direction_idx](bu2_out)  # apply the appropriate task-head.
+        task_out = self.taskhead[task_id][direction_idx](bu2_out)  # apply the appropriate task-head.
         if len(task_out.shape) == 2:
             task_out = task_out.unsqueeze(dim = 2)
         return task_out

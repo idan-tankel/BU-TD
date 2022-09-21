@@ -87,7 +87,7 @@ class Model_Options_By_Flag_And_DsType:
             model_arch = 'BUTDModelShared'
             generelize = True
             use_double_emb = False
-            ndirections = 4
+            ndirections = 1
 
 
         if self.ds_type is DsType.FashionMnist:

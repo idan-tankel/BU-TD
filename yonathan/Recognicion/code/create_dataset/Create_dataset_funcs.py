@@ -48,6 +48,7 @@ def Create_raw_examples(parser,image_ids,k,ds_type,cur_nexamples,valid_pairs, va
             sample_chars = Get_sample_chars(parser,prng, valid_pairs, ds_type, valid_classes, test_chars_list)
         else:
             # Otherwise we choose from all the valid classes, without replacement the desired number of characters.
+
             sample_chars = prng.choice(valid_classes, num_chars_per_image, replace=False)
         image_id = []
         label_ids = []
@@ -439,7 +440,7 @@ def Make_data_dir(parser:argparse, store_folder:str,language_list:list)->tuple:
 
     """
     base_storage_dir = '%d_' % (parser.nchars_per_row * parser.num_rows_in_the_image)
-    base_storage_dir += 'extended_testing_new_changes_beta_' + '5R'
+    base_storage_dir += 'extended_testing_new_changes_beta_' + str(language_list[0])
     base_samples_dir = os.path.join(store_folder, base_storage_dir)
     if not os.path.exists(base_samples_dir):
         os.makedirs(base_samples_dir, exist_ok=True)
