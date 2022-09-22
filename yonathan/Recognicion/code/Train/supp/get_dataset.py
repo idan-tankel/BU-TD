@@ -37,12 +37,15 @@ def get_dataset_for_spatial_realtions(opts, data_path, lan_idx: int, direction_i
         nsamples_test = from_dump_MetaData.nsamples_dict['test']
         nsamples_val = from_dump_MetaData.nsamples_dict['val']
         opts.generelize = opts.generelize and nsamples_val > 0
+        nobj_per_row = from_dump_MetaData.parser.nchars_per_row
+        nobj_per_col = from_dump_MetaData.parser.num_rows_in_the_image
     else:
         image_size = from_dump_MetaData.parser.image_size
         nsamples_train = from_dump_MetaData.nsamples_train
         nsamples_test = from_dump_MetaData.nsamples_test
         nsamples_val = from_dump_MetaData.nsamples_val
         opts.generelize = opts.generelize and nsamples_val > 0
+
 
     # If number of gpus>1 creating larger batch size.
     ubs = opts.ubs  # unified batch scale

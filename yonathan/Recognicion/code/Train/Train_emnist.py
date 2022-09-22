@@ -55,30 +55,31 @@ def main_emnist(language_idx,direction_idx,train_right,train_left,wd):
 
     data_path = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/emnist/samples/18_extended_testing_new_changes_beta_emnist'
     # Create the data for right.
-    [the_datasets, _, _,test_dl,_, _, _] = get_dataset_for_spatial_realtions(parser, data_path, lan_idx=0, direction_idx=0,arg_idx=0)
+    [the_datasets, train_dl, test_dl ,val_dl,_, _, _] = get_dataset_for_spatial_realtions(parser, data_path, lan_idx=0, direction_idx=0,arg_idx=0)
     # Training Right.
 
     path_loading = 'Model_right_wd=1e-0521.09.2022 13:45:01/model_best_right.pt'
     model_path = parser.results_dir
-    load_model(parser.model_old, model_path, path_loading, load_optimizer_and_schedular=False);
-    acc = accuracy(parser.model_old, test_dl)
-    print("Done training right, with accuracy : " + str(acc))
+    load_model(parser.model, model_path, path_loading, load_optimizer_and_schedular=False);
+   # acc = accuracy(parser.model, test_dl)
+   # print("Done training right, with accuracy : " + str(acc))
 
     if train_right:
         parser.EPOCHS = 40
         training_flag = Training_flag(train_all_model = True, train_arg=True,direction_emb = False,lang_emb = True, head_learning=True)
         train_omniglot(parser, lang_id = 0,direction_id=direction_idx, the_datasets=the_datasets, training_flag=training_flag)
-    reg = Regulizer(parser.reg, parser, test_dl)
+   # reg = Regulizer(parser.reg, parser, test_dl)
 
-    parser.reg = reg
-    parser.use_reg = True
+   # parser.reg = reg
+   # parser.use_reg = True
     if train_left:
         parser.EPOCHS = 100
-        [the_datasets, _, _,test_dl,_, _, _] = get_dataset_for_spatial_realtions(parser, data_path, lan_idx=0, direction_idx = 0,arg_idx=0)
+        [the_datasets, _, _,test_dl,_, _, _] = get_dataset_for_spatial_realtions(parser, data_path, lan_idx=2, direction_idx = 2, arg_idx=0)
+
         training_flag = Training_flag(train_all_model=False, train_arg=False, direction_emb=False, lang_emb=True, head_learning=True)
-        train_omniglot(parser, lang_id=1, direction_id = 1, the_datasets=the_datasets, training_flag=training_flag)
+        train_omniglot(parser, lang_id=2, direction_id = 0, the_datasets=the_datasets, training_flag=training_flag)
    # print("Done training left, with accuracy : " + str(acc))
 
 
 
-main_emnist(0,0,True,True,wd=1e-5)
+main_emnist(0,0,False,True,wd=1e-5)
