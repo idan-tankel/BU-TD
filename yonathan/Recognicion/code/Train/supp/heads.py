@@ -74,11 +74,8 @@ class MultiTaskHead(nn.Module):
             ########################
             direction_flag = flag[:, :self.ndirections]
             arg_flag = flag[:, flag.shape[1] - self.ntasks:]
-            emb_flag = flag[:, flag.shape[1] - self.ntasks * 2:flag.shape[1] - self.ntasks]
-            arg = flag[:, self.ndirections:flag.shape[1] - 2 * self.ntasks]
-            lan_id = flag_to_task(emb_flag)
             arg_id = flag_to_task(arg_flag)
-            ones = emb_flag[:, lan_id].view([-1, 1])
+
             ##################
             task_id = arg_id
             direction_idx = flag_to_task(direction_flag)
@@ -87,6 +84,8 @@ class MultiTaskHead(nn.Module):
             direction_flag = flag[:, :self.ntasks]
             direction_idx = flag_to_task(direction_flag)  # #TODO- change flag_to_direction -> flag_to_task
             task_id = 0
+            task_id = direction_idx
+            direction_idx = 0
 
         bu2_out = bu2_out.squeeze()  # Make it 1-dimensional.
         task_out = self.taskhead[task_id][direction_idx](bu2_out)  # apply the appropriate task-head.

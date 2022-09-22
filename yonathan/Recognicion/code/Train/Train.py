@@ -81,7 +81,7 @@ def main_omniglot(language_idx,train_right,train_left,wd):
         training_flag = Training_flag(train_all_model = False, train_arg = False, direction_emb = False,lang_emb = True, head_learning=True)
         train_omniglot(parser, direction_id = 1, the_datasets=the_datasets, training_flag=training_flag, lang_id = 0)
 
-main_omniglot(-1,True, True,wd=1e-5)
+main_omniglot(-1,False, True,wd=1e-4)
 #main_emnist(0,0,False,True,wd=1e-4)
 
 

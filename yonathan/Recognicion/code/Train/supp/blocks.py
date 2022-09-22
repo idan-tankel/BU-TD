@@ -226,10 +226,11 @@ class BasicBlockBU(nn.Module):
         self.nembs = 2 if self.use_double_emb else 1
         self.lang_embedding = [[] for _ in range(self.ntasks)]
         self.direction_embedding = [[] for _ in range(self.ndirections)]
+        self.ds_type = opts.ds_type
         block_inshapes = inshapes[self.idx+1]
         shape_spatial = block_inshapes[1:]  # computing the shape for the channel and pixel modulation.
         if self.flag_at is Flag.SF and self.is_bu2:  # If BU2 stream create the task embedding.
-            self.task_embedding = [[] for _ in range(self.ntasks)]  # The parameters stored as task embedding.
+        #    self.task_embedding = [[] for _ in range(self.ntasks)]  # The parameters stored as task embedding.
             self.task_embedding_layers = []
             self.channel_modulation_after_conv1 = Modulation(nchannels, False,
                                                              self.ntasks)  # channel modulation after conv1
@@ -245,7 +246,7 @@ class BasicBlockBU(nn.Module):
             self.task_embedding_layers.append(self.pixel_modulation_after_conv2)
             for layer in self.task_embedding_layers:  # store for each task its task embedding
                 for i in range(self.ntasks):
-                    self.task_embedding[i].extend(layer.task_embedding[i])
+                    self.lang_embedding[i].extend(layer.task_embedding[i])
 
         if self.flag_at is Flag.SF and self.is_bu2 and self.use_double_emb :
             shape_first_block = inshapes[self.idx + 1]
@@ -292,7 +293,11 @@ class BasicBlockBU(nn.Module):
         x = self.conv1(x)  # perform conv
 
         if self.flag_at is Flag.SF and self.is_bu2:  # perform the task embedding if needed.
-            flag_ = flag[:, flag.shape[1]-2*self.ntasks: flag.shape[1]-self.ntasks]
+            if self.ds_type is DsType.Omniglot:
+             flag_ = flag[:, flag.shape[1]-2*self.ntasks: flag.shape[1]-self.ntasks]
+            else:
+             flag_ = flag[:,:self.ntasks]
+
             x = self.pixel_modulation_after_conv1(x, flag_)
             x = self.channel_modulation_after_conv1(x, flag_)
 
