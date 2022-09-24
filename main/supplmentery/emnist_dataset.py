@@ -100,6 +100,28 @@ def inputs_to_struct(inputs):
         _type_: _description_
     """    
     sample = SimpleNamespace(image = inputs[0], label_existence = inputs[1], label_all = inputs[2], label_task = inputs[3], id = inputs[4], flag = inputs[5])
+    # compute the label for each direction around each sample
+    # each sample has shape of (number_of_rows,number_of_columns) which is in the config file
+    # we will use a trick - we will pad the existing tensor (label_all) and then
+    # instead of acting on each element a function that will return the 4 surrounding elements, we will use a convolution with the following filter
+    # 0 1 0
+    # 1 0 1
+    # 0 1 0
+    sample.label_all
+    border_value = 47
+    # pad all directions with 47 which is the N/A class
+    label_all_pad = torch.nn.functional.pad (sample.label_all, (1, 1, 1, 1), mode = 'constant', value = border_value)
+    # batch_size
+    kernel = torch.zeros(label_all_pad.shape[0],1,3,3).type(dtype=torch.float).to(device=label_all_pad.device)
+    kernel[0,0,1,1]
+    kernel[0, 0, 1, 0] = 1.0   # right
+    kernel[1, 0, 1, 2] = 1.0   # left
+    kernel[2, 0, 0, 1] = 1.0   # up
+    kernel[3, 0, 2, 1] = 1.0   # down
+    ntasks = 4
+    sample.arg = sample.flag[:,ntasks:].argmax(dim=1) # 4 is the number of tasks, and as the flag is splitted - the first 4 are the adj_type and the last 4 are the char
+    # TODO change this to use the sample class! all this thing should be in the __init__ of the class!!
+    sample.label_all_directions = torch.nn.functional.conv2d (label_all_pad.unsqueeze(1).type(torch.float), kernel)
     return sample
 
 class EMNISTAdjDatasetNew2(EMNISTAdjDatasetBase):

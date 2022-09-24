@@ -80,7 +80,7 @@ def train_emnist(embedding_idx=1, flag_at=FlagAt.SF,
     # print(accuracy(parser, val_dl))
     training_functions.train_model(
         parser, the_datasets, learned_params, embedding_idx, model)
-    visuialize_predctions.visualize(parser, train_dataset)
+    # visuialize_predctions.visualize(parser, train_dataset)
 
 
 def main():

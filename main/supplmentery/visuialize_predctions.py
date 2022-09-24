@@ -3,7 +3,7 @@
 from hashlib import blake2b
 import numpy as np
 import matplotlib
-matplotlib.use('tkAgg')
+# matplotlib.use('tkAgg')
 import matplotlib.pyplot as plt
 # from supp.FlagAt import *
 # from supp.measurments import get_model_outs

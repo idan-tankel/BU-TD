@@ -63,7 +63,7 @@ Models:
 
 
 Training:
-  bs: 2 # batch size (int)
+  bs: 10 # batch size (int)
   num_workers: 2
   epochs: 200
   momentum: 0.9 # (`float`) Momentum of the Adam optimizer
