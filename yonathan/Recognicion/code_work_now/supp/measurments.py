@@ -4,19 +4,18 @@ from torch.utils.data import DataLoader
 import torch.nn as nn
 import argparse
 
+
 def get_model_outs(model: nn.Module, outs: list[torch]) -> object:
     """
     :param model: The model
     :param outs: The list of outputs of the model from all the streams.
     :return: struct containing all tensor in the list
     """
-  #  model = opts.model
-  #  print(model.module.outs_to_struct())
     if type(model) is torch.nn.DataParallel or type(model) is torch.nn.parallel.DistributedDataParallel:
-
-        return (model.module.outs_to_struct)(outs)  # Use outs_to_struct to transform from list -> struct
+        return model.module.outs_to_struct(outs)  # Use outs_to_struct to transform from list -> struct
     else:
         return model.outs_to_struct(outs)
+
 
 class MeasurementsBase:
     """

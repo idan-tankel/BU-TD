@@ -3,6 +3,7 @@ import os
 import shutil
 import sys
 import torch
+import setuptools
 
 def reset_logger(logger):
     while len(logger.handlers) > 0:
@@ -71,11 +72,10 @@ def save_script(opts):
             shutil.copy(script_base_fname, model_dir)
 
         # copy funcs folder
-        mods = [m.__name__ for m in sys.modules.values() if 'supp' in m.__name__]
+        mods = 'supp'
         if len(mods)>0:
-            mods=mods[0]
-            mods = mods.split('.')
-            funcs_version=mods[0]
+            mods=mods
+            funcs_version=mods
             if not os.path.exists(os.path.join(model_dir,funcs_version)):
              shutil.copytree(funcs_version, os.path.join(model_dir,funcs_version))
 
