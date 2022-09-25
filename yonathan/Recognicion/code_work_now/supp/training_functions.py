@@ -2,16 +2,13 @@ import torch.optim as optim
 import logging
 import os
 import numpy as np
-import argparse
 import time
 import torch
 import shutil
-import torch
-import torch.nn as nn
+from supp.create_model import *
+from supp.batch_norm import *
 from torch.utils.data import DataLoader
-from supp.FlagAt import Flag, DsType
-from supp.general_functions import instruct
-from supp.batch_norm import store_running_stats
+
 
 class DatasetInfo:
     """encapsulates a (train/test/validation) dataset with its appropriate train or test function and Measurement class"""
@@ -99,7 +96,7 @@ class DatasetInfo:
         self.measurements.add_history(epoch)  # Update the loss and accuracy history.
 
 
-def train_model(args: argparse, the_datasets: list, learned_params: list, lang_id,direction_id) -> None:
+def train_model(args: argparse, the_datasets: list, learned_params: list, task_id: int,direction) -> None:
     """
     :param args: The model options.
     :param the_datasets: The datasets.
@@ -129,7 +126,7 @@ def train_model(args: argparse, the_datasets: list, learned_params: list, lang_i
         lmbda = lambda epoch: args.learning_rates_mult[epoch]
         scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lmbda)
     args.scheduler = scheduler
-    fit(args, the_datasets, lang_id,direction_id)
+    fit(args, the_datasets, task_id,direction)
 
 def create_optimizer_and_sched(opts: argparse,learned_params:list) -> tuple:
     """
@@ -145,9 +142,7 @@ def create_optimizer_and_sched(opts: argparse,learned_params:list) -> tuple:
                                                     cycle_momentum=True, base_momentum=0.8, max_momentum=0.9,
                                                     last_epoch=-1)
     else:
-
         optimizer = optim.Adam(learned_params, lr=opts.base_lr, weight_decay=opts.wd)
-
         if opts.cycle_lr:
             scheduler = optim.lr_scheduler.CyclicLR(optimizer, base_lr=opts.base_lr, max_lr=opts.max_lr,
                                                     step_size_up=opts.nbatches_train // 2, step_size_down=None,
@@ -171,11 +166,17 @@ def train_step(opts: argparse, inputs: list[torch]) -> tuple:
     """
     opts.model.train()  # Move the model into the train mode.
     outs = opts.model(inputs)  # Compute the model output.
-    loss = opts.loss_fun(opts, inputs, outs)  # Compute the loss.
-    wandn.log({"loss":loss})
+    loss = opts.loss_fun(opts.model, inputs, outs)  # Compute the loss.
     opts.optimizer.zero_grad()  # Reset the optimizer.
     loss.backward()  # Do a backward pass.
     opts.optimizer.step()  # Update the model.
+    for n, p in enumerate(opts.optimizer.param_groups[0]['params']):
+      '''
+       if p.grad!=None:
+           if (p.grad != torch.zeros_like(p)).sum() == 0.0:
+               print(n)
+               print(p.grad)
+       '''
     if type(opts.scheduler) in [optim.lr_scheduler.CyclicLR,
                                 optim.lr_scheduler.OneCycleLR]:  # Make a scedular step if needed.
         opts.scheduler.step()
@@ -192,8 +193,7 @@ def test_step(opts: argparse, inputs: list[torch]) -> tuple:
     opts.model.eval()  # Move the model to evaluation mode in order to not change the running statistics of the batch layers.
     with torch.no_grad():  # Don't need to compute grads.
         outs = opts.model(inputs)  # Compute the model outputs.
-        loss = opts.loss_fun(opts, inputs, outs)  # Compute the loss.
-        wandn.log({"loss": loss})
+        loss = opts.loss_fun(opts.model, inputs, outs)  # Compute the loss.
     return loss, outs  # Return the loss and the output.
 
 
@@ -229,7 +229,7 @@ def save_model_and_md(logger: logging, model_fname: str, metadata: dict, epoch: 
     logger.info('Saved model')
 
 
-def load_model(model: argparse, model_path: str, model_latest_fname: str, gpu=None,
+def load_model(opts: argparse, model_path: str, model_latest_fname: str, gpu=None,
                load_optimizer_and_schedular: bool = False) -> dict:
     """
     Loads and returns the model as a dictionary.
@@ -247,7 +247,7 @@ def load_model(model: argparse, model_path: str, model_latest_fname: str, gpu=No
         # Map model to be loaded to specified single gpu.
         loc = 'cuda:{}'.format(gpu)
         checkpoint = torch.load(model_path, map_location=loc)
-    model.load_state_dict(checkpoint['model_state_dict'])  # Loading the epoch_id, the optimum and the data.
+    opts.model.load_state_dict(checkpoint['model_state_dict'])  # Loading the epoch_id, the optimum and the data.
     if load_optimizer_and_schedular:
         opts.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])  # Load the optimizer state.
         opts.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])  # Load the schedular state.
@@ -265,7 +265,7 @@ class save_details_class:
         if self.dataset_saving_by == 'train':
             self.dataset_id = 0  # The dataset to save according to.
 
-        elif self.dataset_saving_by == 'test' and (opts.ds_type is DsType.Emnist or opts.ds_type is DsType.FashionMnist) and opts.generelize:
+        elif self.dataset_saving_by == 'test' and (opts.ds_type is DsType.Emnist or opts.ds_type is DsType.FashionMnist):
             self.dataset_id = 2
         else:
             self.dataset_id = 1
@@ -278,7 +278,7 @@ class save_details_class:
         else:
            self.metric_idx = 1
 
-def fit(opts: argparse, the_datasets: list, lan_id:int,direction_id:int) -> None:
+def fit(opts: argparse, the_datasets: list, task: int,direction) -> None:
     """
     Fitting the model.
     iterate over the datasets and train (or test) them
@@ -293,7 +293,7 @@ def fit(opts: argparse, the_datasets: list, lan_id:int,direction_id:int) -> None
     scheduler = opts.scheduler  # Getting the scheduler,
     nb_epochs = opts.EPOCHS  # Getting the number of epoch we desire to train for,
     model_dir = opts.model_dir  # Getting the model directory.
-    direction = '_right' if direction_id == 0 else '_left'
+    direction = '_right' if direction == 0 else '_left'
     model_ext = '.pt'
     model_basename = 'model'
     model_latest_fname = model_basename + '_latest' + direction + model_ext
@@ -328,8 +328,8 @@ def fit(opts: argparse, the_datasets: list, lan_id:int,direction_id:int) -> None
             the_dataset.do_epoch(opts, epoch)
         opts.logger.info('Epoch {} done'.format(epoch + 1))  # logger info done the epoch.
         #
-        store_running_stats(opts.model, lan_id,direction_id)  # Storing the running stats to avoid forgetting.
-        logger.info('epoch {} done storing running stats direction = {}, language_id = {}'.format(epoch + 1, direction_id, lan_id))  # Adding to the logger.
+        store_running_stats(opts.model, task)  # Storing the running stats to avoid forgetting.
+        logger.info('epoch {} done storing running stats task = {}'.format(epoch + 1,task))  # Adding to the logger.
         #   print("Done storing running stats!")
         #
         for the_dataset in the_datasets:  # Printing the loss, accuracy per dataset.
@@ -372,10 +372,7 @@ def fit(opts: argparse, the_datasets: list, lan_id:int,direction_id:int) -> None
                 shutil.copyfile(model_latest_fname, model_fname)
                 logger.info('Saved model to %s' % model_fname)
                 #
-                model_fname = model_basename + '_best'   + direction + model_ext
-                model_fname = os.path.join(model_dir, model_fname)
-                shutil.copyfile(model_latest_fname, model_fname)
-                logger.info('Saved model to %s' % model_fname)
 
+                #
 
     logger.info('Done fit')
