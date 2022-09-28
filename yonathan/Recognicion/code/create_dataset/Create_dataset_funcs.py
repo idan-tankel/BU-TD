@@ -460,7 +460,7 @@ def Make_data_dir(parser:argparse,ds_type, language_list:list)->tuple:
     base_storage_dir = '%d_' % (parser.num_characters_per_sample)
     if ds_type.from_enum_to_str() == 'omniglot':
 
-     base_storage_dir += 'extended_testing_' + str(language_list[0])
+     base_storage_dir += 'extended_' + str(language_list[0])
     else:
         base_storage_dir += 'extended'
     base_samples_dir = os.path.join(parser.store_folder, base_storage_dir)
@@ -469,7 +469,7 @@ def Make_data_dir(parser:argparse,ds_type, language_list:list)->tuple:
     Meta_data_fname = os.path.join(base_samples_dir, 'MetaData')
     return base_samples_dir, Meta_data_fname
 
-def create_samples(parser:argparse, ds_types:list[str], nexamples_vec:list[int],image_ids:list,storage_dir:str, valid_pairs:np.array, valid_classes:np.array, CG_chars_list:list, raw_data_set:DataSet)->dict:
+def create_samples(parser:argparse,image_ids:list, valid_classes:np.array, raw_data_set:DataSet)->dict:
     """
     Creating samples.
     Args:
@@ -486,6 +486,20 @@ def create_samples(parser:argparse, ds_types:list[str], nexamples_vec:list[int],
     Returns: A dictionary assigning for each dataset the actual number of generated samples.
 
     """
+    nsamples_test = parser.nsamples_test  # The number of test samples we desire to create.
+    nsamples_train = parser.nsamples_train  # The number of train samples we desire to create.
+    nsamples_val = parser.nsamples_val  # The number of validation samples we desire to create.             # The number of queries to create for each sample.
+    storage_dir, _ = Make_data_dir(parser, ds_type, language_list)
+    # Get the storage dir for the data and for the conf file.
+    ds_types = ['test', 'train']  # The dataset types.
+    nexamples_vec = [nsamples_test, nsamples_train]
+    if generalize:  # if we want also the CG dataset we add its name to the ds_type and the number of needed samples.
+        nexamples_vec.append(nsamples_val)
+        ds_types.append('val')
+        valid_pairs, CG_chars_list = Get_valid_pairs_for_the_combinatorial_test(parser, nclasses, valid_classes)
+    else:
+        valid_pairs, CG_chars_list = None, []
+
     num_samples_per_data_type_dict = {}
     for k, (ds_type, cur_nexamples) in enumerate(zip(ds_types, nexamples_vec)):
         examples = Generate_raw_examples(parser, image_ids, k, ds_type, cur_nexamples, valid_pairs, valid_classes,CG_chars_list, raw_data_set)
@@ -508,28 +522,17 @@ def main( ds_type:DataSet, language_list = None ) -> None:
     parser = Get_parser(ds_type)
     raw_data_set = DataSet(parser, data_dir='/home/sverkip/data/BU-TD/yonathan/Recognicion/data/' + ds_type.from_enum_to_str(),  dataset=ds_type, raw_data_source = parser.path_data_raw_for_omniglot,  language_list=language_list)  # Getting the raw data.
     #
-    nsamples_test = parser.nsamples_test  # The number of test samples we desire to create.
-    nsamples_train = parser.nsamples_train  # The number of train samples we desire to create.
-    nsamples_val = parser.nsamples_val  # The number of validation samples we desire to create.             # The number of queries to create for each sample.
+
     nclasses = raw_data_set.nclasses  # The number of classes in the dataset.
     parser.letter_size = raw_data_set.letter_size
     valid_classes = Get_valid_classes_for_emnist_only(ds_type, parser.use_only_valid_classes, nclasses)  # The valid classes, relevant for mnist.
     generalize = parser.generalize  # Whether to create the combinatorial generalization dataset.
     image_ids = set()
-    storage_dir, _ = Make_data_dir(parser,ds_type, language_list)
-    # Get the storage dir for the data and for the conf file.
-    ds_types = ['test', 'train']  # The dataset types.
-    nexamples_vec = [nsamples_test, nsamples_train]
-    if generalize:  # if we want also the CG dataset we add its name to the ds_type and the number of needed samples.
-        nexamples_vec.append(nsamples_val)
-        ds_types.append('val')
-        valid_pairs, CG_chars_list = Get_valid_pairs_for_the_combinatorial_test(parser, nclasses, valid_classes)
-    else:
-        valid_pairs, CG_chars_list = None, []
+
     # Iterating over all dataset types, and its number of desired number of samples.
     nsamples_per_data_type_dict = create_samples(parser, ds_types, nexamples_vec, image_ids, storage_dir, valid_pairs, valid_classes, CG_chars_list, raw_data_set )
     print('Done creating and storaging the samples, we are left only with saving the meta data and the code script.')  # Done creating and storing the samples.
-    Save_meta_data_and_code_script(parser, ds_type,nsamples_per_data_type_dict, valid_classes, language_list)
+    Save_meta_data_and_code_script(parser, ds_type, nsamples_per_data_type_dict, valid_classes, language_list)
     print('Done saving the source code and the meta data!')
 
 def Save_meta_data_and_code_script(parser:argparse,ds_type, nsamples_per_data_type_dict:dict, valid_classes:np.array, language_list:list):

@@ -73,7 +73,7 @@ class DataAugmentClass:
         color_add_range = int(0.2 * 255)
         rotate_deg = 10
         # translate by -20 to +20 percent (per axis))
-        self.aug = iaa.Sequential([iaa.Affine(translate_percent={"x": (-0.06, 0.06), "y": (-0.1, 0.1)},  rotate=(-rotate_deg, rotate_deg), mode='edge', name='affine'), ], random_state=0)
+        self.aug = iaa.Sequential([iaa.Affine(translate_percent={"x": (-0.05, 0.05), "y": (-0.1, 0.1)},  rotate=(-rotate_deg, rotate_deg), mode='edge', name='affine'), ], random_state=0)
         self.aug.append(iaa.Add((-color_add_range, color_add_range)))  # only for the image not the segmentation
         self.aug_seed = seed
 
@@ -103,8 +103,8 @@ class CharInfo:
             samplei: The sample id.
             sample_chars: The sampled characters list
         """
-        minscale = 0.5
-        maxscale = 1.0
+        minscale = 1.0
+        maxscale = 1.5
         minshift = 2.0
         maxshift = .2 * parser.letter_size
         # place the chars on the image
