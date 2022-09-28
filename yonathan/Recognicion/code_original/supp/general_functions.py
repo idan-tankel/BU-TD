@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import argparse
 import torch.optim as optim
+import os
 
 def flag_to_task(flag: torch) -> int:
     """
@@ -37,6 +38,53 @@ def get_laterals(laterals: list[torch], layer_id: int, block_id: int) -> torch:
     else:
         return None
 
+def folder_size(path: str) -> int:
+    """
+    Returns the number of files in a given folder.
+    Args:
+        path: Path to a language file.
+
+    Returns: Number of files in the folder
+
+    """
+    return len([_ for _ in os.scandir(path)])
+
+def create_dict(path: str) -> dict:
+    """
+    Args:
+        # TODO - GET RID OF THIS FUNCTION AND GET IT FROM THE DATA ITSELF.
+        path: Path to all raw Omniglot languages.
+
+    Returns: Dictionary of number of characters per language
+
+    """
+    dict_language = {}
+    cnt = 0
+    for ele in os.scandir(path):  # for language in Omniglot_raw find the number of characters in it.
+        dict_language[cnt] = folder_size(ele)  # Find number of characters in the folder.
+        cnt += 1
+    return dict_language
+
+def get_omniglot_dictionary(initial_tasks:list, ntasks:int, raw_data_folderpath: str) -> dict:
+    """
+    Args:
+        initial_tasks: The initial tasks set.
+        ntasks: The number of tasks.
+        raw_data_folderpath: The path to the raw data.
+
+    Returns: A dictionary assigning for each task its number of characters.
+
+    """
+    nclasses_dictionary = {}
+    dictionary = create_dict(raw_data_folderpath)
+    nclasses_dictionary[0] = sum(
+        dictionary[task] for task in initial_tasks)  # receiving number of characters in the initial tasks.
+    nclasses = []
+    for i in range(ntasks - 1):  # copying the number of characters for all classes
+        nclasses_dictionary[i + 1] = dictionary[i]
+    for i in range(ntasks):  # creating nclasses according to the dictionary and num_chars
+        nclasses.append(nclasses_dictionary[i])
+    return nclasses
 
 class depthwise_separable_conv(nn.Module):
 

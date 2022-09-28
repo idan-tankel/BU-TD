@@ -10,12 +10,16 @@ def Get_raw_data(download_dir:str, dataset:str,language_list, raw_data_source)->
     """
     Args:
         download_dir: The directory to download the raw data into.
-        dataset: The dataset type e.g. emnist, cifar10.
+        dataset: The dataset type e.g. emnist, fashiomnist.
+        language_list: The language list for omniglot
+        raw_data_source: The raw data source for omniglot.
+
     Returns: The images, labels, the raw character size, the number of channels.
+
     """
     # Getting the raw train, test data.
 
-    if dataset.ds_name == 'omniglot':
+    if dataset.from_enum_to_str() == 'omniglot':
         letter_size = 28
         nchannels = 1
         transform = transforms.Compose( [transforms.ToTensor(), transforms.functional.invert, transforms.Resize([28, 28])])
@@ -31,10 +35,8 @@ def Get_raw_data(download_dir:str, dataset:str,language_list, raw_data_source)->
         num_labels = len(images_arranged) // 20
         labels_arranged = sum([num_images_per_label * [i] for i in range(num_labels)], [])
     else:
-
-        rotate = (0, 1)
         nchannels = 1
-        if dataset.ds_name == 'emnist':
+        if dataset.from_enum_to_str() == 'emnist':
             train_raw_dataset = torchvision.datasets.EMNIST(
                 download_dir,
                 download=True,
@@ -57,30 +59,20 @@ def Get_raw_data(download_dir:str, dataset:str,language_list, raw_data_source)->
                     torchvision.transforms.ToTensor()
                 ])
             )
-            len_train_raw_dataset = len(train_raw_dataset)
-            len_test_raw_dataset = len(test_raw_dataset)
+
             shape = (1, 28, 28)
 
         elif dataset.ds_name == 'fashionmnist':
             train_raw_dataset = torchvision.datasets.FashionMNIST(download_dir, train=True, download=True)
-            len_train_raw_dataset = len(train_raw_dataset)
             test_raw_dataset = torchvision.datasets.FashionMNIST(download_dir, train=False, download=True)
-            len_test_raw_dataset = len(test_raw_dataset)
             shape = (1,28,28)
 
-        if dataset.ds_name == 'kmnist':
+        if dataset.from_enum_to_str() == 'kmnist':
             train_raw_dataset = torchvision.datasets.KMNIST(download_dir, train=True, download=True)
             test_raw_dataset = torchvision.datasets.KMNIST(download_dir, train=False, download=True)
 
-        if dataset.ds_name =='SVHN' :
-            shape = (3, 32, 32)
-            train_raw_dataset = torchvision.datasets.SVHN(download_dir, split = 'extra', download = True)
-            test_raw_dataset = torchvision.datasets.SVHN(download_dir, split = 'test', download = True)
-            len_train_raw_dataset = 50000
-            len_test_raw_dataset = 10000
-
-        images = [np.array(train_raw_dataset[i][0]) for i in range(len_train_raw_dataset)]
-        images.extend([np.array(test_raw_dataset[i][0]).reshape(shape) for i in range(len_test_raw_dataset)])
+        images = [np.array(train_raw_dataset[i][0]) for i in range(len(train_raw_dataset))]
+        images.extend([np.array(test_raw_dataset[i][0]).reshape(shape) for i in range(len(test_raw_dataset))])
         labels = [train_raw_dataset[i][1] for i in range(len(train_raw_dataset))]
         labels.extend([test_raw_dataset[i][1] for i in range(len(test_raw_dataset))])
         letter_size = images[0].shape[1]
@@ -95,13 +87,14 @@ class DataSet(data.Dataset):
     def __init__(self,parser, data_dir:str, dataset:str,language_list:list,raw_data_source:str):
         """
         Args:
+            parser: The data-set options.
             data_dir: The data we want to store the raw data into, in order to not re-download the raw data again.
             dataset: The dataset type.
             language_list: The language list for the Omniglot dataset.
             raw_data_source: # The Raw data source for the Omniglot dataset.
         """
         data_dir = os.path.join(data_dir,'RAW')
-        download_raw_data_dir = os.path.join(data_dir, f'{dataset.ds_name}_raw', ) # The path we download the raw data into.
+        download_raw_data_dir = os.path.join(data_dir, f'{dataset.from_enum_to_str()}_raw', ) # The path we download the raw data into.
         self.images, self.labels, self.letter_size, self.nchannels = Get_raw_data(download_raw_data_dir, dataset = dataset,language_list = language_list,raw_data_source = raw_data_source)
         self.nclasses = len(set(self.labels))
         self.num_examples_per_character = len(self.labels) // self.nclasses

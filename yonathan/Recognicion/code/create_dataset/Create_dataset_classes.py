@@ -2,15 +2,25 @@ import numpy as np
 from torchvision import transforms
 import argparse
 import random
+import imgaug
+from imgaug import augmenters as iaa
+from enum import Enum, auto
 
+class DsType(Enum):
+    Emnist = auto()
+    Kmnist = auto()
+    Omniglot =auto()
+    Fashionmist =auto()
 
-class DsType:
-    """
-    Class holding all dataset types the code can handle.
-    """
-    def __init__(self,ds_name):
-        assert ds_name in ['emnist','fashionmnist','omniglot','kmnist','SVHN']
-        self.ds_name = ds_name
+    def from_enum_to_str(self):
+        if self == DsType.Emnist:
+            return "emnist"
+        if self == DsType.Kmnist:
+            return "kmnist"
+        if self == DsType. Omniglot:
+            return "omniglot"
+        if self == DsType.Fashionmist:
+            return "Fashionmist"
 
 class Sample:
     #Class containing all information about the sample, including the image, the flags, the label task.
@@ -18,7 +28,6 @@ class Sample:
         """
         #Class containing all information about the sample, including the image, the flags, the label task.
         Args:
-            infos: All information about all characters in the image.
             image: The image.
             sample_id: The id.
             label_existence: The label existence.
@@ -41,7 +50,7 @@ class ExampleClass:
     def __init__(self,sampled_chars:list,query_part_id:int,adj_type:int,chars:list):
         """
         Args:
-            sample: The sample.
+            sampled_chars: The sampled characters
             query_part_id: The index we query about.
             adj_type: The direction we query about.
             chars: The list of all characters in the sample.
@@ -51,39 +60,38 @@ class ExampleClass:
         self.adj_type = adj_type
         self.chars = chars
 
-
 class DataAugmentClass:
     """
     class performing the augmentation.
     """
-    def __init__(self, image:np.array, label_existence:np.array, aug_data:transforms,augment:bool):
+    def __init__(self, seed:int):
         """
         Args:
-            image: The image we want to augment.
-            label_existence: The label existence.
-            aug_data: The data augmentation transform.
+            seed: The seed for the generation.
         """
-        self.images = image[np.newaxis]
-        self.labels = label_existence[np.newaxis]
-        self.batch_range = range(1)
-        self.aug_data = aug_data
-        self.augment = augment
 
-    def get_batch_base(self):
-        batch_range = self.batch_range
-        batch_images = self.images[batch_range]
+        color_add_range = int(0.2 * 255)
+        rotate_deg = 10
+        # translate by -20 to +20 percent (per axis))
+        self.aug = iaa.Sequential([iaa.Affine(translate_percent={"x": (-0.06, 0.06), "y": (-0.1, 0.1)},  rotate=(-rotate_deg, rotate_deg), mode='edge', name='affine'), ], random_state=0)
+        self.aug.append(iaa.Add((-color_add_range, color_add_range)))  # only for the image not the segmentation
+        self.aug_seed = seed
 
-        aug = self.aug_data
-        augment_type = 'aug_package'
-        if self.augment:
-            aug_seed = aug.aug_seed
-            if augment_type == 'aug_package':
-                aug.seed_(aug_seed)
-                batch_images = aug.augment_images(batch_images)
-                aug.aug_seed += 1
-        return batch_images[0]
+    def __call__(self, image):
+        """
+        Applying the data augmentation on the image.
+        Args:
+            image: 
 
-# TODO - RECEIVE THE CHARINFO OF ALL PREVIOUS CHARS.
+        Returns:
+
+        """
+        aug = self.aug
+        aug_seed = self.aug_seed
+        aug.seed_(aug_seed)
+        aug_images = aug.augment_images([image])
+        return aug_images[0]
+
 
 class CharInfo:
     def __init__(self,parser:argparse, prng:random,label_ids:list,samplei:int,sample_chars:int ):
@@ -95,8 +103,8 @@ class CharInfo:
             samplei: The sample id.
             sample_chars: The sampled characters list
         """
-        minscale = 1.0
-        maxscale = 1.5
+        minscale = 0.5
+        maxscale = 1.0
         minshift = 2.0
         maxshift = .2 * parser.letter_size
         # place the chars on the image

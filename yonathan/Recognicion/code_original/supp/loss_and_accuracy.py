@@ -91,6 +91,8 @@ class UnifiedLossFun:
         self.bu1_loss = opts.bu1_loss
         self.bu2_classification_loss = opts.bu2_loss
         self.inputs_to_struct = opts.model.module.inputs_to_struct
+        self.opts = opts
+        self.use_reg = opts.use_reg
 
     def __call__(self, model, inputs: list[torch], outs: list) -> float:
         """
@@ -111,9 +113,11 @@ class UnifiedLossFun:
         if self.use_bu2_loss:
             loss_task = self.bu2_classification_loss()(outs, samples)  # Compute the BU2 loss.
             loss += loss_task
+        if self.use_reg:
+            loss += self.opts.reg.loss_step()
         return loss
 
-def accuracy(opts: nn.Module, test_data_loader: DataLoader) -> float:
+def accuracy(model: nn.Module, test_data_loader: DataLoader) -> float:
     """
     Args:
         opts: The model options.
@@ -126,10 +130,10 @@ def accuracy(opts: nn.Module, test_data_loader: DataLoader) -> float:
     for inputs in test_data_loader:  # Running over all inputs
         inputs = preprocess(inputs)  # Move to the cuda.
         num_samples += len(inputs[0])  # Update the number of samples.
-        samples = opts.model.module.inputs_to_struct(inputs)  # Make it struct.
-        opts.model.eval() #
-        outs = opts.model(inputs)  # Compute the output.
-        outs = get_model_outs(opts.model, outs)  # From output to struct
+        samples = model.module.inputs_to_struct(inputs)  # Make it struct.
+        model.train() #
+        outs = model(inputs)  # Compute the output.
+        outs = get_model_outs(model, outs)  # From output to struct
         (_, task_accuracy_batch) = multi_label_accuracy_base(outs, samples)  # Compute the accuracy on the batch
         num_correct_pred += task_accuracy_batch.sum()  # Sum all accuracies on the batches.
     return num_correct_pred / num_samples  # Compute the mean.

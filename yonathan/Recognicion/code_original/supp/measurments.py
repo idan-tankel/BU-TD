@@ -4,12 +4,14 @@ from torch.utils.data import DataLoader
 import torch.nn as nn
 import argparse
 
-
 def get_model_outs(model: nn.Module, outs: list[torch]) -> object:
     """
-    :param model: The model
-    :param outs: The list of outputs of the model from all the streams.
-    :return: struct containing all tensor in the list
+    Args:
+        model: The model.
+        outs: The model outs.
+
+    Returns: The outs arranged in a class.
+
     """
     if type(model) is torch.nn.DataParallel or type(model) is torch.nn.parallel.DistributedDataParallel:
         return model.module.outs_to_struct(outs)  # Use outs_to_struct to transform from list -> struct
@@ -24,7 +26,8 @@ class MeasurementsBase:
 
     def __init__(self, opts):
         """
-        :param opts:
+        Args:
+            opts: The model options.
         """
         self.opts = opts
         self.names = ['Loss']  # an attribute(loss) to update.
@@ -39,12 +42,15 @@ class MeasurementsBase:
 
     # update metrics for current batch and epoch (cumulative)
     # here we update the basic metric (loss). Subclasses should also call update_metric()
-    def update(self, inputs: list[torch], outs: list[torch], loss: float) -> None:
+    def update(self, inputs: list[torch], outs: list[torch], loss: float) :
         """
-        :param inputs:The input to the model in the current stage.
-        :param loss: The loss computed on the batch.
-        :return: None
+        Args:
+            inputs: input to the model in the current stage.
+            outs: The model outs.
+            loss: The loss computed on the batch.
+
         """
+
         cur_batch_size = inputs[0].shape[0]  # Getting the batch size as the first dimension.
         self.loss += loss * cur_batch_size  # Add to the loss the batch_size * the average loss on the batch size.
         self.nexamples += cur_batch_size  # Add to the number of the seen samples.
@@ -52,27 +58,31 @@ class MeasurementsBase:
         self.cur_batch_size = cur_batch_size  # Update the current batch_size
 
     # update next metric for current batch
-    def update_metric(self, metric: np.array, batch_sum: np.array) -> None:
+    def update_metric(self, metric: np.array, batch_sum: np.array):
         """
-        :param metric: float np.array
-        :param batch_sum: float np.array
-        :return:
+        Args:
+            metric: The metric we want to update.
+            batch_sum: The batch sum.
+
         """
         self.metrics_cur_batch += [batch_sum]
         metric += batch_sum
 
     def get_history(self):
         """
-        :return: the average loss until the current stage.
+        Returns the average loss until the current stage.
         """
         return np.array(self.metrics) / self.nexamples
 
     # store the epoch's metrics
-    def add_history(self, epoch):
+    def add_history(self, epoch:int):
         """
-        :param epoch: The epoch number.
-        :extends the current history.
+        Extends the current history.
+        Args:
+            epoch: The epoch number.
+
         """
+
         if epoch + 1 > len(self.results):  # If extension is needed and there is no place left.
             more = np.full(((epoch + 1), self.n_measurements),
                            np.nan)  # Create an extension of size epoch + 1 - len(self.n_measurements)
