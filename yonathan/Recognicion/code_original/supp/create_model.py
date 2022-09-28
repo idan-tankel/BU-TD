@@ -4,14 +4,11 @@ import torch
 import torch.nn as nn
 from supp.models import BUModelSimple, BUTDModelShared
 
-"""
-  Creating a model and make it parallel and move it to the cuda.
-  :param args: arguments to create the model according to.
-  :return: The desired model.
-  """
+
 
 def create_model(opts: argparse) -> nn.Module:
     """
+    Creating the model according to the opts, the default is BUTD model.
     Args:
         opts: The model options.
 

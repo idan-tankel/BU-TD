@@ -61,6 +61,7 @@ def Generate_raw_examples(parser:argparse, image_ids:list, k:int, ds_type:str, c
     num_chars_per_image = parser.num_characters_per_sample
     examples = [] # Initialize the examples list.
     for i in range(cur_nexamples):  # Iterating over the number of samples.
+        # Choosing the sequence.
         if parser.generalize:  # If generalize we get the possible pairs we can choose from.
             sample_chars = Get_sample_chars(parser,prng, valid_pairs, ds_type, valid_classes, test_chars_list)
         else:
@@ -87,12 +88,12 @@ def Generate_raw_examples(parser:argparse, image_ids:list, k:int, ds_type:str, c
         else:
             avail_adj_types = [0]
         adj_types = [prng.choice(avail_adj_types)]
-        create_examples_per_sample(parser,prng, ds_type, examples, sample_chars, chars, adj_types)
+        create_examples_per_sample(parser, prng, ds_type, examples, sample_chars, chars, adj_types)
     return examples
 
 def gen_sample(parser: argparse, sample_id: int, ds_type: str, dataloader: DataSet, example: ExampleClass) -> Sample:
     """
-    Creates a single sample including image, label_task, label_all, label_existence, query_index
+    Creates a single sample including image, label_task, label_all, label_existence, query_index.
     Args:
         parser: The option parser.
         sample_id: The sample id.
@@ -121,7 +122,7 @@ def gen_sample(parser: argparse, sample_id: int, ds_type: str, dataloader: DataS
     image = image.astype(np.uint8)
     # instruction and task label
     label_task, flag = Get_label_task(example, label_ordered, dataloader)
-    # Doing data augmentation
+    # Doing data augmentation if needed.
     if is_train and augment_sample:
         # augment
         data_augment = DataAugmentClass(sample_id)
@@ -170,7 +171,7 @@ def gen_samples(parser: argparse, dataloader: DataSet, job_id: int, range_start:
             rel_id += 1
     print('%s: Done' % (datetime.datetime.now()))
 
-def Split_data_into_jobs_and_generate_samples(parser:argparse, raw_data_set:DataSet, examples:list, storage_dir:str, ds_type:str):
+def Split_examples_into_jobs_and_generate_samples(parser:argparse, raw_data_set:DataSet, examples:list, storage_dir:str, ds_type:str):
     """
     After the examples are generate, we generate samples by splitting into parallel jobs and generate the samples including all supervision.
     Args:
@@ -309,7 +310,6 @@ def Get_label_task(example:ExampleClass, label_ordered:np.array,data_loader:data
         else:
             label_task = label_ordered[r, c - 1] # Otherwise we return the character appearing in the left.
     flag = np.array([adj_type, character]) # The flag.
-
     return label_task,flag
 
 def Get_valid_pairs_for_the_combinatorial_test(parser:argparse, nclasses:int,valid_classes:list)->tuple:
@@ -459,7 +459,6 @@ def Make_data_dir(parser:argparse,ds_type, language_list:list)->tuple:
     """
     base_storage_dir = '%d_' % (parser.num_characters_per_sample)
     if ds_type.from_enum_to_str() == 'omniglot':
-
      base_storage_dir += 'extended_' + str(language_list[0])
     else:
         base_storage_dir += 'extended'
@@ -469,23 +468,23 @@ def Make_data_dir(parser:argparse,ds_type, language_list:list)->tuple:
     Meta_data_fname = os.path.join(base_samples_dir, 'MetaData')
     return base_samples_dir, Meta_data_fname
 
-def create_samples(parser:argparse,image_ids:list, valid_classes:np.array, raw_data_set:DataSet)->dict:
+def create_samples(parser:argparse,ds_type, raw_data_set:DataSet, language_list)->dict:
     """
-    Creating samples.
     Args:
         parser: The dataset options.
-        ds_types: All data-set types.
-        nexamples_vec: The number of samples for each dataset.
-        image_ids: The image ids.
-        storage_dir: The storage directory.
-        valid_pairs: The valid pairs.
-        valid_classes: The valid classes.
-        CG_chars_list: The sequences for the CG test.
+        ds_type: All data-set types.
         raw_data_set: The raw dataset.
+        language_list: The language list for omniglot only.
 
-    Returns: A dictionary assigning for each dataset the actual number of generated samples.
+    Returns: Generating samples and returning a dictionary assigning for each dataset the actual number of generated samples.
 
     """
+
+    nclasses = raw_data_set.nclasses  # The number of classes in the dataset.
+    parser.letter_size = raw_data_set.letter_size
+    valid_classes = Get_valid_classes_for_emnist_only(ds_type, parser.use_only_valid_classes, nclasses)  # The valid classes, relevant for mnist.
+    generalize = parser.generalize  # Whether to create the combinatorial generalization dataset.
+    image_ids = set()
     nsamples_test = parser.nsamples_test  # The number of test samples we desire to create.
     nsamples_train = parser.nsamples_train  # The number of train samples we desire to create.
     nsamples_val = parser.nsamples_val  # The number of validation samples we desire to create.             # The number of queries to create for each sample.
@@ -496,18 +495,19 @@ def create_samples(parser:argparse,image_ids:list, valid_classes:np.array, raw_d
     if generalize:  # if we want also the CG dataset we add its name to the ds_type and the number of needed samples.
         nexamples_vec.append(nsamples_val)
         ds_types.append('val')
-        valid_pairs, CG_chars_list = Get_valid_pairs_for_the_combinatorial_test(parser, nclasses, valid_classes)
+        valid_pairs, CG_chars_list = Get_valid_pairs_for_the_combinatorial_test(parser, nclasses, valid_classes) # Generating valid pairs sampling from.
     else:
         valid_pairs, CG_chars_list = None, []
 
     num_samples_per_data_type_dict = {}
+    # Iterating over all dataset types and generating raw examples for each and then generating samples.
     for k, (ds_type, cur_nexamples) in enumerate(zip(ds_types, nexamples_vec)):
         examples = Generate_raw_examples(parser, image_ids, k, ds_type, cur_nexamples, valid_pairs, valid_classes,CG_chars_list, raw_data_set)
         cur_nexamples = len(examples)
         num_samples_per_data_type_dict[ds_type] = cur_nexamples
         print('total of %d examples' % cur_nexamples) # print the number of sampled examples.
         # divide all the examples across several jobs. Each job generates samples from examples
-        Split_data_into_jobs_and_generate_samples(parser,raw_data_set, examples, storage_dir, ds_type)
+        Split_examples_into_jobs_and_generate_samples(parser,raw_data_set, examples, storage_dir, ds_type)
     return num_samples_per_data_type_dict
 
 def main( ds_type:DataSet, language_list = None ) -> None:
@@ -521,21 +521,13 @@ def main( ds_type:DataSet, language_list = None ) -> None:
     """
     parser = Get_parser(ds_type)
     raw_data_set = DataSet(parser, data_dir='/home/sverkip/data/BU-TD/yonathan/Recognicion/data/' + ds_type.from_enum_to_str(),  dataset=ds_type, raw_data_source = parser.path_data_raw_for_omniglot,  language_list=language_list)  # Getting the raw data.
-    #
-
-    nclasses = raw_data_set.nclasses  # The number of classes in the dataset.
-    parser.letter_size = raw_data_set.letter_size
-    valid_classes = Get_valid_classes_for_emnist_only(ds_type, parser.use_only_valid_classes, nclasses)  # The valid classes, relevant for mnist.
-    generalize = parser.generalize  # Whether to create the combinatorial generalization dataset.
-    image_ids = set()
-
     # Iterating over all dataset types, and its number of desired number of samples.
-    nsamples_per_data_type_dict = create_samples(parser, ds_types, nexamples_vec, image_ids, storage_dir, valid_pairs, valid_classes, CG_chars_list, raw_data_set )
+    nsamples_per_data_type_dict = create_samples(parser, ds_type, raw_data_set, language_list )
     print('Done creating and storaging the samples, we are left only with saving the meta data and the code script.')  # Done creating and storing the samples.
-    Save_meta_data_and_code_script(parser, ds_type, nsamples_per_data_type_dict, valid_classes, language_list)
+    Save_meta_data_and_code_script(parser, ds_type, nsamples_per_data_type_dict,  language_list)
     print('Done saving the source code and the meta data!')
 
-def Save_meta_data_and_code_script(parser:argparse,ds_type, nsamples_per_data_type_dict:dict, valid_classes:np.array, language_list:list):
+def Save_meta_data_and_code_script(parser:argparse,ds_type, nsamples_per_data_type_dict:dict, language_list:list):
     """
     Saving the metadata and the code.
     Args:
@@ -547,7 +539,7 @@ def Save_meta_data_and_code_script(parser:argparse,ds_type, nsamples_per_data_ty
     """
     storage_dir, meta_data_fname = Make_data_dir(parser,ds_type, language_list)
     with open(meta_data_fname, "wb") as new_data_file:
-        struct = MetaData(parser, nsamples_per_data_type_dict, valid_classes)
+        struct = MetaData(parser, nsamples_per_data_type_dict)
         pickle.dump(struct, new_data_file)
     Save_script_if_needed(storage_dir)
 

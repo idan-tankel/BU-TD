@@ -219,7 +219,7 @@ class BasicBlockBU(nn.Module):
         block_inshapes = inshapes[self.idx]
         shape_spatial = block_inshapes[1:]  # computing the shape for the channel and pixel modulation.
         nchannels = block_inshapes[0]  # computing the shape for the channel and pixel modulation.
-        if self.flag_at is Flag.SF and self.is_bu2:  # If BU2 stream create the task embedding.
+        if self.flag_at is Flag.ZF and self.is_bu2:  # If BU2 stream create the task embedding.
             self.task_embedding = [[] for _ in range(opts.ndirections)]  # The parameters stored as task embedding.
             self.task_embedding_layers = []
             self.channel_modulation_after_conv1 = Modulation(opts,nchannels, False)  # channel modulation after conv1
@@ -268,7 +268,7 @@ class BasicBlockBU(nn.Module):
         inp = x  # save the inp for the skip to the end of the block
         x = self.conv1(x)  # perform conv
 
-        if self.flag_at is Flag.SF and self.is_bu2:  # perform the task embedding if needed.
+        if self.flag_at is Flag.ZF and self.is_bu2:  # perform the task embedding if needed.
             flag_ = flag[:,:self.ndirections]
             x = self.pixel_modulation_after_conv1(x, flag_)
             x = self.channel_modulation_after_conv1(x, flag_)
@@ -279,7 +279,7 @@ class BasicBlockBU(nn.Module):
         laterals_out.append(x)
         x = self.conv2(x)  # perform conv
 
-        if self.flag_at is Flag.SF and self.is_bu2:  # perform the task embedding if needed.
+        if self.flag_at is Flag.ZF and self.is_bu2:  # perform the task embedding if needed.
             flag_ = flag[:, :self.ndirections]
             x = self.pixel_modulation_after_conv2(x, flag_)
             x = self.channel_modulation_after_conv2(x, flag_)
@@ -318,8 +318,8 @@ class InitialTaskEmbedding(nn.Module):
         self.activation_fun = opts.activation_fun
         self.nclasses = opts.nclasses
         self.ds_type = opts.ds_type
-        self.train_arg_emb = opts.ds_type is DsType.Omniglot and self.model_flag is Flag.SF
-        if self.model_flag is Flag.SF:
+        self.train_arg_emb = opts.ds_type is DsType.Omniglot and self.model_flag is Flag.ZF
+        if self.model_flag is Flag.ZF:
             self.h_flag_task_td = []  # The task embedding.
             self.h_flag_arg_td = []
             self.h_top_td = nn.Sequential(nn.Linear(self.top_filters * 2, self.top_filters),  self.norm_layer(opts,self.top_filters, dims=1), self.activation_fun())
@@ -360,7 +360,7 @@ class InitialTaskEmbedding(nn.Module):
 
         """
         (bu_out, flag) = inputs
-        if self.ds_type is DsType.Omniglot and self.model_flag is Flag.SF:
+        if self.ds_type is DsType.Omniglot and self.model_flag is Flag.ZF:
             direction_flag = flag[:, :self.ndirections]  # The task vector.
             lan_flag = flag[:, self.ndirections:self.ndirections + self.ntasks]
             arg = flag[:, self.ndirections + self.ntasks:]
@@ -368,7 +368,7 @@ class InitialTaskEmbedding(nn.Module):
             lan_id = flag_to_task(lan_flag)
             ones_ = direction_flag[:,direction_id].view([-1,1])
 
-        elif self.model_flag is Flag.SF :
+        elif self.model_flag is Flag.ZF :
             direction_flag = flag[:, :self.ndirections]  # The task vector.
             arg = flag[:, self.ndirections:]
             direction_id = flag_to_task(direction_flag)
@@ -377,7 +377,7 @@ class InitialTaskEmbedding(nn.Module):
           task = flag[:, :self.ndirections]
           arg = flag[:, self.ndirections:]
 
-        if self.model_flag is Flag.SF:
+        if self.model_flag is Flag.ZF:
             top_td_task = self.h_flag_task_td[direction_id](ones_)  # Take the specific task embedding to avoid forgetting.
         else:
             top_td_task = self.h_flag_task_td(task)

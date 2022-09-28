@@ -33,7 +33,7 @@ class TDModel(nn.Module):
         self.InitialTaskEmbedding = InitialTaskEmbedding(opts)
         for i in range(self.ndirections):
             self.task_embedding[i].extend(self.InitialTaskEmbedding.task_embedding[i])
-        if opts.ds_type is DsType.Omniglot and self.model_flag is Flag.SF:
+        if opts.ds_type is DsType.Omniglot and self.model_flag is Flag.ZF:
          for j in range(self.ntasks):
           self.argument_embedding[j].extend(self.InitialTaskEmbedding.argument_embedding[j])
 
@@ -165,7 +165,7 @@ class BUStream(nn.Module):
         for shared_block in blocks:
             # Create Basic BU block.
             layer = self.block(self.opts, shared_block, inshapes, is_bu2,)
-            if self.model_flag is Flag.SF and is_bu2:
+            if self.model_flag is Flag.ZF and is_bu2:
                 # Adding the task embedding of the BU2 stream.
                 for i in range(self.ndirections):
                     self.task_embedding[i].extend(layer.task_embedding[i])
@@ -376,7 +376,7 @@ class BUTDModelShared(BUTDModel):
         self.tdmodel = TDModel(opts,bu_shared.inshapes)  # The TD stream.
         self.bumodel2 = BUStream(opts, bu_shared, is_bu2=True)  # The BU2 stream.
         self.Head = MultiTaskHead(opts)  # The task-head to transform the last layer output to the number of classes.
-        if self.model_flag is Flag.SF:  # Storing the Task embedding.
+        if self.model_flag is Flag.ZF:  # Storing the Task embedding.
             for i in range(self.ndirections):
                 self.task_embedding[i].extend(self.bumodel2.task_embedding[i])
                 self.task_embedding[i].extend(self.tdmodel.task_embedding[i])

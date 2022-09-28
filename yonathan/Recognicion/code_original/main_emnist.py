@@ -83,7 +83,7 @@ def main_emnist(train_right:bool,train_left:bool):
 
     Returns: None.
     """
-    opts = Model_Options_By_Flag_And_DsType(Flag=Flag.SF, DsType=DsType.Emnist)
+    opts = Model_Options_By_Flag_And_DsType(Flag=Flag.ZF, DsType=DsType.Emnist)
     parser = GetParser(opts=opts, language_idx=0)
     print_detail(parser)
     embedding_idx = 0
@@ -94,7 +94,7 @@ def main_emnist(train_right:bool,train_left:bool):
     path_loading = 'Model026.09.2022 14:45:31/model_latest_right.pt'
 
     model_path = parser.results_dir
-    load_model(parser.model, model_path, path_loading, load_optimizer_and_schedular=False);
+   # load_model(parser.model, model_path, path_loading, load_optimizer_and_schedular=False);
  #   load_running_stats(parser.model, task_emb_id = 0,direction_id =0);
   #  acc = accuracy(parser, test_dl)
   #  print("Done training right, with accuracy : " + str(acc))
@@ -118,4 +118,4 @@ def main_emnist(train_right:bool,train_left:bool):
         training_flag = Training_flag(train_all_model = True, train_arg=False, task_embedding = True, head_learning = True)
         train_omniglot(parser, lang_idx = 0, the_datasets = the_datasets, training_flag = training_flag, direction = 1)
 
-main_emnist(False,True)
+main_emnist(True,True)

@@ -8,7 +8,7 @@ class Flag(Enum):
     """
     TD = auto()
     NOFLAG = auto()
-    SF = auto()
+    ZF = auto()
 
     
 class DsType(Enum):
@@ -103,18 +103,18 @@ class Model_Options_By_Flag_And_DsType:
         """
         Setting up the flag fields.
         """
-        if self.Flag is Flag.SF:
+        if self.Flag is Flag.ZF:
             use_td_flag = True
-            use_SF = True
+            use_ZF = True
 
         elif self.Flag is Flag.TD:
             use_td_flag = True
-            use_SF = False
+            use_ZF = False
 
 
         elif self.Flag is Flag.NOFLAG:
             use_td_flag = False
-            use_SF = False
+            use_ZF = False
 
         self.use_td_flag = use_td_flag
-        self.use_SF = use_SF
+        self.use_ZF = use_ZF
