@@ -1,8 +1,6 @@
 import numpy as np
-from torchvision import transforms
 import argparse
 import random
-import imgaug
 from imgaug import augmenters as iaa
 from enum import Enum, auto
 
@@ -133,7 +131,6 @@ class CharInfo:
         self.edge_to_the_right = origc == parser.nchars_per_row - 1 or samplei == parser.num_characters_per_sample - 1
 
 class MetaData:
-    def __init__(self,parser, nsampes_per_data_type_dict, valid_classes):
+    def __init__(self,parser, nsampes_per_data_type_dict):
         self.nsamples_dict = nsampes_per_data_type_dict
         self.parser = parser
-        self.valid_classes = valid_classes
