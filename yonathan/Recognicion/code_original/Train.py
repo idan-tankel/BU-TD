@@ -94,7 +94,7 @@ def main_omniglot(lang_idx:int=-1,train_right:bool = True,train_left:bool = True
     opts = Model_Options_By_Flag_And_DsType(Flag=Flag.SF, DsType=DsType.Omniglot)
     parser = GetParser(opts=opts, language_idx=lang_idx)
     print_detail(parser)
-    data_path = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/omniglot/samples/'+name(lang_idx)
+    data_path = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/omniglot/samples_new/'+name(lang_idx)
     # Create the data for right.
     [the_datasets, _,  test_dl, _ , _ , _, _] = get_dataset_for_spatial_realtions(parser, data_path,lang_idx = lang_idx + 1, direction = 0)
     # Training Right.
@@ -115,4 +115,4 @@ def main_omniglot(lang_idx:int=-1,train_right:bool = True,train_left:bool = True
         training_flag = Training_flag(train_all_model = False, train_arg=False, task_embedding = True, head_learning = True)
         train_omniglot(parser, lang_idx = lang_idx + 1, the_datasets = the_datasets, training_flag = training_flag, direction = 1)
 
-main_omniglot(21,True,False)
+main_omniglot(16,True,False)

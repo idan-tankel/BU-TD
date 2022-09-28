@@ -14,6 +14,6 @@ def main_emnist():
 def main_kmnist():
     main(ds_type = DsType.Kmnist)
 
-main_Omniglot([[11], [23], [24], [27], [28], [29], [32], [33], [34], [36], [37], [38], [40], [42],[ 43], [44],[46],[47],[49]])
+main_Omniglot([[7],[11],[14]])
 
 
