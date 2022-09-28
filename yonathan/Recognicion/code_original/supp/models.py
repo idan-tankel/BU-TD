@@ -26,16 +26,17 @@ class TDModel(nn.Module):
         self.ntasks = opts.ntasks
         self.use_td_flag = opts.use_td_flag
         self.inshapes = bu_inshapes
-
+        self.ndirections = opts.ndirections
         upsample_size = opts.avg_pool_size  # before avg pool we have 7x7x512
-        self.task_embedding = [[] for _ in range(self.ntasks)]
+        self.task_embedding = [[] for _ in range(self.ndirections)]
         self.argument_embedding = [[] for _ in range(self.ntasks)]
         self.InitialTaskEmbedding = InitialTaskEmbedding(opts)
-        for i in range(self.ntasks):
+        for i in range(self.ndirections):
             self.task_embedding[i].extend(self.InitialTaskEmbedding.task_embedding[i])
-            if opts.ds_type is DsType.Omniglot:
-        
-             self.argument_embedding[i].extend(self.InitialTaskEmbedding.argument_embedding[i])
+        if opts.ds_type is DsType.Omniglot and self.model_flag is Flag.SF:
+         for j in range(self.ntasks):
+          self.argument_embedding[j].extend(self.InitialTaskEmbedding.argument_embedding[j])
+
         self.top_upsample = nn.Upsample(scale_factor=upsample_size, mode='bilinear',
                                         align_corners=False)  # Upsample layer to make at of the shape before the avgpool.
         layers = []
@@ -129,7 +130,8 @@ class BUStream(nn.Module):
         self.block = opts.bu_block_type
         self.inshapes = shared.inshapes
         self.ntasks = opts.ntasks
-        self.task_embedding = [[] for _ in range(self.ntasks)]
+        self.ndirections = opts.ndirections
+        self.task_embedding = [[] for _ in range(self.ndirections)]
        # self.norm_layer = opts.norm_layer
         self.activation_fun = opts.activation_fun
         self.model_flag = opts.model_flag
@@ -165,7 +167,7 @@ class BUStream(nn.Module):
             layer = self.block(self.opts, shared_block, inshapes, is_bu2,)
             if self.model_flag is Flag.SF and is_bu2:
                 # Adding the task embedding of the BU2 stream.
-                for i in range(self.ntasks):
+                for i in range(self.ndirections):
                     self.task_embedding[i].extend(layer.task_embedding[i])
             layers.append(layer)
         return nn.ModuleList(layers)
@@ -358,11 +360,12 @@ class BUTDModelShared(BUTDModel):
         self.use_lateral_butd = opts.use_lateral_butd
         self.use_lateral_tdbu = opts.use_lateral_tdbu
         self.task_embedding = [[] for _ in range(self.ndirections)]  # Container to store the task embedding.
-        self.transfer_learning = [[[] for _ in range(self.ndirections)] for _ in range(self.ntasks)]
+        self.transfer_learning = [[] for _ in range(self.ndirections*self.ntasks)]
         self.argument_embedding = [[] for _ in range(self.ntasks)]
         self.model_flag = opts.model_flag  # The model type
         self.use_bu1_loss = opts.use_bu1_loss  # Whether to use the Occurrence loss.
         self.use_td_flag = opts.use_td_flag
+        self.ds_type = opts.ds_type
         if self.use_bu1_loss:
             self.occhead = OccurrenceHead(opts)
         bu_shared = BUStreamShared(opts)  # The shared part between BU1, BU2.
@@ -377,14 +380,15 @@ class BUTDModelShared(BUTDModel):
             for i in range(self.ndirections):
                 self.task_embedding[i].extend(self.bumodel2.task_embedding[i])
                 self.task_embedding[i].extend(self.tdmodel.task_embedding[i])
-                self.argument_embedding[i].extend(self.tdmodel.argument_embedding[i])
+            if self.ds_type is DsType.Omniglot:
+             for j in range(self.ntasks):
+              self.argument_embedding[j].extend(self.tdmodel.argument_embedding[j])
             for i in range(self.ntasks):
              for j in range(self.ndirections):
-                  self.transfer_learning[i][j] = self.Head.taskhead[i][j].parameters()
+                  self.transfer_learning[i*self.ndirections+j] =list(self.Head.taskhead[i*self.ndirections+j].parameters() )
         else:
-            for i in range(self.ntasks):
-                self.task_embedding[i].extend(list(self.Head.taskhead[i].parameters()))
-
+            for i in range(self.ndirections):
+                self.task_embedding[i].extend(list(self.Head.taskhead[0][i].parameters()))
 class BUModelSimple(nn.Module):
     """
     Only BU network.

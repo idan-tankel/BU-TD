@@ -1,55 +1,6 @@
 from enum import Enum, auto
 import os
-
-def folder_size(path: str) -> int:
-    """
-    Returns the number of files in a given folder.
-    Args:
-        path: Path to a language file.
-
-    Returns: Number of files in the folder
-
-    """
-    return len([_ for _ in os.scandir(path)])
-
-
-def create_dict(path: str) -> dict:
-    """
-    Args:
-        # TODO - GET RID OF THIS FUNCTION AND GET IT FROM THE DATA ITSELF.
-        path: Path to all raw Omniglot languages.
-
-    Returns: Dictionary of number of characters per language
-
-    """
-    dict_language = {}
-    cnt = 0
-    for ele in os.scandir(path):  # for language in Omniglot_raw find the number of characters in it.
-        dict_language[cnt] = folder_size(ele)  # Find number of characters in the folder.
-        cnt += 1
-    return dict_language
-
-
-def get_omniglot_dictionary(initial_tasks:list, ntasks:int, raw_data_folderpath: str) -> dict:
-    """
-    Args:
-        initial_tasks: The initial tasks set.
-        ntasks: The number of tasks.
-        raw_data_folderpath: The path to the raw data.
-
-    Returns: A dictionary assigning for each task its number of characters.
-
-    """
-    nclasses_dictionary = {}
-    dictionary = create_dict(raw_data_folderpath)
-    nclasses_dictionary[0] = sum(
-        dictionary[task] for task in initial_tasks)  # receiving number of characters in the initial tasks.
-    nclasses = []
-    for i in range(ntasks - 1):  # copying the number of characters for all classes
-        nclasses_dictionary[i + 1] = dictionary[i]
-    for i in range(ntasks):  # creating nclasses according to the dictionary and num_chars
-        nclasses.append(nclasses_dictionary[i])
-    return nclasses
+from supp.general_functions import get_omniglot_dictionary
 
 class Flag(Enum):
     """
@@ -72,7 +23,7 @@ class DsType(Enum):
 
 class Model_Options_By_Flag_And_DsType:
     # Class create a struct holding the specific dataset parameters.
-    def __init__(self,Flag, DsType):
+    def __init__(self,Flag:Flag, DsType:DsType):
         """
         Args:
             Flag: The model flag.
@@ -90,12 +41,15 @@ class Model_Options_By_Flag_And_DsType:
         self.setup_flag()
 
     def Setup_architecture_params(self):
+        """
+        Setting up the model settings.
+        """
         if self.ds_type is DsType.Omniglot:
             initial_tasks = [27, 5, 42, 18, 33] # The initial tasks set.
             ntasks = 51
             raw_data_path = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/omniglot/RAW'
             nclasses = get_omniglot_dictionary(initial_tasks, ntasks, raw_data_path)
-            results_dir = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/omniglot/results_old'
+            results_dir = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/omniglot/results_all_omniglot'
             dataset_id = 'test'
             use_bu1_loss = False
             model_arch = 'BUTDModelShared'
@@ -104,12 +58,14 @@ class Model_Options_By_Flag_And_DsType:
 
         if self.ds_type is DsType.Emnist:
             initial_tasks = [0]
-            ntasks = 4
+            ntasks = 1
             nclasses = [47 for _ in range(ntasks)]
             results_dir = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/emnist/results'
-            dataset_id = 'val'
+            dataset_id = 'test'
             use_bu1_loss = True
             model_arch = 'BUTDModelShared'
+            generelize = True
+            ndirections = 4
 
         if self.ds_type is DsType.FashionMnist:
             initial_tasks = [0]
@@ -144,6 +100,9 @@ class Model_Options_By_Flag_And_DsType:
         self.ndirections = ndirections
 
     def setup_flag(self):
+        """
+        Setting up the flag fields.
+        """
         if self.Flag is Flag.SF:
             use_td_flag = True
             use_SF = True
@@ -159,5 +118,3 @@ class Model_Options_By_Flag_And_DsType:
 
         self.use_td_flag = use_td_flag
         self.use_SF = use_SF
-
-

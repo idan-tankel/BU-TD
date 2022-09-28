@@ -32,14 +32,15 @@ def GetParser(opts , lr = 0.001,wd = 0.00001,language_idx = 0):
     parser.add_argument('--lr', default=lr, type=float, help='Base lr for the SGD optimizer')
     parser.add_argument('--ndirections', default=opts.ndirections, type=int, help='Number of directions the model should handle')
     parser.add_argument('--checkpoints_per_epoch', default = 1, type=int,  help='Number of model saves per epoch')
-    parser.add_argument('--use_td_flag', default = opts.use_td_flag, type=bool, help='Whther to use the td flag')  #
+    parser.add_argument('--use_reg', default=False, type=bool, help='')
+    parser.add_argument('--use_td_flag', default = opts.use_td_flag, type=bool, help='Whether to use the td flag')  #
     parser.add_argument('--initial_tasks', default = opts.initial_tasks, type=list, help='The initial tasks to train first')
     parser.add_argument('--bs', default=10, type=int, help='The training batch size')
     parser.add_argument('--scale_batch_size', default=num_gpus * 10, type=int,  help='scale batch size')
     parser.add_argument('--gpu', default = None, type=any, help='Not clear - query!')  # TODO-understand what is gpu.
     parser.add_argument('--distributed', default=False, type=bool,   help='Whether to use distributed data')  # TODO-understand what is distributed.
     parser.add_argument('--saving_metric', default='accuracy', type = str,   help='The metric to save models according to')  # TODO-understand what is distributed.
-    parser.add_argument('--multiprocessing_distributed', default=False, type=bool,   help='Whether to use multiprocessing_distributed data')  # TODO-understand what it is.
+    parser.add_argument('--multiprocessing_distributed', default=False, type=bool,   help='Whether to use multiprocessing distributed data')  # TODO-understand what it is.
     parser.add_argument('--workers', default=2, type=int, help='Number of workers to use')
     parser.add_argument('--cycle_lr', default=True, type=bool, help='Whether to cycle the lr')
     parser.add_argument('--orig_relus', default=False, type=bool, help='Flag whether to add ReLU in certain places')
@@ -66,7 +67,7 @@ def GetParser(opts , lr = 0.001,wd = 0.00001,language_idx = 0):
     ##########################################
     now = datetime.now()
     dt_string = now.strftime("%d.%m.%Y %H:%M:%S")
-    model_path = "Model"+str(language_idx)+dt_string
+    model_path = "Model"+str(language_idx)
     parser.add_argument('--results_dir', default = opts.results_dir, type=str, help='The direction the model will be stored')
     model_dir = os.path.join(opts.results_dir, model_path)
     ##########################################
@@ -85,7 +86,24 @@ def GetParser(opts , lr = 0.001,wd = 0.00001,language_idx = 0):
     parser.add_argument('--bu1_loss', default=nn.BCEWithLogitsLoss(reduction='mean').to(dev), type=nn.Module, help='The loss used at the end of the bu1 stream')
     parser.add_argument('--bu2_classification_loss', default=nn.CrossEntropyLoss(reduction='none').to(dev), type=nn.Module, help='The loss used at the end of the bu2 stream')
     parser.add_argument('--model', default=create_model(parser.parse_args()), type=nn.Module, help='The model we fit')
+    parser.add_argument('--model_old', default=create_model(parser.parse_args()), type=nn.Module, help='The model we fit')
+    parser.add_argument('--reg', default = None, type=any,  help='')
     parser.add_argument('--loss_fun', default=UnifiedLossFun(parser.parse_args()), type=Callable,  help='The unified loss function of all training')
     parser.add_argument('--epoch_save_idx', default='accuracy', type=str,    help='The metric we update the best model according to(usually loss/accuracy)')
     parser.add_argument('--dataset_saving_by', default=opts.dataset_saving_by, type=str, help='The dataset we update the best model according to(usually val/test)')
     return parser.parse_args()
+
+def update_model_name(parser,reg_factor):
+    model_path = "Model" + str(reg_factor)
+    model_dir = os.path.join(parser.results_dir, model_path)
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
+    parser.model_dir = model_dir
+
+def update_parser(parser,reg,use_reg,reg_factor):
+    parser.use_reg = use_reg
+    parser.reg = reg
+    parser.loss_fun = UnifiedLossFun(parser)
+    parser.reg_factor = reg_factor
+    model_path = "Model" + str(reg_factor)
+    model_dir = os.path.join(parser.results_dir, model_path)

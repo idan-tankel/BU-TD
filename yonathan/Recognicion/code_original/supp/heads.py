@@ -49,18 +49,15 @@ class MultiTaskHead(nn.Module):
         """
 
         super(MultiTaskHead, self).__init__()
-        self.taskhead = [[] for _ in range(opts.ntasks)]
+        self.taskhead = []
         self.ntasks = opts.ntasks
         self.model_flag = opts.model_flag
         self.ndirections = opts.ndirections
         self.ds_type = opts.ds_type
         self.num_classes = opts.nclasses  # num_classes to create the task-heads according to.
-        for i in range(self.ntasks):  # For each task create its task-head according to num_clases.
-            taskhead_one_lang = []
-            for j in range(self.ndirections):
-                taskhead_one_lang.append(HeadSingleTask(opts, self.num_classes[i]))
-            taskhead_one_lang = nn.ModuleList(taskhead_one_lang)
-            self.taskhead[i] = taskhead_one_lang
+        for i in range(self.ntasks * self.ndirections):  # For each task create its task-head according to num_clases.
+            index  = i//self.ndirections
+            self.taskhead.append(HeadSingleTask(opts, self.num_classes[index]))
         self.taskhead = nn.ModuleList(self.taskhead)
 
     def forward(self, inputs: torch) -> torch:
@@ -77,10 +74,15 @@ class MultiTaskHead(nn.Module):
             lan_flag = flag[:, self.ndirections:self.ndirections + self.ntasks]
             direction_id = flag_to_task(direction_flag)
             lan_id = flag_to_task(lan_flag)
-
+            idx = direction_id + self.ndirections * lan_id
+        else:
+            direction_flag = flag[:, :self.ndirections]  # The task vector.
+            direction_id = flag_to_task(direction_flag)
+            lan_id = 0
+            idx = direction_id + self.ndirections*lan_id
         bu2_out = bu2_out.squeeze()  # Make it 1-dimensional.
 
-        task_out = self.taskhead[lan_id][direction_id](bu2_out)  # apply the appropriate task-head.
+        task_out = self.taskhead[idx](bu2_out)  # apply the appropriate task-head.
         if len(task_out.shape) == 2:
             task_out = task_out.unsqueeze(dim=2)
         return task_out

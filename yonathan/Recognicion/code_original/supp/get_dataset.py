@@ -41,8 +41,12 @@ def get_dataset_for_spatial_realtions(opts, data_fname, lang_idx: int, direction
     obj_per_col = MetaData.parser.num_rows_in_the_image
 
     inshape = (3, *image_size)  # Inshape for the dataset
-    train_ds = dataset(os.path.join(data_fname, 'train'), opts, lang_idx, direction, nsamples_train,obj_per_row, obj_per_col)
-    test_ds = dataset(os.path.join(data_fname, 'test'), opts, lang_idx, direction,nsamples_test, obj_per_row, obj_per_col)
+    if opts.ds_type is DsType.Omniglot:
+       train_ds = dataset(os.path.join(data_fname, 'train'), opts, lang_idx, direction, nsamples_train,obj_per_row, obj_per_col)
+       test_ds = dataset(os.path.join(data_fname, 'test'), opts, lang_idx, direction,nsamples_test, obj_per_row, obj_per_col)
+    else:
+        train_ds = dataset(os.path.join(data_fname, 'train'), opts,  direction, nsamples_train, obj_per_row,obj_per_col)
+        test_ds = dataset(os.path.join(data_fname, 'test'), opts,  direction, nsamples_test, obj_per_row, obj_per_col)
     # If normalize_image is True the mean of the dataset is subtracted from every image.
     batch_size = opts.bs
     if opts.distributed:
@@ -54,15 +58,14 @@ def get_dataset_for_spatial_realtions(opts, data_fname, lang_idx: int, direction
         val_sampler = None
         batch_size = opts.bs
     # Creating the dataset
-    train_dl = DataLoader(train_ds, batch_size=batch_size, num_workers=opts.workers, shuffle=True, pin_memory=True, sampler=train_sampler)
+    train_dl = DataLoader(train_ds, batch_size=batch_size, num_workers=opts.workers, shuffle=False, pin_memory=True, sampler=train_sampler)
     test_dl = DataLoader(test_ds, batch_size=batch_size, num_workers=opts.workers, shuffle=False, pin_memory=True, sampler=test_sampler)
     if use_val:
-     val_ds = dataset(os.path.join(data_fname, 'val'), opts.nclasses, opts.ntasks, embedding_idx, direction, opts.nargs, nexamples=nsamples_test, split=True, mean_image=mean_image)
+     val_ds = dataset(os.path.join(data_fname, 'val'), opts,  direction, nsamples_test, obj_per_row, obj_per_col)
      val_dl = DataLoader(val_ds, batch_size=batch_size, num_workers=opts.workers, shuffle=False, pin_memory=True, sampler=test_sampler)
      nbatches_val = len(val_dl)
      val_dataset = WrappedDataLoader(val_dl, preprocess)
      the_val_dataset = DatasetInfo(False, val_dataset, nbatches_val, 'Val', 1, val_sampler)
-
     else:
      val_ds = None
      val_dl = None
