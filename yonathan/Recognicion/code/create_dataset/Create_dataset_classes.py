@@ -101,10 +101,10 @@ class CharInfo:
             samplei: The sample id.
             sample_chars: The sampled characters list
         """
-        minscale = 1.0
-        maxscale = 1.5
-        minshift = 2.0
-        maxshift = .2 * parser.letter_size
+        minscale = parser.minscale
+        maxscale = parser.maxcale
+        minshift = parser.minshift
+        maxshift = parser.maxshift
         # place the chars on the image
         scale = prng.rand() * (maxscale - minscale) + minscale
         letter_size = parser.letter_size

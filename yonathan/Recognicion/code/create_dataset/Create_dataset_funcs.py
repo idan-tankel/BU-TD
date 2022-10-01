@@ -61,7 +61,7 @@ def Generate_raw_examples(parser:argparse, image_ids:list, k:int, ds_type:str, c
     num_chars_per_image = parser.num_characters_per_sample
     examples = [] # Initialize the examples list.
     for i in range(cur_nexamples):  # Iterating over the number of samples.
-        # Choosing the sequence.
+        # Sampling a sequence.
         if parser.generalize:  # If generalize we get the possible pairs we can choose from.
             sample_chars = Get_sample_chars(parser,prng, valid_pairs, ds_type, valid_classes, test_chars_list)
         else:
