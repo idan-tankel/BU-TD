@@ -8,14 +8,16 @@ import shutil
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from supp.FlagAt import  DsType
+from supp.FlagAt import DsType
 from supp.batch_norm import store_running_stats
 import copy
+
 
 class DatasetInfo:
     """encapsulates a (train/test/validation) dataset with its appropriate train or test function and Measurement class"""
 
-    def __init__(self, istrain: bool, data_set: DataLoader, nbatches: int, name: str, checkpoints_per_epoch: int = 1, sampler=None):
+    def __init__(self, istrain: bool, data_set: DataLoader, nbatches: int, name: str, checkpoints_per_epoch: int = 1,
+                 sampler=None):
         """
         Args:
             istrain: Whether we should fit the dataset.
@@ -40,7 +42,7 @@ class DatasetInfo:
         self.needinit = True
         self.sampler = sampler
 
-    def create_measurement(self, measurements_class: type, opts: argparse, model: nn.Module) :
+    def create_measurement(self, measurements_class: type, opts: argparse, model: nn.Module):
         """
         We create measurment object to handle our matrices.
         Args:
@@ -51,13 +53,13 @@ class DatasetInfo:
         """
         self.measurements = measurements_class(opts, model)
 
-    def reset_iter(self) :
+    def reset_iter(self):
         """
         crate a dataset iterator.
         """
         self.dataset_iter = iter(self.dataset)
 
-    def do_epoch(self, opts: argparse, epoch: int)->None:
+    def do_epoch(self, opts: argparse, epoch: int) -> None:
         """
         Args:
             opts: The model options.
@@ -86,11 +88,13 @@ class DatasetInfo:
                 duration = time.time() - start_time  # Compute the step time.
                 start_time = time.time()
                 estimated_epoch_minutes = duration / 60 * self.nbatches / nbatches_report  # compute the proportion time.
-                opts.logger.info(template.format(epoch + 1, cur_batches, self.nbatches, self.measurements.print_batch(), estimated_epoch_minutes))  # Add the epoch_id, loss, accuracy, time for epoch.
+                opts.logger.info(template.format(epoch + 1, cur_batches, self.nbatches, self.measurements.print_batch(),
+                                                 estimated_epoch_minutes))  # Add the epoch_id, loss, accuracy, time for epoch.
 
         if not aborted:
             self.needinit = True
         self.measurements.add_history(epoch)  # Update the loss and accuracy history.
+
 
 def train_step(opts: argparse, inputs: list[torch]) -> tuple:
     """
@@ -108,9 +112,11 @@ def train_step(opts: argparse, inputs: list[torch]) -> tuple:
     opts.optimizer.zero_grad()  # Reset the optimizer.
     loss.backward()  # Do a backward pass.
     opts.optimizer.step()  # Update the model.
-    if type(opts.scheduler) in [optim.lr_scheduler.CyclicLR, optim.lr_scheduler.OneCycleLR]:  # Make a scedular step if needed.
+    if type(opts.scheduler) in [optim.lr_scheduler.CyclicLR,
+                                optim.lr_scheduler.OneCycleLR]:  # Make a scedular step if needed.
         opts.scheduler.step()
     return loss, outs  # Return the loss and the output.
+
 
 def test_step(opts: argparse, inputs: list[torch]) -> tuple:
     """
@@ -127,6 +133,7 @@ def test_step(opts: argparse, inputs: list[torch]) -> tuple:
         outs = opts.model(inputs)  # Compute the model outputs.
         loss = opts.loss_fun(opts.model, inputs, outs)  # Compute the loss.
     return loss, outs  # Return the loss and the output.
+
 
 def save_model_and_md(logger: logging, model_fname: str, metadata: dict, epoch: int, opts: argparse) -> None:
     """
@@ -155,11 +162,11 @@ def Change_checkpoint(checkpoint, model, ntasks, ndirection):
         if not 'module.Head.taskhead' in param:
             check_new[param] = checkpoint[param]
 
-    for i in range(ntasks*ndirection):
-      param ="module.Head.taskhead."+str(i)+".layers.0.weight"
-      check_new[param] = model.state_dict()[param]
-      param = "module.Head.taskhead." + str(i) + ".layers.0.bias"
-      check_new[param] = model.state_dict()[param]
+    for i in range(ntasks * ndirection):
+        param = "module.Head.taskhead." + str(i) + ".layers.0.weight"
+        check_new[param] = model.state_dict()[param]
+        param = "module.Head.taskhead." + str(i) + ".layers.0.bias"
+        check_new[param] = model.state_dict()[param]
     '''
     for param in checkpoint.keys():
         if 'norm.running_var' or param or 'norm.running_mean' in param:
@@ -169,7 +176,8 @@ def Change_checkpoint(checkpoint, model, ntasks, ndirection):
 
 
 # TODO - MOVE IT TO GENERAL FUNCTIONS.
-def load_model(model: nn.Module, model_path: str, model_latest_fname: str, gpu=None, load_optimizer_and_schedular: bool = False) -> dict:
+def load_model(model: nn.Module, model_path: str, model_latest_fname: str, gpu=None,
+               load_optimizer_and_schedular: bool = False) -> dict:
     """
     Loads and returns the model as a dictionary.
     Args:
@@ -191,17 +199,18 @@ def load_model(model: nn.Module, model_path: str, model_latest_fname: str, gpu=N
         checkpoint = torch.load(model_path, map_location=loc)
     new_load = False
     if new_load:
-     checkpoint = Change_checkpoint( checkpoint['model_state_dict'],model, 51,4)
+        checkpoint = Change_checkpoint(checkpoint['model_state_dict'], model, 51, 4)
     else:
-     checkpoint = checkpoint['model_state_dict']
+        checkpoint = checkpoint['model_state_dict']
     model.load_state_dict(checkpoint)  # Loading the epoch_id, the optimum and the data.
     if load_optimizer_and_schedular:
         opts.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])  # Load the optimizer state.
         opts.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])  # Load the schedular state.
     return checkpoint
 
+
 class save_details_class:
-    def __init__(self, opts:argparse):
+    def __init__(self, opts: argparse):
         """
         Args:
             opts: The model options.
@@ -212,23 +221,25 @@ class save_details_class:
         if self.dataset_saving_by == 'train':
             self.dataset_id = 0  # The dataset to save according to.
 
-        elif self.dataset_saving_by == 'test' and (opts.ds_type is DsType.Emnist or opts.ds_type is DsType.FashionMnist):
+        elif self.dataset_saving_by == 'test':
             self.dataset_id = 1
-        else:
-            self.dataset_id = 1
+
+        elif opts.generalize:
+            self.dataset_id = 2
 
         if self.saving_metric == 'loss':
             self.metric_idx = 0
 
-        elif self.saving_metric == 'accuracy' and (opts.ds_type is DsType.Emnist or opts.ds_type is DsType.FashionMnist):
+        elif self.saving_metric == 'accuracy' and opts.use_bu1_loss:
             self.metric_idx = 2
         else:
-           self.metric_idx = 1
+            self.metric_idx = 1
 
-    def update(self,new_optimum):
+    def update(self, new_optimum):
         self.optimum = new_optimum
 
-def fit(opts: argparse, the_datasets: list, task: int,direction_id:int) -> save_details_class:
+
+def fit(opts: argparse, the_datasets: list, task: int, direction_id: int) -> save_details_class:
     """
     Args:
         opts: The model options.
@@ -241,7 +252,7 @@ def fit(opts: argparse, the_datasets: list, task: int,direction_id:int) -> save_
     """
     logger = opts.logger
     #  if opts.first_node:
-   # logger.info('train_opts: %s', str(opts))
+    # logger.info('train_opts: %s', str(opts))
     optimizer = opts.optimizer  # Getting the optimizer.
     scheduler = opts.scheduler  # Getting the scheduler,
     nb_epochs = opts.EPOCHS  # Getting the number of epoch we desire to train for,
@@ -279,8 +290,8 @@ def fit(opts: argparse, the_datasets: list, task: int,direction_id:int) -> save_
             the_dataset.do_epoch(opts, epoch)
         opts.logger.info('Epoch {} done'.format(epoch + 1))  # logger info done the epoch.
         #
-      #  store_running_stats(opts.model, task)  # Storing the running stats to avoid forgetting.
-      #  logger.info('epoch {} done storing running stats task = {}, direction = {}'.format(epoch + 1,task,direction_id))  # Adding to the logger.
+        #  store_running_stats(opts.model, task)  # Storing the running stats to avoid forgetting.
+        #  logger.info('epoch {} done storing running stats task = {}, direction = {}'.format(epoch + 1,task,direction_id))  # Adding to the logger.
         #   print("Done storing running stats!")
         #
         for the_dataset in the_datasets:  # Printing the loss, accuracy per dataset.
@@ -298,7 +309,8 @@ def fit(opts: argparse, the_datasets: list, task: int,direction_id:int) -> save_
 
         if opts.save_model:  # Saving the model.
             optimum = save_details.optimum  # Getting the old optimum.
-            save_by_dataset = the_datasets[save_details.dataset_id]  # Getting the dataset we update the model according to.
+            save_by_dataset = the_datasets[
+                save_details.dataset_id]  # Getting the dataset we update the model according to.
             measurements = np.array(save_by_dataset.measurements.results)
             new_optimum = False  # Flag telling whether we overcome the old optimum.
             epoch_save_value = measurements[epoch, save_details.metric_idx]  # Getting the possible new optimum.
@@ -315,18 +327,19 @@ def fit(opts: argparse, the_datasets: list, task: int,direction_id:int) -> save_
             metadata['optimum'] = optimum  # Storing the new optimum.
             model_latest_fname = model_basename + '_latest' + direction + model_ext
             model_latest_fname = os.path.join(model_dir, model_latest_fname)
-            save_model_and_md(logger, model_latest_fname, metadata, epoch, opts)  # Storing the metadata in the model_latest.
+            save_model_and_md(logger, model_latest_fname, metadata, epoch,
+                              opts)  # Storing the metadata in the model_latest.
             if new_optimum:  # If we have a new optimum, we store in an additional model to avoid overriding.
-                model_fname = model_basename + '%d' % (epoch + 1)  + direction + model_ext
+                model_fname = model_basename + '%d' % (epoch + 1) + direction + model_ext
                 model_fname = os.path.join(model_dir, model_fname)
                 shutil.copyfile(model_latest_fname, model_fname)
                 logger.info('Saved model to %s' % model_fname)
-                 #
-                model_fname = model_basename +  direction + '_best' +model_ext
+                #
+                model_fname = model_basename + direction + '_best' + model_ext
                 model_fname = os.path.join(model_dir, model_fname)
                 shutil.copyfile(model_latest_fname, model_fname)
                 logger.info('Saved model to %s' % model_fname)
-                 #
+                #
 
     logger.info('Done fit')
     return save_model_and_md

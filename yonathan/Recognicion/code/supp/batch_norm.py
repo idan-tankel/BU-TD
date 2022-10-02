@@ -151,7 +151,6 @@ class BatchNorm(nn.Module):
         self.running_mean[task_emb_id, :] = running_mean
         self.running_var[task_emb_id, :] = running_var
 
-# TODO - MAKE IT A MODEL FUNCTION.
 def store_running_stats(model: nn.Module, task_emb_id: int) -> None:
     """
     Stores the running_stats of the task_id for each norm_layer.

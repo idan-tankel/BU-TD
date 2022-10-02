@@ -4,10 +4,12 @@ import torch.nn as nn
 from supp.general_functions import get_model_outs
 import argparse
 
+
 class MeasurementsBase:
     """
     a class for measuring train/test statistics such as accuracy,loss
     """
+
     def __init__(self, opts):
         """
         Args:
@@ -26,7 +28,7 @@ class MeasurementsBase:
 
     # update metrics for current batch and epoch (cumulative)
     # here we update the basic metric (loss). Subclasses should also call update_metric()
-    def update(self, inputs: list[torch], outs: list[torch], loss: float) :
+    def update(self, inputs: list[torch], outs: list[torch], loss: float):
         """
         Args:
             inputs: input to the model in the current stage.
@@ -59,7 +61,7 @@ class MeasurementsBase:
         return np.array(self.metrics) / self.nexamples
 
     # store the epoch's metrics
-    def add_history(self, epoch:int):
+    def add_history(self, epoch: int):
         """
         Extends the current history.
         Args:
@@ -135,7 +137,7 @@ class Measurements(MeasurementsBase):
         super(Measurements, self).__init__(opts)
         self.model = model
         self.opts = opts
-        self.inputs_to_struct = model.module.inputs_to_struct
+        self.inputs_to_struct = opts.inputs_to_struct
         if self.opts.use_bu1_loss:  # If desired we also follow the occurrence loss.
             super().add_name('Occurrence Acc')
 
@@ -168,6 +170,7 @@ class Measurements(MeasurementsBase):
         if self.opts.use_bu2_loss:
             self.task_accuracy = np.array(0.0)
             self.metrics += [self.task_accuracy]
+
 
 def set_datasets_measurements(datasets: object, measurements_class: type, model_opts: argparse, model: nn.Module):
     for the_dataset in datasets:

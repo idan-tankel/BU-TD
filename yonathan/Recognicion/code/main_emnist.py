@@ -1,11 +1,10 @@
 import copy
 import os
 import argparse
-import wandb
 import torch.backends.cudnn as cudnn
 from supp.Parser import GetParser, update_parser, update_model_name
 from supp.get_dataset import get_dataset_for_spatial_realtions
-from supp.FlagAt import Flag, DsType,Model_Options_By_Flag_And_DsType
+from supp.FlagAt import Flag, DsType, Model_Options_By_Flag_And_DsType
 from supp.logger import print_detail
 from supp.loss_and_accuracy import accuracy
 from supp.measurments import set_datasets_measurements
@@ -15,12 +14,12 @@ from supp.measurments import Measurements
 from supp.batch_norm import load_running_stats
 import argparse
 import torch.nn as nn
-from supp.Regulizer import Regulizer
-# NO SEED in data_functions and not in blocks.
+
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
+
 class Training_flag:
-    def __init__(self,train_all_model:bool, train_arg:bool,task_embedding:bool,head_learning:bool):
+    def __init__(self, train_all_model: bool, train_arg: bool, task_embedding: bool, head_learning: bool):
         """
         Args:
             train_all_model: Whether to train all model.
@@ -33,7 +32,7 @@ class Training_flag:
         self.task_embedding = task_embedding
         self.head_learning = head_learning
 
-    def Get_learned_params(self, model:nn.Module, lang_idx:int, direction:int):
+    def Get_learned_params(self, model: nn.Module, lang_idx: int, direction: int):
         """
         Args:
             model: The model.
@@ -54,7 +53,8 @@ class Training_flag:
             learned_params.extend(model.module.tdmodel.argument_embedding[lang_idx])
         return learned_params
 
-def train_omniglot(opts:argparse, lang_idx:int, the_datasets:list, training_flag:Training_flag, direction:int):
+
+def train_omniglot(opts: argparse, lang_idx: int, the_datasets: list, training_flag: Training_flag, direction: int):
     """
     Args:
         opts: The model options.
@@ -69,53 +69,53 @@ def train_omniglot(opts:argparse, lang_idx:int, the_datasets:list, training_flag
     set_datasets_measurements(the_datasets, Measurements, opts, opts.model)
     cudnn.benchmark = True  # TODO:understand what it is.
     # Deciding which parameters will be trained: if True all the model otherwise,only the task embedding.
-    learned_params =training_flag.Get_learned_params(opts.model, lang_idx, direction)
+    learned_params = training_flag.Get_learned_params(opts.model, lang_idx, direction)
     opts.optimizer, opts.scheduler = create_optimizer_and_sched(opts, learned_params)
     # Training the learned params of the model.
     return fit(opts, the_datasets, lang_idx, direction)
 
-def main_emnist(train_right:bool,train_left:bool):
+
+def main_emnist(train_right: bool, train_left: bool):
     """
     Args:
-        lang_idx:
         train_right: Whether to train right.
         train_left: Whether to train left.
 
     Returns: None.
     """
-    opts = Model_Options_By_Flag_And_DsType(Flag=Flag.ZF, DsType=DsType.Emnist)
+    opts = Model_Options_By_Flag_And_DsType(Flag=Flag.NOFLAG, DsType=DsType.Emnist)
     parser = GetParser(opts=opts, language_idx=0)
     print_detail(parser)
-    embedding_idx = 0
     data_path = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/emnist/samples/6_extended_testing_new_changes_beta_0'
     # Create the data for right.
-    [the_datasets, train_dl,  test_dl, _ , _ , _, _] = get_dataset_for_spatial_realtions(parser, data_path,lang_idx = 0, direction = 0)
+    [the_datasets, train_dl, test_dl, _] = get_dataset_for_spatial_realtions(parser, data_path, lang_idx=0, direction=0)
     # Training Right.
     path_loading = 'Model026.09.2022 14:45:31/model_latest_right.pt'
 
     model_path = parser.results_dir
-   # load_model(parser.model, model_path, path_loading, load_optimizer_and_schedular=False);
- #   load_running_stats(parser.model, task_emb_id = 0,direction_id =0);
-  #  acc = accuracy(parser, test_dl)
-  #  print("Done training right, with accuracy : " + str(acc))
+    # load_model(parser.model, model_path, path_loading, load_optimizer_and_schedular=False);
+    #   load_running_stats(parser.model, task_emb_id = 0,direction_id =0);
+    #  acc = accuracy(parser, test_dl)
+    #  print("Done training right, with accuracy : " + str(acc))
     if train_right:
         parser.EPOCHS = 60
         training_flag = Training_flag(train_all_model=True, train_arg=True, task_embedding=False, head_learning=True)
-        train_omniglot(parser, lang_idx=0, the_datasets=the_datasets, training_flag=training_flag,direction = 0)
+        train_omniglot(parser, lang_idx=0, the_datasets=the_datasets, training_flag=training_flag, direction=0)
 
     if train_left:
-        load_model(parser.model_old, model_path, path_loading, load_optimizer_and_schedular=False);
-    #    parser.model_old = copy.deepcopy(parser.model)
-       # parser.model_old = copy.deepcopy(parser.model_old)
-       # acc = accuracy(parser.model_old, test_dl)
+        load_model(parser.model_old, model_path, path_loading, load_optimizer_and_schedular=False)
+        #    parser.model_old = copy.deepcopy(parser.model)
+        # parser.model_old = copy.deepcopy(parser.model_old)
+        # acc = accuracy(parser.model_old, test_dl)
         reg_factor = 256000
-        update_model_name(parser,reg_factor=reg_factor)
-        reg = Regulizer(lambd = reg_factor, opts= parser, data_loader = train_dl)
+        update_model_name(parser, reg_factor=reg_factor)
+        reg = Regulizer(lambd=reg_factor, opts=parser, data_loader=train_dl)
         opts.reg = reg
-        update_parser(parser,reg, use_reg = True,reg_factor = 200)
+        update_parser(parser, reg, use_reg=True, reg_factor=200)
         parser.EPOCHS = 100
-        [the_datasets, _, _, _, _, _, _] = get_dataset_for_spatial_realtions(parser, data_path, lang_idx = 0, direction = 1 )
-        training_flag = Training_flag(train_all_model = True, train_arg=False, task_embedding = True, head_learning = True)
-        train_omniglot(parser, lang_idx = 0, the_datasets = the_datasets, training_flag = training_flag, direction = 1)
+        [the_datasets, _, _, _, _, _, _] = get_dataset_for_spatial_realtions(parser, data_path, lang_idx=0, direction=1)
+        training_flag = Training_flag(train_all_model=True, train_arg=False, task_embedding=True, head_learning=True)
+        train_omniglot(parser, lang_idx=0, the_datasets=the_datasets, training_flag=training_flag, direction=1)
 
-main_emnist(True,True)
+
+main_emnist(True, True)

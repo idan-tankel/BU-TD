@@ -6,7 +6,8 @@ import torch
 import setuptools
 import argparse
 
-def reset_logger(logger:logging)->None:
+
+def reset_logger(logger: logging) -> None:
     """
     Resting the logger.
     Args:
@@ -18,7 +19,8 @@ def reset_logger(logger:logging)->None:
     while len(logger.handlers) > 0:
         logger.handlers.pop()
 
-def setup_logger(logger:logging, fname:str)->logging:
+
+def setup_logger(logger: logging, fname: str) -> logging:
     """
     Args:
         logger: The logger.
@@ -36,7 +38,7 @@ def setup_logger(logger:logging, fname:str)->logging:
     return logger
 
 
-def log_init(opts:argparse)->None:
+def log_init(opts: argparse) -> None:
     """
     Args:
         opts: The model options.
@@ -51,7 +53,7 @@ def log_init(opts:argparse)->None:
         setup_logger(logger, os.path.join(model_dir, logfname))
 
 
-def print_info(opts:argparse)->None:
+def print_info(opts: argparse) -> None:
     import __main__ as main
     try:
         script_fname = main.__file__
@@ -71,9 +73,11 @@ def print_info(opts:argparse)->None:
 
     opts.logger.info('PyTorch version: %s' % torch.__version__)
     opts.logger.info('cuDNN enabled: %s' % torch.backends.cudnn.enabled)
-  #  opts.logger.info('model_opts: %s', str(opts))
 
-def save_script(opts:argparse)->None:
+
+#  opts.logger.info('model_opts: %s', str(opts))
+
+def save_script(opts: argparse) -> None:
     """
     Saving the code script.
     Args:
@@ -81,10 +85,10 @@ def save_script(opts:argparse)->None:
 
     """
     model_dir = opts.model_dir
-    if getattr(opts,'save_script',None) is None:
-        save_script=True
+    if getattr(opts, 'save_script', None) is None:
+        save_script = True
     else:
-        save_script=opts.save_script
+        save_script = opts.save_script
 
     if save_script:
         import __main__ as main
@@ -94,19 +98,19 @@ def save_script(opts:argparse)->None:
         if opts.distributed:
             # if distributed then also copy the actual script
             script_base_fname = opts.module + '.py'
-            script_base_fname = os.path.join(os.path.dirname(script_fname),script_base_fname)
+            script_base_fname = os.path.join(os.path.dirname(script_fname), script_base_fname)
             shutil.copy(script_base_fname, model_dir)
 
         # copy funcs folder
         mods = 'supp'
-        if len(mods)>0:
-            mods=mods
-            funcs_version=mods
-            if not os.path.exists(os.path.join(model_dir,funcs_version)):
-             shutil.copytree(funcs_version, os.path.join(model_dir,funcs_version))
+        if len(mods) > 0:
+            mods = mods
+            funcs_version = mods
+            if not os.path.exists(os.path.join(model_dir, funcs_version)):
+                shutil.copytree(funcs_version, os.path.join(model_dir, funcs_version))
 
 
-def print_detail(args:argparse)->None:
+def print_detail(args: argparse) -> None:
     """
     Args:
         args: The model options.
@@ -117,7 +121,7 @@ def print_detail(args:argparse)->None:
     args.first_node = first_node
     if first_node:
         if not os.path.exists(args.model_dir):
-          os.makedirs(args.model_dir)
+            os.makedirs(args.model_dir)
     if args.distributed:
         import torch.distributed as dist
         dist.barrier()

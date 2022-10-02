@@ -5,6 +5,7 @@ import argparse
 import torch.optim as optim
 import os
 
+
 def flag_to_task(flag: torch) -> int:
     """
     Args:
@@ -15,6 +16,7 @@ def flag_to_task(flag: torch) -> int:
     """
     task = torch.argmax(flag, dim=1)[0]  # Finds the non zero entry in the one-hot vector
     return task
+
 
 def get_laterals(laterals: list[torch], layer_id: int, block_id: int) -> torch:
     """
@@ -49,6 +51,7 @@ def folder_size(path: str) -> int:
     """
     return len([_ for _ in os.scandir(path)])
 
+
 def create_dict(path: str) -> dict:
     """
     Args:
@@ -64,7 +67,8 @@ def create_dict(path: str) -> dict:
         cnt += 1
     return dict_language
 
-def get_omniglot_dictionary(initial_tasks:list, ntasks:int, raw_data_folderpath: str) -> dict:
+
+def get_omniglot_dictionary(initial_tasks: list, ntasks: int, raw_data_folderpath: str) -> list:
     """
     Args:
         initial_tasks: The initial tasks set.
@@ -85,8 +89,10 @@ def get_omniglot_dictionary(initial_tasks:list, ntasks:int, raw_data_folderpath:
         nclasses.append(nclasses_dictionary[i])
     return nclasses
 
+
 class depthwise_separable_conv(nn.Module):
-    def __init__(self, channels_in: int, channels_out: int, kernel_size: int, stride: int = 1, padding: int = 1, bias: bool = False):
+    def __init__(self, channels_in: int, channels_out: int, kernel_size: int, stride: int = 1, padding: int = 1,
+                 bias: bool = False):
         """
         Args:
             channels_in: In channels of the input tensor.
@@ -97,8 +103,11 @@ class depthwise_separable_conv(nn.Module):
             bias: Whether to use bias.
         """
         super(depthwise_separable_conv, self).__init__()
-        self.depthwise = nn.Conv2d(channels_in, channels_in, kernel_size=kernel_size, stride=stride, padding=padding,    groups=channels_in, bias = bias)  # Preserves the number of channels but may downsample by stride.
-        self.pointwise = nn.Conv2d(channels_in, channels_out, kernel_size=1, bias=bias)  # Preserves the inner channels but changes the number of channels.
+        self.depthwise = nn.Conv2d(channels_in, channels_in, kernel_size=kernel_size, stride=stride, padding=padding,
+                                   groups=channels_in,
+                                   bias=bias)  # Preserves the number of channels but may downsample by stride.
+        self.pointwise = nn.Conv2d(channels_in, channels_out, kernel_size=1,
+                                   bias=bias)  # Preserves the inner channels but changes the number of channels.
 
     def forward(self, x: torch) -> torch:
         """
@@ -111,6 +120,7 @@ class depthwise_separable_conv(nn.Module):
         out = self.depthwise(x)  # Downsample the tensor.
         out = self.pointwise(out)  # Change the number of channels
         return out
+
 
 def conv3x3(in_channels: int, out_channels: int, stride: int = 1) -> nn.Module:
     """
@@ -125,7 +135,8 @@ def conv3x3(in_channels: int, out_channels: int, stride: int = 1) -> nn.Module:
 
     return depthwise_separable_conv(in_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
 
-def conv3x3up(in_channels:int, out_channels:int,size:np.array, upsample = False) -> nn.Module:
+
+def conv3x3up(in_channels: int, out_channels: int, size: np.array, upsample=False) -> nn.Module:
     """
     Args:
         in_channels: The number of channels in the input. out_channels < in_channels
@@ -138,12 +149,12 @@ def conv3x3up(in_channels:int, out_channels:int,size:np.array, upsample = False)
     """
     layer = conv3x3(in_channels, out_channels)  # Changing the number of channels.
     if upsample:
-
-        layer = nn.Sequential(nn.Upsample(size = size, mode='bilinear', align_corners=False), layer)  # Upsample the inner dimensions of the tensor.
+        layer = nn.Sequential(nn.Upsample(size=size, mode='bilinear', align_corners=False),
+                              layer)  # Upsample the inner dimensions of the tensor.
     return layer
 
 
-def conv1x1(in_channels:int, out_channels:int, stride:int=1) -> nn.Module:
+def conv1x1(in_channels: int, out_channels: int, stride: int = 1) -> nn.Module:
     """
     Args:
         in_channels: In channels of the input tensor
@@ -153,7 +164,7 @@ def conv1x1(in_channels:int, out_channels:int, stride:int=1) -> nn.Module:
     Returns: 1 by 1 conv.
 
     """
-    return nn.Conv2d(in_channels, out_channels, kernel_size = 1, stride=stride, bias=False)
+    return nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False)
 
 
 def num_params(params: list) -> int:
@@ -172,17 +183,18 @@ def num_params(params: list) -> int:
         nparams = nparams + cnt  # Sum for all params.
     return nparams
 
-def create_optimizer_and_sched(opts: argparse,learned_params: list) -> tuple:
+
+def create_optimizer_and_sched(opts: argparse, learned_params: list) -> tuple:
     """
     Args:
         opts: The model options.
-        the_datasets: The
+        learned_params: The learned parameters.
 
     Returns: Optimizer, scheduler.
 
     """
     if opts.SGD:
-        optimizer = optim.SGD(learned_params, lr=opts.initial_lr, momentum = opts.momentum, weight_decay=opts.weight_decay)
+        optimizer = optim.SGD(learned_params, lr=opts.initial_lr, momentum=opts.momentum, weight_decay=opts.wd)
         if opts.cycle_lr:
             scheduler = optim.lr_scheduler.CyclicLR(optimizer, base_lr=opts.base_lr, max_lr=opts.max_lr,
                                                     step_size_up=opts.nbatches_train // 2, step_size_down=None,
@@ -203,6 +215,7 @@ def create_optimizer_and_sched(opts: argparse,learned_params: list) -> tuple:
         scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lmbda)
 
     return optimizer, scheduler
+
 
 def get_model_outs(model: nn.Module, outs: list[torch]) -> object:
     """
