@@ -2,8 +2,7 @@ import argparse
 from supp.FlagAt import DsType
 import torch
 import torch.nn as nn
-from supp.models import BUModelSimple, BUTDModelShared
-
+from supp.models import ResNet, BUTDModelShared
 
 
 def create_model(opts: argparse) -> nn.Module:
@@ -16,7 +15,7 @@ def create_model(opts: argparse) -> nn.Module:
 
     """
     if opts.ds_type is DsType.Cifar10:
-        model = BUModelSimple(opts)
+        model = ResNet(opts)
     if opts.ds_type is DsType.Emnist or opts.ds_type is DsType.Omniglot or opts.ds_type is DsType.FashionMnist:
         model = BUTDModelShared(opts)
     if not torch.cuda.is_available():
