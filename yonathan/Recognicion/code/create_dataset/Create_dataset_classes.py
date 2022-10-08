@@ -102,7 +102,7 @@ class CharInfo:
             sample_chars: The sampled characters list
         """
         minscale = parser.minscale
-        maxscale = parser.maxcale
+        maxscale = parser.maxscale
         minshift = parser.minshift
         maxshift = parser.maxshift
         # place the chars on the image

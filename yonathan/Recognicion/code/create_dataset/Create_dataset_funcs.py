@@ -459,7 +459,7 @@ def Make_data_dir(parser:argparse,ds_type, language_list:list)->tuple:
     """
     base_storage_dir = '%d_' % (parser.num_characters_per_sample)
     if ds_type.from_enum_to_str() == 'omniglot':
-     base_storage_dir += 'extended_' + str(language_list[0])
+     base_storage_dir += 'extended_testing' + str(language_list[0])
     else:
         base_storage_dir += 'extended'
     base_samples_dir = os.path.join(parser.store_folder, base_storage_dir)

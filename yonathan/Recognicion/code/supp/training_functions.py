@@ -108,12 +108,12 @@ def train_step(opts: argparse, inputs: list[torch]) -> tuple:
     """
     opts.model.train()  # Move the model into the train mode.
     outs = opts.model(inputs)  # Compute the model output.
-    loss = opts.loss_fun(opts.model, inputs, outs)  # Compute the loss.
+    loss = opts.loss_fun(inputs, outs)  # Compute the loss.
     opts.optimizer.zero_grad()  # Reset the optimizer.
     loss.backward()  # Do a backward pass.
     opts.optimizer.step()  # Update the model.
     if type(opts.scheduler) in [optim.lr_scheduler.CyclicLR,
-                                optim.lr_scheduler.OneCycleLR]:  # Make a scedular step if needed.
+                                optim.lr_scheduler.OneCycleLR]:  # Make a schedular step if needed.
         opts.scheduler.step()
     return loss, outs  # Return the loss and the output.
 
@@ -131,7 +131,7 @@ def test_step(opts: argparse, inputs: list[torch]) -> tuple:
     opts.model.eval()  # Move the model to evaluation mode in order to not change the running statistics of the batch layers.
     with torch.no_grad():  # Don't need to compute grads.
         outs = opts.model(inputs)  # Compute the model outputs.
-        loss = opts.loss_fun(opts.model, inputs, outs)  # Compute the loss.
+        loss = opts.loss_fun( inputs, outs)  # Compute the loss.
     return loss, outs  # Return the loss and the output.
 
 
@@ -199,7 +199,7 @@ def load_model(model: nn.Module, model_path: str, model_latest_fname: str, gpu=N
         checkpoint = torch.load(model_path, map_location=loc)
     new_load = False
     if new_load:
-        checkpoint = Change_checkpoint(checkpoint['model_state_dict'], model, 51, 4)
+        checkpoint = Change_checkpoint(checkpoint['model_state_dict'], model, 4, 4)
     else:
         checkpoint = checkpoint['model_state_dict']
     model.load_state_dict(checkpoint)  # Loading the epoch_id, the optimum and the data.

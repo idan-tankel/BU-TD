@@ -65,7 +65,7 @@ class TDModel(nn.Module):
         layers = []
         for _ in range(1, num_blocks):  # Create shape preserving blocks.
             block_inshape = self.inshapes[index - 1]
-            newblock = self.block(self.opts, self.inplanes, self.inplanes, 1, block_inshape, index=index)
+            newblock = self.block(self.opts, self.inplanes, self.inplanes, 1, block_inshape)
             layers.append(newblock)
         # Create Upsampling block.
         block_inshape = self.inshapes[index - 1]
@@ -388,8 +388,7 @@ class BUTDModelShared(BUTDModel):
                     self.argument_embedding[j].extend(self.tdmodel.argument_embedding[j])
             for i in range(self.ntasks):
                 for j in range(self.ndirections):
-                    self.transfer_learning[i * self.ndirections + j] = list(
-                        self.Head.taskhead[i * self.ndirections + j].parameters())
+                    self.transfer_learning[i * self.ndirections + j] = list(self.Head.taskhead[i * self.ndirections + j].parameters())
         '''
         elif self.model_flag is Flag.TD:
             for i in range(self.ndirections):
@@ -410,11 +409,12 @@ class ResNet(nn.Module):
         super(ResNet, self).__init__()
         self.taskhead = MultiTaskHead(opts)
         self.bumodel = BUModel(opts, use_embedding=False)
+        self.opts = opts
         pre_top_shape = self.bumodel.trunk.inshapes[-2][1:]
         opts.avg_pool_size = tuple(pre_top_shape[1:].tolist())
 
     def forward(self, inputs):
-        samples = self.inputs_to_struct(inputs)
+        samples = self.opts.inputs_to_struct(inputs)
         images = samples.image
         flags = samples.flag
         model_inputs = [images, flags, None]
@@ -430,12 +430,5 @@ class ResNet(nn.Module):
                 outs: The model outs.
             """
             task_out, layer_out = outs
-            self.before_readout = task_out
-            self.after_readout = layer_out
-
-    class inputs_to_struct:
-        def __init__(self, inputs):
-            img, label_task, flag = inputs
-            self.image = img
-            self.label_task = label_task
-            self.flag = flag
+            self.before_readout = layer_out
+            self.task = task_out

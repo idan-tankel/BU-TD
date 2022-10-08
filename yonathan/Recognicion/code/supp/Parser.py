@@ -9,9 +9,8 @@ from supp.loss_and_accuracy import UnifiedLossFun, multi_label_accuracy_base
 from supp.batch_norm import BatchNorm
 from supp.FlagAt import DsType, Flag
 from supp.blocks import BasicBlockTD, BasicBlockBU, BasicBlockBUShared
-from supp.create_model import create_model
 from supp.data_functions import dev
-
+from supp.models import ResNet, BUTDModelShared
 
 def GetParser(opts, lr=0.001, wd=0.00001, language_idx=0, direction='right', use_reg=False):
     """
@@ -34,25 +33,17 @@ def GetParser(opts, lr=0.001, wd=0.00001, language_idx=0, direction='right', use
     parser.add_argument('--ndirections', default=opts.ndirections, type=int,
                         help='Number of directions the model should handle')
     parser.add_argument('--checkpoints_per_epoch', default=1, type=int, help='Number of model saves per epoch')
-    parser.add_argument('--use_reg', default=use_reg, type=bool, help='')
     parser.add_argument('--use_td_flag', default=opts.use_td_flag, type=bool, help='Whether to use the td flag')  #
     parser.add_argument('--initial_tasks', default=opts.initial_tasks, type=list,
                         help='The initial tasks to train first')
     parser.add_argument('--bs', default=10, type=int, help='The training batch size')
-    parser.add_argument('--scale_batch_size', default=num_gpus * 10, type=int, help='scale batch size')
-    parser.add_argument('--gpu', default=None, type=any, help='Not clear - query!')  # TODO-understand what is gpu.
-    parser.add_argument('--distributed', default=False, type=bool,
-                        help='Whether to use distributed data')  # TODO-understand what is distributed.
-    parser.add_argument('--saving_metric', default='accuracy', type=str,
-                        help='The metric to save models according to')  # TODO-understand what is distributed.
-    parser.add_argument('--multiprocessing_distributed', default=False, type=bool,
-                        help='Whether to use multiprocessing distributed data')  # TODO-understand what it is.
+    parser.add_argument('--scale_batch_size', default = num_gpus * 10, type=int, help='scale batch size')
+    parser.add_argument('--saving_metric', default='accuracy', type=str, help='The metric to save models according to')  # TODO-understand what is distributed.
     parser.add_argument('--workers', default=2, type=int, help='Number of workers to use')
     parser.add_argument('--cycle_lr', default=True, type=bool, help='Whether to cycle the lr')
     parser.add_argument('--orig_relus', default=False, type=bool, help='Flag whether to add ReLU in certain places')
     parser.add_argument('--base_lr', default=0.0002, type=float, help='Base lr of the cyclic Adam optimizer')
-    parser.add_argument('--max_lr', default = 0.002, type=float,
-                        help='Max lr of the cyclic Adam optimizer before the lr returns to the base_lr')
+    parser.add_argument('--max_lr', default = 0.002, type=float, help='Max lr of the cyclic Adam optimizer before the lr returns to the base_lr')
     parser.add_argument('--momentum', default=0.9, type=float, help='Momentum of the Adam optimizer')
     parser.add_argument('--model_flag', default=opts.Flag, type=Flag, help='Flag that defines the model type')
     parser.add_argument('--ntasks', default=opts.ntasks, type=int, help='Number of tasks the model should handle')
@@ -69,7 +60,7 @@ def GetParser(opts, lr=0.001, wd=0.00001, language_idx=0, direction='right', use
     parser.add_argument('--nfilters', default=[64, 96, 128, 256], type=list, help='The ResNet filters')
     parser.add_argument('--strides', default=[2, 2, 1, 2], type=list, help='The ResNet strides')
     parser.add_argument('--ks', default=[7, 3, 3, 3], type=list, help='The ResNet kernel sizes')
-    parser.add_argument('--ns', default=[0, 1, 1, 1], type=list, help='Number of blocks per filter size')
+    parser.add_argument('--ns', default=[0, 3, 3, 3], type=list, help='Number of blocks per filter size')
     parser.add_argument('--inshape', default=(3, 112, 224), type=tuple, help='The input image shape')
     parser.add_argument('--norm_layer', default=BatchNorm, type=nn.Module, help='The used batch normalization')
     parser.add_argument('--EPOCHS', default=100, type=int, help='Number of epochs in the training')
@@ -78,7 +69,7 @@ def GetParser(opts, lr=0.001, wd=0.00001, language_idx=0, direction='right', use
     ##########################################
     now = datetime.now()
     dt_string = now.strftime("%d.%m.%Y %H:%M:%S")
-    model_path = "Model" + str(language_idx) + '_' + str(direction)
+    model_path = "Model" + str(language_idx) + '_' + str(direction) +"_test_stronger_emb" + dt_string
     parser.add_argument('--results_dir', default=opts.results_dir, type=str,
                         help='The direction the model will be stored')
     model_dir = os.path.join(opts.results_dir, model_path)
@@ -102,10 +93,7 @@ def GetParser(opts, lr=0.001, wd=0.00001, language_idx=0, direction='right', use
                         help='The loss used at the end of the bu1 stream')
     parser.add_argument('--bu2_classification_loss', default=nn.CrossEntropyLoss(reduction='none').to(dev),
                         type=nn.Module, help='The loss used at the end of the bu2 stream')
-    parser.add_argument('--model', default=create_model(parser.parse_args()), type=nn.Module, help='The model we fit')
-    parser.add_argument('--model_old', default=create_model(parser.parse_args()) if use_reg else None, type=nn.Module,
-                        help='The model we fit')
-    parser.add_argument('--reg', default=None, type=any, help=' ')
+    parser.add_argument('--model', default = BUTDModelShared(parser.parse_args()).cuda(), type=nn.Module, help='The model we fit')
     parser.add_argument('--loss_fun', default=UnifiedLossFun(parser.parse_args()), type=Callable,
                         help='The unified loss function of all training')
     parser.add_argument('--epoch_save_idx', default='accuracy', type=str,
@@ -116,22 +104,4 @@ def GetParser(opts, lr=0.001, wd=0.00001, language_idx=0, direction='right', use
     return parser.parse_args()
 
 
-def update_attr(attr_name, new_value):
-    pass
 
-
-def update_model_name(parser, reg_factor):
-    model_path = "Model" + str(reg_factor)
-    model_dir = os.path.join(parser.results_dir, model_path)
-    if not os.path.exists(model_dir):
-        os.makedirs(model_dir)
-    parser.model_dir = model_dir
-
-
-def update_parser(parser, reg, use_reg, reg_factor):
-    parser.use_reg = use_reg
-    parser.reg = reg
-    parser.loss_fun = UnifiedLossFun(parser)
-    parser.reg_factor = reg_factor
-    model_path = "Model" + str(reg_factor)
-    model_dir = os.path.join(parser.results_dir, model_path)

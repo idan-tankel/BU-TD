@@ -4,7 +4,6 @@ import torch.nn as nn
 from supp.general_functions import flag_to_task
 from supp.FlagAt import DsType, Flag
 
-
 class HeadSingleTask(nn.Module):
     # Single task head.
     # allocates tasks according to the desired output size.
@@ -22,8 +21,7 @@ class HeadSingleTask(nn.Module):
         else:
             nheads = 1
 
-        for k in range(
-                nheads):  # according to  the output size we allocate the number of heads.if flag=NOFLAG all characters(usually 6) will be recognized,the loop will run 6 times.
+        for k in range(nheads):  # according to  the output size we allocate the number of heads.if flag=NOFLAG all characters(usually 6) will be recognized,the loop will run 6 times.
             outfilters = nclasses + 1  # The desired number of classes according to the task.
             infilters = opts.nfilters[-1]  # The input size from the end of the BU2 stream.
             layers.append(nn.Linear(infilters, outfilters))
