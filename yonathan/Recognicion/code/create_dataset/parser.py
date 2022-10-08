@@ -1,6 +1,6 @@
 import argparse
 
-def Get_parser(ds_type, nchars_per_row = 6, num_rows_in_the_image = 1):
+def Get_parser(ds_type, nchars_per_row =6, num_rows_in_the_image = 1):
     parser = argparse.ArgumentParser()
     parser.add_argument('--path_data_raw_for_omniglot', default='/home/sverkip/data/BU-TD/yonathan/Recognicion/data/omniglot/RAW', type=str, help='The Raw data path')
     parser.add_argument('--store_folder', default='/home/sverkip/data/BU-TD/yonathan/Recognicion/data/'+ds_type.from_enum_to_str()+'/samples_new/', type=str,help='The storing path')
@@ -24,8 +24,8 @@ def Get_parser(ds_type, nchars_per_row = 6, num_rows_in_the_image = 1):
     parser.add_argument('--single_feat_to_generate', default=False, type=bool, help='Whether to create multiple queries about the same sample')
     parser.add_argument('--ntest_strings', default = 1, type=int, help='The number of samples strings for the combinatorial test.')
     parser.add_argument('--num_rows_in_the_image', default = num_rows_in_the_image, type=int,  help = 'The number of queries to create for the same image')
-    parser.add_argument('--minscale', default = 1.0, type=float,  help = 'The minimal character scale')
-    parser.add_argument('--maxscale', default=1.5, type=float, help = 'The maximal character scale')
-    parser.add_argument('--minshift', default=2.0, type=float, help = 'The minimal shift')
-    parser.add_argument('--maxshift', default=.2*28, type=float, help = 'The maximal shift')
+    parser.add_argument('--minscale', default = 1.5, type=float,  help = 'The minimal character scale')
+    parser.add_argument('--maxscale', default=2.0, type=float, help = 'The maximal character scale')
+    parser.add_argument('--minshift', default=1.0, type=float, help = 'The minimal shift')
+    parser.add_argument('--maxshift', default=0, type=float, help = 'The maximal shift')
     return parser.parse_args()

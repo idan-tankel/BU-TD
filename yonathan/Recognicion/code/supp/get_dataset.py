@@ -51,19 +51,10 @@ def get_dataset_for_spatial_realtions(opts: argparse, data_fname: str, lang_idx:
         test_ds = dataset(os.path.join(data_fname, 'test'), opts, direction, nsamples_test, obj_per_row, obj_per_col)
     # If normalize_image is True the mean of the dataset is subtracted from every image.
     batch_size = opts.bs
-    if opts.distributed:
-        train_sampler = torch.utils.data.distributed.DistributedSampler(train_ds)
-        test_sampler = None
-    else:
-        train_sampler = None
-        test_sampler = None
-        val_sampler = None
-        batch_size = opts.bs
+
     # Creating the data-loaders.
-    train_dl = DataLoader(train_ds, batch_size=batch_size, num_workers=opts.workers, shuffle=False, pin_memory=True,
-                          sampler=train_sampler)
-    test_dl = DataLoader(test_ds, batch_size=batch_size, num_workers=opts.workers, shuffle=False, pin_memory=True,
-                         sampler=test_sampler)
+    train_dl = DataLoader(train_ds, batch_size=batch_size, num_workers=opts.workers, shuffle=True, pin_memory=True )
+    test_dl = DataLoader(test_ds, batch_size=batch_size, num_workers=opts.workers, shuffle=False, pin_memory=True)
     val_dl = None
     #
     nbatches_train = len(train_dl)
@@ -71,20 +62,19 @@ def get_dataset_for_spatial_realtions(opts: argparse, data_fname: str, lang_idx:
     nbatches_val = 0
     train_dataset = WrappedDataLoader(train_dl, preprocess)
     test_dataset = WrappedDataLoader(test_dl, preprocess)
-    the_train_dataset = DatasetInfo(True, train_dataset, nbatches_train, 'Train', opts.checkpoints_per_epoch,
-                                    train_sampler)
-    the_test_dataset = DatasetInfo(False, test_dataset, nbatches_test, 'Test', 1, test_sampler)
+    the_train_dataset = DatasetInfo(True, train_dataset, nbatches_train, 'Train', opts.checkpoints_per_epoch)
+    the_test_dataset = DatasetInfo(False, test_dataset, nbatches_test, 'Test', 1)
     the_datasets = [the_train_dataset, the_test_dataset]
     #
     if use_val:
         val_ds = dataset(os.path.join(data_fname, 'val'), opts, direction, nsamples_val, obj_per_row, obj_per_col)
-        val_dl = DataLoader(val_ds, batch_size=batch_size, num_workers=opts.workers, shuffle=False, pin_memory=True,
-                            sampler=test_sampler)
+        val_dl = DataLoader(val_ds, batch_size=batch_size, num_workers=opts.workers, shuffle=False, pin_memory=True)
         nbatches_val = len(val_dl)
         val_dataset = WrappedDataLoader(val_dl, preprocess)
-        the_val_dataset = DatasetInfo(False, val_dataset, nbatches_val, 'Val', 1, val_sampler)
+        the_val_dataset = DatasetInfo(False, val_dataset, nbatches_val, 'Val', 1)
         the_datasets.append(the_val_dataset)
-
+    else:
+        val_ds = None
     # Storing tht parameters into the Parser
     opts.img_channels = 3
     opts.image_size = image_size
@@ -92,4 +82,4 @@ def get_dataset_for_spatial_realtions(opts: argparse, data_fname: str, lang_idx:
     opts.nbatches_train = nbatches_train
     opts.nbatches_val = nbatches_val
     opts.nbatches_test = nbatches_test
-    return [the_datasets, train_dl, test_dl, val_dl]
+    return [the_datasets, train_dl, test_dl, val_dl, train_ds, test_ds, val_ds]

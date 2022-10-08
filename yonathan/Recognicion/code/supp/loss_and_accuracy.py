@@ -41,7 +41,7 @@ def multi_label_accuracy(outs: object, samples: object):
 
     """
     preds, task_accuracy = multi_label_accuracy_base(outs, samples)
-    task_accuracy = task_accuracy.mean(axis=1)  # per single example
+    task_accuracy = task_accuracy.mean(axis=0)  # per single example
     return preds, task_accuracy
 
 
@@ -56,13 +56,29 @@ def multi_label_accuracy_weighted(outs, samples):
 
     """
     preds, task_accuracy = multi_label_accuracy_base(outs, samples)
-    loss_weight = samples.loss_weight
+    loss_weight = samples.label_existence
     task_accuracy = task_accuracy * loss_weight
     task_accuracy = task_accuracy.sum(axis=1) / loss_weight.sum(axis=1)  # per single example
     return preds, task_accuracy
+#
+def multi_label_accuracy_weighted_for_accuracy(outs, inputs):
+    """
+    return the task accuracy weighted mean over the existing characters in the image.
+    Args:
+        outs: The model outs.
+        samples: The samples.
 
+    Returns: The predication and mean accuracy over the batch.
 
+    """
+    preds, task_accuracy = multi_label_accuracy_base(outs, inputs)
+    loss_weight = inputs[-1]
+    task_accuracy = task_accuracy * loss_weight
+    task_accuracy = task_accuracy.sum(axis=1) / loss_weight.sum(axis=1)  # per single example
+    return preds, task_accuracy
+#
 # Loss
+
 def multi_label_loss_base(outs: object, samples: object):
     """
     Here for each head we compute its loss according to the model out and label task.
@@ -73,6 +89,7 @@ def multi_label_loss_base(outs: object, samples: object):
     Returns: The loss over all heads.
 
     """
+   # samples.label_task = samples.label_task.view([-1, 1])
     loss_tasks = torch.zeros(samples.label_task.shape).to(dev, non_blocking=True)
     num_outputs = samples.label_task.shape[-1]
     for k in range(num_outputs):
@@ -108,11 +125,10 @@ def multi_label_loss_weighted(outs, samples):
 
     """
     losses_task = multi_label_loss_base(outs, samples)
-    loss_weight = samples.loss_weight
+    loss_weight = samples.label_existence
     losses_task = losses_task * loss_weight
     loss_task = losses_task.sum() / loss_weight.sum()  # a single valued result for the whole batch
     return loss_task
-
 
 class UnifiedLossFun:
     def __init__(self, opts: argparse):
@@ -127,9 +143,8 @@ class UnifiedLossFun:
         self.bu2_classification_loss = opts.bu2_loss
         self.inputs_to_struct = opts.inputs_to_struct
         self.opts = opts
-        self.use_reg = opts.use_reg
 
-    def __call__(self, model: nn.Module, inputs: list[torch], outs: list[torch]) -> float:
+    def __call__(self, inputs: list[torch], outs: list[torch]) -> float:
         """
         Args:
             model: The model.
@@ -139,18 +154,16 @@ class UnifiedLossFun:
         Returns: The overall loss.
 
         """
-        outs = get_model_outs(model, outs)  # The output from all the streams.
+        outs = get_model_outs(self.opts.model, outs)  # The output from all the streams.
         samples = self.inputs_to_struct(inputs)  # Make samples from the raw data.
         loss = 0.0  # The general loss.
         if self.use_bu1_loss:
-            loss_occ = self.bu1_loss(outs.occurence_out,
-                                     samples.label_existence)  # compute the binary existence classification loss
+            loss_occ = self.bu1_loss(outs.occurence_out, samples.label_existence)  # compute the binary existence classification loss
             loss += loss_occ  # Add the occurrence loss.                                
         if self.use_bu2_loss:
             loss_task = self.bu2_classification_loss(outs, samples)  # Compute the BU2 loss.
             loss += loss_task
-        if self.use_reg:
-            loss += self.opts.reg.loss_step()
+            
         return loss
 
 
@@ -167,7 +180,7 @@ def accuracy(model: nn.Module, test_data_loader: DataLoader) -> float:
     for inputs in test_data_loader:  # Running over all inputs
         inputs = preprocess(inputs)  # Move to the cuda.
         num_samples += len(inputs[0])  # Update the number of samples.
-        samples = model.module.inputs_to_struct(inputs)  # Make it struct.
+        samples = model.inputs_to_struct(inputs)  # Make it struct.
         model.eval()  #
         outs = model(inputs)  # Compute the output.
         outs = get_model_outs(model, outs)  # From output to struct

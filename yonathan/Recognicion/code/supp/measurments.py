@@ -157,7 +157,7 @@ class Measurements(MeasurementsBase):
                                   occurrence_accuracy.sum().cpu().numpy())  # Update the occurrence metric.
         if self.opts.use_bu2_loss:
             preds, task_accuracy = self.opts.task_accuracy(outs, samples)
-            super().update_metric(self.task_accuracy, task_accuracy.sum().cpu().numpy())  # Update the task metric.
+            super().update_metric(self.task_accuracy, 10 * task_accuracy.sum().cpu().numpy())  # Update the task metric.
 
     def reset(self) -> None:
         """
