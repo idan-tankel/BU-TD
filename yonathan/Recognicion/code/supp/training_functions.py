@@ -74,8 +74,6 @@ class DatasetInfo:
         if self.needinit or self.checkpoints_per_epoch == 1:
             self.reset_iter()  # Reset the data loader to iterate from the beginning.
             self.needinit = False  # The initialization is done.
-            if opts.distributed and self.sampler:
-                self.sampler.set_epoch(epoch)
         start_time = time.time()  # Count the beginning time.
         for inputs in self.dataset_iter:  # Iterating over all dataset.
             cur_loss, outs = self.batch_fun(opts, inputs)  # compute the model outputs and the current loss.

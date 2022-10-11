@@ -47,8 +47,9 @@ def get_dataset_for_spatial_realtions(opts: argparse, data_fname: str, lang_idx:
         test_ds = dataset(os.path.join(data_fname, 'test'), opts, lang_idx, direction, nsamples_test, obj_per_row,
                           obj_per_col)
     else:
-        train_ds = dataset(os.path.join(data_fname, 'train'), opts, direction, nsamples_train, obj_per_row, obj_per_col)
-        test_ds = dataset(os.path.join(data_fname, 'test'), opts, direction, nsamples_test, obj_per_row, obj_per_col)
+        # TODO - OMIT KEYBOARD DEFAULTS.
+        train_ds = dataset(os.path.join(data_fname, 'train'), opts, direction, True, nsamples_train, obj_per_row, obj_per_col)
+        test_ds = dataset(os.path.join(data_fname, 'test'), opts, direction, False, nsamples_test, obj_per_row, obj_per_col)
     # If normalize_image is True the mean of the dataset is subtracted from every image.
     batch_size = opts.bs
 

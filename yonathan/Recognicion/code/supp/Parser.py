@@ -12,7 +12,7 @@ from supp.blocks import BasicBlockTD, BasicBlockBU, BasicBlockBUShared
 from supp.data_functions import dev
 from supp.models import ResNet, BUTDModelShared
 
-def GetParser(opts, lr=0.001, wd=0.00001, language_idx=0, direction='right', use_reg=False):
+def GetParser(opts, lr=0.001, wd=0.00001, language_idx=0, direction='right', model_type = BUTDModelShared):
     """
     Args:
         opts: The opts for data-set specification.
@@ -93,7 +93,7 @@ def GetParser(opts, lr=0.001, wd=0.00001, language_idx=0, direction='right', use
                         help='The loss used at the end of the bu1 stream')
     parser.add_argument('--bu2_classification_loss', default=nn.CrossEntropyLoss(reduction='none').to(dev),
                         type=nn.Module, help='The loss used at the end of the bu2 stream')
-    parser.add_argument('--model', default = BUTDModelShared(parser.parse_args()).cuda(), type=nn.Module, help='The model we fit')
+    parser.add_argument('--model', default = model_type(parser.parse_args()).cuda(), type=nn.Module, help='The model we fit')
     parser.add_argument('--loss_fun', default=UnifiedLossFun(parser.parse_args()), type=Callable,
                         help='The unified loss function of all training')
     parser.add_argument('--epoch_save_idx', default='accuracy', type=str,

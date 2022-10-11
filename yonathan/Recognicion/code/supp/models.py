@@ -412,6 +412,12 @@ class ResNet(nn.Module):
         self.opts = opts
         pre_top_shape = self.bumodel.trunk.inshapes[-2][1:]
         opts.avg_pool_size = tuple(pre_top_shape[1:].tolist())
+        self.ntasks = opts.ntasks
+        self.ndirections = opts.ndirections
+        self.transfer_learning = [[] for _ in range(self.ndirections * self.ntasks)]
+        for i in range(self.ntasks):
+            for j in range(self.ndirections):
+                self.transfer_learning[i * self.ndirections + j] = list(self.taskhead.taskhead[i * self.ndirections + j].parameters())
 
     def forward(self, inputs):
         samples = self.opts.inputs_to_struct(inputs)
