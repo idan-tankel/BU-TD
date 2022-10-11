@@ -28,17 +28,10 @@ def multi_label_accuracy_base(outs: object, samples: object) -> tuple:
     Returns: The predictions, the task accuracy.
 
     """
-    num_outputs = samples[1].shape[-1]
-    cur_batch_size = samples[0].shape[0]
-    predictions = torch.zeros((cur_batch_size, num_outputs), dtype=torch.int).to(dev, non_blocking=True)
-    for k in range(num_outputs):
-        task_output = outs[:, k, :]  # For each task extract its predictions.
-        task_pred = torch.argmax(task_output, dim=1)  # Find the highest probability in the distribution
-        predictions[:, k] = task_pred  # assign for each task its predictions
+    predictions = torch.argmax(outs, dim=1)
     label_task = samples[1]
-    task_accuracy = (  predictions == label_task).float()  # Compare the number of matches and normalize by the batch size*num_outputs.
-    return predictions, task_accuracy  # return the predictions and the accuracy.
-
+    task_accuracy = ( predictions == label_task).float()  # Compare the number of matches and normalize by the batch size*num_outputs.
+    return (predictions, task_accuracy)
 
 def multi_label_accuracy(outs: object, samples: object):
     """
@@ -67,7 +60,7 @@ def multi_label_accuracy_weighted(outs, inputs):
     preds, task_accuracy = multi_label_accuracy_base(outs, inputs)
     loss_weight = inputs[-1]
     task_accuracy = task_accuracy * loss_weight
-    task_accuracy = task_accuracy.sum(axis=1) / loss_weight.sum(axis=1)  # per single example
+    task_accuracy = task_accuracy.sum() / loss_weight.sum()  # per single example
     return preds, task_accuracy
 
 class MyAccuracy(Metric[float]):
@@ -106,12 +99,7 @@ class MyAccuracy(Metric[float]):
         """
 
     @torch.no_grad()
-    def update(
-        self,
-        predicted_y: Tensor,
-        gt: Tensor,
-        task_labels: Union[float, Tensor],
-    ) -> None:
+    def update(self, predicted_y: Tensor, gt: Tensor, task_labels: Union[float, Tensor],) -> None:
         """
         Update the running accuracy given the true and predicted labels.
         Parameter `task_labels` is used to decide how to update the inner
@@ -136,8 +124,9 @@ class MyAccuracy(Metric[float]):
             #
           #  true_positives = float(torch.sum(torch.eq(predicted_y, true_y)))
           #  total_patterns = len(true_y)
-            task_accuracy = task_accuracy.sum() / gt[-1].shape[0]
-            self._mean_accuracy[task_labels].update(task_accuracy , gt[-1].shape[0])
+            task_accuracy = task_accuracy.sum()
+            self._mean_accuracy[task_labels].update(task_accuracy , predicted_y.shape[0])
+
         elif isinstance(task_labels, Tensor):
             for pred, true, t in zip(predicted_y, gt[1], task_labels):
                 true_positives = (pred == true).float().item()

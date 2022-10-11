@@ -1,11 +1,15 @@
 from typing import Optional, Sequence, List, Union
 from torch.nn import Module, CrossEntropyLoss
 from torch.optim import Optimizer
+import torch
 from avalanche.training.plugins.evaluation import default_evaluator
 import sys
 from avalanche.training.templates.supervised import SupervisedTemplate
 sys.path.append(r'/home/sverkip/data/BU-TD/yonathan/Recognicion/code/Integration_toward_CL')
-from Plugins import MyEWCPlugin, MylwfPlugin,  MyLFLPlugin
+sys.path.append(r'/home/sverkip/data/BU-TD/yonathan/Recognicion/code/')
+from supp.data_functions import preprocess
+from supp_avalanche_AI.Plugins import MyEWCPlugin, MylwfPlugin,  MyLFLPlugin
+from supp_avalanche_AI.Accuracy_plugin import multi_label_accuracy_weighted
 from avalanche.training.plugins import SupervisedPlugin
 from avalanche.training.plugins import (
     SupervisedPlugin,
@@ -26,8 +30,9 @@ from avalanche.training.plugins import (
     MASPlugin,
 )
 
+
 class MySupervisedTemplate(SupervisedTemplate):
-    def __init__(    self,   model: Module,  optimizer: Optimizer,  criterion=CrossEntropyLoss(),train_mb_size: int = 1, train_epochs: int = 1, eval_mb_size: Optional[int] = 1,  device="cpu",   plugins: Optional[Sequence["SupervisedPlugin"]] = None, evaluator=default_evaluator,  eval_every=-1, **base_kwargs):
+    def __init__(    self,   model: Module,  optimizer: Optimizer,  criterion=CrossEntropyLoss(),checkpoint=None,train_mb_size: int = 1, train_epochs: int = 1, eval_mb_size: Optional[int] = 1,  device="cpu", test_dl = None,logger = None,   plugins: Optional[Sequence["SupervisedPlugin"]] = None, evaluator=default_evaluator,  eval_every=-1, **base_kwargs):
         super().__init__(
             model,
             optimizer,
@@ -41,6 +46,13 @@ class MySupervisedTemplate(SupervisedTemplate):
             eval_every=eval_every,
             **base_kwargs
         )
+        self.test_dl = test_dl
+        self.logger = logger
+        self.accuracy_fun = multi_label_accuracy_weighted
+        self.checkpoint = checkpoint
+        self.optimum = 0.0
+        self.epoch = 0
+
     @property
     def mb_x(self):
         """Current mini-batch input."""
@@ -52,6 +64,39 @@ class MySupervisedTemplate(SupervisedTemplate):
         """Loss function."""
         return self._criterion(self.mb_x, self.mb_output)
 
+    def eval_epoch(self, **kwargs):
+        """Evaluation loop over the current `self.dataloader`."""
+        sum = 0.0
+        for self.mbatch in self.dataloader:
+            self._unpack_minibatch()
+            self._before_eval_iteration(**kwargs)
+
+            self._before_eval_forward(**kwargs)
+            self.mb_output = self.forward()
+            self._after_eval_forward(**kwargs)
+            self.loss = self.criterion()
+            acc = self.accuracy_fun(self.mb_output[0], self.mbatch[:5])[1]
+            sum += acc
+            self._after_eval_iteration(**kwargs)
+        sum = sum / len(self.dataloader)
+        if sum > self.optimum:
+            self.checkpoint(self.model,self.epoch,sum)
+        self.epoch += 1
+    '''
+    def eval_epoch(self, **kwargs):
+        sum =0.0
+        with torch.no_grad():
+            for inputs in self.test_dl:
+                inputs = preprocess(inputs)
+                outs = self.model(inputs)
+                acc = self.accuracy_fun(outs[0], inputs)[1]
+                loss = self._criterion(inputs,outs)
+       #         self.logger.log('val_loss', loss, on_step=True, on_epoch=True, logger=True)
+          #      self.logger.log('val_acc', acc, on_step=True, on_epoch=True, logger=True)
+                sum += acc
+            print(sum/len(self.test_dl))
+            return sum/len(self.test_dl)
+    '''
 
 class MyEWC(MySupervisedTemplate):
     def __init__(
@@ -327,7 +372,7 @@ class MyLFL(MySupervisedTemplate):
             **base_kwargs
         )
 
-class Naive_with_freezing(SupervisedTemplate):
+class Naive_with_freezing(MySupervisedTemplate):
     """Naive finetuning.
 
     The simplest (and least effective) Continual Learning strategy. Naive just
@@ -343,10 +388,9 @@ class Naive_with_freezing(SupervisedTemplate):
         self,
         model: Module,
         optimizers: List[Optimizer],
-        task_id,
         criterion=CrossEntropyLoss(),
         train_mb_size: int = 1,
-        train_epochs: int = 1,
+        train_epochs: list[int] = [1],
         eval_mb_size: Optional[int] = None,
         device=None,
         plugins: Optional[List[SupervisedPlugin]] = None,
@@ -375,13 +419,16 @@ class Naive_with_freezing(SupervisedTemplate):
         :param base_kwargs: any additional
             :class:`~avalanche.training.BaseTemplate` constructor arguments.
         """
-        optimizer = optimizers[task_id]
+        self.optimizers = optimizers
+        self.epochs_list = train_epochs
+        optimizer = optimizers[0]
+        train_epoch = train_epochs[0]
         super().__init__(
-            model,
-            optimizer,
-            criterion,
+            model = model,
+            optimizer = optimizer,
+            criterion = criterion,
             train_mb_size=train_mb_size,
-            train_epochs=train_epochs,
+            train_epochs = train_epoch,
             eval_mb_size=eval_mb_size,
             device=device,
             plugins=plugins,
@@ -389,3 +436,22 @@ class Naive_with_freezing(SupervisedTemplate):
             eval_every=eval_every,
             **base_kwargs
         )
+        
+    def _after_training_exp(self, **kwargs):
+        """
+        Switching the optimizer, number of parameters.
+        Args:
+            **kwargs:
+
+        Returns:
+
+        """
+        super(Naive_with_freezing, self)._after_training_exp()
+        nexperiences_trained_so_far = self.clock.train_exp_counter
+        if nexperiences_trained_so_far  < len(self.optimizers):
+          new_exp_idx= nexperiences_trained_so_far
+          self.optimizer = self.optimizers[new_exp_idx]
+          self.train_epochs = self.epochs_list[new_exp_idx]
+          print("switch_optimizer")
+        
+        

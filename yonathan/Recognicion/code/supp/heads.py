@@ -41,7 +41,7 @@ class HeadSingleTask(nn.Module):
         for layer in self.layers:
             y = layer(x)  # Transforms the shape according to the number of classes.
             outs.append(y)
-        return torch.stack(outs, dim=-2)  # stacks all tensor into one tensor
+        return torch.stack(outs, dim=-1)  # stacks all tensor into one tensor
 
 
 class MultiTaskHead(nn.Module):

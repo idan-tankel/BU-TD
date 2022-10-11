@@ -1,14 +1,15 @@
 import warnings
 import torch
+import sys
+#print(sys.path)
+sys.path.append(r'/home/sverkip/data/BU-TD/yonathan/Recognicion/code')
 from supp.data_functions import preprocess
 from avalanche.training.utils import copy_params_dict, zerolike_params_dict
 from torch.utils.data import DataLoader
 from avalanche.models import avalanche_forward
 import copy
-import torch
 from avalanche.training.plugins.strategy_plugin import SupervisedPlugin
 from avalanche.training.utils import get_last_fc_layer, freeze_everything
-from avalanche.models.base_model import BaseModel
 from avalanche.training.plugins import (
     SupervisedPlugin,
     CWRStarPlugin,
@@ -27,8 +28,6 @@ from avalanche.training.plugins import (
     LFLPlugin,
     MASPlugin,
 )
-
-from avalanche.training.plugins.clock import Clock
 
 class MyEWCPlugin(EWCPlugin):
     def __init__(
@@ -71,52 +70,44 @@ class MyEWCPlugin(EWCPlugin):
         for i, batch in enumerate(dataloader):
             x = preprocess(batch[:-1])
             task_labels = batch[-1].to(device)
-            if len(x[1].shape)  == 1:
+            if len(x[1].shape) == 1:
              x[1] = x[1].view([-1,1])
             optimizer.zero_grad()
             out = avalanche_forward(model, x, task_labels)
             loss = criterion(x, out)
             loss.backward()
 
-            for (k1, p), (k2, imp) in zip(
-                    model.named_parameters(), importances
-            ):
-                assert k1 == k2
-                if p.grad is not None:
-                    imp += p.grad.data.clone().pow(2)
+            for (k1, p), (k2, imp) in zip( model.named_parameters(), importances):
+                if not 'taskhead' in k1:
+                    assert k1 == k2
+                    if p.grad is not None:
+                        imp += p.grad.data.clone().pow(2)
 
         # average over mini batch length
         for _, imp in importances:
             imp /= float(len(dataloader))
-        s = 0
         importances_without_taskhead = {}
         for i in range(len(importances)):
           (name, param ) = importances[i]
           if not 'taskhead.taskhead' in name:
               importances_without_taskhead[name] = param
-
-
         return importances_without_taskhead
 
     def before_training_exp(self,strategy, **kwargs):
+        super(MyEWCPlugin, self).before_training_exp(strategy,**kwargs)
         if self.start_from_regulization:
             exp_counter = 0
-            importances = self.compute_importances(
-                strategy.model,
-                strategy._criterion,
-                strategy.optimizer,
-                strategy.experience.dataset,
-                strategy.device,
-                strategy.train_mb_size,
-            )
+            importances = self.compute_importances( strategy.model,   strategy._criterion,    strategy.optimizer,   strategy.experience.dataset,       strategy.device,   strategy.train_mb_size, )
             self.update_importances(importances, exp_counter)
             self.saved_params[exp_counter] = dict(copy_params_dict(strategy.model))
-          #  self.start_from_regulization = False
+            self.start_from_regulization = False
 
     def after_training_exp(self, strategy, **kwargs):
         """
         Compute importances of parameters after each experience.
         """
+        pass
+        '''
         if self.start_from_regulization:
          exp_counter = strategy.clock.train_exp_counter + 1
         else:
@@ -135,36 +126,32 @@ class MyEWCPlugin(EWCPlugin):
         # clear previous parameter values
         if exp_counter > 0 and (not self.keep_importance_data):
             del self.saved_params[exp_counter - 1]
-
+        '''
     def before_backward(self, strategy, **kwargs):
         """
         Compute EWC penalty and add it to the loss.
+        # TODO - SUPPORT ALL SUPPORTED THINGS LIKE EXP_COUNTER = 0, MULTITASKLOSS.
         """
         exp_counter = strategy.clock.train_exp_counter
-        if exp_counter == 0 and not self.start_from_regulization:
+        if exp_counter == 0 and False:
             return
-     #   print("success")
         exp_counter +=1
         penalty = torch.tensor(0).float().to(strategy.device)
         if self.mode == "separate":
-            for experience in range(exp_counter):
-                '''
-                for (_, cur_param), (_, saved_param), (_, imp) in zip(
-                    strategy.model.named_parameters(),
-                    self.saved_params[experience],
-                    self.importances[experience],
-                ):
-                '''
+            for experience in range(1):
                 Cur_params = dict(strategy.model.named_parameters())
-                for name in self.importances[experience].keys():
-                    saved_param = self.saved_params[exp_counter-1][name]
-                    imp = self.importances[experience][name]
+                for name in self.importances[0].keys():
+                    # CHANGE IT!!!!
+                  #  print(self.saved_params[0])
+                    saved_param = self.saved_params[0][name]
+                    imp = self.importances[0][name]
                     cur_param = Cur_params[name]
                     # dynamic models may add new units
                     # new units are ignored by the regularization
                     n_units = saved_param.shape[0]
                     cur_param = cur_param[:n_units]
                     penalty += (imp * (cur_param - saved_param).pow(2)).sum()
+
         elif self.mode == "online":
             prev_exp = exp_counter - 1
             for (_, cur_param), (_, saved_param), (_, imp) in zip(
@@ -211,7 +198,6 @@ class MyLFLPlugin(LFLPlugin):
     This plugin does not use task identities.
     """
 
-
     def compute_features(self, model, x):
         """
         Compute features from prev model and current model
@@ -244,12 +230,6 @@ class MyLFLPlugin(LFLPlugin):
         Check if the model is an instance of base class to ensure get_features()
         is implemented 
         """ 
-        return None          
-
-
-class MyClock(Clock):
-    def __init__(self,iter = 0):
-     super().__init__()
-     self.train_exp_counter = iter
+        return None
 
 

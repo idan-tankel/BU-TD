@@ -2,7 +2,6 @@ import copy
 import os
 import argparse
 import torch.backends.cudnn as cudnn
-from supp.Parser import GetParser, update_parser, update_model_name
 from supp.get_dataset import get_dataset_for_spatial_realtions
 from supp.FlagAt import Flag, DsType, Model_Options_By_Flag_And_DsType
 from supp.logger import print_detail
@@ -14,7 +13,8 @@ from supp.measurments import Measurements
 from supp.batch_norm import load_running_stats
 import argparse
 import torch.nn as nn
-
+from supp.models import ResNet
+from supp.Parser import GetParser
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 cudnn.benchmark = True
 
@@ -90,20 +90,20 @@ def main_emnist(train_right: bool, train_left: bool,direction:int):
 
     Returns: None.
     """
-    opts = Model_Options_By_Flag_And_DsType(Flag=Flag.ZF, DsType=DsType.Emnist)
-    parser = GetParser(opts=opts, language_idx=0)
+    opts = Model_Options_By_Flag_And_DsType(Flag=Flag.NOFLAG, DsType=DsType.Emnist,)
+    parser = GetParser(opts=opts, language_idx=0,model_type=ResNet)
     print_detail(parser)
     data_path = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/emnist/samples/18_extended'
     # Create the data for right.
-    [the_datasets, train_dl, test_dl, _ , _, _, _] = get_dataset_for_spatial_realtions(parser, data_path, lang_idx=0, direction=0)
+    [the_datasets, train_dl, test_dl, _ , _, _, _] = get_dataset_for_spatial_realtions(parser, data_path, lang_idx=0, direction = 0)
     # Training Right.
-    path_loading = 'Model_right_18_extended/model_right_best.pt'
+    path_loading = 'Model0_right_test_stronger_emb10.10.2022 12:09:18/model_right_best.pt'
 
     model_path = parser.results_dir
     load_model(parser.model, model_path, path_loading, load_optimizer_and_schedular=False);
     #   load_running_stats(parser.model, task_emb_id = 0,direction_id =0);
- #   acc = accuracy(parser.model, test_dl)
-   # print("Done training right, with accuracy : " + str(acc))
+    acc = accuracy(parser, test_dl)
+    print("Done training right, with accuracy : " + str(acc))
   #  print(num_params(parser.model.parameters()))
     if train_right:
         parser.EPOCHS = 60
@@ -118,8 +118,8 @@ def main_emnist(train_right: bool, train_left: bool,direction:int):
         parser.EPOCHS = 100
         [the_datasets, _ , _ , _, train_ds, test_ds , _ ] = get_dataset_for_spatial_realtions(parser, data_path, lang_idx=0, direction=direction)
 #        compute_for_each_direction_the_stats(train_ds)
-        training_flag = Training_flag(train_all_model=False, train_arg=False, task_embedding=True, head_learning=True)
+        training_flag = Training_flag(train_all_model=False, train_arg=False, task_embedding=False, head_learning=True)
         train_omniglot(parser, lang_idx=0, the_datasets=the_datasets, training_flag=training_flag, direction=direction)
 
 
-main_emnist(False, True, direction = 1)
+main_emnist(False, True, direction = 2)

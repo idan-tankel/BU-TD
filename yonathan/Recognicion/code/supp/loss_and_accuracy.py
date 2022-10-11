@@ -18,16 +18,20 @@ def multi_label_accuracy_base(outs: object, samples: object) -> tuple:
     Returns: The predictions, the task accuracy.
 
     """
+    '''
     num_outputs = samples.label_task.shape[-1]
     cur_batch_size = samples.image.shape[0]
     predictions = torch.zeros((cur_batch_size, num_outputs), dtype=torch.int).to(dev, non_blocking=True)
+  #  out = outs.task.reshape([10,48,47])
     for k in range(num_outputs):
-        task_output = outs.task[:, k, :]  # For each task extract its predictions.
+        task_output = outs.task[:, :, k]  # For each task extract its predictions.
         task_pred = torch.argmax(task_output, dim=1)  # Find the highest probability in the distribution
         predictions[:, k] = task_pred  # assign for each task its predictions
+    '''
+    predictions = torch.argmax(outs.task,dim=1)
     label_task = samples.label_task
-    task_accuracy = (  predictions == label_task).float()  # Compare the number of matches and normalize by the batch size*num_outputs.
-    return predictions, task_accuracy  # return the predictions and the accuracy.
+    task_accuracy = ( predictions == label_task).float()  # Compare the number of matches and normalize by the batch size*num_outputs.
+    return (predictions, task_accuracy)  # return the predictions and the accuracy.
 
 
 def multi_label_accuracy(outs: object, samples: object):
@@ -43,25 +47,8 @@ def multi_label_accuracy(outs: object, samples: object):
     preds, task_accuracy = multi_label_accuracy_base(outs, samples)
     task_accuracy = task_accuracy.mean(axis=0)  # per single example
     return preds, task_accuracy
-
-
-def multi_label_accuracy_weighted(outs, samples):
-    """
-    return the task accuracy weighted mean over the existing characters in the image.
-    Args:
-        outs: The model outs.
-        samples: The samples.
-
-    Returns: The predication and mean accuracy over the batch.
-
-    """
-    preds, task_accuracy = multi_label_accuracy_base(outs, samples)
-    loss_weight = samples.label_existence
-    task_accuracy = task_accuracy * loss_weight
-    task_accuracy = task_accuracy.sum(axis=1) / loss_weight.sum(axis=1)  # per single example
-    return preds, task_accuracy
 #
-def multi_label_accuracy_weighted_for_accuracy(outs, inputs):
+def multi_label_accuracy_weighted(outs, inputs):
     """
     return the task accuracy weighted mean over the existing characters in the image.
     Args:
@@ -72,9 +59,9 @@ def multi_label_accuracy_weighted_for_accuracy(outs, inputs):
 
     """
     preds, task_accuracy = multi_label_accuracy_base(outs, inputs)
-    loss_weight = inputs[-1]
+    loss_weight = inputs.label_existence
     task_accuracy = task_accuracy * loss_weight
-    task_accuracy = task_accuracy.sum(axis=1) / loss_weight.sum(axis=1)  # per single example
+    task_accuracy =  task_accuracy.sum() / loss_weight.sum() # per single example
     return preds, task_accuracy
 #
 # Loss
@@ -90,6 +77,7 @@ def multi_label_loss_base(outs: object, samples: object):
 
     """
    # samples.label_task = samples.label_task.view([-1, 1])
+    '''
     loss_tasks = torch.zeros(samples.label_task.shape).to(dev, non_blocking=True)
     num_outputs = samples.label_task.shape[-1]
     for k in range(num_outputs):
@@ -97,6 +85,8 @@ def multi_label_loss_base(outs: object, samples: object):
         label_task = samples.label_task[:, k]  # The label for the loss
         loss_task = CE(task_output, label_task)  # compute the loss
         loss_tasks[:, k] = loss_task  # Assign for each task its loss.
+    '''
+    loss_tasks = CE(outs.task, samples.label_task)
     return loss_tasks  # return the task loss
 
 
@@ -167,7 +157,7 @@ class UnifiedLossFun:
         return loss
 
 
-def accuracy(model: nn.Module, test_data_loader: DataLoader) -> float:
+def accuracy(parser: nn.Module, test_data_loader: DataLoader) -> float:
     """
     Args:
         model: The model options.
@@ -176,14 +166,15 @@ def accuracy(model: nn.Module, test_data_loader: DataLoader) -> float:
     Returns: The accuracy over the batch size.
 
     """
+    model = parser.model
     num_correct_pred, num_samples = (0.0, 0.0)
     for inputs in test_data_loader:  # Running over all inputs
         inputs = preprocess(inputs)  # Move to the cuda.
-        num_samples += len(inputs[0])  # Update the number of samples.
-        samples = model.inputs_to_struct(inputs)  # Make it struct.
+        num_samples += 1  # Update the number of samples.
+        samples = parser.inputs_to_struct(inputs)  # Make it struct.
         model.eval()  #
         outs = model(inputs)  # Compute the output.
         outs = get_model_outs(model, outs)  # From output to struct
-        (_, task_accuracy_batch) = multi_label_accuracy_base(outs, samples)  # Compute the accuracy on the batch
+        (_ , task_accuracy_batch) = multi_label_accuracy_weighted(outs, samples)  # Compute the accuracy on the batch
         num_correct_pred += task_accuracy_batch.sum()  # Sum all accuracies on the batches.
     return num_correct_pred / num_samples  # Compute the mean.

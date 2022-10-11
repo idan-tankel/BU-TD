@@ -95,13 +95,7 @@ def save_script(opts: argparse) -> None:
         # copy the running script
         script_fname = main.__file__
         shutil.copy(script_fname, model_dir)
-        if opts.distributed:
-            # if distributed then also copy the actual script
-            script_base_fname = opts.module + '.py'
-            script_base_fname = os.path.join(os.path.dirname(script_fname), script_base_fname)
-            shutil.copy(script_base_fname, model_dir)
-
-        # copy funcs folder
+        
         mods = 'supp'
         if len(mods) > 0:
             mods = mods
@@ -116,16 +110,11 @@ def print_detail(args: argparse) -> None:
         args: The model options.
 
     """
-    first_node = not args.multiprocessing_distributed or (
-            args.multiprocessing_distributed and args.rank % ngpus_per_node == 0)
+    first_node = True
     args.first_node = first_node
     if first_node:
         if not os.path.exists(args.model_dir):
             os.makedirs(args.model_dir)
-    if args.distributed:
-        import torch.distributed as dist
-        dist.barrier()
-        model_opts.module = args.module
     log_init(args)
     if first_node:
         print_info(args)
