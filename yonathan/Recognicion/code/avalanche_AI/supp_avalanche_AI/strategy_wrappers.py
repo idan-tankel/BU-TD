@@ -1,56 +1,49 @@
+import argparse
+import sys
 from typing import Optional, Sequence, List, Union
+
+from avalanche.training.plugins.evaluation import default_evaluator
+from avalanche.training.templates.supervised import SupervisedTemplate
 from torch.nn import Module, CrossEntropyLoss
 from torch.optim import Optimizer
-import torch
-from avalanche.training.plugins.evaluation import default_evaluator
-import sys
-from avalanche.training.templates.supervised import SupervisedTemplate
+
 sys.path.append(r'/home/sverkip/data/BU-TD/yonathan/Recognicion/code/Integration_toward_CL')
 sys.path.append(r'/home/sverkip/data/BU-TD/yonathan/Recognicion/code/')
-from supp.data_functions import preprocess
-from supp_avalanche_AI.Plugins import MyEWCPlugin, MylwfPlugin,  MyLFLPlugin
-from supp_avalanche_AI.Accuracy_plugin import multi_label_accuracy_weighted
-from avalanche.training.plugins import SupervisedPlugin
+from supp_avalanche_AI.Plugins.EWC import MyEWCPlugin
+from supp_avalanche_AI.Plugins.LWF import MyLWFPlugin
+from supp_avalanche_AI.Plugins.MAS import MyMASPlugin
+from supp_avalanche_AI.Plugins.LFL import MyLFLPlugin
+from supp_avalanche_AI.Plugins.Clock import EpochClock
+from supp_avalanche_AI.Plugins.Accuracy_plugin import multi_label_accuracy_weighted
 from avalanche.training.plugins import (
     SupervisedPlugin,
-    CWRStarPlugin,
-    ReplayPlugin,
-    GenerativeReplayPlugin,
-    TrainGeneratorAfterExpPlugin,
-    GDumbPlugin,
-    LwFPlugin,
-    AGEMPlugin,
-    GEMPlugin,
-    EWCPlugin,
     EvaluationPlugin,
     SynapticIntelligencePlugin,
-    CoPEPlugin,
-    GSS_greedyPlugin,
-    LFLPlugin,
-    MASPlugin,
 )
 
-
 class MySupervisedTemplate(SupervisedTemplate):
-    def __init__(    self,   model: Module,  optimizer: Optimizer,  criterion=CrossEntropyLoss(),checkpoint=None,train_mb_size: int = 1, train_epochs: int = 1, eval_mb_size: Optional[int] = 1,  device="cpu", test_dl = None,logger = None,   plugins: Optional[Sequence["SupervisedPlugin"]] = None, evaluator=default_evaluator,  eval_every=-1, **base_kwargs):
+    def __init__(self, parser:argparse, checkpoint=None,  device="cpu", test_dl = None,logger = None,   plugins: Optional[Sequence["SupervisedPlugin"]] = None, evaluator=default_evaluator,  eval_every=-1, **base_kwargs):
         super().__init__(
-            model,
-            optimizer,
-            criterion,
-            train_mb_size=train_mb_size,
-            train_epochs=train_epochs,
-            eval_mb_size=eval_mb_size,
+            model=parser.model,
+            optimizer=parser.optimizer,
+            criterion=parser.criterion,
+            train_mb_size=parser.train_mb_size,
+            train_epochs=parser.train_epochs,
+            eval_mb_size=parser.eval_mb_size,
             device=device,
             plugins=plugins,
             evaluator=evaluator,
             eval_every=eval_every,
-            **base_kwargs
         )
+
         self.test_dl = test_dl
         self.logger = logger
         self.accuracy_fun = multi_label_accuracy_weighted
         self.checkpoint = checkpoint
         self.optimum = 0.0
+        self.pretrined_model = parser.pretrained_model
+        self.EpochClock = EpochClock(parser.epochs, self.pretrined_model)
+        self.plugins.append(self.EpochClock)
         self.epoch = 0
 
     @property
@@ -79,40 +72,17 @@ class MySupervisedTemplate(SupervisedTemplate):
             sum += acc
             self._after_eval_iteration(**kwargs)
         sum = sum / len(self.dataloader)
-        if sum > self.optimum:
-            self.checkpoint(self.model,self.epoch,sum)
+        self.checkpoint(self.model, self.epoch, sum)
         self.epoch += 1
-    '''
-    def eval_epoch(self, **kwargs):
-        sum =0.0
-        with torch.no_grad():
-            for inputs in self.test_dl:
-                inputs = preprocess(inputs)
-                outs = self.model(inputs)
-                acc = self.accuracy_fun(outs[0], inputs)[1]
-                loss = self._criterion(inputs,outs)
-       #         self.logger.log('val_loss', loss, on_step=True, on_epoch=True, logger=True)
-          #      self.logger.log('val_acc', acc, on_step=True, on_epoch=True, logger=True)
-                sum += acc
-            print(sum/len(self.test_dl))
-            return sum/len(self.test_dl)
-    '''
 
 class MyEWC(MySupervisedTemplate):
     def __init__(
             self,
-            model: Module,
-            optimizer: Optimizer,
-            criterion,
-            ewc_lambda: float,
-            start_from_regulization = False,
-            Ignored_params = None,
+            parser: argparse,
             mode: str = "separate",
             decay_factor: Optional[float] = None,
             keep_importance_data: bool = False,
-            train_mb_size: int = 1,
-            train_epochs: int = 1,
-            eval_mb_size: int = None,
+         #   eval_mb_size: int = None,
             device=None,
             plugins: Optional[List[SupervisedPlugin]] = None,
             evaluator = None,
@@ -153,19 +123,14 @@ class MyEWC(MySupervisedTemplate):
         :param base_kwargs: any additional
             :class:`~avalanche.training.BaseTemplate` constructor arguments.
         """
-        ewc = MyEWCPlugin(ewc_lambda,start_from_regulization,Ignored_params, mode, decay_factor, keep_importance_data)
+        ewc = MyEWCPlugin(parser.ewc_lambda, mode, decay_factor, keep_importance_data,parser.old_dataset)
         if plugins is None:
             plugins = [ewc]
         else:
             plugins.append(ewc)
 
         super().__init__(
-            model,
-            optimizer,
-            criterion,
-            train_mb_size=train_mb_size,
-            train_epochs=train_epochs,
-            eval_mb_size=eval_mb_size,
+            parser,
             device=device,
             plugins=plugins,
             evaluator=evaluator,
@@ -247,11 +212,7 @@ class MySI(MySupervisedTemplate):
 class Mylwf(MySupervisedTemplate):
     def __init__(
             self,
-            model: Module,
-            optimizer: Optimizer,
-            criterion,
-            alpha: Union[float, Sequence[float]],
-            temperature: float,
+            parser,
             train_mb_size: int = 1,
             train_epochs: int = 1,
             eval_mb_size: int = None,
@@ -285,16 +246,21 @@ class Mylwf(MySupervisedTemplate):
             :class:`~avalanche.training.BaseTemplate` constructor arguments.
         """
 
-        lwf = MylwfPlugin(alpha, temperature)
+        model = parser.model
+        optimizer = parser.optimizer
+        criterion = parser.criterion
+        if parser.pretrained_model:
+            prev_model = model
+        else:
+         prev_model = None
+        lwf = MyLWFPlugin(parser, prev_model)
         if plugins is None:
             plugins = [lwf]
         else:
             plugins.append(lwf)
 
         super().__init__(
-            model,
-            optimizer,
-            criterion,
+            parser = parser,
             train_mb_size=train_mb_size,
             train_epochs=train_epochs,
             eval_mb_size=eval_mb_size,
@@ -305,8 +271,6 @@ class Mylwf(MySupervisedTemplate):
             **base_kwargs
         )
 
-
-
 class MyLFL(MySupervisedTemplate):
     """Less Forgetful Learning strategy.
 
@@ -316,19 +280,14 @@ class MyLFL(MySupervisedTemplate):
     """
 
     def __init__(
-        self,
-        model: Module,
-        optimizer: Optimizer,
-        criterion,
-        lambda_e: Union[float, Sequence[float]],
-        train_mb_size: int = 1,
-        train_epochs: int = 1,
-        eval_mb_size: int = None,
-        device=None,
-        plugins: Optional[List[SupervisedPlugin]] = None,
-        evaluator: EvaluationPlugin = default_evaluator,
-        eval_every=-1,
-        **base_kwargs
+            self,
+            parser: argparse,
+            device=None,
+            plugins: Optional[List[SupervisedPlugin]] = None,
+            evaluator=None,
+            #  evaluator: EvaluationPlugin = default_evaluator(),
+            eval_every=-1,
+            **base_kwargs
     ):
         """Init.
 
@@ -352,19 +311,69 @@ class MyLFL(MySupervisedTemplate):
             :class:`~avalanche.training.BaseTemplate` constructor arguments.
         """
 
-        lfl = MyLFLPlugin(lambda_e)
+        lfl = MyLFLPlugin(parser.lambda_lfl, parser.model)
         if plugins is None:
             plugins = [lfl]
         else:
             plugins.append(lfl)
 
         super().__init__(
-            model,
-            optimizer,
-            criterion,
-            train_mb_size=train_mb_size,
-            train_epochs=train_epochs,
-            eval_mb_size=eval_mb_size,
+            parser,
+            device=device,
+            plugins=plugins,
+            evaluator=evaluator,
+            eval_every=eval_every,
+            **base_kwargs
+        )
+
+class MyMAS(MySupervisedTemplate):
+    """Less Forgetful Learning strategy.
+
+    See LFL plugin for details.
+    Refer Paper: https://arxiv.org/pdf/1607.00122.pdf
+    This strategy does not use task identities.
+    """
+
+    def __init__(
+            self,
+            parser: argparse,
+            device=None,
+            plugins: Optional[List[SupervisedPlugin]] = None,
+            evaluator=None,
+            #  evaluator: EvaluationPlugin = default_evaluator(),
+            eval_every=-1,
+            **base_kwargs
+    ):
+        """Init.
+
+        :param model: The model.
+        :param optimizer: The optimizer to use.
+        :param criterion: The loss criterion to use.
+        :param lambda_e: euclidean loss hyper parameter. It can be either a
+                float number or a list containing lambda_e for each experience.
+        :param train_mb_size: The train minibatch size. Defaults to 1.
+        :param train_epochs: The number of training epochs. Defaults to 1.
+        :param eval_mb_size: The eval minibatch size. Defaults to 1.
+        :param device: The device to use. Defaults to None (cpu).
+        :param plugins: Plugins to be added. Defaults to None.
+        :param evaluator: (optional) instance of EvaluationPlugin for logging
+            and metric computations.
+        :param eval_every: the frequency of the calls to `eval` inside the
+            training loop. -1 disables the evaluation. 0 means `eval` is called
+            only at the end of the learning experience. Values >0 mean that
+            `eval` is called every `eval_every` epochs and at the end of the
+            learning experience.
+            :class:`~avalanche.training.BaseTemplate` constructor arguments.
+        """
+
+        lfl = MyMASPlugin(parser)
+        if plugins is None:
+            plugins = [lfl]
+        else:
+            plugins.append(lfl)
+
+        super().__init__(
+            parser,
             device=device,
             plugins=plugins,
             evaluator=evaluator,

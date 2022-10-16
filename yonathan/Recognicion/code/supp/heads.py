@@ -1,8 +1,11 @@
-import torch
 import argparse
+
+import torch
 import torch.nn as nn
+
+from supp.Dataset_and_model_type_specification import DsType, Flag
 from supp.general_functions import flag_to_task
-from supp.FlagAt import DsType, Flag
+
 
 class HeadSingleTask(nn.Module):
     # Single task head.
@@ -63,7 +66,10 @@ class MultiTaskHead(nn.Module):
             self.taskhead.append(HeadSingleTask(opts, self.num_classes[index]))
         self.taskhead = nn.ModuleList(self.taskhead)
 
-    def forward(self, inputs: torch) -> torch:
+
+
+
+    def forward(self, inputs: torch,idx_out = None) -> torch:
         """
         Args:
             inputs: The output from BU2, the flag.
@@ -83,7 +89,8 @@ class MultiTaskHead(nn.Module):
             direction_id = flag_to_task(direction_flag)
             lan_id = 0
             idx = direction_id + self.ndirections * lan_id
-
+        if idx_out != None:
+            idx = idx_out
         bu2_out = bu2_out.squeeze()  # Make it 1-dimensional.
         task_out = self.taskhead[idx](bu2_out)  # apply the appropriate task-head.
         if len(task_out.shape) == 2:

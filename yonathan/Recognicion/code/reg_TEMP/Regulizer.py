@@ -1,13 +1,12 @@
-import os
-import torch
-import pickle
 import argparse
-from supp.data_functions import preprocess
-from supp.Parser import GetParser
-from supp.get_dataset import get_dataset_for_spatial_realtions
-from supp.FlagAt import Flag, DsType, Model_Options_By_Flag_And_DsType
+import os
+import pickle
+
+import torch
 from supp.utils import cross_entropy
 from torch.utils.data import DataLoader
+
+from supp.data_functions import preprocess
 
 
 class EWC():  # elastic weight consolidation.

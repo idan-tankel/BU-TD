@@ -1,5 +1,6 @@
-import torch.nn as nn
 import torch
+import torch.nn as nn
+
 '''
 class BatchNorm(nn.Module):
     def __init__(self,opts, num_channels, dims=2):

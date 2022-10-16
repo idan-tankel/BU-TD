@@ -1,20 +1,21 @@
-import copy
-import os
 import argparse
+import os
+from pathlib import Path
+
 import torch.backends.cudnn as cudnn
+import torch.nn as nn
+
+from supp.Dataset_and_model_type_specification import Flag
+from supp.Parser import GetParser
+from supp.general_functions import create_optimizer_and_sched
 from supp.get_dataset import get_dataset_for_spatial_realtions
-from supp.FlagAt import Flag, DsType, Model_Options_By_Flag_And_DsType
 from supp.logger import print_detail
 from supp.loss_and_accuracy import accuracy
-from supp.measurments import set_datasets_measurements
-from supp.training_functions import load_model, fit
-from supp.general_functions import num_params, create_optimizer_and_sched
 from supp.measurments import Measurements
-from supp.batch_norm import load_running_stats
-import argparse
-import torch.nn as nn
-from supp.models import ResNet
-from supp.Parser import GetParser
+from supp.measurments import set_datasets_measurements
+from supp.models import BUTDModelShared
+from supp.training_functions import fit
+
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 cudnn.benchmark = True
 
@@ -75,13 +76,6 @@ def train_omniglot(opts: argparse, lang_idx: int, the_datasets: list, training_f
     # Training the learned params of the model.
     return fit(opts, the_datasets, lang_idx, direction)
 
-def compute_for_each_direction_the_stats(train_ds):
-    labels =[0 for _ in range(48)]
-    for i in range(len(train_ds)):
-      input = train_ds[i]
-      labels[input[1]] +=1 /len(train_ds)
-    print(labels)
-
 def main_emnist(train_right: bool, train_left: bool,direction:int):
     """
     Args:
@@ -90,17 +84,17 @@ def main_emnist(train_right: bool, train_left: bool,direction:int):
 
     Returns: None.
     """
-    opts = Model_Options_By_Flag_And_DsType(Flag=Flag.NOFLAG, DsType=DsType.Emnist,)
-    parser = GetParser(opts=opts, language_idx=0,model_type=ResNet)
+    parser = GetParser(language_idx=0,model_type=BUTDModelShared,flag=Flag.TD)
     print_detail(parser)
-    data_path = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/emnist/samples/18_extended'
+    project_path = Path(__file__).parents[1]
+    data_path =  os.path.join(project_path, 'data/{}/samples/6_extended'.format('emnist'))
     # Create the data for right.
     [the_datasets, train_dl, test_dl, _ , _, _, _] = get_dataset_for_spatial_realtions(parser, data_path, lang_idx=0, direction = 0)
     # Training Right.
-    path_loading = 'Model0_right_test_stronger_emb10.10.2022 12:09:18/model_right_best.pt'
+    path_loading = 'Model_up_1/model_right_best.pt'
 
     model_path = parser.results_dir
-    load_model(parser.model, model_path, path_loading, load_optimizer_and_schedular=False);
+   # load_model(parser.model, model_path, path_loading, load_optimizer_and_schedular=False);
     #   load_running_stats(parser.model, task_emb_id = 0,direction_id =0);
     acc = accuracy(parser, test_dl)
     print("Done training right, with accuracy : " + str(acc))
@@ -122,4 +116,4 @@ def main_emnist(train_right: bool, train_left: bool,direction:int):
         train_omniglot(parser, lang_idx=0, the_datasets=the_datasets, training_flag=training_flag, direction=direction)
 
 
-main_emnist(False, True, direction = 2)
+main_emnist(True, True, direction = 0)

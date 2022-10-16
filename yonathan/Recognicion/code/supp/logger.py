@@ -1,10 +1,9 @@
+import argparse
 import logging
 import os
 import shutil
-import sys
+
 import torch
-import setuptools
-import argparse
 
 
 def reset_logger(logger: logging) -> None:

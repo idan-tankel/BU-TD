@@ -1,5 +1,6 @@
+from Create_dataset_classes import DsType
 from Create_dataset_funcs import main
-from Create_dataset_classes import  DsType
+
 
 def main_Omniglot(lists):
     for list in lists:
