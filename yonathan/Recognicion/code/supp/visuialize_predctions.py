@@ -1,12 +1,18 @@
-from supp.training_functions import test_step
-#from supp.omniglot_dataset import inputs_to_struct
+rom supp.training_functions # from supp.omniglot_dataset import inputs_to_struct
 import numpy as np
-
-#import matplotlib.pyplot as plt
-
-from supp.FlagAt import *
-from supp.measurments import get_model_outs
+import test_step
 import torch
+
+from supp.Dataset_and_model_type_specification import *
+from supp.measurments import get_model_outs
+from supp.training_functions import test_step
+
+
+# from supp.omniglot_dataset import inputs_to_struct
+# import matplotlib.pyplot as plt
+
+
+# import matplotlib.pyplot as plt
 
 
 def flag_to_comp(flag: torch, ntasks: int) -> tuple:

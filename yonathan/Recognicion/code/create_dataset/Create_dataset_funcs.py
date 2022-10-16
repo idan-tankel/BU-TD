@@ -1,19 +1,22 @@
-import torch.utils.data as data
-import skimage.transform as transforms
-from PIL import Image
-from Raw_data import DataSet
-import os
-import numpy as np
-import skimage
-import random
-from Create_dataset_classes import Sample, ExampleClass, CharInfo, DataAugmentClass, MetaData
-from parser import Get_parser
-import datetime
-import pickle
 import argparse
+import datetime
+import os
+import pickle
+import random
+import shutil
 import sys
 from multiprocessing import Pool
-import shutil
+from parser import Get_parser
+
+import numpy as np
+import skimage
+import skimage.transform as transforms
+import torch.utils.data as data
+from PIL import Image
+
+from Create_dataset_classes import Sample, ExampleClass, CharInfo, DataAugmentClass, MetaData
+from Raw_data import DataSet
+
 
 def store_sample_disk(parser:argparse,sample:Sample, store_dir:str)->None:
     """

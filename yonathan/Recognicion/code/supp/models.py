@@ -1,11 +1,13 @@
+import argparse
+
+import numpy as np
 import torch
 import torch.nn as nn
-import argparse
-from supp.heads import MultiTaskHead, OccurrenceHead
+
+from supp.Dataset_and_model_type_specification import Flag, DsType
 from supp.blocks import BUInitialBlock, init_module_weights, InitialTaskEmbedding, SideAndComb, SideAndCombSharedBase
 from supp.general_functions import depthwise_separable_conv, get_laterals
-from supp.FlagAt import Flag, DsType
-import numpy as np
+from supp.heads import MultiTaskHead, OccurrenceHead
 
 
 class TDModel(nn.Module):
@@ -18,7 +20,6 @@ class TDModel(nn.Module):
         super(TDModel, self).__init__()
         self.block = opts.td_block_type
         self.use_lateral = opts.use_lateral_butd
-        self.use_td_flag = opts.use_td_flag
         self.model_flag = opts.model_flag
         self.top_filters = opts.nfilters[-1]
         self.inplanes = opts.nfilters[-1]
@@ -84,7 +85,7 @@ class TDModel(nn.Module):
         """
         bu_out, flag, laterals_in = inputs
         laterals_out = []
-        if self.use_td_flag:
+        if self.model_flag is not Flag.NOFLAG:
             (x, top_td_embed, top_td) = self.InitialTaskEmbedding((bu_out, flag))  # Compute the initial task embedding.
         else:
             x = bu_out
@@ -115,10 +116,9 @@ class TDModel(nn.Module):
             x = self.bot_lat((x, lateral_in))  # Compute lateral connection + channel modulation.
         laterals_out.append(x)
         outs = [x, laterals_out[::-1]]  # Output the output of the stream + the lateral connections.
-        if self.use_td_flag:
+        if self.model_flag is not Flag.NOFLAG:
             outs += [top_td_embed, top_td]  # Add the top embeddings to the output if needed.
         return outs
-
 
 class BUStream(nn.Module):
     def __init__(self, opts: argparse, shared: nn.Module, is_bu2: bool):
@@ -367,7 +367,6 @@ class BUTDModelShared(BUTDModel):
         self.argument_embedding = [[] for _ in range(self.ntasks)]
         self.model_flag = opts.model_flag  # The model type
         self.use_bu1_loss = opts.use_bu1_loss  # Whether to use the Occurrence loss.
-        self.use_td_flag = opts.use_td_flag
         self.ds_type = opts.ds_type
         if self.use_bu1_loss:
             self.occhead = OccurrenceHead(opts)
@@ -418,14 +417,31 @@ class ResNet(nn.Module):
         for i in range(self.ntasks):
             for j in range(self.ndirections):
                 self.transfer_learning[i * self.ndirections + j] = list(self.taskhead.taskhead[i * self.ndirections + j].parameters())
+        print(len(self.transfer_learning))
 
-    def forward(self, inputs):
+    def forward_features(self, features, inputs, head = None):
+        """
+        Needed for switching a task-head given computed features.
+        Args:
+            features:
+            inputs:
+            head:
+
+        Returns:
+
+        """
+        samples = self.opts.inputs_to_struct(inputs)
+        flags = samples.flag
+        task_out = self.taskhead((features, flags), head)
+        return task_out
+
+    def forward(self, inputs,head = None):
         samples = self.opts.inputs_to_struct(inputs)
         images = samples.image
         flags = samples.flag
         model_inputs = [images, flags, None]
         bu_out, _ = self.bumodel(model_inputs)
-        task_out = self.taskhead((bu_out, flags))
+        task_out = self.taskhead((bu_out, flags),head)
         return task_out, bu_out
 
     class outs_to_struct:

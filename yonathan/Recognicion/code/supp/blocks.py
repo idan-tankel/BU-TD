@@ -1,9 +1,12 @@
-import torch.nn as nn
-import torch
-import numpy as np
-from supp.general_functions import conv3x3, conv1x1, conv3x3up, get_laterals, flag_to_task
-from supp.FlagAt import Flag, DsType
 import argparse
+
+import numpy as np
+import torch
+import torch.nn as nn
+
+from supp.Dataset_and_model_type_specification import Flag, DsType
+from supp.general_functions import conv3x3, conv1x1, conv3x3up, get_laterals, flag_to_task
+
 
 # torch.manual_seed(seed=0)
 
@@ -328,7 +331,6 @@ class InitialTaskEmbedding(nn.Module):
         self.top_filters = opts.nfilters[-1]
         self.model_flag = opts.model_flag
         self.ndirections = opts.ndirections
-        self.use_td_flag = opts.use_td_flag
         self.task_embedding = [[] for _ in range(self.ntasks)]
         self.norm_layer = opts.norm_layer
         self.activation_fun = opts.activation_fun

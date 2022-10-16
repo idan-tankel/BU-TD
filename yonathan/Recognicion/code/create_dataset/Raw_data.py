@@ -1,10 +1,11 @@
 import os
+
 import numpy as np
+import skimage.io
 import torch.utils.data as data
 import torchvision
-from skimage import io
 from torchvision import transforms
-import skimage.io
+
 
 def Get_raw_data(download_dir:str, dataset:str,language_list, raw_data_source)->tuple:
     """

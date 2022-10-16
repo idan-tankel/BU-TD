@@ -8,14 +8,15 @@
 # E-mail: contact@continualai.org                                              #
 # Website: www.continualai.org                                                 #
 ################################################################################
-from typing import List, Union, Dict
-import torch
-from torch import Tensor
-from avalanche.evaluation import Metric, PluginMetric, GenericPluginMetric
-from avalanche.evaluation.metrics.mean import Mean
-from avalanche.evaluation.metric_utils import phase_and_task
 from collections import defaultdict
-from supp.data_functions import dev
+from typing import List, Union, Dict
+
+import torch
+from avalanche.evaluation import Metric, PluginMetric, GenericPluginMetric
+from avalanche.evaluation.metric_utils import phase_and_task
+from avalanche.evaluation.metrics.mean import Mean
+from torch import Tensor
+
 
 def multi_label_accuracy_base(outs: object, samples: object) -> tuple:
     """

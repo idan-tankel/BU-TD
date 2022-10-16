@@ -1,27 +1,22 @@
+import argparse
 import os
-import argparse
-import torch.backends.cudnn as cudnn
-from supp.Parser import GetParser
-from supp.get_dataset import get_dataset_for_spatial_realtions
-from supp.FlagAt import Flag, DsType, Model_Options_By_Flag_And_DsType
-from supp.logger import print_detail
-from supp.loss_and_accuracy import accuracy
-from supp.measurments import set_datasets_measurements
-from supp.training_functions import load_model, fit
-from supp.general_functions import num_params, create_optimizer_and_sched
-from supp.measurments import Measurements
-from supp.batch_norm import load_running_stats
-import argparse
+
 import pytorch_lightning as pl
-from pytorch_lightning import LightningModule
-from supp.general_functions import create_optimizer_and_sched
 import torch
-from supp.Parser import GetParser
-from supp.get_dataset import get_dataset_for_spatial_realtions
-from supp.FlagAt import Flag, DsType, Model_Options_By_Flag_And_DsType
-from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning import loggers
+import torch.backends.cudnn as cudnn
 import torch.nn as nn
+from pytorch_lightning import LightningModule
+from pytorch_lightning import loggers
+from pytorch_lightning.callbacks import ModelCheckpoint
+
+from supp.Dataset_and_model_type_specification import Flag, DsType, Model_Options_By_Flag_And_DsType
+from supp.Parser import GetParser
+from supp.general_functions import create_optimizer_and_sched
+from supp.get_dataset import get_dataset_for_spatial_realtions
+from supp.logger import print_detail
+from supp.measurments import Measurements
+from supp.measurments import set_datasets_measurements
+from supp.training_functions import fit
 
 # NO SEED in data_functions and not in blocks.
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'

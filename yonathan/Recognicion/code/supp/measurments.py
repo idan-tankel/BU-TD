@@ -1,8 +1,10 @@
+import argparse
+
 import numpy as np
 import torch
 import torch.nn as nn
+
 from supp.general_functions import get_model_outs
-import argparse
 
 
 class MeasurementsBase:

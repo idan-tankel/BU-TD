@@ -1,9 +1,10 @@
+import argparse
+import os
+
 import numpy as np
 import torch
 import torch.nn as nn
-import argparse
 import torch.optim as optim
-import os
 
 
 def flag_to_task(flag: torch) -> int:
@@ -226,7 +227,21 @@ def get_model_outs(model: nn.Module, outs: list[torch]) -> object:
     Returns: The outs arranged in a class.
 
     """
-    if type(model) is torch.nn.DataParallel or type(model) is torch.nn.parallel.DistributedDataParallel:
-        return model.module.outs_to_struct(outs)  # Use outs_to_struct to transform from list -> struct
-    else:
-        return model.outs_to_struct(outs)
+    return model.outs_to_struct(outs)
+
+
+def Get_non_taskhead_params(model):
+    param_dict = dict()
+    params = list(model.named_parameters())
+   # Head_paramd = model.head.named_parameters()
+    for idx, (key, param) in enumerate(params):
+        if 'taskhead' not in key:
+         param_dict[key] = param
+    return param_dict
+
+
+def Get_learned_params(model,task_id):
+    learned_param = []
+    learned_param.extend(model.bumodel.parameters())
+    learned_param.extend(model.transfer_learning[task_id])
+    return learned_param

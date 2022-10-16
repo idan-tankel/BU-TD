@@ -1,12 +1,13 @@
-import os
-import sys
-import pickle
-import torch
 import argparse
+import os
+import pickle
+import sys
+
 from torch.utils.data import DataLoader
-from supp.FlagAt import DsType, Flag
-from supp.training_functions import DatasetInfo
+
+from supp.Dataset_and_model_type_specification import DsType, Flag
 from supp.data_functions import WrappedDataLoader, preprocess
+from supp.training_functions import DatasetInfo
 
 sys.path.append(r'/home/sverkip/data/BU-TD/yonathan/Recognicion/code/create_dataset')
 
@@ -25,10 +26,11 @@ def get_dataset_for_spatial_realtions(opts: argparse, data_fname: str, lang_idx:
     """
     if opts.ds_type is DsType.Omniglot and opts.model_flag is Flag.ZF:
         from supp.datasets import OmniglotDataset as dataset
-    if opts.ds_type is DsType.Emnist and opts.model_flag is Flag.ZF:
+    if (opts.ds_type is DsType.Emnist or opts.ds_type is DsType.FashionMnist) and opts.model_flag is not Flag.NOFLAG:
         from supp.datasets import EmnistDataSet as dataset
-    if opts.ds_type is DsType.Emnist and opts.model_flag is Flag.NOFLAG:
+    if (opts.ds_type is DsType.Emnist or opts.ds_type is DsType.FashionMnist) and opts.model_flag is Flag.NOFLAG:
         from supp.datasets import EmnistDataSetAll as dataset
+
     use_val = opts.generalize
     path_fname = os.path.join(data_fname, 'MetaData')
     # Opening the conf file and retrieve number of samples, img shape,number of objects per image.
@@ -68,7 +70,7 @@ def get_dataset_for_spatial_realtions(opts: argparse, data_fname: str, lang_idx:
     the_datasets = [the_train_dataset, the_test_dataset]
     #
     if use_val:
-        val_ds = dataset(os.path.join(data_fname, 'val'), opts, direction, nsamples_val, obj_per_row, obj_per_col)
+        val_ds = dataset(os.path.join(data_fname, 'val'), opts, direction,False, nsamples_val, obj_per_row, obj_per_col)
         val_dl = DataLoader(val_ds, batch_size=batch_size, num_workers=opts.workers, shuffle=False, pin_memory=True)
         nbatches_val = len(val_dl)
         val_dataset = WrappedDataLoader(val_dl, preprocess)

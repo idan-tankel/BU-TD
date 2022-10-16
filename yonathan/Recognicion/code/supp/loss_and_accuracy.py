@@ -1,9 +1,11 @@
+import argparse
+
 import torch
 import torch.nn as nn
-import argparse
 from torch.utils.data import DataLoader
+
+from supp.data_functions import preprocess, CE
 from supp.general_functions import get_model_outs
-from supp.data_functions import dev, preprocess, CE
 
 
 # Accuracy#
@@ -89,7 +91,6 @@ def multi_label_loss_base(outs: object, samples: object):
     loss_tasks = CE(outs.task, samples.label_task)
     return loss_tasks  # return the task loss
 
-
 def multi_label_loss(outs, samples):
     """
     The loss over all images in the batch.
@@ -172,9 +173,9 @@ def accuracy(parser: nn.Module, test_data_loader: DataLoader) -> float:
         inputs = preprocess(inputs)  # Move to the cuda.
         num_samples += 1  # Update the number of samples.
         samples = parser.inputs_to_struct(inputs)  # Make it struct.
-        model.eval()  #
+        model.train()  #
         outs = model(inputs)  # Compute the output.
         outs = get_model_outs(model, outs)  # From output to struct
-        (_ , task_accuracy_batch) = multi_label_accuracy_weighted(outs, samples)  # Compute the accuracy on the batch
+        ( _ , task_accuracy_batch) = multi_label_accuracy_weighted(outs, samples)  # Compute the accuracy on the batch
         num_correct_pred += task_accuracy_batch.sum()  # Sum all accuracies on the batches.
     return num_correct_pred / num_samples  # Compute the mean.

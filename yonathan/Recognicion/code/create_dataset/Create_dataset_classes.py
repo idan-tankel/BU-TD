@@ -1,8 +1,10 @@
-import numpy as np
 import argparse
 import random
-from imgaug import augmenters as iaa
 from enum import Enum, auto
+
+import numpy as np
+from imgaug import augmenters as iaa
+
 
 class DsType(Enum):
     Emnist = auto()

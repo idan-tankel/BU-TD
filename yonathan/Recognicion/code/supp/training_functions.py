@@ -1,16 +1,14 @@
+import argparse
 import logging
 import os
-import numpy as np
-import torch.optim as optim
-import argparse
-import time
 import shutil
+import time
+
+import numpy as np
 import torch
 import torch.nn as nn
+import torch.optim as optim
 from torch.utils.data import DataLoader
-from supp.FlagAt import DsType
-from supp.batch_norm import store_running_stats
-import copy
 
 
 class DatasetInfo:
@@ -106,7 +104,7 @@ def train_step(opts: argparse, inputs: list[torch]) -> tuple:
     """
     opts.model.train()  # Move the model into the train mode.
     outs = opts.model(inputs)  # Compute the model output.
-    loss = opts.loss_fun(inputs, outs)  # Compute the loss.
+    loss = opts.criterion(inputs, outs)  # Compute the loss.
     opts.optimizer.zero_grad()  # Reset the optimizer.
     loss.backward()  # Do a backward pass.
     opts.optimizer.step()  # Update the model.
@@ -129,7 +127,7 @@ def test_step(opts: argparse, inputs: list[torch]) -> tuple:
     opts.model.eval()  # Move the model to evaluation mode in order to not change the running statistics of the batch layers.
     with torch.no_grad():  # Don't need to compute grads.
         outs = opts.model(inputs)  # Compute the model outputs.
-        loss = opts.loss_fun( inputs, outs)  # Compute the loss.
+        loss = opts.criterion( inputs, outs)  # Compute the loss.
     return loss, outs  # Return the loss and the output.
 
 
@@ -197,7 +195,7 @@ def load_model(model: nn.Module, model_path: str, model_latest_fname: str, gpu=N
         checkpoint = torch.load(model_path, map_location=loc)
     new_load = False
     if new_load:
-        checkpoint = Change_checkpoint(checkpoint['model_state_dict'], model, 4, 4)
+        checkpoint = checkpoint
     else:
         checkpoint = checkpoint['model_state_dict']
     model.load_state_dict(checkpoint)  # Loading the epoch_id, the optimum and the data.
@@ -262,6 +260,8 @@ def fit(opts: argparse, the_datasets: list, task: int, direction_id: int) -> sav
     model_latest_fname = os.path.join(model_dir, model_latest_fname)
     save_details = save_details_class(opts)  # Contains the optimum.
     last_epoch = -1
+
+    '''
     if opts.load_model_if_exists:  # If we want to continue started training.
         if os.path.exists(model_latest_fname):
             logger.info('Loading model: %s' % model_latest_fname)
@@ -277,6 +277,7 @@ def fit(opts: argparse, the_datasets: list, task: int, direction_id: int) -> sav
                 dist.barrier()
             logger.info('restored model with optimum %f' % optimum)
             logger.info('continuing from epoch: %d' % (last_epoch + 2))
+    '''
 
     st_epoch = last_epoch + 1
     end_epoch = nb_epochs
