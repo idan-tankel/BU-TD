@@ -1,9 +1,8 @@
 # from supp.training_functions import test_step
 # from supp.emnist_dataset import inputs_to_struct
-from hashlib import blake2b
 import numpy as np
 import matplotlib
-# matplotlib.use('tkAgg')
+# matplotlib.use(backend='QtAgg')
 import matplotlib.pyplot as plt
 # from supp.FlagAt import *
 # from supp.measurments import get_model_outs

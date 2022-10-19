@@ -78,7 +78,7 @@ def train_emnist(embedding_idx=1, flag_at=FlagAt.SF,
     if train_all_model:
         learned_params = model.parameters()
     # Training the learned params of the model.
-    print(accuracy(parser, val_dl,model,4))
+    print(accuracy(parser, val_dl,model,2))
     visuialize_predctions.visualize(parser, train_dataset,model=model)
 
 

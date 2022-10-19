@@ -2,8 +2,9 @@ from typing import List
 import torch.optim as optim
 import torch.nn as nn
 import torch
-import matplotlib.pyplot as plt
 import matplotlib as mpl
+mpl.use('tkAgg')
+import matplotlib.pyplot as plt
 import logging
 import time
 import pickle

@@ -13,7 +13,8 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {
-                "LD_LIBRARY_PATH": "/home/idanta/anaconda3/envs/tankel/lib"
+                "LD_LIBRARY_PATH": "/home/idanta/anaconda3/envs/tankel/lib",
+                "DISPLAY": "localhost:16.0"
             }
         },
         {

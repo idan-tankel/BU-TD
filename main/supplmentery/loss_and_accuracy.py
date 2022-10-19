@@ -1,3 +1,5 @@
+from doctest import Example
+from functools import total_ordering
 import torch.nn as nn
 # from measurments import *
 import torch
@@ -28,25 +30,38 @@ def multi_label_accuracy_base(outs: object, samples: object, compound_all:bool=F
 
     NOTE - the outs and the samples are structured - after inputs_to_struct function and get_model_outs function.
     """
+    total_number_of_tasks = 4
     cur_batch_size = samples.image.shape[0]
     predictions = torch.argmax(input=outs.task, dim=1, keepdim=False)
-    direction_one_hot = samples.flag[:,0:4].type(torch.int64)
+    direction_one_hot = samples.flag[:,0:total_number_of_tasks].type(torch.int64)
     if not compound_all:
         direction_map = direction_one_hot.argmax(dim=1)
         # choose for each sample the col (direction) appropriate for the sample
         predictions_by_correct_task = predictions.gather(dim=1, index=direction_map.unsqueeze(1)).squeeze(1)
         label_task = samples.label_task.squeeze(1)
         # Take the single original label for each sample
-        task_accuracy = ((predictions_by_correct_task == label_task).float()).sum()  
+        task_accuracy = ((predictions_by_correct_task == label_task).float()).sum()
+        # task_accuracy here is the number of correct predictions  
         # Compare the number of matches and normalize by the batch size*num_outputs.
     else:
         # need to do a one hot multiplication to get the indicator in the direction map which is now (batch_size,number_of_directions)
         predictions_by_correct_task = torch.mul(predictions,direction_one_hot) # which predictions to take
         # now, since we are comparing against label_all and not label_task, we should get to test all the directions together.
+        # now we shell focus on a specific argument of samples.label_all_directions
+        # to find this argument, we shell keep in some location the position of the requested argument (occurence task)
+        labels_all_directions = torch.mul(samples.label_all_directions,direction_one_hot.unsqueeze(1))
+        things_to_test = torch.zeros(cur_batch_size,total_number_of_tasks).to(dev)
+        for number_of_sample,row,arg in zip(range(cur_batch_size),samples.label_all,samples.arg):
+            row_of_arg,col_of_arg = (row == arg).nonzero(as_tuple=True)
+            things_to_test[number_of_sample,:] = labels_all_directions[number_of_sample,col_of_arg,:]
         
-        labels_all_directions = torch.mul(samples.label_all_directions,direction_one_hot) 
+            # now, these are the row + col that have been found
+            # Add then 1 as an indicator to the propriate example in the index_of_arguments_location
         # since if we don't take all, to create 0=0 in the next comparison
-        task_accuracy = (labels_all_directions == predictions_by_correct_task).float().sum()
+        number_of_errors = (things_to_test - predictions_by_correct_task).count_nonzero()
+        task_accuracy = cur_batch_size*2 - number_of_errors
+        # this counts also zero = zero
+        # this depends on the assumption of things_to_test and predictions_by_correct_task are multiplied by the same one_hot filter
     return predictions, task_accuracy  # return the predictions and the accuracy.
 
 
@@ -180,6 +195,26 @@ def accuracy(opts: object, data_loader: DataLoader,model:nn.Module,ntasks:int) -
         inputs = preprocess(inputs)  # Move to the cuda.
         num_samples += len(inputs[0])  # Update the number of samples.
         samples = opts.inputs_to_struct(inputs)  # Make it struct.
+        samples.label_all
+        border_value = 47
+        # pad all directions with 47 which is the N/A class
+        label_all_pad = torch.nn.functional.pad (samples.label_all, (1, 1, 1, 1), mode = 'constant', value = border_value)
+        # 4 is for the 4 directions!!!!
+        # this is kind of a magic number
+        # 5 = 4+1 one to keep the original value instead of working by location
+        kernel = torch.zeros(4,1,3,3).type(dtype=torch.float).to(device=label_all_pad.device)
+        kernel[0,0,1,1]
+        kernel[0, 0, 1, 2] = 1.0   # left
+        kernel[1, 0, 1, 0] = 1.0   # right
+        kernel[2, 0, 0, 1] = 1.0   # up
+        kernel[3, 0, 2, 1] = 1.0   # down
+        ntasks_all = 4
+        samples.arg = samples.flag[:,ntasks_all:].argmax(dim=1) # 4 is the number of tasks, and as the flag is splitted - the first 4 are the adj_type and the last 4 are the char
+        # TODO change this to use the samples class! all this thing should be in the __init__ of the class!!
+        # we have added one group - in the original example batch_size = 1 and then things worked out
+        samples.label_all_directions = torch.nn.functional.conv2d(label_all_pad.unsqueeze(1).type(torch.float), kernel).squeeze(dim=2).permute(0,2,1)
+        # get location of the argument to go back to label_all_directions
+
         inputs[5][:,:ntasks] = torch.ones_like(inputs[5][:,:ntasks]) # flag modification to ones only
         # TODO change this this sould be only on inference!
         outs = model(inputs)  # Compute the output.
@@ -187,4 +222,4 @@ def accuracy(opts: object, data_loader: DataLoader,model:nn.Module,ntasks:int) -
         model.eval()
         ( _ , task_accuracy_batch) = multi_label_accuracy_base(outs, samples,compound_all=True)  # Compute the accuracy on the batch
         num_correct_pred += task_accuracy_batch.sum()  # Sum all accuracies on the batches.
-    return num_correct_pred / num_samples  # Compute the mean.
+    return num_correct_pred / (num_samples*ntasks)  # Compute the mean.
