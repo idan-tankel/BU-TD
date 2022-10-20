@@ -9,7 +9,10 @@ class RegType(Enum):
     LWF = auto()
     LFL = auto()
     MAS = auto()
+<<<<<<< HEAD
     RWALK = auto()
+=======
+>>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
 
 
     def Enum_to_name(self):
@@ -23,8 +26,11 @@ class RegType(Enum):
             return 'LFL'
         if self == RegType.MAS:
             return 'MAS'
+<<<<<<< HEAD
         if self == RegType.RWALK:
             return 'RWALK'
+=======
+>>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
 
 
 

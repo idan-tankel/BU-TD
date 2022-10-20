@@ -35,15 +35,23 @@ class MyLFLPlugin(LFLPlugin):
         """
         return torch.nn.functional.mse_loss(features, prev_features)
 
+<<<<<<< HEAD
     def penalty(self, x, mb_output, lambda_e):
+=======
+    def penalty(self, x, model, lambda_e):
+>>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
         """
         Compute weighted euclidean loss
         """
         if self.prev_model is None:
             return 0
         else:
+<<<<<<< HEAD
             features = mb_output[1]
             prev_features = self.prev_model(x)[1]
+=======
+            features, prev_features = self.compute_features(model, x)
+>>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
             dist_loss = self._euclidean_loss(features, prev_features)
             return lambda_e * dist_loss
 
@@ -63,7 +71,13 @@ class MyLFLPlugin(LFLPlugin):
         Add euclidean loss between prev and current features as penalty
         """
         lambda_e = ( self.lambda_e[strategy.clock.train_exp_counter] if isinstance(self.lambda_e, (list, tuple)) else self.lambda_e)
+<<<<<<< HEAD
         penalty = self.penalty(strategy.mb_x, strategy.mb_output, lambda_e)
+=======
+       # print("success")
+        penalty = self.penalty(strategy.mb_x, strategy.model, lambda_e)
+       # print(penalty)
+>>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
         strategy.loss += penalty
 
     def after_training_exp(self, strategy, **kwargs):

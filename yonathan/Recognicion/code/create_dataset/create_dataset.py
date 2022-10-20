@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from parser import Get_parser
 from Create_dataset_classes import DsType
 from Create_dataset_funcs import create_samples, Save_meta_data_and_code_script
@@ -20,23 +21,40 @@ def main(ds_type:DataSet, language_list = None, nchars_per_row =6, num_rows_in_t
     print('Done creating and storaging the samples, we are left only with saving the meta data and the code script.')  # Done creating and storing the samples.
     Save_meta_data_and_code_script(parser, ds_type, nsamples_per_data_type_dict,  language_list)
     print('Done saving the source code and the meta data!')
+=======
+from Create_dataset_classes import DsType
+from Create_dataset_funcs import main
+
+>>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
 
 def main_Omniglot(lists):
     for list in lists:
         main(ds_type = DsType.Omniglot, language_list = list)
 
+<<<<<<< HEAD
 def main_FashionEmnist(nchars_per_row =6, num_rows_in_the_image = 1):
     main(ds_type = DsType.Fashionmist, nchars_per_row = nchars_per_row, num_rows_in_the_image = num_rows_in_the_image)
 
 def main_emnist(nchars_per_row =6, num_rows_in_the_image = 1):
     main(ds_type = DsType.Emnist, nchars_per_row = nchars_per_row, num_rows_in_the_image = num_rows_in_the_image)
+=======
+def main_FashionEmnist():
+    main(ds_type = DsType.Fashionmist)
+
+def main_emnist():
+    main(ds_type=DsType.Emnist)
+>>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
 
 def main_kmnist():
     main(ds_type = DsType.Kmnist)
 
+<<<<<<< HEAD
 main_emnist(6,4)
 
 #main_Omniglot([[35]])
+=======
+main_Omniglot([[35]])
+>>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
 #main_Omniglot([[14],[39]])
 #main_emnist()
 
