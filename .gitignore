@@ -36,3 +36,5 @@ data*
 # azuer workspace
 *.amlignore
 *.amlignore.amltmp
+
+*wandb*

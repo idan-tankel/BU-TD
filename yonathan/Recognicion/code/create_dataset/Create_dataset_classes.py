@@ -20,7 +20,25 @@ class DsType(Enum):
         if self == DsType. Omniglot:
             return "omniglot"
         if self == DsType.Fashionmist:
-            return "Fashionmist"
+            return "fashionmnist"
+
+class DatasetParams:
+    def __init__(self,ds_type:DsType):
+        """
+        Args:
+            flag_at: The model flag.
+        """
+        self.ds_type = ds_type
+        self.minscale = None
+        self.maxscale = None
+        self.generelize = None
+        self.use_only_valid_classes = None
+
+class EmnistParams:
+    def __init__(self,ds_type:DsType):
+        super(EmnistParams, self).__init__(ds_type)
+        self.minscale = 0.9
+      
 
 class Sample:
     #Class containing all information about the sample, including the image, the flags, the label task.
@@ -70,10 +88,10 @@ class DataAugmentClass:
             seed: The seed for the generation.
         """
 
-        color_add_range = int(0.2 * 255)
+        color_add_range = int(0.15 * 255)
         rotate_deg = 10
         # translate by -20 to +20 percent (per axis))
-        self.aug = iaa.Sequential([iaa.Affine(translate_percent={"x": (-0.05, 0.05), "y": (-0.1, 0.1)},  rotate=(-rotate_deg, rotate_deg), mode='edge', name='affine'), ], random_state=0)
+        self.aug = iaa.Sequential([iaa.Affine(translate_percent={"x": (-0.03, 0.03), "y": (-0.1, 0.1)},  rotate=(-rotate_deg, rotate_deg), mode='edge', name='affine'), ], random_state=0)
         self.aug.append(iaa.Add((-color_add_range, color_add_range)))  # only for the image not the segmentation
         self.aug_seed = seed
 
@@ -115,12 +133,12 @@ class CharInfo:
         y, x = shift.astype(np.int)
         origr, origc = np.unravel_index(samplei, [parser.num_rows_in_the_image, parser.nchars_per_row])
         c = origc + 1  # start from column 1 instead of 0
-        r = origr
+        r = origr + 1
         _ , imageh , imagew = parser.image_size
         stx = c * parser.letter_size + x
         stx = max(0, stx)
         stx = min(stx, imagew - new_size)
-        sty = r * parser.letter_size + y
+        sty = int(r * parser.letter_size + y)
         sty = max(0, sty)
         sty = min(sty, imageh - new_size)
 

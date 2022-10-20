@@ -14,7 +14,10 @@ from supp_avalanche_AI.Plugins.LWF import MyLWFPlugin
 from supp_avalanche_AI.Plugins.MAS import MyMASPlugin
 from supp_avalanche_AI.Plugins.LFL import MyLFLPlugin
 from supp_avalanche_AI.Plugins.Clock import EpochClock
-from supp_avalanche_AI.Plugins.Accuracy_plugin import multi_label_accuracy_weighted
+from supp_avalanche_AI.Plugins.SI import MySynapticIntelligencePlugin as MySIPlugin
+from supp_avalanche_AI.Plugins.RWALK import RWalkPlugin
+
+from supp_avalanche_AI.Plugins.Accuracy_plugin import multi_label_accuracy_weighted # TODO - GIT RID OF THOSE STUPID FUNCTIONS.
 from avalanche.training.plugins import (
     SupervisedPlugin,
     EvaluationPlugin,
@@ -44,6 +47,8 @@ class MySupervisedTemplate(SupervisedTemplate):
         self.pretrined_model = parser.pretrained_model
         self.EpochClock = EpochClock(parser.epochs, self.pretrined_model)
         self.plugins.append(self.EpochClock)
+        self.scheduler = plugins[0].scheduler
+        self.parser = parser
         self.epoch = 0
 
     @property
@@ -54,8 +59,8 @@ class MySupervisedTemplate(SupervisedTemplate):
         return self.mbatch[:5]
 
     def criterion(self):
-        """Loss function."""
-        return self._criterion(self.mb_x, self.mb_output)
+        """Loss function.""" 
+        return self._criterion(self.parser, self.mb_x, self.mb_output)
 
     def eval_epoch(self, **kwargs):
         """Evaluation loop over the current `self.dataloader`."""
@@ -72,7 +77,7 @@ class MySupervisedTemplate(SupervisedTemplate):
             sum += acc
             self._after_eval_iteration(**kwargs)
         sum = sum / len(self.dataloader)
-        self.checkpoint(self.model, self.epoch, sum)
+        self.checkpoint(self.model, self.epoch, sum, self.optimizer, self.scheduler, self.parser, 2) # Updating checkpoint.
         self.epoch += 1
 
 class MyEWC(MySupervisedTemplate):
@@ -123,7 +128,7 @@ class MyEWC(MySupervisedTemplate):
         :param base_kwargs: any additional
             :class:`~avalanche.training.BaseTemplate` constructor arguments.
         """
-        ewc = MyEWCPlugin(parser.ewc_lambda, mode, decay_factor, keep_importance_data,parser.old_dataset)
+        ewc = MyEWCPlugin(parser, parser.ewc_lambda, mode, decay_factor, keep_importance_data,parser.old_dataset)
         if plugins is None:
             plugins = [ewc]
         else:
@@ -141,14 +146,7 @@ class MyEWC(MySupervisedTemplate):
 class MySI(MySupervisedTemplate):
     def __init__(
             self,
-            model: Module,
-            optimizer: Optimizer,
-            criterion,
-            si_lambda: Union[float, Sequence[float]],
-            eps: float = 0.0000001,
-            train_mb_size: int = 1,
-            train_epochs: int = 1,
-            eval_mb_size: int = 1,
+            parser,
             device="cpu",
             plugins: Optional[Sequence["SupervisedPlugin"]] = None,
             evaluator = None,
@@ -193,19 +191,14 @@ class MySI(MySupervisedTemplate):
 
         # This implementation relies on the S.I. Plugin, which contains the
         # entire implementation of the strategy!
-        plugins.append(SynapticIntelligencePlugin(si_lambda=si_lambda, eps=eps))
+        plugins.append(MySIPlugin(parser = parser, si_lambda = parser.si_lambda, eps = parser.si_eps ))
 
-        super(MySI, self).__init__(
-            model,
-            optimizer,
-            criterion,
-            train_mb_size,
-            train_epochs,
-            eval_mb_size,
-            device=device,
-            plugins=plugins,
-            evaluator=evaluator,
-            eval_every=eval_every,
+        super().__init__(
+            parser,                             
+            device = device,
+            plugins = plugins,
+            evaluator = evaluator,
+            eval_every = eval_every,
             **base_kwargs
         )
 
@@ -366,11 +359,11 @@ class MyMAS(MySupervisedTemplate):
             :class:`~avalanche.training.BaseTemplate` constructor arguments.
         """
 
-        lfl = MyMASPlugin(parser)
+        MAS = MyMASPlugin(parser)
         if plugins is None:
-            plugins = [lfl]
+            plugins = [MAS]
         else:
-            plugins.append(lfl)
+            plugins.append(MAS)
 
         super().__init__(
             parser,
@@ -380,6 +373,55 @@ class MyMAS(MySupervisedTemplate):
             eval_every=eval_every,
             **base_kwargs
         )
+
+class MyRWALK(MySupervisedTemplate):
+    def __init__(
+            self,
+            parser: argparse,
+            device=None,
+            plugins: Optional[List[SupervisedPlugin]] = None,
+            evaluator=None,
+            #  evaluator: EvaluationPlugin = default_evaluator(),
+            eval_every=-1,
+            **base_kwargs
+    ):
+        """Init.
+
+        :param model: The model.
+        :param optimizer: The optimizer to use.
+        :param criterion: The loss criterion to use.
+        :param lambda_e: euclidean loss hyper parameter. It can be either a
+                float number or a list containing lambda_e for each experience.
+        :param train_mb_size: The train minibatch size. Defaults to 1.
+        :param train_epochs: The number of training epochs. Defaults to 1.
+        :param eval_mb_size: The eval minibatch size. Defaults to 1.
+        :param device: The device to use. Defaults to None (cpu).
+        :param plugins: Plugins to be added. Defaults to None.
+        :param evaluator: (optional) instance of EvaluationPlugin for logging
+            and metric computations.
+        :param eval_every: the frequency of the calls to `eval` inside the
+            training loop. -1 disables the evaluation. 0 means `eval` is called
+            only at the end of the learning experience. Values >0 mean that
+            `eval` is called every `eval_every` epochs and at the end of the
+            learning experience.
+            :class:`~avalanche.training.BaseTemplate` constructor arguments.
+        """
+
+        RWalk = RWalkPlugin(parser)
+        if plugins is None:
+            plugins = [RWalk]
+        else:
+            plugins.append(RWalk)
+
+        super().__init__(
+            parser,
+            device=device,
+            plugins=plugins,
+            evaluator=evaluator,
+            eval_every=eval_every,
+            **base_kwargs
+        )
+
 
 class Naive_with_freezing(MySupervisedTemplate):
     """Naive finetuning.
@@ -463,4 +505,4 @@ class Naive_with_freezing(MySupervisedTemplate):
           self.train_epochs = self.epochs_list[new_exp_idx]
           print("switch_optimizer")
         
-        
+             

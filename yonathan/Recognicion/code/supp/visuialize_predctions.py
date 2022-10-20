@@ -1,11 +1,9 @@
-rom supp.training_functions # from supp.omniglot_dataset import inputs_to_struct
 import numpy as np
-import test_step
 import torch
-
-from supp.Dataset_and_model_type_specification import *
 from supp.measurments import get_model_outs
 from supp.training_functions import test_step
+
+from supp.Dataset_and_model_type_specification import *
 
 
 # from supp.omniglot_dataset import inputs_to_struct

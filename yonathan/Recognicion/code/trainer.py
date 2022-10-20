@@ -6,14 +6,15 @@ from supp.get_dataset import get_dataset_for_spatial_realtions
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 import os
+from supp.models import BUTDModelShared, ResNet
 from pathlib import Path
 from supp.pytorch_lightning_model_and_checkpoints import CheckpointSaver, ModelWrapped, Training_flag
-from supp.Dataset_and_model_type_specification import Flag
+from supp.Dataset_and_model_type_specification import Flag,DsType
 
-def main(train_right, train_left):
-    parser = GetParser(language_idx=0, direction='right',flag=Flag.ZF)
+def main(train_right, train_left,ds_type=DsType.Emnist):
+    parser = GetParser(task_idx = 0, direction_idx = 'right',flag=Flag.NOFLAG, ds_type = ds_type,model_type = ResNet)
     project_path = Path(__file__).parents[1]
-    data_path = os.path.join(project_path, 'data/emnist/samples/6_extended')
+    data_path = os.path.join(project_path, 'data/{}/samples/18_extended'.format(ds_type.Enum_to_name()))
     tmpdir = os.path.join(project_path, 'data/emnist/results/')
     checkpoint_path = os.path.join(tmpdir, 'MyFirstCkt.ckpt')
     ModelCkpt = ModelCheckpoint(dirpath=checkpoint_path, monitor="val_loss_epoch", mode="min")
@@ -28,9 +29,8 @@ def main(train_right, train_left):
         model = ModelWrapped(parser, learned_params, ckpt=Checkpoint_saver,direction = 0)
         trainer.fit(model, train_dataloaders=train_dl, val_dataloaders=test_dl)
     if train_left:
-        [the_datasets, train_dl, test_dl, val_dl, _, _, _] = get_dataset_for_spatial_realtions(parser, data_path,  lang_idx=0,    direction = 1)
+        [ train_dl, test_dl, val_dl, _, _, _] = get_dataset_for_spatial_realtions(parser, data_path,  lang_idx=0,    direction = 1)
         model = ModelWrapped(parser, learned_params, ckpt=Checkpoint_saver)
         trainer.fit(model, train_dataloaders=train_dl, val_dataloaders=test_dl)
-
 
 main(True,False)

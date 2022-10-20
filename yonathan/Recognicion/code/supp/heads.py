@@ -3,7 +3,7 @@ import argparse
 import torch
 import torch.nn as nn
 
-from supp.Dataset_and_model_type_specification import DsType, Flag
+from supp.Dataset_and_model_type_specification import Flag
 from supp.general_functions import flag_to_task
 
 
@@ -48,7 +48,7 @@ class HeadSingleTask(nn.Module):
 
 
 class MultiTaskHead(nn.Module):
-    def __init__(self, opts: argparse):
+    def __init__(self, opts: argparse, transfer_learning_params:list = None ):
         """
         Multi head task-head supporting all needed tasks.
         Args:
@@ -63,11 +63,11 @@ class MultiTaskHead(nn.Module):
         self.num_classes = opts.nclasses  # num_classes to create the task-heads according to.
         for i in range(self.ntasks * self.ndirections):  # For each task create its task-head according to num_clases.
             index = i // self.ndirections
-            self.taskhead.append(HeadSingleTask(opts, self.num_classes[index]))
+            layer = HeadSingleTask(opts, self.num_classes[index])
+            self.taskhead.append(layer)
+            if transfer_learning_params != None:
+             transfer_learning_params[i].extend(layer.parameters())
         self.taskhead = nn.ModuleList(self.taskhead)
-
-
-
 
     def forward(self, inputs: torch,idx_out = None) -> torch:
         """
@@ -78,17 +78,13 @@ class MultiTaskHead(nn.Module):
 
         """
         (bu2_out, flag) = inputs
-        if self.ds_type is DsType.Omniglot:
-            direction_flag = flag[:, :self.ndirections]  # The task vector.
-            lan_flag = flag[:, self.ndirections:self.ndirections + self.ntasks]
-            direction_id = flag_to_task(direction_flag)
-            lan_id = flag_to_task(lan_flag)
-            idx = direction_id + self.ndirections * lan_id
-        else:
-            direction_flag = flag[:, :self.ndirections]  # The task vector.
-            direction_id = flag_to_task(direction_flag)
-            lan_id = 0
-            idx = direction_id + self.ndirections * lan_id
+
+        direction_flag = flag[:, :self.ndirections]  # The task vector.
+        task_flag = flag[:, self.ndirections:self.ndirections + self.ntasks]
+        direction_id = flag_to_task(direction_flag)
+        task_id = flag_to_task(task_flag)
+        idx = direction_id + self.ndirections * task_id
+
         if idx_out != None:
             idx = idx_out
         bu2_out = bu2_out.squeeze()  # Make it 1-dimensional.
@@ -96,7 +92,6 @@ class MultiTaskHead(nn.Module):
         if len(task_out.shape) == 2:
             task_out = task_out.unsqueeze(dim=2)
         return task_out
-
 
 class OccurrenceHead(nn.Module):
 

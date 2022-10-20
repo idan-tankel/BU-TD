@@ -8,7 +8,8 @@ import torch
 from avalanche.models.utils import avalanche_forward
 from avalanche.training.utils import copy_params_dict, zerolike_params_dict
 from avalanche.training.plugins import MASPlugin
-
+from supp.general_functions import preprocess
+# TODO - ALSO HERE GET RID OF THE BUMODEL, INSTEAD USE FEAUTURES.
 class MyMASPlugin(MASPlugin):
     """
     Memory Aware Synapses (MAS) plugin.
@@ -52,6 +53,9 @@ class MyMASPlugin(MASPlugin):
         # Model parameters
         self.params: Union[Dict, None] = None
         self.importance: Union[Dict, None] = None
+        self.batch_size = parser.bs
+        self.device = parser.device
+        self.parser = parser
 
         # Progress bar
         self.verbose = verbose
@@ -59,13 +63,13 @@ class MyMASPlugin(MASPlugin):
         if parser.pretrained_model:
             self.model_old = copy.deepcopy(parser.model)
             self.old_data = parser.old_dataset
-            self.imortances = self._get_importance(self.model_old, self.old_data, self.bs, parser.device)
-            self.params = self.params = dict(copy_params_dict(self.model_old))
+            self.importance = self._get_importance(self.model_old, self.old_data, self.batch_size, parser.device)
+            self.params = self.params = dict(copy_params_dict(self.model_old.bumodel))
 
     def _get_importance(self, model, dataset, train_mb_size,device  ):
 
         # Initialize importance matrix
-        importance = dict(zerolike_params_dict(model))
+        importance = dict(zerolike_params_dict(model.bumodel))
         '''
         if not strategy.experience:
             raise ValueError("Current experience is not available")
@@ -87,24 +91,20 @@ class MyMASPlugin(MASPlugin):
 
         for _, batch in enumerate(dataloader):
             # Get batch
-            if len(batch) == 2 or len(batch) == 3:
-                x, _, t = batch[0], batch[1], batch[-1]
-            else:
-                raise ValueError("Batch size is not valid")
 
             # Move batch to device
-            x = x.to(device)
+            batch = preprocess(self.parser, batch)
 
             # Forward pass
             model.zero_grad()
-            out = avalanche_forward(model, x, t)
+            out = avalanche_forward(model,batch, None)[1]
 
             # Average L2-Norm of the output
             loss = torch.norm(out, p="fro", dim=1).mean()
             loss.backward()
 
             # Accumulate importance
-            for name, param in model.named_parameters():
+            for name, param in model.bumodel.named_parameters():
                 if param.requires_grad:
                     # In multi-head architectures, the gradient is going
                     # to be None for all the heads different from the
@@ -137,7 +137,7 @@ class MyMASPlugin(MASPlugin):
             raise ValueError("Loss is not available")
 
         # Apply penalty term
-        for name, param in strategy.model.named_parameters():
+        for name, param in strategy.model.bumodel.named_parameters():
             if name in self.importance.keys():
                 loss_reg += torch.sum(
                     self.importance[name] * (param - self.params[name]).pow(2)
@@ -149,7 +149,7 @@ class MyMASPlugin(MASPlugin):
 
     def before_training(self, strategy, **kwargs):
         # Parameters before the first task starts
-        if strategy.EpochClock.pretrained_model and strategy.EpochClock.just_initialized and not self.pretrained_model:
+        if strategy.EpochClock.just_initialized and not self.pretrained_model:
             if not self.params:
                 self.params = dict(copy_params_dict(strategy.model))
 

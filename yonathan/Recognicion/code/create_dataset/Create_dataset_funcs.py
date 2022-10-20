@@ -6,7 +6,6 @@ import random
 import shutil
 import sys
 from multiprocessing import Pool
-from parser import Get_parser
 
 import numpy as np
 import skimage
@@ -464,7 +463,7 @@ def Make_data_dir(parser:argparse,ds_type, language_list:list)->tuple:
     if ds_type.from_enum_to_str() == 'omniglot':
      base_storage_dir += 'extended_testing' + str(language_list[0])
     else:
-        base_storage_dir += 'extended'
+        base_storage_dir += 'extended_testing'
     base_samples_dir = os.path.join(parser.store_folder, base_storage_dir)
     if not os.path.exists(base_samples_dir):
         os.makedirs(base_samples_dir, exist_ok=True)
@@ -512,23 +511,6 @@ def create_samples(parser:argparse,ds_type, raw_data_set:DataSet, language_list)
         # divide all the examples across several jobs. Each job generates samples from examples
         Split_examples_into_jobs_and_generate_samples(parser,raw_data_set, examples, storage_dir, ds_type)
     return num_samples_per_data_type_dict
-
-def main( ds_type:DataSet, language_list = None ) -> None:
-    """
-    Args:
-        parser: The dataset options.
-        raw_data_set: The raw dataset.
-        ds_type: The dataset type.
-        language_list: The language list.
-
-    """
-    parser = Get_parser(ds_type)
-    raw_data_set = DataSet(parser, data_dir='/home/sverkip/data/BU-TD/yonathan/Recognicion/data/' + ds_type.from_enum_to_str(),  dataset=ds_type, raw_data_source = parser.path_data_raw_for_omniglot,  language_list=language_list)  # Getting the raw data.
-    # Iterating over all dataset types, and its number of desired number of samples.
-    nsamples_per_data_type_dict = create_samples(parser, ds_type, raw_data_set, language_list )
-    print('Done creating and storaging the samples, we are left only with saving the meta data and the code script.')  # Done creating and storing the samples.
-    Save_meta_data_and_code_script(parser, ds_type, nsamples_per_data_type_dict,  language_list)
-    print('Done saving the source code and the meta data!')
 
 def Save_meta_data_and_code_script(parser:argparse,ds_type, nsamples_per_data_type_dict:dict, language_list:list):
     """

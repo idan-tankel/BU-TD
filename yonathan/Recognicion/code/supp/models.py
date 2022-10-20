@@ -30,9 +30,7 @@ class TDModel(nn.Module):
         upsample_size = opts.avg_pool_size  # before avg pool we have 7x7x512
         self.task_embedding = [[] for _ in range(self.ndirections)]
         self.argument_embedding = [[] for _ in range(self.ntasks)]
-        self.InitialTaskEmbedding = InitialTaskEmbedding(opts)
-        for i in range(self.ndirections):
-            self.task_embedding[i].extend(self.InitialTaskEmbedding.task_embedding[i])
+        self.InitialTaskEmbedding = InitialTaskEmbedding(opts,self.task_embedding)
         if opts.ds_type is DsType.Omniglot and self.model_flag is Flag.ZF:
             for j in range(self.ntasks):
                 self.argument_embedding[j].extend(self.InitialTaskEmbedding.argument_embedding[j])
@@ -137,7 +135,6 @@ class BUStream(nn.Module):
         self.activation_fun = opts.activation_fun
         self.model_flag = opts.model_flag
         self.inshapes = shared.inshapes
-        self.orig_relus = opts.orig_relus
         self.opts = opts
         self.use_lateral = shared.use_lateral
         self.filters = opts.nfilters[0]
@@ -167,11 +164,7 @@ class BUStream(nn.Module):
         for shared_block in blocks:
             # Create Basic BU block.
             block_inshape = self.inshapes[layer_id + 1]
-            layer = self.block(self.opts, shared_block, block_inshape, is_bu2)
-            if self.model_flag is Flag.ZF and is_bu2:
-                # Adding the task embedding of the BU2 stream.
-                for i in range(self.ndirections):
-                    self.task_embedding[i].extend(layer.task_embedding[i])
+            layer = self.block(self.opts, shared_block, block_inshape, is_bu2, self.task_embedding)
             layers.append(layer)
         return nn.ModuleList(layers)
 
@@ -203,7 +196,6 @@ class BUStream(nn.Module):
         laterals_out.append(x)
         return x, laterals_out
 
-
 class BUStreamShared(nn.Module):
     def __init__(self, opts: argparse):
         """
@@ -220,14 +212,12 @@ class BUStreamShared(nn.Module):
         inplanes = opts.inshape[0]
         self.opts = opts
         inshape = np.array(opts.inshape)
-        #  inshapes = []  # The shapes of all tensors in all blocks.
         inshapes = []
         self.conv1 = depthwise_separable_conv(inplanes, filters, kernel_size=7, stride=stride, padding=3,
                                               bias=False)  # The first conv layer as in ResNet.
         self.inplanes = filters
         inshape = np.array(
             [filters, np.int(np.ceil(inshape[1] / stride)), np.int(np.ceil(inshape[2] / stride))])  # The first shape.
-        #  inshapes.append([inshape])
         inshapes.append(inshape)
         self.bot_lat = SideAndCombSharedBase(filters=filters)
         num_blocks = 0
@@ -243,15 +233,11 @@ class BUStreamShared(nn.Module):
             inshapes.append(inshape)
             for _ in range(nblocks - 1):
                 inshape_lst.append(inshape)
-        #      inshapes.append(inshape_lst)
         self.alllayers = layers
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))  # Average pool before the classification.
         filters = opts.nfilters[-1]
         if self.use_lateral:
             self.top_lat = SideAndCombSharedBase(filters=filters)
-        inshape = np.array([filters, 1, 1])  # Add the shape of the last layer.
-        #   inshapes.append(inshape)
-        #  self.inshapes = inshapes
         self.inshapes = inshapes
 
     def _make_layer(self, planes: int, nblocks: int, stride: int, num_blocks: int) -> nn.Module:
@@ -295,10 +281,39 @@ class BUModel(nn.Module):
         trunk_out, laterals_out = self.trunk(inputs)
         return trunk_out, laterals_out
 
+class BUTDModelShared(nn.Module):
+    def __init__(self, opts: argparse):
+        """
+        Args:
+            opts: Model options.
+        """
+        super(BUTDModelShared, self).__init__()
+        self.ntasks = opts.ntasks
+        self.ndirections = opts.ndirections
+        self.task_embedding = None
+        self.argument_embedding = None
+        self.transfer_learning = [[] for _ in range(self.ndirections * self.ntasks)]
+        self.use_lateral_butd = opts.use_lateral_butd
+        self.inputs_to_struct = opts.inputs_to_struct
+        self.use_lateral_tdbu = opts.use_lateral_tdbu
+        self.model_flag = opts.model_flag  # The model type
+        self.use_bu1_loss = opts.use_bu1_loss  # Whether to use the Occurrence loss.
+        self.ds_type = opts.ds_type
+        if self.use_bu1_loss:
+            self.occhead = OccurrenceHead(opts)
+        bu_shared = BUStreamShared(opts)  # The shared part between BU1, BU2.
+        shapes = bu_shared.inshapes
+        opts.avg_pool_size = tuple(shapes[-1][1:])
+        self.bu_inshapes = bu_shared.inshapes
+        self.bumodel1 = BUStream(opts, bu_shared, is_bu2=False)  # The BU1 stream.
+        self.tdmodel = TDModel(opts, shapes)  # The TD stream.
+        self.bumodel2 = BUStream(opts, bu_shared, is_bu2=True)  # The BU2 stream.
+        self.Head = MultiTaskHead(opts, self.transfer_learning)  # The task-head to transform the last layer output to the number of classes.
+        if self.model_flag is Flag.ZF:  # Storing the Task embedding.
+            self.task_embedding = list(map(list.__add__,self.bumodel2.task_embedding, self.tdmodel.task_embedding))
+            if self.ds_type is DsType.Omniglot:
+                self.argument_embedding = self.tdmodel.argument_embedding
 
-# TODO - MAKE BUTDMODEL, BUTDMODELSHARED THE SAME.
-class BUTDModel(nn.Module):
-    # BU - TD model.
     def forward(self, inputs: list[torch]) -> list[torch]:
         """
         Args:
@@ -350,51 +365,6 @@ class BUTDModel(nn.Module):
             self.bu2 = bu2_out
 
 
-class BUTDModelShared(BUTDModel):
-    def __init__(self, opts: argparse):
-        """
-        Args:
-            opts: Model options.
-        """
-        super(BUTDModelShared, self).__init__()
-        self.ntasks = opts.ntasks
-        self.ndirections = opts.ndirections
-        self.use_lateral_butd = opts.use_lateral_butd
-        self.inputs_to_struct = opts.inputs_to_struct
-        self.use_lateral_tdbu = opts.use_lateral_tdbu
-        self.task_embedding = [[] for _ in range(self.ndirections)]  # Container to store the task embedding.
-        self.transfer_learning = [[] for _ in range(self.ndirections * self.ntasks)]
-        self.argument_embedding = [[] for _ in range(self.ntasks)]
-        self.model_flag = opts.model_flag  # The model type
-        self.use_bu1_loss = opts.use_bu1_loss  # Whether to use the Occurrence loss.
-        self.ds_type = opts.ds_type
-        if self.use_bu1_loss:
-            self.occhead = OccurrenceHead(opts)
-        bu_shared = BUStreamShared(opts)  # The shared part between BU1, BU2.
-        shapes = bu_shared.inshapes
-        opts.avg_pool_size = tuple(shapes[-1][1:])
-        self.bu_inshapes = bu_shared.inshapes
-        self.bumodel1 = BUStream(opts, bu_shared, is_bu2=False)  # The BU1 stream.
-        self.tdmodel = TDModel(opts, shapes)  # The TD stream.
-        self.bumodel2 = BUStream(opts, bu_shared, is_bu2=True)  # The BU2 stream.
-        self.Head = MultiTaskHead(opts)  # The task-head to transform the last layer output to the number of classes.
-        if self.model_flag is Flag.ZF:  # Storing the Task embedding.
-            for i in range(self.ndirections):
-                self.task_embedding[i].extend(self.bumodel2.task_embedding[i])
-                self.task_embedding[i].extend(self.tdmodel.task_embedding[i])
-            if self.ds_type is DsType.Omniglot:
-                for j in range(self.ntasks):
-                    self.argument_embedding[j].extend(self.tdmodel.argument_embedding[j])
-            for i in range(self.ntasks):
-                for j in range(self.ndirections):
-                    self.transfer_learning[i * self.ndirections + j] = list(self.Head.taskhead[i * self.ndirections + j].parameters())
-        '''
-        elif self.model_flag is Flag.TD:
-            for i in range(self.ndirections):
-                self.task_embedding[i].extend(list(self.Head.taskhead[0][i].parameters()))
-        '''
-
-
 class ResNet(nn.Module):
     """
     A ResNet model.
@@ -406,18 +376,12 @@ class ResNet(nn.Module):
             opts:  The model options.
         """
         super(ResNet, self).__init__()
-        self.taskhead = MultiTaskHead(opts)
-        self.bumodel = BUModel(opts, use_embedding=False)
-        self.opts = opts
-        pre_top_shape = self.bumodel.trunk.inshapes[-2][1:]
-        opts.avg_pool_size = tuple(pre_top_shape[1:].tolist())
         self.ntasks = opts.ntasks
         self.ndirections = opts.ndirections
         self.transfer_learning = [[] for _ in range(self.ndirections * self.ntasks)]
-        for i in range(self.ntasks):
-            for j in range(self.ndirections):
-                self.transfer_learning[i * self.ndirections + j] = list(self.taskhead.taskhead[i * self.ndirections + j].parameters())
-        print(len(self.transfer_learning))
+        self.taskhead = MultiTaskHead(opts, self.transfer_learning)
+        self.bumodel = BUModel(opts, use_embedding = False)
+        self.opts = opts
 
     def forward_features(self, features, inputs, head = None):
         """
@@ -436,6 +400,14 @@ class ResNet(nn.Module):
         return task_out
 
     def forward(self, inputs,head = None):
+        """
+        Args:
+            inputs:
+            head:
+
+        Returns:
+
+        """
         samples = self.opts.inputs_to_struct(inputs)
         images = samples.image
         flags = samples.flag
@@ -443,6 +415,14 @@ class ResNet(nn.Module):
         bu_out, _ = self.bumodel(model_inputs)
         task_out = self.taskhead((bu_out, flags),head)
         return task_out, bu_out
+
+    def get_features(self, inputs):
+        samples = self.opts.inputs_to_struct(inputs)
+        images = samples.image
+        flags = samples.flag
+        model_inputs = [images, flags, None]
+        features, _ = self.bumodel(model_inputs)
+        return features
 
     class outs_to_struct:
         def __init__(self, outs: list[torch]):
