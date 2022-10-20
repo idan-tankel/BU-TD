@@ -1,8 +1,4 @@
 import argparse
-<<<<<<< HEAD
-=======
-import os
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
 
 import numpy as np
 import torch
@@ -45,58 +41,6 @@ def get_laterals(laterals: list[torch], layer_id: int, block_id: int) -> torch:
     else:
         return None
 
-<<<<<<< HEAD
-=======
-def folder_size(path: str) -> int:
-    """
-    Returns the number of files in a given folder.
-    Args:
-        path: Path to a language file.
-
-    Returns: Number of files in the folder
-    """
-    return len([_ for _ in os.scandir(path)])
-
-
-def create_dict(path: str) -> dict:
-    """
-    Args:
-        path: Path to all raw Omniglot languages.
-
-    Returns: Dictionary of number of characters per language
-
-    """
-    dict_language = {}
-    cnt = 0
-    for ele in os.scandir(path):  # for language in Omniglot_raw find the number of characters in it.
-        dict_language[cnt] = folder_size(ele)  # Find number of characters in the folder.
-        cnt += 1
-    return dict_language
-
-
-def get_omniglot_dictionary(initial_tasks: list, ntasks: int, raw_data_folderpath: str) -> list:
-    """
-    Args:
-        initial_tasks: The initial tasks set.
-        ntasks: The number of tasks.
-        raw_data_folderpath: The path to the raw data.
-
-    Returns: A dictionary assigning for each task its number of characters.
-
-    """
-    nclasses_dictionary = {}
-    dictionary = create_dict(raw_data_folderpath)
-    nclasses_dictionary[0] = sum(
-        dictionary[task] for task in initial_tasks)  # receiving number of characters in the initial tasks.
-    nclasses = []
-    for i in range(ntasks - 1):  # copying the number of characters for all classes
-        nclasses_dictionary[i + 1] = dictionary[i]
-    for i in range(ntasks):  # creating nclasses according to the dictionary and num_chars
-        nclasses.append(nclasses_dictionary[i])
-    return nclasses
-
-
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
 class depthwise_separable_conv(nn.Module):
     def __init__(self, channels_in: int, channels_out: int, kernel_size: int, stride: int = 1, padding: int = 1,
                  bias: bool = False):
@@ -224,42 +168,13 @@ def create_optimizer_and_sched(opts: argparse, learned_params: list) -> tuple:
     return optimizer, scheduler
 
 
-<<<<<<< HEAD
-=======
-def get_model_outs(model: nn.Module, outs: list[torch]) -> object:
-    """
-    Args:
-        model: The model.
-        outs: The model outs.
-
-    Returns: The outs arranged in a class.
-
-    """
-    return model.outs_to_struct(outs)
-
-
-def Get_non_taskhead_params(model):
-    param_dict = dict()
-    params = list(model.named_parameters())
-   # Head_paramd = model.head.named_parameters()
-    for idx, (key, param) in enumerate(params):
-        if 'taskhead' not in key:
-         param_dict[key] = param
-    return param_dict
-
-
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
 def Get_learned_params(model,task_id):
     learned_param = []
     learned_param.extend(model.bumodel.parameters())
     learned_param.extend(model.transfer_learning[task_id])
-<<<<<<< HEAD
     return learned_param
 
 def preprocess(inputs: torch, device) -> torch:
     # Moves the tensor into the device, usually to the cuda.
     inputs = [inp.to(device) for inp in inputs]
     return inputs
-=======
-    return learned_param
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d

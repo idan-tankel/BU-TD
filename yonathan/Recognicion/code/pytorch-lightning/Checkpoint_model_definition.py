@@ -2,10 +2,10 @@ import os.path
 import sys
 sys.path.append(r'/home/sverkip/data/BU-TD/yonathan/Recognicion/code/')
 from pytorch_lightning import LightningModule
-from supp.general_functions import create_optimizer_and_sched
+from supp.general_functions import create_optimizer_and_sched,preprocess
 import torch
 import torch.optim as optim
-from supp.data_functions import preprocess
+
 import numpy as np
 import os
 import logging

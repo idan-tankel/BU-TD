@@ -2,11 +2,7 @@ import sys
 import warnings
 
 sys.path.append(r'/home/sverkip/data/BU-TD/yonathan/Recognicion/code')
-<<<<<<< HEAD
 from supp.general_functions import preprocess
-=======
-from supp.data_functions import preprocess
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
 from torch.utils.data import DataLoader
 import torch
 from avalanche.models.utils import avalanche_forward
@@ -14,11 +10,7 @@ from avalanche.training.utils import copy_params_dict, zerolike_params_dict
 from avalanche.training.plugins import EWCPlugin
 
 class MyEWCPlugin(EWCPlugin):
-<<<<<<< HEAD
     def __init__( self,parser,  ewc_lambda, mode="separate",   decay_factor=None,   keep_importance_data=False, old_dataset = None ):
-=======
-    def __init__( self,  ewc_lambda, mode="separate",   decay_factor=None,   keep_importance_data=False, old_dataset = None ):
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
         """
         Args:
             ewc_lambda:
@@ -31,10 +23,7 @@ class MyEWCPlugin(EWCPlugin):
 
         super().__init__( ewc_lambda = ewc_lambda, mode = mode, decay_factor = decay_factor,  keep_importance_data = keep_importance_data)
         self.old_dataset = old_dataset
-<<<<<<< HEAD
         self.parser = parser
-=======
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
 
     def compute_importances(self, model, criterion, optimizer, dataset, device, batch_size,use_task_ids):
         """
@@ -56,28 +45,19 @@ class MyEWCPlugin(EWCPlugin):
                     module.train()
 
         # list of list
-<<<<<<< HEAD
         # TODO - CHANGE TO FE.
         importances = zerolike_params_dict(model.bumodel)
-=======
-        importances = zerolike_params_dict(model)
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
         dataloader = DataLoader(dataset, batch_size=batch_size)
         for i, batch in enumerate(dataloader):
             if use_task_ids:
              x = preprocess(batch[:-1])
             else:
-<<<<<<< HEAD
              x = preprocess(batch, device)
-=======
-                x = preprocess(batch)
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
             task_labels = batch[-1].to(device)
             if len(x[1].shape) == 1:
              x[1] = x[1].view([-1,1])
             optimizer.zero_grad()
             out = avalanche_forward(model, x, task_labels)
-<<<<<<< HEAD
             loss = criterion(self.parser, x, out)
             loss.backward()
 
@@ -97,42 +77,15 @@ class MyEWCPlugin(EWCPlugin):
 
     def before_training_exp(self,strategy, **kwargs):
         # TODO - INSTEAD OF THIS INIT WITH MODEL_OLD, MUCH EASIER.
-=======
-            loss = criterion(x, out)
-            loss.backward()
-
-            for (k1, p), (k2, imp) in zip( model.named_parameters(), importances):
-                if not 'taskhead' in k1:
-                    assert k1 == k2
-                    if p.grad is not None:
-                        imp += p.grad.data.clone().pow(2)
-
-        # average over mini batch length
-        for _, imp in importances:
-            imp /= float(len(dataloader))
-        importances_without_taskhead = {}
-        for i in range(len(importances)):
-          (name, param ) = importances[i]
-          if not 'taskhead.taskhead' in name:
-              importances_without_taskhead[name] = param
-        return importances_without_taskhead
-
-    def before_training_exp(self,strategy, **kwargs):
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
         super(MyEWCPlugin, self).before_training_exp(strategy,**kwargs)
         if strategy.EpochClock.pretrained_model and strategy.EpochClock.just_initialized:
             dataset = self.old_dataset
             importances = self.compute_importances(strategy.model, strategy._criterion, strategy.optimizer, dataset, strategy.device, strategy.train_mb_size,False)
             self.update_importances(importances, 0)
-<<<<<<< HEAD
             self.saved_params[0] = dict(copy_params_dict(strategy.model.bumodel))
 
     def after_eval_exp( self, strategy,*args, **kwargs ) :
         print(strategy)
-=======
-            self.saved_params[0] = dict(copy_params_dict(strategy.model))
-
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
 
     def after_training_exp(self, strategy, **kwargs):
         """
@@ -151,11 +104,7 @@ class MyEWCPlugin(EWCPlugin):
                 True
             )
             self.update_importances(importances, exp_counter)
-<<<<<<< HEAD
             self.saved_params[exp_counter] = copy_params_dict(strategy.model.bumodel)
-=======
-            self.saved_params[exp_counter] = copy_params_dict(strategy.model)
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
             # clear previous parameter values
             if exp_counter > 0 and (not self.keep_importance_data):
                 del self.saved_params[exp_counter - 1]
@@ -171,18 +120,9 @@ class MyEWCPlugin(EWCPlugin):
         penalty = torch.tensor(0).float().to(strategy.device)
         if self.mode == "separate":
             for experience in range(1):
-<<<<<<< HEAD
                 Cur_params = dict(strategy.model.bumodel.named_parameters())
                 for name in self.importances[0].keys():
                     # TODO - CHANGE IT to general index in the future according to some policy!!!!
-=======
-                Cur_params = dict(strategy.model.named_parameters())
-                for name in self.importances[0].keys():
-                    # TODO - CHANGE IT to general index in the future according to some policy!!!!
-                 #   print(self.saved_params.keys())
-                    if type(self.saved_params[0]) == list:
-                      print(len(self.saved_params[0]))
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
                     saved_param = self.saved_params[0][name]
                     imp = self.importances[0][name]
                     cur_param = Cur_params[name]
@@ -206,9 +146,5 @@ class MyEWCPlugin(EWCPlugin):
                 penalty += (imp * (cur_param - saved_param).pow(2)).sum()
         else:
             raise ValueError("Wrong EWC mode.")
-<<<<<<< HEAD
-=======
-     #   print(type(self.saved_params[0]))
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
         print(self.ewc_lambda * penalty)
         strategy.loss += self.ewc_lambda * penalty

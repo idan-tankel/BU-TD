@@ -14,14 +14,10 @@ from supp_avalanche_AI.Plugins.LWF import MyLWFPlugin
 from supp_avalanche_AI.Plugins.MAS import MyMASPlugin
 from supp_avalanche_AI.Plugins.LFL import MyLFLPlugin
 from supp_avalanche_AI.Plugins.Clock import EpochClock
-<<<<<<< HEAD
 from supp_avalanche_AI.Plugins.SI import MySynapticIntelligencePlugin as MySIPlugin
 from supp_avalanche_AI.Plugins.RWALK import RWalkPlugin
 
 from supp_avalanche_AI.Plugins.Accuracy_plugin import multi_label_accuracy_weighted # TODO - GIT RID OF THOSE STUPID FUNCTIONS.
-=======
-from supp_avalanche_AI.Plugins.Accuracy_plugin import multi_label_accuracy_weighted
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
 from avalanche.training.plugins import (
     SupervisedPlugin,
     EvaluationPlugin,
@@ -51,11 +47,8 @@ class MySupervisedTemplate(SupervisedTemplate):
         self.pretrined_model = parser.pretrained_model
         self.EpochClock = EpochClock(parser.epochs, self.pretrined_model)
         self.plugins.append(self.EpochClock)
-<<<<<<< HEAD
         self.scheduler = plugins[0].scheduler
         self.parser = parser
-=======
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
         self.epoch = 0
 
     @property
@@ -66,13 +59,8 @@ class MySupervisedTemplate(SupervisedTemplate):
         return self.mbatch[:5]
 
     def criterion(self):
-<<<<<<< HEAD
         """Loss function.""" 
         return self._criterion(self.parser, self.mb_x, self.mb_output)
-=======
-        """Loss function."""
-        return self._criterion(self.mb_x, self.mb_output)
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
 
     def eval_epoch(self, **kwargs):
         """Evaluation loop over the current `self.dataloader`."""
@@ -89,11 +77,7 @@ class MySupervisedTemplate(SupervisedTemplate):
             sum += acc
             self._after_eval_iteration(**kwargs)
         sum = sum / len(self.dataloader)
-<<<<<<< HEAD
         self.checkpoint(self.model, self.epoch, sum, self.optimizer, self.scheduler, self.parser, 2) # Updating checkpoint.
-=======
-        self.checkpoint(self.model, self.epoch, sum)
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
         self.epoch += 1
 
 class MyEWC(MySupervisedTemplate):
@@ -144,11 +128,7 @@ class MyEWC(MySupervisedTemplate):
         :param base_kwargs: any additional
             :class:`~avalanche.training.BaseTemplate` constructor arguments.
         """
-<<<<<<< HEAD
         ewc = MyEWCPlugin(parser, parser.ewc_lambda, mode, decay_factor, keep_importance_data,parser.old_dataset)
-=======
-        ewc = MyEWCPlugin(parser.ewc_lambda, mode, decay_factor, keep_importance_data,parser.old_dataset)
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
         if plugins is None:
             plugins = [ewc]
         else:
@@ -166,18 +146,7 @@ class MyEWC(MySupervisedTemplate):
 class MySI(MySupervisedTemplate):
     def __init__(
             self,
-<<<<<<< HEAD
             parser,
-=======
-            model: Module,
-            optimizer: Optimizer,
-            criterion,
-            si_lambda: Union[float, Sequence[float]],
-            eps: float = 0.0000001,
-            train_mb_size: int = 1,
-            train_epochs: int = 1,
-            eval_mb_size: int = 1,
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
             device="cpu",
             plugins: Optional[Sequence["SupervisedPlugin"]] = None,
             evaluator = None,
@@ -222,7 +191,6 @@ class MySI(MySupervisedTemplate):
 
         # This implementation relies on the S.I. Plugin, which contains the
         # entire implementation of the strategy!
-<<<<<<< HEAD
         plugins.append(MySIPlugin(parser = parser, si_lambda = parser.si_lambda, eps = parser.si_eps ))
 
         super().__init__(
@@ -231,21 +199,6 @@ class MySI(MySupervisedTemplate):
             plugins = plugins,
             evaluator = evaluator,
             eval_every = eval_every,
-=======
-        plugins.append(SynapticIntelligencePlugin(si_lambda=si_lambda, eps=eps))
-
-        super(MySI, self).__init__(
-            model,
-            optimizer,
-            criterion,
-            train_mb_size,
-            train_epochs,
-            eval_mb_size,
-            device=device,
-            plugins=plugins,
-            evaluator=evaluator,
-            eval_every=eval_every,
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
             **base_kwargs
         )
 
@@ -406,7 +359,6 @@ class MyMAS(MySupervisedTemplate):
             :class:`~avalanche.training.BaseTemplate` constructor arguments.
         """
 
-<<<<<<< HEAD
         MAS = MyMASPlugin(parser)
         if plugins is None:
             plugins = [MAS]
@@ -460,13 +412,6 @@ class MyRWALK(MySupervisedTemplate):
             plugins = [RWalk]
         else:
             plugins.append(RWalk)
-=======
-        lfl = MyMASPlugin(parser)
-        if plugins is None:
-            plugins = [lfl]
-        else:
-            plugins.append(lfl)
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
 
         super().__init__(
             parser,
@@ -477,10 +422,6 @@ class MyRWALK(MySupervisedTemplate):
             **base_kwargs
         )
 
-<<<<<<< HEAD
-
-=======
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
 class Naive_with_freezing(MySupervisedTemplate):
     """Naive finetuning.
 
@@ -563,8 +504,4 @@ class Naive_with_freezing(MySupervisedTemplate):
           self.train_epochs = self.epochs_list[new_exp_idx]
           print("switch_optimizer")
         
-<<<<<<< HEAD
              
-=======
-        
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
