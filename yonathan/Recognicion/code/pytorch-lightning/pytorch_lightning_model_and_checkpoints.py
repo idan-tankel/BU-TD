@@ -25,8 +25,8 @@ class CheckpointSaver:
         self.top_model_paths = []
         self.best_metric_val = np.Inf if decreasing else -np.Inf
 
-    def __call__(self, model, epoch, metric_val,optimizer,scheduler, parser):
-        model_path = os.path.join(self.dirpath, model.__class__.__name__ + f'_epoch{epoch}.pt')
+    def __call__(self, model, epoch, metric_val,optimizer,scheduler, parser,direction):
+        model_path = os.path.join(self.dirpath, model.__class__.__name__ + f'_epoch{epoch}_direction={direction}.pt')
         save = metric_val<self.best_metric_val if self.decreasing else metric_val>self.best_metric_val
         if save:
             logging.info(f"Current metric value better than {metric_val} better than best {self.best_metric_val}, saving model at {model_path}")
@@ -48,12 +48,13 @@ class CheckpointSaver:
         self.top_model_paths = self.top_model_paths[:self.top_n]
 
 class ModelWrapped(LightningModule):
-    def __init__(self, opts, learned_params, ckpt):
+    def __init__(self, opts, learned_params, ckpt,direction):
         super().__init__()
         # Important: This property activates manual optimization.
-        self.automatic_optimization = False
+        self.automatic_optimization = True
         self.model = opts.model
         self.opts = opts
+        self.direction = direction
         self.loss_fun = opts.criterion
         self.ckpt = ckpt
         self.learned_params = learned_params
@@ -65,14 +66,14 @@ class ModelWrapped(LightningModule):
         model.train()  # Move the model into the train mode.
         outs = model(batch)  # Compute the model output.
         loss = self.loss_fun( batch, outs)  # Compute the loss.
-        self.optimizer.zero_grad()  # Reset the optimizer.
-        loss.backward()  # Do a backward pass.
-        self.optimizer.step()  # Update the model.
+     #   self.optimizer.zero_grad()  # Reset the optimizer.
+     #   loss.backward()  # Do a backward pass.
+     #   self.optimizer.step()  # Update the model.
         samples = self.opts.inputs_to_struct(batch)
         outs = self.model.outs_to_struct(outs)
         _ , acc = self.accuracy(outs, samples)
-        if type(self.scheduler) in [optim.lr_scheduler.CyclicLR, optim.lr_scheduler.OneCycleLR]:  # Make a scheduler step if needed.
-            self.scheduler.step()
+     #   if type(self.scheduler) in [optim.lr_scheduler.CyclicLR, optim.lr_scheduler.OneCycleLR]:  # Make a scheduler step if needed.
+      #      self.scheduler.step()
         self.log('train_loss', loss, on_step=True, on_epoch=True, logger = True)
         self.log('train_acc',acc, on_step=True, on_epoch=True, logger=True)
         return loss  # Return the loss and the output.
@@ -104,7 +105,7 @@ class ModelWrapped(LightningModule):
         acc = sum(outputs) / len(outputs)
         print(acc)
         if self.ckpt != None:
-          self.ckpt(self.model,self.current_epoch,acc,self.optimizer,self.scheduler, self.opts)
+          self.ckpt(self.model,self.current_epoch,acc,self.optimizer,self.scheduler, self.opts,self.direction)
         return sum(outputs) / len(outputs)
 
     def test_epoch_end(self, outputs):
