@@ -35,7 +35,10 @@ def Get_raw_data(download_dir:str, dataset:str,language_list, raw_data_source)->
         num_images_per_label = 20
         num_labels = len(images_arranged) // 20
         labels_arranged = sum([num_images_per_label * [i] for i in range(num_labels)], [])
+<<<<<<< HEAD
 
+=======
+>>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
     else:
         nchannels = 1
         if dataset.from_enum_to_str() == 'emnist':
@@ -64,16 +67,28 @@ def Get_raw_data(download_dir:str, dataset:str,language_list, raw_data_source)->
 
             shape = (1, 28, 28)
 
+<<<<<<< HEAD
         elif dataset.from_enum_to_str() == 'fashionmnist':
+=======
+        elif dataset.ds_name == 'fashionmnist':
+>>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
             train_raw_dataset = torchvision.datasets.FashionMNIST(download_dir, train=True, download=True)
             test_raw_dataset = torchvision.datasets.FashionMNIST(download_dir, train=False, download=True)
             shape = (1,28,28)
 
+<<<<<<< HEAD
         elif dataset.from_enum_to_str() == 'kmnist':
             train_raw_dataset = torchvision.datasets.KMNIST(download_dir, train=True, download=True)
             test_raw_dataset = torchvision.datasets.KMNIST(download_dir, train=False, download=True)
 
         images = [np.array(train_raw_dataset[i][0]).reshape(shape) for i in range(len(train_raw_dataset))]
+=======
+        if dataset.from_enum_to_str() == 'kmnist':
+            train_raw_dataset = torchvision.datasets.KMNIST(download_dir, train=True, download=True)
+            test_raw_dataset = torchvision.datasets.KMNIST(download_dir, train=False, download=True)
+
+        images = [np.array(train_raw_dataset[i][0]) for i in range(len(train_raw_dataset))]
+>>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
         images.extend([np.array(test_raw_dataset[i][0]).reshape(shape) for i in range(len(test_raw_dataset))])
         labels = [train_raw_dataset[i][1] for i in range(len(train_raw_dataset))]
         labels.extend([test_raw_dataset[i][1] for i in range(len(test_raw_dataset))])

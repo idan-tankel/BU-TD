@@ -37,4 +37,10 @@ data*
 *.amlignore
 *.amlignore.amltmp
 
+<<<<<<< HEAD
 *wandb*
+=======
+
+# wandb
+wandb/*
+>>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d

@@ -37,11 +37,16 @@ class MyLWFPlugin(LwFPlugin):
         Knowledge distillation uses only units corresponding to old classes. 
         """
 
+<<<<<<< HEAD
     def _distillation_loss(self, cur_out, prev_out, x):
+=======
+    def _distillation_loss(self, out, prev_out, x):
+>>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
         """
         Compute distillation loss between output of the current model and
         and output of the previous (saved) model.
         """
+<<<<<<< HEAD
         loss_weight = (x[-1]).unsqueeze(dim = 2)
         cur_out = torch.transpose(cur_out, 2, 1)
         prev_out = torch.transpose(prev_out, 2, 1)
@@ -51,6 +56,19 @@ class MyLWFPlugin(LwFPlugin):
         dist_loss = dist_loss * loss_weight
         dist_loss = dist_loss.sum() / loss_weight.size(0)
         return dist_loss
+=======
+        loss_weight= (x[-1]).unsqueeze(dim = 1)
+     #   loss_weight = loss_weight.view(loss_weight.shape[0], 1, loss_weight.shape[-1])
+      #  loss_weight = torch.zeros_like(loss_weight)
+       # task_out = out
+     #   prev_out_task = prev_out
+        log_p = torch.log_softmax(out / self.temperature, dim=1)
+        q = torch.softmax(prev_out[0] / self.temperature, dim=1)
+        res = torch.nn.functional.kl_div(log_p, q, reduction='none')
+        res = res * loss_weight
+        res = res.sum() / loss_weight.size(0)
+        return res
+>>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
 
     def penalty(self,model, out, x, alpha):
         """
@@ -60,9 +78,26 @@ class MyLWFPlugin(LwFPlugin):
         if self.prev_model is None:
             return 0
         else:
+<<<<<<< HEAD
                 # TODO - CHANGE TO THE TASK IDENTITIES.
             y_prev = {"0": self.prev_model(x, head = 0)  }
             y_curr = {"0": model.forward_features(out[1], x, head = 0)  }
+=======
+            with torch.no_grad():
+                '''
+                if isinstance(self.prev_model, MultiTaskModule):
+                    # output from previous output heads.
+                    y_prev = avalanche_forward(self.prev_model, x, None)
+                    # in a multitask scenario we need to compute the output
+                    # from all the heads, so we need to call forward again.
+                    # TODO: can we avoid this?
+                    y_curr = avalanche_forward(curr_model, x, None)
+                else:  # no task labels
+                '''
+                # TODO - CHANGE TO THE TASK IDENTITIES.
+                y_prev = {"0": self.prev_model(x, head = 0)  }
+                y_curr = {"0": model.forward_features(out[1], x, head = 0)  }
+>>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
 
             dist_loss = 0
             for task_id in y_prev.keys():
@@ -70,7 +105,11 @@ class MyLWFPlugin(LwFPlugin):
                 if task_id in self.prev_classes:
                     yp = y_prev[task_id]
                     yc = y_curr[task_id]
+<<<<<<< HEAD
                     dist_loss += self._distillation_loss(yc, yp[0], x)
+=======
+                    dist_loss += self._distillation_loss(yc, yp, x)
+>>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
 
             return alpha * dist_loss
 
@@ -86,7 +125,11 @@ class MyLWFPlugin(LwFPlugin):
         penalty = self.penalty(strategy.model,
             strategy.mb_output, strategy.mb_x, alpha
         )
+<<<<<<< HEAD
       #  print(penalty)
+=======
+     #   print(penalty)
+>>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
         strategy.loss += penalty
 
     def after_training_exp(self, strategy, **kwargs):

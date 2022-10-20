@@ -6,8 +6,14 @@ import sys
 from torch.utils.data import DataLoader
 
 from supp.Dataset_and_model_type_specification import DsType, Flag
+<<<<<<< HEAD
 
 # TODO - GET RIT OF THIS.
+=======
+from supp.data_functions import WrappedDataLoader, preprocess
+from supp.training_functions import DatasetInfo
+
+>>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
 sys.path.append(r'/home/sverkip/data/BU-TD/yonathan/Recognicion/code/create_dataset')
 
 
@@ -23,12 +29,23 @@ def get_dataset_for_spatial_realtions(opts: argparse, data_fname: str, lang_idx:
     Returns: The train, test, val(if exists) datasets.
 
     """
+<<<<<<< HEAD
 
     if opts.model_flag is not Flag.NOFLAG:
         from supp.datasets import DatasetAllDataSetTypes as dataset
     elif opts.model_flag is Flag.NOFLAG:
         from supp.datasets import DatasetAllDataSetTypesAll as dataset
 
+=======
+    if opts.ds_type is DsType.Omniglot and opts.model_flag is Flag.ZF:
+        from supp.datasets import OmniglotDataset as dataset
+    if (opts.ds_type is DsType.Emnist or opts.ds_type is DsType.FashionMnist) and opts.model_flag is not Flag.NOFLAG:
+        from supp.datasets import EmnistDataSet as dataset
+    if (opts.ds_type is DsType.Emnist or opts.ds_type is DsType.FashionMnist) and opts.model_flag is Flag.NOFLAG:
+        from supp.datasets import EmnistDataSetAll as dataset
+
+    use_val = opts.generalize
+>>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
     path_fname = os.path.join(data_fname, 'MetaData')
     # Opening the conf file and retrieve number of samples, img shape,number of objects per image.
     with open(path_fname, "rb") as new_data_file:
@@ -41,6 +58,7 @@ def get_dataset_for_spatial_realtions(opts: argparse, data_fname: str, lang_idx:
     obj_per_col = MetaData.parser.num_rows_in_the_image
     # Creating the data-sets.
     if opts.ds_type is DsType.Omniglot:
+<<<<<<< HEAD
         arg_and_head_index = lang_idx
     else:
         arg_and_head_index = 0
@@ -48,6 +66,17 @@ def get_dataset_for_spatial_realtions(opts: argparse, data_fname: str, lang_idx:
                        is_train=True, nexamples=nsamples_train, obj_per_row=obj_per_row, obj_per_col=obj_per_col)
     test_ds = dataset(root=os.path.join(data_fname, 'test'), opts=opts, arg_and_head_index=arg_and_head_index, direction=direction,
                       is_train=False, nexamples=nsamples_test, obj_per_row=obj_per_row, obj_per_col=obj_per_col)
+=======
+        train_ds = dataset(os.path.join(data_fname, 'train'), opts, lang_idx, direction, nsamples_train, obj_per_row,
+                           obj_per_col)
+        test_ds = dataset(os.path.join(data_fname, 'test'), opts, lang_idx, direction, nsamples_test, obj_per_row,
+                          obj_per_col)
+    else:
+        # TODO - OMIT KEYBOARD DEFAULTS.
+        train_ds = dataset(os.path.join(data_fname, 'train'), opts, direction, True, nsamples_train, obj_per_row, obj_per_col)
+        test_ds = dataset(os.path.join(data_fname, 'test'), opts, direction, False, nsamples_test, obj_per_row, obj_per_col)
+    # If normalize_image is True the mean of the dataset is subtracted from every image.
+>>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
     batch_size = opts.bs
 
     # Creating the data-loaders.
@@ -58,11 +87,27 @@ def get_dataset_for_spatial_realtions(opts: argparse, data_fname: str, lang_idx:
     nbatches_train = len(train_dl)
     nbatches_test = len(test_dl)
     nbatches_val = 0
+<<<<<<< HEAD
 
     if os.path.exists(os.path.join(data_fname, 'val')):
         val_ds = dataset(os.path.join(data_fname, 'val'), opts, direction,False, nsamples_val, obj_per_row, obj_per_col)
         val_dl = DataLoader(val_ds, batch_size=batch_size, num_workers=opts.workers, shuffle=False, pin_memory=True)
         nbatches_val = len(val_dl)
+=======
+    train_dataset = WrappedDataLoader(train_dl, preprocess)
+    test_dataset = WrappedDataLoader(test_dl, preprocess)
+    the_train_dataset = DatasetInfo(True, train_dataset, nbatches_train, 'Train', opts.checkpoints_per_epoch)
+    the_test_dataset = DatasetInfo(False, test_dataset, nbatches_test, 'Test', 1)
+    the_datasets = [the_train_dataset, the_test_dataset]
+    #
+    if use_val:
+        val_ds = dataset(os.path.join(data_fname, 'val'), opts, direction,False, nsamples_val, obj_per_row, obj_per_col)
+        val_dl = DataLoader(val_ds, batch_size=batch_size, num_workers=opts.workers, shuffle=False, pin_memory=True)
+        nbatches_val = len(val_dl)
+        val_dataset = WrappedDataLoader(val_dl, preprocess)
+        the_val_dataset = DatasetInfo(False, val_dataset, nbatches_val, 'Val', 1)
+        the_datasets.append(the_val_dataset)
+>>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
     else:
         val_ds = None
     # Storing tht parameters into the Parser
@@ -72,4 +117,8 @@ def get_dataset_for_spatial_realtions(opts: argparse, data_fname: str, lang_idx:
     opts.nbatches_train = nbatches_train
     opts.nbatches_val = nbatches_val
     opts.nbatches_test = nbatches_test
+<<<<<<< HEAD
     return [train_dl, test_dl, val_dl, train_ds, test_ds, val_ds]
+=======
+    return [the_datasets, train_dl, test_dl, val_dl, train_ds, test_ds, val_ds]
+>>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
