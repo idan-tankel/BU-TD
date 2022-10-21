@@ -77,3 +77,7 @@ Shimon Ullman, Liav Assif, Alona Strugatski, Ben-Zion Vatashsky, Hila Levi, Aviv
     - clevr
 - change the `create_dataset` file to be idempotent - namely, when running the file after the dataset is cretaed it won't be downloaded again 
 - change the behaviour of the download function path to not be relative
+
+### specifications fot this branch
+- Change the parser to config files similar to the one in the beta version
+- remove copy of code when running - change that to copy commit details (at most) and upload commit files to `wandb.ai`

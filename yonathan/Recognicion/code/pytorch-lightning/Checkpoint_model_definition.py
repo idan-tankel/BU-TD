@@ -64,7 +64,7 @@ class ModelWrapped(LightningModule):
         model = self.model
         model.train()  # Move the model into the train mode.
         outs = model(batch)  # Compute the model output.
-        loss = self.loss_fun( batch, outs)  # Compute the loss.
+        loss = self.loss_fun( opts=self.opts,inputs=batch, outs=outs)  # Compute the loss.
         self.optimizer.zero_grad()  # Reset the optimizer.
         loss.backward()  # Do a backward pass.
         self.optimizer.step()  # Update the model.

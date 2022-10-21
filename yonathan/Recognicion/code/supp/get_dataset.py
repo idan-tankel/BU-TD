@@ -38,7 +38,11 @@ def get_dataset_for_spatial_realtions(opts: argparse, data_fname: str, lang_idx:
     image_size = MetaData.parser.image_size
     nsamples_train = MetaData.nsamples_dict['train']
     nsamples_test = MetaData.nsamples_dict['test']
-    nsamples_val = MetaData.nsamples_dict['val']
+    # if there is no validation set, then the number of samples in the validation set is 0.
+    try:
+        nsamples_val = MetaData.nsamples_dict['val']
+    except KeyError:
+        nsamples_val = 0
     obj_per_row = MetaData.parser.nchars_per_row
     obj_per_col = MetaData.parser.num_rows_in_the_image
     # Creating the data-sets.

@@ -48,13 +48,14 @@ class Training_flag:
 
 def main(train_right, train_left):
     project_path = Path(__file__).parents[2]
-    data_path = os.path.join(project_path, 'data/emnist/samples/6_extended')
+    data_path = os.path.join(project_path, 'data/emnist/samples/24_extended_testing')
+    # TODO change these hard coded paths!
     tmpdir = os.path.join(project_path, 'data/emnist/results/')
     checkpoint_path = os.path.join(tmpdir, 'MyFirstCkt.ckpt')
     parser = GetParser(task_idx=0, direction_idx='right',flag=Flag.ZF)
   #  [the_datasets, train_dl, test_dl, val_dl, _, _, _] = get_dataset_for_spatial_realtions(parser, data_path,          lang_idx=0, direction=0)
     ModelCkpt = ModelCheckpoint(dirpath=checkpoint_path, monitor="val_loss_epoch", mode="min")
-    # Checkpoint_saver = CheckpointSaver( dirpath=checkpoint_path, decreasing=False, top_n=5)
+    Checkpoint_saver = CheckpointSaver( dirpath=checkpoint_path, decreasing=False, top_n=5)
     # TODO: remove this classs since the checkpoint is already defined
     wandb_logger = WandbLogger(project="My_first_project_5.10", job_type='train',
                                save_dir='/home/sverkip/data/BU-TD/yonathan/Recognicion/data/emnist/results/')
@@ -62,7 +63,7 @@ def main(train_right, train_left):
     training_flag = Training_flag(train_all_model = True, train_arg = False, train_task_embedding = False, train_head = False)
     learned_params = training_flag.Get_learned_params(parser.model, lang_idx = 0, direction=0)
     if train_right:
-        [the_datasets, train_dl, test_dl, val_dl, _, _, _] = get_dataset_for_spatial_realtions(parser, data_path, lang_idx=0, direction = 0)
+        the_datasets, train_dl, test_dl, val_dl, *less = get_dataset_for_spatial_realtions(parser, data_path, lang_idx=0, direction = 0)
         # TODO: why return a tuple? turn this into a dict
         model = ModelWrapped(parser, learned_params, ckpt=Checkpoint_saver)
         trainer.fit(model, train_dataloaders=train_dl, val_dataloaders=test_dl)
