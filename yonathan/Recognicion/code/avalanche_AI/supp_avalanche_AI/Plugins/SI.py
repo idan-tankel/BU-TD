@@ -388,4 +388,4 @@ class MySynapticIntelligencePlugin(SynapticIntelligencePlugin):
             if param.requires_grad:
                 result.append((name, param))
 
-        return result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
+        return result

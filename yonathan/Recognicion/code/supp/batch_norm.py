@@ -1,7 +1,10 @@
 import torch
 import torch.nn as nn
 
+<<<<<<< HEAD
 # TODO - ADD SUPPORT TO STORING RUNNING STATS.
+=======
+>>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
 '''
 class BatchNorm(nn.Module):
     def __init__(self,opts, num_channels, dims=2):
