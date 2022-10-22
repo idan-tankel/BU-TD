@@ -23,6 +23,7 @@ def get_dataset_for_spatial_realtions(opts: argparse, data_fname: str, lang_idx:
         direction: The direction.
 
     Returns: The train, test, val(if exists) datasets.
+    (`tuple`): train_dl, test_dl, val_dl, train_ds, test_ds, val_ds
 
     """
 
@@ -78,4 +79,4 @@ def get_dataset_for_spatial_realtions(opts: argparse, data_fname: str, lang_idx:
     opts.nbatches_train = nbatches_train
     opts.nbatches_val = nbatches_val
     opts.nbatches_test = nbatches_test
-    return [train_dl, test_dl, val_dl, train_ds, test_ds, val_ds]
+    return train_dl, test_dl, val_dl, train_ds, test_ds, val_ds
