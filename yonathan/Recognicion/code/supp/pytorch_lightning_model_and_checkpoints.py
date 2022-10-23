@@ -25,7 +25,8 @@ class CheckpointSaver:
         decreasing: If decreasing is `True`, then lower metric is better
         top_n: Total number of models to track based on validation metric value
         """
-        if not os.path.exists(dirpath): os.makedirs(dirpath)
+        if not os.path.exists(dirpath): 
+            os.makedirs(dirpath)
         self.dirpath = dirpath
         self.top_n = top_n
         self.decreasing = decreasing
@@ -51,10 +52,10 @@ class CheckpointSaver:
             self.cleanup()
 
     def cleanup(self):
-        to_remove = self.top_model_paths[self.top_n:]
-        logging.info(f"Removing extra models.. {to_remove}")
-        for o in to_remove:
-            os.remove(o['path'])
+        """
+        cleanup function to delete old checkpoint of the model
+        """        
+        pass
         self.top_model_paths = self.top_model_paths[:self.top_n]
 
 class ModelWrapped(LightningModule):
