@@ -353,10 +353,9 @@ def gen_samples(job_id, range_start, range_stop, examples, storage_dir,
             aug_data = get_aug_data(IMAGE_SIZE)
             aug_data.aug_seed = range_start
             aug_data.augment = True
-    else:
         # both validation and training use the same job id. make the random generator different
 
-    # divide the job into several smaller parts and run them sequentially
+        # divide the job into several smaller parts and run them sequentially
     nbatches = np.ceil((range_stop - range_start) / job_chunk_size)
     ranges = np.arange(range_start, range_stop, job_chunk_size)
     if ranges[-1] != range_stop:
@@ -388,9 +387,8 @@ def gen_samples(job_id, range_start, range_stop, examples, storage_dir,
             if sample is None:
                 continue
 
-            
             store_sample_disk_pytorch(sample, cur_samples_dir,
-                                          folder_split, folder_size)
+                                      folder_split, folder_size)
 
             rel_id += 1
 
@@ -463,7 +461,6 @@ def main():
         for folder in bg_folders:
             filenames = [os.path.join(folder, f) for f in os.listdir(folder)]
             bg_fnames.extend(filenames)
-
 
     same_max_value = True  # use the same value as the maximum for all features
     npersons_per_example = 2

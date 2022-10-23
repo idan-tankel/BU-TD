@@ -1,0 +1,9 @@
+imgaug
+matplotlib
+Pillow==8.2.0
+scikit-image==0.16.2
+pyyaml
+pytorch
+torchvision
+torchaudio 
+cudatoolkit=11.3

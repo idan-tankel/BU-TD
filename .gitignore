@@ -36,5 +36,7 @@ data*
 # azuer workspace
 *.amlignore
 *.amlignore.amltmp
-
-*wandb*
+.vscode/settings.json
+.vscode/settings.json
+# wandb
+wandb/*
