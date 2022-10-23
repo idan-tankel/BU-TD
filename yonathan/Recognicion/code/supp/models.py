@@ -30,7 +30,7 @@ class TDModel(nn.Module):
         upsample_size = opts.avg_pool_size  # before avg pool we have 7x7x512
         self.task_embedding = [[] for _ in range(self.ndirections)]
         self.argument_embedding = [[] for _ in range(self.ntasks)]
-        self.InitialTaskEmbedding = InitialTaskEmbedding(opts,self.task_embedding)
+        self.InitialTaskEmbedding = InitialTaskEmbedding(opts=opts)
         if opts.ds_type is DsType.Omniglot and self.model_flag is Flag.ZF:
             for j in range(self.ntasks):
                 self.argument_embedding[j].extend(self.InitialTaskEmbedding.argument_embedding[j])

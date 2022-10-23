@@ -60,7 +60,7 @@ def main(train_right, train_left):
     parser = GetParser(task_idx=0, direction_idx='right', flag=Flag.ZF)
   #  [the_datasets, train_dl, test_dl, val_dl, _, _, _] = get_dataset_for_spatial_realtions(parser, data_path,          lang_idx=0, direction=0)
     ModelCkpt = ModelCheckpoint(
-        dirpath=checkpoint_path, monitor="val_loss_epoch", mode="min")
+        dirpath=tmpdir, monitor="val_loss_epoch", mode="min")
     Checkpoint_saver = CheckpointSaver(
         dirpath=checkpoint_path, decreasing=False, top_n=5)
     # TODO: remove this classs since the checkpoint is already defined
