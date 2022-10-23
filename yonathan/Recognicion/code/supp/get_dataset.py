@@ -6,7 +6,7 @@ import sys
 from torch.utils.data import DataLoader
 
 from supp.Dataset_and_model_type_specification import DsType, Flag
-from supp.general_functions import WrappedDataLoader, preprocess
+from supp.general_functions import preprocess
 from supp.training_functions import DatasetInfo
 
 sys.path.append(r'/home/sverkip/data/BU-TD/yonathan/Recognicion/code/create_dataset')

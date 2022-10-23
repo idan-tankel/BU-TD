@@ -5,7 +5,7 @@ from pytorch_lightning import LightningModule
 from supp.general_functions import create_optimizer_and_sched
 import torch
 import torch.optim as optim
-from supp.data_functions import preprocess
+from supp.general_functions import preprocess
 import numpy as np
 import os
 import logging

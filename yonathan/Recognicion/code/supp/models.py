@@ -135,7 +135,6 @@ class BUStream(nn.Module):
         self.activation_fun = opts.activation_fun
         self.model_flag = opts.model_flag
         self.inshapes = shared.inshapes
-        self.orig_relus = opts.orig_relus
         self.opts = opts
         self.use_lateral = shared.use_lateral
         self.filters = opts.nfilters[0]

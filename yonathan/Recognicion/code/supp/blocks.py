@@ -66,10 +66,8 @@ class SideAndComb(nn.Module):
         super(SideAndComb, self).__init__()
         self.side = ChannelModulation(filters)  # channel-modulation layer.
         self.norm = opts.norm_layer(opts, filters)  # batch norm after the channel-modulation of the lateral.
-        self.orig_relus = opts.orig_relus
         self.filters = filters
-        if not opts.orig_relus:
-            self.relu1 = opts.activation_fun()  # activation_fun after the batch_norm layer
+        self.relu1 = opts.activation_fun()  # activation_fun after the batch_norm layer
         self.relu2 = opts.activation_fun()  # activation_fun after the skip connection
 
     def forward(self, inputs: torch) -> torch:
@@ -83,8 +81,7 @@ class SideAndComb(nn.Module):
         x, lateral = inputs  # input, lateral connection.
         side_val = self.side(lateral)  # channel-modulation(CM)
         side_val = self.norm(side_val)  # batch_norm after the CM
-        if not self.orig_relus:
-            side_val = self.relu1(side_val)  # activation_fun after the batch_norm
+        side_val = self.relu1(side_val)  # activation_fun after the batch_norm
         x = x + side_val  # the lateral skip connection
         x = self.relu2(x)  # activation_fun after the skip connection
         return x
@@ -188,7 +185,6 @@ class BUInitialBlock(nn.Module):
         self.filters = opts.nfilters[0]
         self.norm_layer = opts.norm_layer
         self.activation_fun = opts.activation_fun
-        self.orig_relus = opts.orig_relus
         self.ntasks = opts.ntasks
         self.conv1 = nn.Sequential(shared.conv1, opts.norm_layer(opts, self.filters),
                                    self.activation_fun())  # The initial block downsampling from RGB.
@@ -221,7 +217,6 @@ class BasicBlockBU(nn.Module):
             is_bu2: is the stream BU1 or BU2.
         """
         super(BasicBlockBU, self).__init__()
-        self.orig_relus = opts.orig_relus
         self.flag_at = opts.model_flag
         self.is_bu2 = is_bu2
         self.ndirections = opts.ndirections
@@ -262,8 +257,6 @@ class BasicBlockBU(nn.Module):
                                     shared.lat2.filters)  # Lateral connection 1 from the previous stream if exists.
             self.lat3 = SideAndComb(opts,
                                     shared.lat3.filters)  # Lateral connection 1 from the previous stream if exists.
-        if self.orig_relus:
-            self.relu = opts.activation_fun()
 
     def forward(self, inputs):
         """
@@ -309,8 +302,6 @@ class BasicBlockBU(nn.Module):
             identity = inp
 
         x = x + identity  # Perform the skip connection.
-        if self.orig_relus:  # Perform relu activation.
-            x = self.relu(x)
         return x, laterals_out
 
 
@@ -437,7 +428,6 @@ class BasicBlockTD(nn.Module):
         """
         super(BasicBlockTD, self).__init__()
         self.ntasks = opts.ntasks
-        self.orig_relus = opts.orig_relus
         self.flag_params = [[] for _ in range(self.ntasks)]
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -454,8 +444,6 @@ class BasicBlockTD(nn.Module):
         self.relu1 = opts.activation_fun()
         self.conv2 = conv3x3up(in_channels, out_channels, size, stride > 1)
         self.conv2_norm = opts.norm_layer(opts, out_channels)
-        if self.orig_relus:
-            self.relu2 = opts.activation_fun()
         self.relu3 = opts.activation_fun()
         upsample = None
         out_channels = out_channels * BasicBlockTD.expansion
@@ -492,8 +480,6 @@ class BasicBlockTD(nn.Module):
         laterals_out.append(x)
         x = self.conv2(x)  # Performs conv that upsamples the input
         x = self.conv2_norm(x)  # Perform norm layer.
-        if self.orig_relus:
-            x = self.relu2(x)
         if laterals_in is not None:
             x = self.lat3((x, lateral3_in))  # perform lateral connection3
         laterals_out.append(x)
