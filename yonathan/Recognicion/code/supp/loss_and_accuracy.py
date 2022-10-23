@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from supp.data_functions import preprocess, CE
+from supp.general_functions import preprocess
 from supp.general_functions import get_model_outs
 
 
