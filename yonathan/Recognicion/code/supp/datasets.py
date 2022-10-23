@@ -8,7 +8,10 @@ from torch.utils.data import Dataset
 import torchvision.transforms as T
 from PIL import Image
 
-sys.path.append(r'/home/sverkip/data/BU-TD/yonathan/Recognicion/code/create_dataset')
+sys.path.append(
+    r'/home/sverkip/data/BU-TD/yonathan/Recognicion/code/create_dataset')
+
+
 class DataSetBase(Dataset):
 
     """
@@ -16,7 +19,7 @@ class DataSetBase(Dataset):
     Supports initialization and get item methods.
     """
 
-    def __init__(self, root: str, nclasses_existence: int, ndirections: int,is_train:bool, nexamples: int = None,
+    def __init__(self, root: str, nclasses_existence: int, ndirections: int, is_train: bool, nexamples: int = None,
                  split: bool = True) -> None:
         """
         Args:
@@ -33,7 +36,8 @@ class DataSetBase(Dataset):
         self.splitsize = 1000
         self.is_train = is_train
         if nexamples is None:
-            filenames = [os.path.join(dp, f) for dp, dn, fn in os.walk(root) for f in fn]
+            filenames = [os.path.join(dp, f)
+                         for dp, dn, fn in os.walk(root) for f in fn]
             images = [f for f in filenames if f.endswith('_img.jpg')]
             self.nexamples = len(images)
         else:
@@ -72,14 +76,13 @@ class DataSetBase(Dataset):
 
         """
 
-
         if self.is_train:
-         nexamples = self.nexamples
+            nexamples = self.nexamples
         else:
-         nexamples = self.nexamples
-        nexamples = 1000
+            nexamples = self.nexamples
         self.targets = [0 for _ in range(nexamples)]
         return nexamples
+
 
 def struct_to_input(sample: object) -> tuple:
     """
@@ -96,8 +99,9 @@ def struct_to_input(sample: object) -> tuple:
     label_task = sample.label_task
     return label_existence, label_all, flag, label_task
 
+
 class DatasetAllDataSetTypes(DataSetBase):
-    def __init__(self, root: str, opts:argparse, arg_and_head_index:int = 0, direction: int = 0,is_train = True, nexamples: int = None, obj_per_row=6,
+    def __init__(self, root: str, opts: argparse, arg_and_head_index: int = 0, direction: int = 0, is_train=True, nexamples: int = None, obj_per_row=6,
                  obj_per_col=1, split: bool = True):
         """
         Omniglot data-set.
@@ -112,7 +116,8 @@ class DatasetAllDataSetTypes(DataSetBase):
             split: Whether to split the dataset.
         """
 
-        super(DatasetAllDataSetTypes, self).__init__(root, nexamples, split, is_train=is_train)
+        super(DatasetAllDataSetTypes, self).__init__(
+            root, nexamples, split, is_train=is_train)
         self.ntasks = opts.ntasks
         self.nclasses_existence = opts.nclasses[arg_and_head_index]
         self.direction = torch.tensor(direction)
@@ -145,11 +150,14 @@ class DatasetAllDataSetTypes(DataSetBase):
         # Getting the task embedding.
         task_type_ohe = torch.nn.functional.one_hot(self.task_idx, self.ntasks)
         # Getting the direction embedding.
-        direction_type_ohe = torch.nn.functional.one_hot(self.direction, self.ndirections)
+        direction_type_ohe = torch.nn.functional.one_hot(
+            self.direction, self.ndirections)
         # Getting the character embedding.
-        char_type_one = torch.nn.functional.one_hot(torch.tensor(char), self.nclasses_existence)
+        char_type_one = torch.nn.functional.one_hot(
+            torch.tensor(char), self.nclasses_existence)
         # Concatenating into one flag.
-        flag = torch.concat([direction_type_ohe, task_type_ohe, char_type_one], dim=0).float()
+        flag = torch.concat(
+            [direction_type_ohe, task_type_ohe, char_type_one], dim=0).float()
         edge_class = self.nclasses_existence
         r, c = (label_all == char).nonzero()
         if self.direction == 0:
@@ -180,10 +188,12 @@ class DatasetAllDataSetTypes(DataSetBase):
             else:
                 label_task = label_all[r - 1, c]
         # TODO change this to use conv2d with the proper filter
-        label_existence, label_all, label_task = map(torch.tensor, (label_existence, label_all, label_task))
+        label_existence, label_all, label_task = map(
+            torch.tensor, (label_existence, label_all, label_task))
         label_task = label_task.view([-1])
         label_existence = label_existence.float()
         return img, label_task, flag, label_all, label_existence
+
 
 class DatasetAllDataSetTypesAll(DatasetAllDataSetTypes):
     def calc_label_task_all(self, label_all, not_available_class):
@@ -225,7 +235,7 @@ class DatasetAllDataSetTypesAll(DatasetAllDataSetTypes):
                 elif self.direction == 3:
                     # Down
                     if r == 0:
-                       res = edge_class
+                        res = edge_class
                     else:
                         res = label_all[r - 1, c]
 
@@ -235,5 +245,6 @@ class DatasetAllDataSetTypesAll(DatasetAllDataSetTypes):
     def __getitem__(self, index):
         img, label_task, flag, label_all, label_existence = super().__getitem__(index)
         not_available_class = 47
-        label_task = self.calc_label_task_all(label_all, not_available_class).long()
+        label_task = self.calc_label_task_all(
+            label_all, not_available_class).long()
         return img, label_task, flag, label_all, label_existence
