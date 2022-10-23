@@ -4,12 +4,12 @@ import pickle
 import sys
 
 import torch
-import torch.utils.data as data
+from torch.utils.data import Dataset
 import torchvision.transforms as T
 from PIL import Image
 
 sys.path.append(r'/home/sverkip/data/BU-TD/yonathan/Recognicion/code/create_dataset')
-class DataSetBase(data.Dataset):
+class DataSetBase(Dataset):
 
     """
     Base class OmniglotDataSetBase.
@@ -135,6 +135,7 @@ class DatasetAllDataSetTypes(DataSetBase):
         # Opening the image and converting to Tensor
         img = Image.open(fname).convert('RGB')
         img = T.ToTensor()(img)
+        # TODO: all those functions have changed in the beta branch to save all the images as tensors already in the Create dataset phase
         img = 255 * img  # converting to RGB
         # Get raw sample.
         sample = self.get_raw_sample(index)
@@ -178,7 +179,7 @@ class DatasetAllDataSetTypes(DataSetBase):
                 label_task = edge_class
             else:
                 label_task = label_all[r - 1, c]
-
+        # TODO change this to use conv2d with the proper filter
         label_existence, label_all, label_task = map(torch.tensor, (label_existence, label_all, label_task))
         label_task = label_task.view([-1])
         label_existence = label_existence.float()

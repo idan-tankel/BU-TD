@@ -108,8 +108,7 @@ def multi_label_loss_weighted(outs, samples):
     loss_task = losses_task.sum() / loss_weight.sum()
     return loss_task
 
-
-def UnifiedCriterion(opts: argparse, inputs: list[torch.Tensor], outs: list[torch.Tensor]):
+def UnifiedCriterion(opts:argparse, inputs: list[torch.Tensor], outs: list[torch.Tensor]):
     """Loss function based on BCE loss
 
     Args:
@@ -119,7 +118,7 @@ def UnifiedCriterion(opts: argparse, inputs: list[torch.Tensor], outs: list[torc
 
     Returns:
         _type_: _description_
-    """
+    """    
     outs = opts.model.outs_to_struct(outs)  # The output from all the streams.
     samples = opts.inputs_to_struct(inputs)  # Make samples from the raw data.
     loss = 0.0  # The general loss.

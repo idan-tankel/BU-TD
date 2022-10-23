@@ -55,6 +55,7 @@ class ModelWrapped(LightningModule):
         self.model = opts.model
         self.opts = opts
         self.loss_fun = opts.criterion
+        # change this! the saving of something under the opts object without a reason is harder to understand
         self.ckpt = ckpt
         self.learned_params = learned_params
         self.accuracy = opts.task_accuracy
@@ -64,7 +65,7 @@ class ModelWrapped(LightningModule):
         model = self.model
         model.train()  # Move the model into the train mode.
         outs = model(batch)  # Compute the model output.
-        loss = self.loss_fun( batch, outs)  # Compute the loss.
+        loss = self.loss_fun( opts=self.opts,inputs=batch, outs=outs)  # Compute the loss.
         self.optimizer.zero_grad()  # Reset the optimizer.
         loss.backward()  # Do a backward pass.
         self.optimizer.step()  # Update the model.
@@ -86,7 +87,7 @@ class ModelWrapped(LightningModule):
     def validation_step(self, batch, batch_idx):
         with torch.no_grad():
             outs = self.model(batch)
-            loss = self.loss_fun(batch, outs)  # Compute the loss.
+            loss = self.loss_fun(opts=self.opts,inputs=batch, outs=outs)  # Compute the loss.
             outs = self.model.outs_to_struct(outs)
             samples = self.opts.inputs_to_struct(batch)
             _ , task_accuracy = self.accuracy(outs, samples)

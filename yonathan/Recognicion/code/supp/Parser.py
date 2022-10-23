@@ -7,6 +7,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+import git
+
 from supp.Dataset_and_model_type_specification import Flag, DsType, AllOptions, inputs_to_struct
 from supp.batch_norm import BatchNorm
 from supp.blocks import BasicBlockTD, BasicBlockBU, BasicBlockBUShared

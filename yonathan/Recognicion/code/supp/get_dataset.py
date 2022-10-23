@@ -22,6 +22,7 @@ def get_dataset_for_spatial_realtions(opts: argparse, data_fname: str, lang_idx:
         direction: The direction.
 
     Returns: The train, test, val(if exists) datasets.
+    (`tuple`): train_dl, test_dl, val_dl, train_ds, test_ds, val_ds
 
     """
     if opts.ds_type is DsType.Omniglot and opts.model_flag is Flag.ZF:
@@ -39,7 +40,11 @@ def get_dataset_for_spatial_realtions(opts: argparse, data_fname: str, lang_idx:
     image_size = MetaData.parser.image_size
     nsamples_train = MetaData.nsamples_dict['train']
     nsamples_test = MetaData.nsamples_dict['test']
-    nsamples_val = MetaData.nsamples_dict['val']
+    # if there is no validation set, then the number of samples in the validation set is 0.
+    try:
+        nsamples_val = MetaData.nsamples_dict['val']
+    except KeyError:
+        nsamples_val = 0
     obj_per_row = MetaData.parser.nchars_per_row
     obj_per_col = MetaData.parser.num_rows_in_the_image
     # Creating the data-sets.
@@ -85,4 +90,4 @@ def get_dataset_for_spatial_realtions(opts: argparse, data_fname: str, lang_idx:
     opts.nbatches_train = nbatches_train
     opts.nbatches_val = nbatches_val
     opts.nbatches_test = nbatches_test
-    return [the_datasets, train_dl, test_dl, val_dl, train_ds, test_ds, val_ds]
+    return train_dl, test_dl, val_dl, train_ds, test_ds, val_ds
