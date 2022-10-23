@@ -59,7 +59,7 @@ class CheckpointSaver:
         self.top_model_paths = self.top_model_paths[:self.top_n]
 
 class ModelWrapped(LightningModule):
-    def __init__(self, opts, learned_params, ckpt,direction):
+    def __init__(self, opts, learned_params, ckpt, direction):
         super().__init__()
         # Important: This property activates manual optimization.
         self.automatic_optimization = False
@@ -115,8 +115,8 @@ class ModelWrapped(LightningModule):
     def validation_epoch_end(self, outputs):
         acc = sum(outputs) / len(outputs)
         print(acc)
-        if self.ckpt != None:
-          self.ckpt(self.model,self.current_epoch,acc,self.optimizer,self.scheduler, self.opts,self.direction)
+        # if self.ckpt != None:
+        #   self.ckpt(self.model,self.current_epoch,acc,self.optimizer,self.scheduler, self.opts,self.direction)
         return sum(outputs) / len(outputs)
 
     def test_epoch_end(self, outputs):

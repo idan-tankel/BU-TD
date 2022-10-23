@@ -24,10 +24,9 @@ def main(train_right, train_left, ds_type=DsType.Emnist):
         project_path, f'data/{ds_type.Enum_to_name()}/samples/24_extended_testing')
     tmpdir = os.path.join(project_path, 'data/emnist/results/')
     checkpoint_path = os.path.join(tmpdir, 'MyFirstCkt.ckpt')
+    Checkpoint_saver = None
     ModelCkpt = ModelCheckpoint(
         dirpath=checkpoint_path, monitor="val_loss_epoch", mode="min")
-    Checkpoint_saver = CheckpointSaver(
-        dirpath=f'{git_root}/yonathan/Recognicion/data/emnist/results/MyFirstCkpt', decreasing=False, top_n=5)
     wandb_logger = WandbLogger(project="My_first_project_5.10", job_type='train',
                                save_dir='/home/sverkip/data/BU-TD/yonathan/Recognicion/data/emnist/results/')
     trainer = pl.Trainer(accelerator='gpu', max_epochs=60,
@@ -39,13 +38,14 @@ def main(train_right, train_left, ds_type=DsType.Emnist):
     if train_right:
         train_dl, test_dl, val_dl, *datasets = get_dataset_for_spatial_realtions(
             parser, data_path, lang_idx=0, direction=0)
-        model = ModelWrapped(parser, learned_params,
+        model = ModelWrapped(opts=parser, learned_params=learned_params,
                              ckpt=Checkpoint_saver, direction=0)
         trainer.fit(model, train_dataloaders=train_dl, val_dataloaders=test_dl)
     if train_left:
         train_dl, test_dl, val_dl, *datasets = get_dataset_for_spatial_realtions(
             parser, data_path,  lang_idx=0,    direction=1)
-        model = ModelWrapped(parser, learned_params, ckpt=Checkpoint_saver)
+        model = ModelWrapped(
+            opts=parser, learned_params=learned_params, ckpt=Checkpoint_saver)
         trainer.fit(model, train_dataloaders=train_dl, val_dataloaders=test_dl)
 
 
