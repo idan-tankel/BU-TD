@@ -1,3 +1,5 @@
+import sys
+sys.path.append(r'/home/idanta/BU-TD/yonathan/Recognicion/code/')
 import pytorch_lightning as pl
 from supp.Parser import GetParser
 from supp.get_dataset import get_dataset_for_spatial_realtions
@@ -8,9 +10,8 @@ from pathlib import Path
 from Checkpoint_model_definition import CheckpointSaver, ModelWrapped
 import torch.nn as nn
 from supp.Dataset_and_model_type_specification import Flag
+from Configs.Config import Config
 import git
-import sys
-sys.path.append(r'/home/idanta/BU-TD/yonathan/Recognicion/code/')
 # TODO write an own import function using imp
 git_repo = git.Repo(__file__, search_parent_directories=True)
 git_root = git_repo.working_dir
@@ -60,7 +61,7 @@ def main(train_right=True, train_left=False):
     tmpdir = os.path.join(project_path, 'data/emnist/results/')
     checkpoint_path = os.path.join(tmpdir, 'MyFirstCkt.ckpt')
     parser = GetParser(task_idx=0, direction_idx='right', flag=Flag.ZF)
-
+    # parser = Config()
     ModelCkpt = ModelCheckpoint(
         dirpath=tmpdir, monitor="train_loss_epoch", mode="min")
     Checkpoint_saver = CheckpointSaver(

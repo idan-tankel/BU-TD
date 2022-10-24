@@ -39,7 +39,7 @@ Losses:
   use_td_loss: False
   use_bu1_loss: True
   use_bu2_loss: True
-  activation_fun: 'ReLU' 
+  activation_fun: 'ReLU' # moved to the Models section
   # the name here must be the same as the name of the activation function under `torch.nn`
   # there are some extra params set up in the `Config.py` file
 
@@ -73,6 +73,7 @@ Training:
   max_lr: 0.002  # (`float`) the maximum learning rate
   distributed: False # whether to use distributed data within training - accross some GPUs using DistributedSampler of torch
   cycle_lr: True # (`bool`) whether to cycle the learning rate
+  base_lr: 0.0002 # (`float`) the base learning rate for the cyclic_adam_optimizer, if used
   optimizer: Adam  # (`str`) the optimizer to use. ['Adam','SGD']
   # checkpoints and saving options
   load_existing_path: False # (`bool`) whether to load an existing model from the path specified in `path_loading`. Default to false

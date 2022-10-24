@@ -103,13 +103,13 @@ def get_dataset(direction: int, args: Config, data_fname, batch_size=None):
                                     name='Train', checkpoints_per_epoch=args.Training.checkpoints_per_epoch)
     the_test_dataset = DatasetInfo(
         False, test_dataset, nbatches_test, 'Test', 1)
+    the_datasets = [the_train_dataset, the_test_dataset]
     if nsamples_val > 0:
         the_val_dataset = DatasetInfo(
             istrain=False, ds=val_dataset, nbatches=nbatches_val, name='Validation', checkpoints_per_epoch=1)
-    else:
-        the_val_dataset = None
+        the_datasets += [the_val_dataset]
     #
-    return train_dl, test_dl, val_dl, train_dataset, test_dataset, the_val_dataset
+    return the_datasets, train_dl, test_dl, val_dl, train_dataset, test_dataset, the_val_dataset
 
 
 # set stop_after to None if you want the accurate mean, otherwise set to the number of examples to process

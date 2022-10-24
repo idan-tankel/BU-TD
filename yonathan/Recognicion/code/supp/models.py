@@ -30,7 +30,7 @@ class TDModel(nn.Module):
         upsample_size = opts.avg_pool_size  # before avg pool we have 7x7x512
         self.task_embedding = [[] for _ in range(self.ndirections)]
         self.argument_embedding = [[] for _ in range(self.ntasks)]
-        self.InitialTaskEmbedding = InitialTaskEmbedding(opts=opts)
+        self.InitialTaskEmbedding = InitialTaskEmbedding(opts=opts,task_embedding=[[] for _ in range(self.ndirections)])
         if opts.ds_type is DsType.Omniglot and self.model_flag is Flag.ZF:
             for j in range(self.ntasks):
                 self.argument_embedding[j].extend(self.InitialTaskEmbedding.argument_embedding[j])
@@ -128,6 +128,7 @@ class BUStream(nn.Module):
         """
         super(BUStream, self).__init__()
         self.block = opts.bu_block_type
+        # enumeration for supp.blocks.BasicBlockBU
         self.inshapes = shared.inshapes
         self.ntasks = opts.ntasks
         self.ndirections = opts.ndirections
@@ -164,7 +165,7 @@ class BUStream(nn.Module):
         for shared_block in blocks:
             # Create Basic BU block.
             block_inshape = self.inshapes[layer_id + 1]
-            layer = self.block(self.opts, shared_block, block_inshape, is_bu2)
+            layer = self.block(opts=self.opts, shared=shared_block, block_inshapes=block_inshape, is_bu2=is_bu2)
             if self.model_flag is Flag.ZF and is_bu2:
                 # Adding the task embedding of the BU2 stream.
                 for i in range(self.ndirections):

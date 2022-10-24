@@ -6,14 +6,12 @@ import yaml
 import numpy as np
 import torch
 from supp.Dataset_and_model_type_specification import DsType,Flag
-from v26.functions.inits import init_model_options
+# from v26.functions.inits import init_model_options
 from supp.batch_norm import BatchNorm
-from supp.loss_and_accuracy import multi_label_loss,UnifiedLossFun,multi_label_accuracy_base
-from supp.emnist_dataset import inputs_to_struct
+from supp.loss_and_accuracy import multi_label_loss,UnifiedCriterion,multi_label_accuracy_base
+# from supp.emnist_dataset import inputs_to_struct
 
 # from supp.training_functions import create_optimizer_and_sched
-
-dev = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 # configuration class
 # from v26.models.flag_at import FlagAt
 
@@ -181,4 +179,3 @@ class Training:
         for key,value in config.items():
             self.__setattr__(key,value)
         self.lr : float = float(config['lr'])
-        self.optimizer
