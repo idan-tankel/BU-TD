@@ -1,19 +1,20 @@
 import copy
 import sys
-sys.path.append(r'/home/sverkip/data/BU-TD/yonathan/Recognicion/code')
+sys.path.append(r'/')
 from tqdm.auto import tqdm
 from typing import Dict, Union
+import torch.nn as nn
 from torch.utils.data import DataLoader
+import argparse
 import torch
 from avalanche.models.utils import avalanche_forward
 from avalanche.training.utils import copy_params_dict, zerolike_params_dict
 from avalanche.training.plugins import MASPlugin
-<<<<<<< HEAD
+from torch.utils.data import Dataset
 from supp.general_functions import preprocess
+from avalanche.training.templates.supervised import SupervisedTemplate
 # TODO - ALSO HERE GET RID OF THE BUMODEL, INSTEAD USE FEAUTURES.
-=======
 
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
 class MyMASPlugin(MASPlugin):
     """
     Memory Aware Synapses (MAS) plugin.
@@ -33,9 +34,7 @@ class MyMASPlugin(MASPlugin):
     https://github.com/mmasana/FACIL/blob/master/src/approach/mas.py
     """
 
-    def __init__(
-        self, parser,verbose = False
-    ):
+    def __init__( self, parser:argparse, verbose:bool = False ):
         """
         :param lambda_reg: hyperparameter weighting the penalty term
                in the loss.
@@ -50,42 +49,28 @@ class MyMASPlugin(MASPlugin):
         super().__init__()
 
         # Regularization Parameters
-
-
         self._lambda = parser.mas_lambda_reg
         self.alpha = parser.mas_alpha
         # Model parameters
         self.params: Union[Dict, None] = None
         self.importance: Union[Dict, None] = None
-<<<<<<< HEAD
         self.batch_size = parser.bs
         self.device = parser.device
         self.parser = parser
-=======
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
-
         # Progress bar
         self.verbose = verbose
         self.pretrained_model = parser.pretrained_model
         if parser.pretrained_model:
             self.model_old = copy.deepcopy(parser.model)
             self.old_data = parser.old_dataset
-<<<<<<< HEAD
             self.importance = self._get_importance(self.model_old, self.old_data, self.batch_size, parser.device)
             self.params = self.params = dict(copy_params_dict(self.model_old.bumodel))
-=======
-            self.imortances = self._get_importance(self.model_old, self.old_data, self.bs, parser.device)
-            self.params = self.params = dict(copy_params_dict(self.model_old))
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
 
-    def _get_importance(self, model, dataset, train_mb_size,device  ):
+    def _get_importance(self, model:nn.Module, dataset:Dataset, train_mb_size:int,device:Union['cuda','cpu']):
 
         # Initialize importance matrix
-<<<<<<< HEAD
         importance = dict(zerolike_params_dict(model.bumodel))
-=======
-        importance = dict(zerolike_params_dict(model))
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
+
         '''
         if not strategy.experience:
             raise ValueError("Current experience is not available")
@@ -95,10 +80,7 @@ class MyMASPlugin(MASPlugin):
         '''
         # Do forward and backward pass to accumulate L2-loss gradients
         model.train()
-        dataloader = DataLoader(
-            dataset,
-            batch_size=train_mb_size,
-        )
+        dataloader = DataLoader(dataset,  batch_size=train_mb_size,)
 
         # Progress bar
         if self.verbose:
@@ -107,7 +89,6 @@ class MyMASPlugin(MASPlugin):
 
         for _, batch in enumerate(dataloader):
             # Get batch
-<<<<<<< HEAD
 
             # Move batch to device
             batch = preprocess(self.parser, batch)
@@ -115,7 +96,7 @@ class MyMASPlugin(MASPlugin):
             # Forward pass
             model.zero_grad()
             out = avalanche_forward(model,batch, None)[1]
-=======
+
             if len(batch) == 2 or len(batch) == 3:
                 x, _, t = batch[0], batch[1], batch[-1]
             else:
@@ -127,18 +108,13 @@ class MyMASPlugin(MASPlugin):
             # Forward pass
             model.zero_grad()
             out = avalanche_forward(model, x, t)
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
-
             # Average L2-Norm of the output
             loss = torch.norm(out, p="fro", dim=1).mean()
             loss.backward()
 
             # Accumulate importance
-<<<<<<< HEAD
             for name, param in model.bumodel.named_parameters():
-=======
-            for name, param in model.named_parameters():
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
+
                 if param.requires_grad:
                     # In multi-head architectures, the gradient is going
                     # to be None for all the heads different from the
@@ -171,11 +147,8 @@ class MyMASPlugin(MASPlugin):
             raise ValueError("Loss is not available")
 
         # Apply penalty term
-<<<<<<< HEAD
         for name, param in strategy.model.bumodel.named_parameters():
-=======
-        for name, param in strategy.model.named_parameters():
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
+
             if name in self.importance.keys():
                 loss_reg += torch.sum(
                     self.importance[name] * (param - self.params[name]).pow(2)
@@ -185,13 +158,11 @@ class MyMASPlugin(MASPlugin):
         print(self._lambda * loss_reg)
         strategy.loss += self._lambda * loss_reg
 
-    def before_training(self, strategy, **kwargs):
+    def before_training(self, strategy:SupervisedTemplate, **kwargs):
         # Parameters before the first task starts
-<<<<<<< HEAD
+
         if strategy.EpochClock.just_initialized and not self.pretrained_model:
-=======
-        if strategy.EpochClock.pretrained_model and strategy.EpochClock.just_initialized and not self.pretrained_model:
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
+
             if not self.params:
                 self.params = dict(copy_params_dict(strategy.model))
 

@@ -8,6 +8,7 @@
 # E-mail: contact@continualai.org                                              #
 # Website: www.continualai.org                                                 #
 ################################################################################
+
 from collections import defaultdict
 from typing import List, Union, Dict
 
@@ -16,55 +17,11 @@ from avalanche.evaluation import Metric, PluginMetric, GenericPluginMetric
 from avalanche.evaluation.metric_utils import phase_and_task
 from avalanche.evaluation.metrics.mean import Mean
 from torch import Tensor
+from supp.Dataset_and_model_type_specification import Flag
+from supp.loss_and_accuracy import multi_label_accuracy_weighted, multi_label_accuracy
+from avalanche.evaluation.metrics.accuracy import Accuracy
 
-
-def multi_label_accuracy_base(outs: object, samples: object) -> tuple:
-    """
-    The base class for all modes.
-    Here for each head we compute its accuracy according to the model out and label task.
-    Args:
-        outs: The model outs.
-        samples: The samples.
-
-    Returns: The predictions, the task accuracy.
-
-    """
-    predictions = torch.argmax(outs, dim=1)
-    label_task = samples[1]
-    task_accuracy = ( predictions == label_task).float()  # Compare the number of matches and normalize by the batch size*num_outputs.
-    return (predictions, task_accuracy)
-
-def multi_label_accuracy(outs: object, samples: object):
-    """
-    return the task accuracy mean over all samples.
-    Args:
-        outs: The model outs.
-        samples: The samples.
-
-    Returns: The predictions and task accuracy over the batch.
-
-    """
-    preds, task_accuracy = multi_label_accuracy_base(outs, samples)
-    task_accuracy = task_accuracy.mean(axis=0)  # per single example
-    return preds, task_accuracy
-
-def multi_label_accuracy_weighted(outs, inputs):
-    """
-    return the task accuracy weighted mean over the existing characters in the image.
-    Args:
-        outs: The model outs.
-        samples: The samples.
-
-    Returns: The predication and mean accuracy over the batch.
-
-    """
-    preds, task_accuracy = multi_label_accuracy_base(outs, inputs)
-    loss_weight = inputs[-1]
-    task_accuracy = task_accuracy * loss_weight
-    task_accuracy = task_accuracy.sum() / loss_weight.sum()  # per single example
-    return preds, task_accuracy
-
-class MyAccuracy(Metric[float]):
+class MyAccuracy(Accuracy):
     """
     The Accuracy metric. This is a standalone metric.
 
@@ -81,7 +38,7 @@ class MyAccuracy(Metric[float]):
     this metric in its initial state will return an accuracy value of 0.
     """
 
-    def __init__(self,accuracy_name):
+    def __init__(self,parser):
         """
         Creates an instance of the standalone Accuracy metric.
 
@@ -89,11 +46,13 @@ class MyAccuracy(Metric[float]):
         value of 0. The metric can be updated by using the `update` method
         while the running accuracy can be retrieved using the `result` method.
         """
+        self.out_to_struct = parser.model.outs_to_struct
+        self.inputs_to_struct = parser.model.inputs_to_struct
         self._mean_accuracy = defaultdict(Mean)
-        if accuracy_name == 'MACW':
+        if parser.model_flag is Flag.NOFLAG:
          self.accuracy_fun = multi_label_accuracy_weighted
         else:
-         self.accuracy_fun = multi_label_accuracy_base
+         self.accuracy_fun = multi_label_accuracy
         """
         The mean utility that will be used to store the running accuracy
         for each task label.
@@ -120,13 +79,11 @@ class MyAccuracy(Metric[float]):
         """
         if isinstance(task_labels, int):
             #
-
-            preds, task_accuracy = self.accuracy_fun(predicted_y, gt)
-            #
-          #  true_positives = float(torch.sum(torch.eq(predicted_y, true_y)))
-          #  total_patterns = len(true_y)
+            predicted_y_struct = self.out_to_struct(predicted_y)
+            gt = self.inputs_to_struct(gt)
+            preds, task_accuracy = self.accuracy_fun(predicted_y_struct, gt)
             task_accuracy = task_accuracy.sum()
-            self._mean_accuracy[task_labels].update(task_accuracy , predicted_y.shape[0])
+            self._mean_accuracy[task_labels].update(task_accuracy , predicted_y[0].shape[0])
 
         elif isinstance(task_labels, Tensor):
             for pred, true, t in zip(predicted_y, gt[1], task_labels):
@@ -170,15 +127,14 @@ class MyAccuracy(Metric[float]):
         else:
             self._mean_accuracy[task_label].reset()
 
-
-class MyAccuracyPluginMetric(GenericPluginMetric[float]):
+class MyGenericPluginMetric(GenericPluginMetric[float]):
     """
     Base class for all accuracies plugin metrics
     """
 
-    def __init__(self, reset_at, emit_at, mode,accuracy_fun):
-        self._accuracy = MyAccuracy(accuracy_fun)
-        super(MyAccuracyPluginMetric, self).__init__(
+    def __init__(self,parser, reset_at, emit_at, mode):
+        self._accuracy = MyAccuracy(parser)
+        super(MyGenericPluginMetric, self).__init__(
             self._accuracy, reset_at=reset_at, emit_at=emit_at, mode=mode
         )
 
@@ -206,10 +162,9 @@ class MyAccuracyPluginMetric(GenericPluginMetric[float]):
             task_labels = strategy.mb_task_id
         else:
             task_labels = task_labels[0]
-        self._accuracy.update(strategy.mb_output[0], strategy.mb_x, task_labels)
+        self._accuracy.update(strategy.mb_output, strategy.mb_x, task_labels)
 
-
-class MinibatchAccuracy(MyAccuracyPluginMetric):
+class MinibatchAccuracy(MyGenericPluginMetric):
     """
     The minibatch plugin accuracy metric.
     This metric only works at training time.
@@ -222,19 +177,16 @@ class MinibatchAccuracy(MyAccuracyPluginMetric):
     :class:`EpochAccuracy` instead.
     """
 
-    def __init__(self,accuracy_fun):
+    def __init__(self, parser):
         """
         Creates an instance of the MinibatchAccuracy metric.
         """
-        super(MinibatchAccuracy, self).__init__(
-            reset_at="iteration", emit_at="iteration", mode="train",accuracy_fun = accuracy_fun
-        )
+        super(MinibatchAccuracy, self).__init__(parser = parser, reset_at = "iteration", emit_at = "iteration", mode = "train" )
 
     def __str__(self):
         return "Top1_Acc_MB"
 
-
-class EpochAccuracy(MyAccuracyPluginMetric):
+class EpochAccuracy(MyGenericPluginMetric):
     """
     The average accuracy over a single training epoch.
     This plugin metric only works at training time.
@@ -244,20 +196,19 @@ class EpochAccuracy(MyAccuracyPluginMetric):
     the overall number of patterns encountered in that epoch.
     """
 
-    def __init__(self,accuracy_metrics=None):
+    def __init__(self,parser):
         """
         Creates an instance of the EpochAccuracy metric.
         """
 
-        super(EpochAccuracy, self).__init__(
-            reset_at="epoch", emit_at="epoch", mode="train",accuracy_fun=accuracy_metrics
+        super(EpochAccuracy, self).__init__(parser=parser,
+            reset_at="epoch", emit_at="epoch", mode="train",
         )
 
     def __str__(self):
         return "Top1_Acc_Epoch"
 
-
-class RunningEpochAccuracy(MyAccuracyPluginMetric):
+class RunningEpochAccuracy(MyGenericPluginMetric):
     """
     The average accuracy across all minibatches up to the current
     epoch iteration.
@@ -280,45 +231,41 @@ class RunningEpochAccuracy(MyAccuracyPluginMetric):
     def __str__(self):
         return "Top1_RunningAcc_Epoch"
 
-
-class ExperienceAccuracy(MyAccuracyPluginMetric):
+class ExperienceAccuracy(MyGenericPluginMetric):
     """
     At the end of each experience, this plugin metric reports
     the average accuracy over all patterns seen in that experience.
     This metric only works at eval time.
     """
 
-    def __init__(self, accuracy_fun):
+    def __init__(self, parser):
         """
         Creates an instance of ExperienceAccuracy metric
         """
-        super(ExperienceAccuracy, self).__init__(
-            reset_at="experience", emit_at="experience", mode="eval",accuracy_fun=accuracy_fun
-        )
+        super(ExperienceAccuracy, self).__init__(parser=parser, reset_at="experience", emit_at="experience", mode="eval" )
 
     def __str__(self):
         return "Top1_Acc_Exp"
 
-class StreamAccuracy(MyAccuracyPluginMetric):
+class StreamAccuracy(MyGenericPluginMetric):
     """
     At the end of the entire stream of experiences, this plugin metric
     reports the average accuracy over all patterns seen in all experiences.
     This metric only works at eval time.
     """
 
-    def __init__(self,accuracy_fun):
+    def __init__(self, parser):
         """
         Creates an instance of StreamAccuracy metric
         """
         super(StreamAccuracy, self).__init__(
-            reset_at="stream", emit_at="stream", mode="eval",accuracy_fun=accuracy_fun
+            reset_at="stream", emit_at="stream", mode="eval",parser=parser
         )
 
     def __str__(self):
         return "Top1_Acc_Stream"
 
-
-class TrainedExperienceAccuracy(MyAccuracyPluginMetric):
+class TrainedExperienceAccuracy(MyGenericPluginMetric):
     """
     At the end of each experience, this plugin metric reports the average
     accuracy for only the experiences that the model has been trained on so far.
@@ -326,13 +273,13 @@ class TrainedExperienceAccuracy(MyAccuracyPluginMetric):
     This metric only works at eval time.
     """
 
-    def __init__(self,accuracy_fun):
+    def __init__(self,parser):
         """
         Creates an instance of TrainedExperienceAccuracy metric by first
         constructing AccuracyPluginMetric
         """
         super(TrainedExperienceAccuracy, self).__init__(
-            reset_at="stream", emit_at="stream", mode="eval",accuracy_fun =accuracy_fun
+            reset_at="stream", emit_at="stream", mode="eval",parser = parser
         )
         self._current_experience = 0
 
@@ -353,9 +300,8 @@ class TrainedExperienceAccuracy(MyAccuracyPluginMetric):
     def __str__(self):
         return "Accuracy_On_Trained_Experiences"
 
-
 def accuracy_metrics(
-    accuracy_fun,
+    parser,
     minibatch=False,
     epoch=False,
     epoch_running=False,
@@ -387,22 +333,22 @@ def accuracy_metrics(
 
     metrics = []
     if minibatch:
-        metrics.append(MinibatchAccuracy(accuracy_fun))
+        metrics.append(MinibatchAccuracy(parser))
 
     if epoch:
-        metrics.append(EpochAccuracy(accuracy_fun))
+        metrics.append(EpochAccuracy(parser))
 
     if epoch_running:
-        metrics.append(RunningEpochAccuracy(accuracy_fun))
+        metrics.append(RunningEpochAccuracy(parser))
 
     if experience:
-        metrics.append(ExperienceAccuracy(accuracy_fun))
+        metrics.append(ExperienceAccuracy(parser))
 
     if stream:
-        metrics.append(StreamAccuracy(accuracy_fun))
+        metrics.append(StreamAccuracy(parser))
 
     if trained_experience:
-        metrics.append(TrainedExperienceAccuracy(accuracy_fun))
+        metrics.append(TrainedExperienceAccuracy(parser))
 
     return metrics
 

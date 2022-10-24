@@ -10,7 +10,7 @@ class RegType(Enum):
     LFL = auto()
     MAS = auto()
     RWALK = auto()
-
+    Naive_with_freezing = auto()
 
     def Enum_to_name(self):
         if self == RegType.EWC:
@@ -25,6 +25,3 @@ class RegType(Enum):
             return 'MAS'
         if self == RegType.RWALK:
             return 'RWALK'
-
-
-

@@ -10,14 +10,14 @@ from torch.optim import Optimizer
 sys.path.append(r'/home/sverkip/data/BU-TD/yonathan/Recognicion/code/Integration_toward_CL')
 sys.path.append(r'/home/sverkip/data/BU-TD/yonathan/Recognicion/code/')
 from supp_avalanche_AI.Plugins.EWC import MyEWCPlugin
-from supp_avalanche_AI.Plugins.LWF import MyLWFPlugin
+from supp_avalanche_AI.Plugins.LWF import MyLwFPlugin
 from supp_avalanche_AI.Plugins.MAS import MyMASPlugin
 from supp_avalanche_AI.Plugins.LFL import MyLFLPlugin
 from supp_avalanche_AI.Plugins.Clock import EpochClock
 from supp_avalanche_AI.Plugins.SI import MySynapticIntelligencePlugin as MySIPlugin
 from supp_avalanche_AI.Plugins.RWALK import RWalkPlugin
 
-from supp_avalanche_AI.Plugins.Accuracy_plugin import multi_label_accuracy_weighted # TODO - GIT RID OF THOSE STUPID FUNCTIONS.
+from supp.loss_and_accuracy import multi_label_accuracy_weighted # TODO - GIT RID OF THOSE STUPID FUNCTIONS.
 from avalanche.training.plugins import (
     SupervisedPlugin,
     EvaluationPlugin,
@@ -64,20 +64,23 @@ class MySupervisedTemplate(SupervisedTemplate):
 
     def eval_epoch(self, **kwargs):
         """Evaluation loop over the current `self.dataloader`."""
+        super().eval_epoch()
+    #    print(self.evaluator.get_last_metrics())
         sum = 0.0
         for self.mbatch in self.dataloader:
             self._unpack_minibatch()
             self._before_eval_iteration(**kwargs)
-
             self._before_eval_forward(**kwargs)
             self.mb_output = self.forward()
+            mb_output = self.model.forward_and_out_to_struct(self.mbatch[:5])
+            input_struct = self.model.inputs_to_struct(self.mbatch[:5])
             self._after_eval_forward(**kwargs)
             self.loss = self.criterion()
-            acc = self.accuracy_fun(self.mb_output[0], self.mbatch[:5])[1]
+            _ , acc = self.accuracy_fun(mb_output, input_struct)
             sum += acc
             self._after_eval_iteration(**kwargs)
         sum = sum / len(self.dataloader)
-        self.checkpoint(self.model, self.epoch, sum, self.optimizer, self.scheduler, self.parser, 2) # Updating checkpoint.
+        self.checkpoint(self.model, self.epoch, sum, self.optimizer, self.scheduler, self.parser, 2)  # Updating checkpoint.
         self.epoch += 1
 
 class MyEWC(MySupervisedTemplate):
@@ -128,7 +131,7 @@ class MyEWC(MySupervisedTemplate):
         :param base_kwargs: any additional
             :class:`~avalanche.training.BaseTemplate` constructor arguments.
         """
-        ewc = MyEWCPlugin(parser, parser.ewc_lambda, mode, decay_factor, keep_importance_data,parser.old_dataset)
+        ewc = MyEWCPlugin(parser, mode, decay_factor, keep_importance_data,parser.model, parser.old_dataset)
         if plugins is None:
             plugins = [ewc]
         else:
@@ -246,7 +249,7 @@ class Mylwf(MySupervisedTemplate):
             prev_model = model
         else:
          prev_model = None
-        lwf = MyLWFPlugin(parser, prev_model)
+        lwf = MyLwFPlugin(parser, prev_model)
         if plugins is None:
             plugins = [lwf]
         else:

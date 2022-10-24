@@ -1,7 +1,7 @@
 import sys
 import warnings
 
-sys.path.append(r'/home/sverkip/data/BU-TD/yonathan/Recognicion/code')
+sys.path.append(r'/')
 from supp.general_functions import preprocess
 from torch.utils.data import DataLoader
 import torch
@@ -10,20 +10,28 @@ from avalanche.training.utils import copy_params_dict, zerolike_params_dict
 from avalanche.training.plugins import EWCPlugin
 
 class MyEWCPlugin(EWCPlugin):
-    def __init__( self,parser,  ewc_lambda, mode="separate",   decay_factor=None,   keep_importance_data=False, old_dataset = None ):
+    def __init__( self,parser, mode="separate",   decay_factor=None,   keep_importance_data=False,prev_model = None, old_dataset = None ):
         """
         Args:
-            ewc_lambda:
-            pretrained_model:
-            Ignored_params:
-            mode:
+            parser: The model parser.
+            mode: The training mode.
             decay_factor:
             keep_importance_data:
+            prev_model: A pretrained model
+            old_dataset:
         """
-
-        super().__init__( ewc_lambda = ewc_lambda, mode = mode, decay_factor = decay_factor,  keep_importance_data = keep_importance_data)
+        super().__init__( ewc_lambda = parser.ewc_lambda, mode = mode, decay_factor = decay_factor,  keep_importance_data = keep_importance_data)
         self.old_dataset = old_dataset
+        self.prev_model = prev_model
         self.parser = parser
+        # Supporting pretrained model.
+        if prev_model != None and old_dataset != None:
+            # Update importances and old params to begin with EWC training.
+            print("Computing Importances")
+            importances = self.compute_importances(prev_model, parser.criterion, parser.optimizer, old_dataset, parser.device, parser.train_mb_size, False)
+            self.update_importances(importances, 0)
+            print("Done computing Importances")
+            self.saved_params[0] = dict(copy_params_dict(prev_model.bumodel)) # Change to the excluded params.
 
     def compute_importances(self, model, criterion, optimizer, dataset, device, batch_size,use_task_ids):
         """
@@ -50,7 +58,7 @@ class MyEWCPlugin(EWCPlugin):
         dataloader = DataLoader(dataset, batch_size=batch_size)
         for i, batch in enumerate(dataloader):
             if use_task_ids:
-             x = preprocess(batch[:-1])
+             x = preprocess(batch[:-1],device)
             else:
              x = preprocess(batch, device)
             task_labels = batch[-1].to(device)
@@ -74,18 +82,6 @@ class MyEWCPlugin(EWCPlugin):
         importances = dict(importances)
 
         return importances
-
-    def before_training_exp(self,strategy, **kwargs):
-        # TODO - INSTEAD OF THIS INIT WITH MODEL_OLD, MUCH EASIER.
-        super(MyEWCPlugin, self).before_training_exp(strategy,**kwargs)
-        if strategy.EpochClock.pretrained_model and strategy.EpochClock.just_initialized:
-            dataset = self.old_dataset
-            importances = self.compute_importances(strategy.model, strategy._criterion, strategy.optimizer, dataset, strategy.device, strategy.train_mb_size,False)
-            self.update_importances(importances, 0)
-            self.saved_params[0] = dict(copy_params_dict(strategy.model.bumodel))
-
-    def after_eval_exp( self, strategy,*args, **kwargs ) :
-        print(strategy)
 
     def after_training_exp(self, strategy, **kwargs):
         """
@@ -115,11 +111,11 @@ class MyEWCPlugin(EWCPlugin):
         # TODO - SUPPORT ALL SUPPORTED THINGS LIKE EXP_COUNTER = 0, MULTITASKLOSS.
         """
         exp_counter = strategy.EpochClock.train_exp_counter
-        if  exp_counter == 0:
+        if  exp_counter == 0 or self.ewc_lambda == 0.0:
             return
         penalty = torch.tensor(0).float().to(strategy.device)
         if self.mode == "separate":
-            for experience in range(1):
+            for experience in range(1): # TODO - CHANGE TO ALL TASKS.
                 Cur_params = dict(strategy.model.bumodel.named_parameters())
                 for name in self.importances[0].keys():
                     # TODO - CHANGE IT to general index in the future according to some policy!!!!
@@ -146,5 +142,5 @@ class MyEWCPlugin(EWCPlugin):
                 penalty += (imp * (cur_param - saved_param).pow(2)).sum()
         else:
             raise ValueError("Wrong EWC mode.")
-        print(self.ewc_lambda * penalty)
+      #  print(self.ewc_lambda * penalty)
         strategy.loss += self.ewc_lambda * penalty

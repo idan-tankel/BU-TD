@@ -5,21 +5,13 @@ from avalanche.evaluation.metrics import loss_metrics
 from avalanche.logging import WandBLogger
 from avalanche.training.plugins import LRSchedulerPlugin
 from avalanche.training.plugins.evaluation import EvaluationPlugin
-<<<<<<< HEAD
 from supp.training_functions import load_model
-=======
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
-from supp_avalanche_AI.Accuracy_plugin import accuracy_metrics
-
 from supp.Dataset_and_model_type_specification import Flag, DsType, Model_Options_By_Flag_And_DsType
 from supp.Parser import GetParser
 from supp.general_functions import create_optimizer_and_sched
 from supp.get_dataset import get_dataset_for_spatial_realtions
 from supp.models import ResNet
-<<<<<<< HEAD
-=======
-from supp.training_functions import load_model
->>>>>>> 315b11ac3016dc72662fd8ca96881ae68c5cda6d
+
 from supp_avalanche_AI.strategy_wrappers import Naive_with_freezing
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
