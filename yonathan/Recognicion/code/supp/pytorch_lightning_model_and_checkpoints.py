@@ -1,31 +1,33 @@
+import shutil
+from pathlib import Path
+import torch.nn as nn
+import logging
+import os
+import numpy as np
+from supp.general_functions import preprocess
+import torch.optim as optim
+import torch
+from supp.general_functions import create_optimizer_and_sched
+from pytorch_lightning import LightningModule
 import os.path
 import sys
 sys.path.append(r'/home/sverkip/data/BU-TD/yonathan/Recognicion/code/')
-from pytorch_lightning import LightningModule
-from supp.general_functions import create_optimizer_and_sched
-import torch
-import torch.optim as optim
-from supp.general_functions import preprocess
-import numpy as np
-import os
-import logging
-import torch.nn as nn
-from pathlib import Path
-import shutil
 
 # TODO - GET RID OF THE CHECKPOINT CLASS AS PYTORCH DOES IT.
 
 # TODO - USE AUTOMATIC OPTIMIZATION.
 
 # TODO - CLEAN PATH OF CHECKPOINT IF EXISTS.
+
+
 class CheckpointSaver:
-    def __init__(self, dirpath, decreasing=False, top_n = 20):
+    def __init__(self, dirpath, decreasing=False, top_n=20):
         """
         dirpath: Directory path where to store all model weights
         decreasing: If decreasing is `True`, then lower metric is better
         top_n: Total number of models to track based on validation metric value
         """
-        if not os.path.exists(dirpath): 
+        if not os.path.exists(dirpath):
             os.makedirs(dirpath)
         self.dirpath = dirpath
         self.top_n = top_n
@@ -36,30 +38,35 @@ class CheckpointSaver:
         if not os.path.exists(os.path.join(code_path)):
             shutil.copytree('code', os.path.join(self.dirpath, 'code'))
 
-    def __call__(self, model, epoch, metric_val,optimizer,scheduler, parser,direction):
-        model_path = os.path.join(self.dirpath, model.__class__.__name__ + f'_epoch{epoch}_direction={direction}.pt')
-        save = metric_val<self.best_metric_val if self.decreasing else metric_val >self.best_metric_val
+    def __call__(self, model, epoch, metric_val, optimizer, scheduler, parser, direction):
+        model_path = os.path.join(
+            self.dirpath, model.__class__.__name__ + f'_epoch{epoch}_direction={direction}.pt')
+        save = metric_val < self.best_metric_val if self.decreasing else metric_val > self.best_metric_val
         if save:
-            logging.info(f"Current metric value better than {metric_val} better than best {self.best_metric_val}, saving model at {model_path}")
+            logging.info(
+                f"Current metric value better than {metric_val} better than best {self.best_metric_val}, saving model at {model_path}")
             self.best_metric_val = metric_val
             save_data = {'epoch': epoch, 'model_state_dict': model.state_dict(),
-             'optimizer_state_dict': optimizer.state_dict(),
-             'scheduler_state_dict': scheduler.state_dict(), 'parser': parser }
+                         'optimizer_state_dict': optimizer.state_dict(),
+                         'scheduler_state_dict': scheduler.state_dict(), 'parser': parser}
             torch.save(save_data, model_path)
-            self.top_model_paths.append({'path': model_path, 'score': metric_val})
-            self.top_model_paths = sorted(self.top_model_paths, key=lambda o: o['score'], reverse=not self.decreasing)
+            self.top_model_paths.append(
+                {'path': model_path, 'score': metric_val})
+            self.top_model_paths = sorted(
+                self.top_model_paths, key=lambda o: o['score'], reverse=not self.decreasing)
         if len(self.top_model_paths) > self.top_n:
             self.cleanup()
 
     def cleanup(self):
         """
         cleanup function to delete old checkpoint of the model
-        """        
+        """
         pass
         self.top_model_paths = self.top_model_paths[:self.top_n]
 
+
 class ModelWrapped(LightningModule):
-    def __init__(self, opts, learned_params, ckpt, direction):
+    def __init__(self, opts, learned_params, direction):
         super().__init__()
         # Important: This property activates manual optimization.
         self.automatic_optimization = False
@@ -67,10 +74,10 @@ class ModelWrapped(LightningModule):
         self.opts = opts
         self.direction = direction
         self.loss_fun = opts.criterion
-        self.ckpt = ckpt
         self.learned_params = learned_params
         self.accuracy = opts.task_accuracy
-        self.optimizer , self.scheduler =  create_optimizer_and_sched(self.opts, self.learned_params)
+        self.optimizer, self.scheduler = create_optimizer_and_sched(
+            self.opts, self.learned_params)
 
     def training_step(self, batch, batch_idx):
         model = self.model
@@ -82,11 +89,12 @@ class ModelWrapped(LightningModule):
         self.optimizer.step()  # Update the model.
         samples = self.opts.inputs_to_struct(batch)
         outs = self.model.outs_to_struct(outs)
-        _ , acc = self.accuracy(outs, samples)
-        if type(self.scheduler) in [optim.lr_scheduler.CyclicLR, optim.lr_scheduler.OneCycleLR]:  # Make a scheduler step if needed.
-           self.scheduler.step()
-        self.log('train_loss', loss, on_step=True, on_epoch=True, logger = True)
-        self.log('train_acc',acc, on_step=True, on_epoch=True, logger=True)
+        _, acc = self.accuracy(outs, samples)
+        # Make a scheduler step if needed.
+        if type(self.scheduler) in [optim.lr_scheduler.CyclicLR, optim.lr_scheduler.OneCycleLR]:
+            self.scheduler.step()
+        self.log('train_loss', loss, on_step=True, on_epoch=True, logger=True)
+        self.log('train_acc', acc, on_step=True, on_epoch=True, logger=True)
         return loss  # Return the loss and the output.
 
     def test_step(self, batch, batch_idx):
@@ -101,15 +109,18 @@ class ModelWrapped(LightningModule):
             loss = self.loss_fun(self.opts, batch, outs)  # Compute the loss.
             outs = self.model.outs_to_struct(outs)
             samples = self.opts.inputs_to_struct(batch)
-            _ , task_accuracy = self.accuracy(outs, samples)
+            _, task_accuracy = self.accuracy(outs, samples)
             samples = self.opts.inputs_to_struct(batch)
-            _ , acc = self.accuracy(outs, samples)
-            self.log('val_loss', loss, on_step=True, on_epoch=True, logger=True)
-            self.log('val_acc', task_accuracy, on_step=True, on_epoch=True, logger=True)
+            _, acc = self.accuracy(outs, samples)
+            self.log('val_loss', loss, on_step=True,
+                     on_epoch=True, logger=True)
+            self.log('val_acc', task_accuracy, on_step=True,
+                     on_epoch=True, logger=True)
             return task_accuracy.sum()
 
     def configure_optimizers(self):
-        opti, sched = create_optimizer_and_sched(self.opts, self.learned_params)
+        opti, sched = create_optimizer_and_sched(
+            self.opts, self.learned_params)
         return [opti], [sched]
 
     def validation_epoch_end(self, outputs):
@@ -130,13 +141,14 @@ class ModelWrapped(LightningModule):
             outs = self.model(inputs)
             samples = self.opts.inputs_to_struct(inputs)
             outs = self.model.outs_to_struct(outs)
-            pred , acc_batch = self.accuracy(outs, samples)
+            pred, acc_batch = self.accuracy(outs, samples)
             acc += acc_batch
         acc = acc / len(dl)
         return acc
 
+
 class Training_flag:
-    def __init__(self,parser, train_all_model: bool, train_arg: bool, train_task_embedding: bool, train_head: bool):
+    def __init__(self, parser, train_all_model: bool, train_arg: bool, train_task_embedding: bool, train_head: bool):
         """
         Args:
             train_all_model: Whether to train all model.
@@ -148,7 +160,7 @@ class Training_flag:
         self.train_arg = train_arg
         self.task_embedding = train_task_embedding
         self.head_learning = train_head
-        self.parser= parser
+        self.parser = parser
 
     def Get_learned_params(self, model: nn.Module, lang_idx: int, direction: int):
         """
@@ -171,6 +183,7 @@ class Training_flag:
             learned_params.extend(model.tdmodel.argument_embedding[lang_idx])
         return learned_params
 
+
 def load_model(model: nn.Module, model_path: str, model_latest_fname: str, gpu=None,
                load_optimizer_and_schedular: bool = False) -> dict:
     """
@@ -187,18 +200,20 @@ def load_model(model: nn.Module, model_path: str, model_latest_fname: str, gpu=N
     """
     if gpu is None:
         model_path = os.path.join(model_path, model_latest_fname)
-        checkpoint = torch.load(model_path)  # Loading the weights and the metadata.
+        # Loading the weights and the metadata.
+        checkpoint = torch.load(model_path)
     else:
         # Map model to be loaded to specified single gpu.
         loc = 'cuda:{}'.format(gpu)
         checkpoint = torch.load(model_path, map_location=loc)
     new = True
     if new:
-     checkpoint = checkpoint['model_state_dict']
+        checkpoint = checkpoint['model_state_dict']
     else:
         checkpoint = checkpoint
 
-    model.load_state_dict(checkpoint)  # Loading the epoch_id, the optimum and the data.
+    # Loading the epoch_id, the optimum and the data.
+    model.load_state_dict(checkpoint)
   #  if load_optimizer_and_schedular:
   #      opts.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])  # Load the optimizer state.
   #      opts.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])  # Load the schedular state.

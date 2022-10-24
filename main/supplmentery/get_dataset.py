@@ -5,7 +5,7 @@ import numpy as np
 import torch.distributed as dist
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
-from supplmentery.emnist_dataset import EMNISTAdjDatasetNew2 as dataset,inputs_to_struct
+from supplmentery.emnist_dataset import EMNISTAdjDatasetNew2 as dataset, inputs_to_struct
 from supplmentery.data_functions import preprocess
 from v26.models.WrappedDataLoader import WrappedDataLoader
 from v26.models.DatasetInfo import DatasetInfo
@@ -13,11 +13,10 @@ from Configs.Config import Config
 # from supp.FlagAt import *
 # from supp.training_functions import *
 # from supp.data_functions import *
-num_gpus=torch.cuda.device_count()
+num_gpus = torch.cuda.device_count()
 
 
-
-def get_dataset(direction:int,args: Config,data_fname,batch_size=None):
+def get_dataset(direction: int, args: Config, data_fname, batch_size=None):
     """
     get_dataset _summary_
 
@@ -28,23 +27,27 @@ def get_dataset(direction:int,args: Config,data_fname,batch_size=None):
 
     Returns:
         (`list`, `DataLoader`, ,``DataLoader``, ``WrappedDataLoader``, ``WrappedDataLoader``):(the_datasets, train_dl, test_dl,val_dl, train_dataset, test_dataset)
-    """    
-    conf_path=os.path.join(data_fname,'conf')
-    #TODO change this config file path since the pickle is not loaded
+    """
+    conf_path = os.path.join(data_fname, 'conf')
+    # TODO change this config file path since the pickle is not loaded
     with open(conf_path, "rb") as conf_path:
-        nsamples_train, nsamples_test, nsamples_val, nclasses_existence, LETTER_SIZE, IMAGE_SIZE, num_rows_in_the_image,obj_per_row, num_chars_per_image, ndirections, valid_classes = pickle.load(
+        nsamples_train, nsamples_test, nsamples_val, nclasses_existence, LETTER_SIZE, IMAGE_SIZE, num_rows_in_the_image, obj_per_row, num_chars_per_image, ndirections, valid_classes = pickle.load(
             conf_path)
-            # TODO change this pickle path ot
-    args.inputs_to_struct=inputs_to_struct
+        # TODO change this pickle path ot
+    args.inputs_to_struct = inputs_to_struct
     ndirections = 4
-    train_ds = dataset(os.path.join(data_fname, 'train'), nclasses_existence, ndirections,  nexamples=nsamples_train, split=True, direction=direction)
+    train_ds = dataset(os.path.join(data_fname, 'train'), nclasses_existence,
+                       ndirections,  nexamples=nsamples_train, split=True, direction=direction)
 
-    normalize_image = True #TODO-CHANGE
+    normalize_image = True  # TODO-CHANGE
     if normalize_image:
         # just for getting the mean image
-        train_dl = DataLoader(train_ds, batch_size=args.Training.bs, num_workers=args.Training.num_workers, shuffle=True, pin_memory=True)
-        mean_image = retrieve_mean_image(train_dl, args.Models.inshape, inputs_to_struct, data_fname, True)
-        train_ds = dataset(os.path.join(data_fname, 'train'), nclasses_existence, ndirections, nexamples=nsamples_train, split=True, mean_image=mean_image, direction=direction)
+        train_dl = DataLoader(train_ds, batch_size=args.Training.bs,
+                              num_workers=args.Training.num_workers, shuffle=True, pin_memory=True)
+        mean_image = retrieve_mean_image(
+            train_dl, args.Models.inshape, inputs_to_struct, data_fname, True)
+        train_ds = dataset(os.path.join(data_fname, 'train'), nclasses_existence, ndirections,
+                           nexamples=nsamples_train, split=True, mean_image=mean_image, direction=direction)
     else:
         mean_image = None
     test_ds = dataset(os.path.join(data_fname, 'test'), nclasses_existence, ndirections, nexamples=nsamples_test,
@@ -52,8 +55,8 @@ def get_dataset(direction:int,args: Config,data_fname,batch_size=None):
     val_ds = dataset(os.path.join(data_fname, 'val'), nclasses_existence, ndirections, nexamples=None, split=True,
                      mean_image=mean_image, direction=direction)
 
-
-    nsamples_val = len(val_ds)  # validation set is only sometimes present so nsamples_val is not always available
+    # validation set is only sometimes present so nsamples_val is not always available
+    nsamples_val = len(val_ds)
 
     if args.Training.distributed:
         dist.init_process_group(backend="gloo")
@@ -83,7 +86,8 @@ def get_dataset(direction:int,args: Config,data_fname,batch_size=None):
     # train_dl = DataLoader(train_ds, batch_size=batch_size,num_workers=0,shuffle=False,pin_memory=True, sampler=train_sampler)
     test_dl = DataLoader(test_ds, batch_size=batch_size, num_workers=args.Training.num_workers, shuffle=False, pin_memory=True,
                          sampler=test_sampler)
-    val_dl = DataLoader(val_ds, batch_size=batch_size, num_workers=args.Training.num_workers, shuffle=False, pin_memory=True,sampler=val_sampler)
+    val_dl = DataLoader(val_ds, batch_size=batch_size, num_workers=args.Training.num_workers,
+                        shuffle=False, pin_memory=True, sampler=val_sampler)
 
     nbatches_train = len(train_dl)
     nbatches_val = len(val_dl)
@@ -95,18 +99,21 @@ def get_dataset(direction:int,args: Config,data_fname,batch_size=None):
     test_dataset = WrappedDataLoader(test_dl, preprocess)
     val_dataset = WrappedDataLoader(val_dl, preprocess)
 
-    the_train_dataset = DatasetInfo(istrain=True, ds=train_dataset, nbatches=nbatches_train, name='Train', checkpoints_per_epoch=args.Training.checkpoints_per_epoch)
-    the_test_dataset = DatasetInfo(False, test_dataset, nbatches_test, 'Test', 1)
-    the_datasets = [the_train_dataset, the_test_dataset]
+    the_train_dataset = DatasetInfo(istrain=True, ds=train_dataset, nbatches=nbatches_train,
+                                    name='Train', checkpoints_per_epoch=args.Training.checkpoints_per_epoch)
+    the_test_dataset = DatasetInfo(
+        False, test_dataset, nbatches_test, 'Test', 1)
     if nsamples_val > 0:
-        the_val_dataset = DatasetInfo(istrain=False, ds=val_dataset, nbatches=nbatches_val, name='Validation',checkpoints_per_epoch=1)
-        the_datasets += [the_val_dataset]
+        the_val_dataset = DatasetInfo(
+            istrain=False, ds=val_dataset, nbatches=nbatches_val, name='Validation', checkpoints_per_epoch=1)
+    else:
+        the_val_dataset = None
     #
-    return the_datasets, train_dl, test_dl,val_dl, train_dataset, test_dataset
+    return train_dl, test_dl, val_dl, train_dataset, test_dataset, the_val_dataset
 
 
 # set stop_after to None if you want the accurate mean, otherwise set to the number of examples to process
-def get_mean_image(data_loader:DataLoader, inshape, inputs_to_struct, stop_after=1000):
+def get_mean_image(data_loader: DataLoader, inshape, inputs_to_struct, stop_after=1000):
     """
     get_mean_image 
 
@@ -118,23 +125,26 @@ def get_mean_image(data_loader:DataLoader, inshape, inputs_to_struct, stop_after
 
     Returns:
         _type_: _description_
-    """    
+    """
     mean_image = np.zeros(inshape)
     nimgs = 0
     for inputs in data_loader:
         # inputs = tonp(inputs) this line moved the input to CPU using that function /home/idanta/BU-TD/emnist/code/v26/funcs.py
         samples = inputs_to_struct(inputs)
         cur_bs = samples.image.shape[0]
-        mean_image =  np.add(mean_image * nimgs,samples.image.sum(axis=0)) / (nimgs + cur_bs)
+        mean_image = np.add(mean_image * nimgs,
+                            samples.image.sum(axis=0)) / (nimgs + cur_bs)
         nimgs += cur_bs
         if stop_after and nimgs > stop_after:
             break
     return mean_image
 
+
 def retrieve_mean_image(train_dl, inshape, inputs_to_struct, base_samples_dir, store, stop_after=1000):
     mean_image_fname = os.path.join(base_samples_dir, 'mean_image.pkl')
     if not os.path.exists(mean_image_fname):
-        mean_image = get_mean_image(data_loader=train_dl, inshape=inshape, inputs_to_struct=inputs_to_struct, stop_after=stop_after)
+        mean_image = get_mean_image(data_loader=train_dl, inshape=inshape,
+                                    inputs_to_struct=inputs_to_struct, stop_after=stop_after)
         if store:
             with open(mean_image_fname, "wb") as data_file:
                 pickle.dump(mean_image, data_file)
