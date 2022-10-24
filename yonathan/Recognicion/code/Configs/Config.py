@@ -5,13 +5,13 @@ from torch import nn
 import yaml
 import numpy as np
 import torch
-from supplmentery.FlagAt import FlagAt
+from supp.Dataset_and_model_type_specification import DsType,Flag
 from v26.functions.inits import init_model_options
-from supplmentery.batch_norm import BatchNorm
-from supplmentery.loss_and_accuracy import multi_label_loss,UnifiedLossFun,multi_label_accuracy_base
-from supplmentery.emnist_dataset import inputs_to_struct
+from supp.batch_norm import BatchNorm
+from supp.loss_and_accuracy import multi_label_loss,UnifiedLossFun,multi_label_accuracy_base
+from supp.emnist_dataset import inputs_to_struct
 
-# from supplmentery.training_functions import create_optimizer_and_sched
+# from supp.training_functions import create_optimizer_and_sched
 
 dev = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 # configuration class
@@ -65,26 +65,26 @@ class Config:
 
         Returns: None (setting attributes of the Config object `self`)
         """    
-        model_flag = self.RunningSpecs.FlagAt
-        if model_flag is FlagAt.BU2:
+        model_flag = self.RunningSpecs.Flag
+        if model_flag is Flag.BU2:
             self.use_bu1_flag = False
             self.use_td_flag = False
             self.use_bu2_flag = True
-        elif model_flag is FlagAt.BU1 or model_flag is FlagAt.BU1_SIMPLE or model_flag is FlagAt.BU1_NOLAG:
+        elif model_flag is Flag.BU1 or model_flag is Flag.BU1_SIMPLE or model_flag is Flag.BU1_NOLAG:
             self.use_bu1_flag = True
             self.use_td_flag = False
             self.use_bu2_flag = False
-        elif model_flag is FlagAt.TD:
+        elif model_flag is Flag.TD:
             self.use_bu1_flag = False
             self.use_td_flag = True
             self.use_bu2_flag = False
             self.use_SF = False
-        elif model_flag is FlagAt.SF:
+        elif model_flag is Flag.SF:
             self.use_bu1_flag = False
             self.use_td_flag = True
             self.use_bu2_flag = False
             self.use_SF = True
-        elif model_flag is FlagAt.NOFLAG:
+        elif model_flag is Flag.NOFLAG:
             self.use_bu1_flag = False
             self.use_td_flag = False
             self.use_bu2_flag = False
@@ -131,13 +131,14 @@ class Visibility:
 class RunningSpecs:
     def __init__(self, config: dict):
         self.distributed = config['distributed']
-        self.FlagAt = FlagAt[config['FlagAt']]
+        self.Flag = Flag[config['FlagAt']]
         self.isFit = config['isFit']
         self.processed_data = config['processed_data']
 
 
 class Datasets:
     def __init__(self, config: dict):
+        self.dataset = DsType(value=config['dataset'])
         self.dummyds = config['dummyds']
 
 

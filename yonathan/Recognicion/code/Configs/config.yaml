@@ -4,13 +4,14 @@ Visibility:
 
 RunningSpecs:
   distributed: False
-  FlagAt: TD
+  Flag: TD # the model specification to run. Defined as (`supp.Dataset_and_model_type_specifications.Flag`)
   flag_size:
   isFit: True
   processed_data: '6_extended' # The name of the model result directory
   
 
 Datasets:
+  Dataset: # (supp.Dataset_and_model_type_specifications.DsType) the name of the dataset to use. Supported: 'Emnist,FashionMnist,Omniglot,Cifar10,Cifar100'
   dummyds: False
 
 Logging:
