@@ -69,10 +69,12 @@ def main(train_right=True, train_left=False):
     # TODO: remove this classs since the checkpoint is already defined
     wandb_logger = WandbLogger(project="My_first_project_5.10", job_type='train',
                                save_dir=f'{git_root}/yonathan/Recognicion/data/emnist/results/')
+
     trainer = pl.Trainer(accelerator='gpu', max_epochs=60,
                          logger=wandb_logger, callbacks=[ModelCkpt])
     training_flag = Training_flag(
         train_all_model=True, train_arg=False, train_task_embedding=False, train_head=False)
+    model = 
     learned_params = training_flag.Get_learned_params(
         parser.model, lang_idx=0, direction=0)
     if train_right:
