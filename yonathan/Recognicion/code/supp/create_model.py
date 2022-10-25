@@ -8,19 +8,21 @@ import torch
 # from models import *
 # from training_functions import *
 # from loss_and_accuracy import UnifiedLossFun
-from v26.models.BU_TD_Models import BUTDModelShared,BUModelSimple
-from v26 import ConstantsBuTd
-from v26.funcs import logger
-from supplmentery.FlagAt import FlagAt
+from typing import Union
+from Configs.Config import Config
+# from v26.models.BU_TD_Models import BUTDModelShared,BUModelSimple
+# from v26 import ConstantsBuTd
+# from v26.funcs import logger
+from supp.Dataset_and_model_type_specification import Flag
 
 
-def create_model(model_opts: SimpleNamespace) -> nn.Module:
+def create_model(model_opts: Union[SimpleNamespace, Config]) -> nn.Module:
     """
     Creating a model and make it parallel and move it to the cuda.
     :param args: arguments to create the model according to.
     :return: The desired model.
     """
-    if model_opts.RunningSpecs.FlagAt is FlagAt.BU1_SIMPLE:
+    if model_opts.RunningSpecs.Flag is FlagAt.BU1_SIMPLE:
         model = BUModelSimple(model_opts)
     else:
 
@@ -32,7 +34,6 @@ def create_model(model_opts: SimpleNamespace) -> nn.Module:
         model = torch.nn.DataParallel(model).cuda()
     ConstantsBuTd.set_model(model)
     ConstantsBuTd.set_model_opts(model_opts)
-    return model
 
     if args.model_flag is FlagAt.BU1_SIMPLE:
         model = BUModelSimple(args)
@@ -44,8 +45,10 @@ def create_model(model_opts: SimpleNamespace) -> nn.Module:
         if args.gpu is not None:
             torch.cuda.set_device(args.gpu)
             model.cuda(args.gpu)
-            args.workers = int((args.workers + ngpus_per_node - 1) / ngpus_per_node)
-            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu], find_unused_parameters=True)
+            args.workers = int(
+                (args.workers + ngpus_per_node - 1) / ngpus_per_node)
+            model = torch.nn.parallel.DistributedDataParallel(
+                model, device_ids=[args.gpu], find_unused_parameters=True)
         else:
             model.cuda()
             model = torch.nn.parallel.DistributedDataParallel(model)

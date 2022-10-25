@@ -11,6 +11,7 @@ from Checkpoint_model_definition import CheckpointSaver, ModelWrapped
 import torch.nn as nn
 from supp.Dataset_and_model_type_specification import Flag
 from Configs.Config import Config
+from supp.create_model import create_model
 import git
 # TODO write an own import function using imp
 git_repo = git.Repo(__file__, search_parent_directories=True)
@@ -74,7 +75,7 @@ def main(train_right=True, train_left=False):
                          logger=wandb_logger, callbacks=[ModelCkpt])
     training_flag = Training_flag(
         train_all_model=True, train_arg=False, train_task_embedding=False, train_head=False)
-    model = 
+    model = create_model(model_opts=parser)
     learned_params = training_flag.Get_learned_params(
         parser.model, lang_idx=0, direction=0)
     if train_right:
