@@ -36,5 +36,10 @@ class cifar_dataset(data.Dataset):
          return 10000
 
 def inputs_to_struct():
+    '''
+    ***DEPRECATED***
+    This function is DEPRECATED and will be removed in the future.
+    This function passed over to a constructor of the inputs class (`__init__`)
+    '''
     pass
 

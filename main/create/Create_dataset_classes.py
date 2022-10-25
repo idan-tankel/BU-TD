@@ -41,6 +41,7 @@ class Sample:
         
         TODO: add also method to this class [create_example?]
         TODO: when creating the inputs, we still call them as a unstructured and use the inputs_to_struct method
+        TODO: there is an INPUT class, to see if we can give up one
         
         Attributes:
             infos: All information about all characters in the image.
@@ -106,6 +107,7 @@ class ExampleClass:
 
 class GetAugData:
     """
+    MARKED FOR DEPRECATION
      _summary_
     """
     # Class returning for a given image size a data augmentation transform.

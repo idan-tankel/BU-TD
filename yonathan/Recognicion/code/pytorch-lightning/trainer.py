@@ -61,7 +61,7 @@ def main(train_right=True, train_left=False):
     tmpdir = os.path.join(project_path, 'data/emnist/results/')
     checkpoint_path = os.path.join(tmpdir, 'MyFirstCkt.ckpt')
     parser = GetParser(task_idx=0, direction_idx='right', flag=Flag.ZF)
-    # parser = Config()
+    parser = Config()
     ModelCkpt = ModelCheckpoint(
         dirpath=tmpdir, monitor="train_loss_epoch", mode="min")
     Checkpoint_saver = CheckpointSaver(

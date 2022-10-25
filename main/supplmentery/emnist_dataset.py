@@ -17,7 +17,7 @@ class EMNISTAdjDatasetBase(data.Dataset):
         self.ndirections = ndirections
         self.mean_image = mean_image
         self.split = split
-        self.splitsize=1000
+        self.splitsize = 1000
         if nexamples is None:
             # just in order to count the number of examples
 
@@ -60,6 +60,10 @@ class EMNISTAdjDatasetBase(data.Dataset):
         return self.nexamples
 
 class EMNISTAdjDataset(EMNISTAdjDatasetBase):
+    """MARKED FOR DELETION
+    TODO make the class and the one coming after it 1 class
+    TODO add conv2d to compute the adjecency matrix as done in the new versions in beta branch
+    """
     def __getitem__(self, index):
         root = self.get_root_by_index(index)
         fname=os.path.join(root,'%d_img.jpg' % index)
@@ -91,6 +95,8 @@ class EMNISTAdjDataset(EMNISTAdjDatasetBase):
 
 def inputs_to_struct(inputs):
     """
+    ***DEPRECATED***
+    This method will passed over to use the `inputs` class __init__ and will removed in the next revision
     inputs_to_struct Structure the inputs from a list to more complex object
 
     Args:
@@ -147,6 +153,7 @@ class EMNISTAdjDatasetNew2(EMNISTAdjDatasetBase):
         r = r[0]
         c = c[0]
         # find the adjacent char
+        # TODO use conv2d for that! much faster
         if adj_type == 0:
             # right
             # TODO when trying to find the right element of the 

@@ -129,14 +129,14 @@ class Visibility:
 class RunningSpecs:
     def __init__(self, config: dict):
         self.distributed = config['distributed']
-        self.Flag = Flag[config['FlagAt']]
+        self.Flag = Flag[config['Flag']]
         self.isFit = config['isFit']
         self.processed_data = config['processed_data']
 
 
 class Datasets:
     def __init__(self, config: dict):
-        self.dataset = DsType(value=config['dataset'])
+        self.dataset = DsType[config['dataset']]
         self.dummyds = config['dummyds']
 
 
@@ -152,11 +152,11 @@ class Losses:
         self.use_bu1_loss = config['use_bu1_loss']
         self.use_bu2_loss = config['use_bu2_loss']
         self.activation_fun = nn.__getattribute__(config['activation_fun'])
-        self.bu1_loss = nn.BCEWithLogitsLoss(reduction='mean').to(dev)
+        self.bu1_loss = nn.BCEWithLogitsLoss(reduction='mean')
         self.bu2_loss = multi_label_loss
         self.td_loss = nn.MSELoss(reduction='mean').to(dev)
         self.inputs_to_struct = inputs_to_struct 
-        self.loss_fun = UnifiedLossFun(self)
+        self.loss_fun = UnifiedCriterion(self)
         self.task_accuracy = multi_label_accuracy_base
         # the UnifiedLossFun is a wrapper around the loss functions, and it must be the last one here since it using all the arguments of self
         # since there are not much accuracy functions written here, the multi_label_accuracy_base is hard coded most of the time
