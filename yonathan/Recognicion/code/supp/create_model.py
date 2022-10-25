@@ -16,11 +16,11 @@ from Configs.Config import Config
 # from v26.funcs import logger
 from supp.Dataset_and_model_type_specification import Flag
 # from supp.models import BUTDModelShared,BUTDModel,BUModel,BUStream,BUStreamShared
-from models.BU_TD_Models import BUTDModelShared,BUModelSimple
+from models.BU_TD_Models import BUTDModelShared, BUModelSimple
 logger = logging.getLogger(__name__)
 
 
-def create_model(model_opts: Union[SimpleNamespace, Config]) -> nn.Module:
+def create_model(model_opts: Config) -> nn.Module:
     """
     Creating a model and make it parallel and move it to the cuda.
     :param args: arguments to create the model according to.
@@ -42,6 +42,9 @@ def create_model(model_opts: Union[SimpleNamespace, Config]) -> nn.Module:
         model = BUModelSimple(args)
     else:
         model = BUTDModelShared(args)
+
+    return model
+    # since the pytorch lightning trainer is used, the model is created here and the dev is controlled by the trainer
     if not torch.cuda.is_available():
         logger.info('using CPU, this will be slow')
     elif args.distributed:
@@ -60,5 +63,3 @@ def create_model(model_opts: Union[SimpleNamespace, Config]) -> nn.Module:
         model = model.cuda(args.gpu)
     else:
         model = torch.nn.DataParallel(model).cuda()
-
-    return model

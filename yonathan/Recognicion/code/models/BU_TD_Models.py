@@ -2,7 +2,9 @@ from types import SimpleNamespace
 
 from torch import nn
 
-from .Heads import OccurrenceHead, MultiLabelHead, ImageHead, MultiLabelHeadOnlyTask
+from models.Heads import OccurrenceHead, MultiLabelHead, ImageHead, MultiLabelHeadOnlyTask
+from models.SharedBase import ResNetLatSharedBase
+from models.ResNet import ResNetLatShared,ResNetTDLat
 
 
 class BUModel(nn.Module):
@@ -105,7 +107,7 @@ class BUTDModel(nn.Module):
 
         Returns:
             `SimpleNamespace`: The structured model outs
-        """        
+        """
         occurence_out, task_out, bu_out, bu2_out, *rest = outs
         outs_ns = SimpleNamespace(
             occurence=occurence_out, task=task_out, bu=bu_out, bu2=bu2_out)
@@ -195,8 +197,17 @@ class BUTDModelSeparate(BUTDModel):
 
 
 class BUModelSimple(nn.Module):
+    """
+    BUModelSimple _summary_
+    """
 
     def __init__(self, opts):
+        """
+        __init__ Creates a BUModelSimple instance
+
+        Args:
+            opts (`argparse.ArgumentParser` | `Configs.Config.Config`): Model options - see Models section in the config file
+        """
         super(BUModelSimple, self).__init__()
         self.occhead = OccurrenceHead(opts)
         self.taskhead = MultiLabelHead(opts)
@@ -250,7 +261,3 @@ class BUModelRaw(nn.Module):
         x = self.trunk(inputs)
         x = self.head(x)
         return x
-
-
-
-
