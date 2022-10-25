@@ -92,8 +92,9 @@ Shimon Ullman, Liav Assif, Alona Strugatski, Ben-Zion Vatashsky, Hila Levi, Aviv
 - Long Time forward
     - Create a workflow and a proper GitHUB action to invoke training / debugging / simple auto tests
     - Transfer the use case of some np.array to torch framework
+    - https://pytorch-lightning.readthedocs.io/en/stable/clouds/cluster_advanced.html
 
 
 ## Contribute
 
-@yonatansverdlov @idan-tankel 
+@yonatansverdlov @idan-tankel @liavassif

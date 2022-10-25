@@ -1,7 +1,6 @@
 import torch
 from torch import nn
 
-from v26.functions.convs import conv3x3up
 
 dev = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 

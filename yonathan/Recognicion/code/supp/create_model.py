@@ -15,7 +15,8 @@ from Configs.Config import Config
 # from v26 import ConstantsBuTd
 # from v26.funcs import logger
 from supp.Dataset_and_model_type_specification import Flag
-from supp.models import BUTDModelShared,BUTDModel,BUModel,BUStream,BUStreamShared
+# from supp.models import BUTDModelShared,BUTDModel,BUModel,BUStream,BUStreamShared
+from models.BU_TD_Models import BUTDModelShared,BUModelSimple
 logger = logging.getLogger(__name__)
 
 
@@ -28,15 +29,14 @@ def create_model(model_opts: Union[SimpleNamespace, Config]) -> nn.Module:
     if model_opts.RunningSpecs.Flag is Flag.BU1_SIMPLE:
         model = BUModelSimple(model_opts)
     else:
-
         model = BUTDModelShared(model_opts)
     if not torch.cuda.is_available():
         logger.info('using CPU, this will be slow')
     else:
         # DataParallel will divide and allocate batch_size to all available GPUs
         model = torch.nn.DataParallel(model).cuda()
-    ConstantsBuTd.set_model(model)
-    ConstantsBuTd.set_model_opts(model_opts)
+    # ConstantsBuTd.set_model(model)
+    # ConstantsBuTd.set_model_opts(model_opts)
 
     if args.model_flag is Flag.BU1_SIMPLE:
         model = BUModelSimple(args)

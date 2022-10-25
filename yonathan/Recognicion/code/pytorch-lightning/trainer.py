@@ -62,7 +62,7 @@ def main(train_right=True, train_left=False):
     tmpdir = os.path.join(project_path, 'data/emnist/results/')
     checkpoint_path = os.path.join(tmpdir, 'MyFirstCkt.ckpt')
     parser = GetParser(task_idx=0, direction_idx='right', flag=Flag.ZF)
-    parser = Config()
+    # parser = Config()
     ModelCkpt = ModelCheckpoint(
         dirpath=tmpdir, monitor="train_loss_epoch", mode="min")
     Checkpoint_saver = CheckpointSaver(
@@ -75,7 +75,7 @@ def main(train_right=True, train_left=False):
                          logger=wandb_logger, callbacks=[ModelCkpt])
     training_flag = Training_flag(
         train_all_model=True, train_arg=False, train_task_embedding=False, train_head=False)
-    model = create_model(model_opts=parser)
+    # model = create_model(model_opts=parser)
     learned_params = training_flag.Get_learned_params(
         parser.model, lang_idx=0, direction=0)
     if train_right:
