@@ -1,18 +1,18 @@
 import sys
 sys.path.append(r'/home/idanta/BU-TD/yonathan/Recognicion/code/')
-import pytorch_lightning as pl
-from supp.Parser import GetParser
-from supp.get_dataset import get_dataset_for_spatial_realtions
-from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning.loggers import WandbLogger
-import os
-from pathlib import Path
-from Checkpoint_model_definition import CheckpointSaver, ModelWrapped
-import torch.nn as nn
-from supp.Dataset_and_model_type_specification import Flag
-from Configs.Config import Config
-from supp.create_model import create_model
 import git
+from supp.create_model import create_model
+from Configs.Config import Config
+from supp.Dataset_and_model_type_specification import Flag
+import torch.nn as nn
+from Checkpoint_model_definition import CheckpointSaver, ModelWrapped
+from pathlib import Path
+import os
+from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.callbacks import ModelCheckpoint
+from supp.get_dataset import get_dataset_for_spatial_realtions
+from supp.Parser import GetParser
+import pytorch_lightning as pl
 # TODO write an own import function using imp
 git_repo = git.Repo(__file__, search_parent_directories=True)
 git_root = git_repo.working_dir

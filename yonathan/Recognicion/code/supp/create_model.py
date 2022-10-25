@@ -3,8 +3,9 @@ import argparse
 from types import SimpleNamespace
 from torch import nn as nn
 import torch
+import logging
 # from general_functions import *
-# from FlagAt import *
+# from Flag import *
 # from models import *
 # from training_functions import *
 # from loss_and_accuracy import UnifiedLossFun
@@ -14,6 +15,8 @@ from Configs.Config import Config
 # from v26 import ConstantsBuTd
 # from v26.funcs import logger
 from supp.Dataset_and_model_type_specification import Flag
+from supp.models import BUTDModelShared,BUTDModel,BUModel,BUStream,BUStreamShared
+logger = logging.getLogger(__name__)
 
 
 def create_model(model_opts: Union[SimpleNamespace, Config]) -> nn.Module:
@@ -22,7 +25,7 @@ def create_model(model_opts: Union[SimpleNamespace, Config]) -> nn.Module:
     :param args: arguments to create the model according to.
     :return: The desired model.
     """
-    if model_opts.RunningSpecs.Flag is FlagAt.BU1_SIMPLE:
+    if model_opts.RunningSpecs.Flag is Flag.BU1_SIMPLE:
         model = BUModelSimple(model_opts)
     else:
 
@@ -35,7 +38,7 @@ def create_model(model_opts: Union[SimpleNamespace, Config]) -> nn.Module:
     ConstantsBuTd.set_model(model)
     ConstantsBuTd.set_model_opts(model_opts)
 
-    if args.model_flag is FlagAt.BU1_SIMPLE:
+    if args.model_flag is Flag.BU1_SIMPLE:
         model = BUModelSimple(args)
     else:
         model = BUTDModelShared(args)
