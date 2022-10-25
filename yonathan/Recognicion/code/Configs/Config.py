@@ -5,7 +5,7 @@ from torch import nn
 import yaml
 import numpy as np
 import torch
-from supp.Dataset_and_model_type_specification import DsType,Flag
+from supp.Dataset_and_model_type_specification import DsType,Flag,inputs_to_struct
 # from v26.functions.inits import init_model_options
 from supp.batch_norm import BatchNorm
 from supp.loss_and_accuracy import multi_label_loss,UnifiedCriterion,multi_label_accuracy_base
@@ -68,7 +68,7 @@ class Config:
             self.use_bu1_flag = False
             self.use_td_flag = False
             self.use_bu2_flag = True
-        elif model_flag is Flag.BU1 or model_flag is Flag.BU1_SIMPLE or model_flag is Flag.BU1_NOLAG:
+        elif model_flag is Flag.BU1 or model_flag is Flag.BU1_SIMPLE or model_flag is Flag.BU1_NOFLAG:
             self.use_bu1_flag = True
             self.use_td_flag = False
             self.use_bu2_flag = False
@@ -154,9 +154,9 @@ class Losses:
         self.activation_fun = nn.__getattribute__(config['activation_fun'])
         self.bu1_loss = nn.BCEWithLogitsLoss(reduction='mean')
         self.bu2_loss = multi_label_loss
-        self.td_loss = nn.MSELoss(reduction='mean').to(dev)
+        self.td_loss = nn.MSELoss(reduction='mean')
         self.inputs_to_struct = inputs_to_struct 
-        self.loss_fun = UnifiedCriterion(self)
+        self.loss_fun = UnifiedCriterion
         self.task_accuracy = multi_label_accuracy_base
         # the UnifiedLossFun is a wrapper around the loss functions, and it must be the last one here since it using all the arguments of self
         # since there are not much accuracy functions written here, the multi_label_accuracy_base is hard coded most of the time

@@ -14,6 +14,11 @@ class Flag(Enum):
     TD = auto()  # ordinary BU-TD network.
     NOFLAG = auto()  # NO TASK network.
     ZF = auto()  # BU-TD network with allocating task embedding for each task.
+    BU2 = auto()
+    BU1 = auto()
+    BU1_SIMPLE = auto()
+    BU1_NOFLAG = auto()
+    SF = auto()  # BU-TD network with allocating task embedding for each task and using the SF loss.
 
 
 class DsType(Enum):
