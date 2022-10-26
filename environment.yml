@@ -3,6 +3,7 @@ channels:
   - conda-forge
   - pytorch
   - defaults
+  - huggingface
 dependencies:
   - _libgcc_mutex=0.1
   - _openmp_mutex=5.1

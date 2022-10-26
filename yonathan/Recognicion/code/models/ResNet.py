@@ -1,5 +1,9 @@
+from types import SimpleNamespace
 import torch
 from torch import nn
+import argparse
+from typing import Union
+from Configs.Config import Config
 
 # from v26.funcs import instruct, init_module_weights, get_laterals
 # from v26.functions.convs import conv1x1, conv2d_fun
@@ -79,20 +83,23 @@ class ResNet(nn.Module):
 
 
 class ResNetLatShared(nn.Module):
-    __doc__=r"""
+    __doc__ = r"""
     ResNetLatShared _summary_
     """
-    def __init__(self, opts, shared):
+
+    def __init__(self, opts: Union[Config, argparse.ArgumentParser, SimpleNamespace], shared):
         """
         __init__ _summary_
 
         Args:
-            opts (_type_): _description_
+            opts (`Config` | `argparse.ArgumentParser` | `SimpleNamespace`): The config options to the whole training process
             shared (_type_): _description_
-        """        
+        """
         super(ResNetLatShared, self).__init__()
         model_options_section = opts.Models
-        self.norm_layer = model_options_section.norm_fun
+        model_options_section.init_model_options()
+        # now the model options will hold the norm_layer and activation_fun
+        self.norm_layer = model_options_section.norm_layer
         self.activation_fun = model_options_section.activation_fun
         self.inshapes = shared.inshapes
         self.use_lateral = shared.use_lateral  # incoming lateral
@@ -156,7 +163,7 @@ class ResNetLatShared(nn.Module):
 
         Returns:
             _type_: _description_
-        """        
+        """
         if self.use_bu1_flag:
             f = self.h_flag_bu(flags)
             f = f.view(self.flag_shape)
@@ -199,6 +206,7 @@ class ResNetLatShared(nn.Module):
 
         return x, laterals_out
 
+
 class ResNetTDLat(nn.Module):
     """ResNetTDLat is ResNet network with lateral connections
     """
@@ -215,7 +223,7 @@ class ResNetTDLat(nn.Module):
         self.top_filters = top_filters
         self.inplanes = top_filters
         # TODO flag_size is missing
-        # When training on emnist flag_size should be `flag_size = ndirections + nclasses_existence` 
+        # When training on emnist flag_size should be `flag_size = ndirections + nclasses_existence`
         # When training on avatar flag_size should be `flag_size = nclasses_existence + nfeatures`
         if opts.use_td_flag:
             self.h_flag_td = nn.Sequential(nn.Linear(opts.flag_size, top_filters), self.norm_layer(top_filters, dims=1),
@@ -265,8 +273,8 @@ class ResNetTDLat(nn.Module):
 
         return nn.ModuleList(layers)
 
-    def forward(self, bu_out,flag,laterals_in):
-        #TODO change input model to **kwargs or to fix the inputs!
+    def forward(self, bu_out, flag, laterals_in):
+        # TODO change input model to **kwargs or to fix the inputs!
         # Get rid of the `inputs` variable
         # bu_out, flag, laterals_in = inputs
         laterals_out = []

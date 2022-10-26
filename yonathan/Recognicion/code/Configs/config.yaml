@@ -57,6 +57,8 @@ Models:
   use_lateral_butd: True # ('bool') use lateral connections in the TDBU
   # these 2 booleans are connected to the Losses section
   use_final_conv: False
+  orig_relus: False # ('bool') use the original relu activation function in certain places
+  norm_layer: BatchNorm # (`nn.Module`) one of the supported normalization layers
 
 
 # Some other model params are initialized in the function `init_model_options` under `v26.functions.inits.py`

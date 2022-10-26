@@ -5,10 +5,10 @@ from torch import nn
 import yaml
 import numpy as np
 import torch
-from supp.Dataset_and_model_type_specification import DsType,Flag,inputs_to_struct
+from supp.Dataset_and_model_type_specification import DsType, Flag, inputs_to_struct
 # from v26.functions.inits import init_model_options
 from supp.batch_norm import BatchNorm
-from supp.loss_and_accuracy import multi_label_loss,UnifiedCriterion,multi_label_accuracy_base
+from supp.loss_and_accuracy import multi_label_loss, UnifiedCriterion, multi_label_accuracy_base
 # from supp.emnist_dataset import inputs_to_struct
 
 # from supp.training_functions import create_optimizer_and_sched
@@ -20,7 +20,7 @@ class Config:
     """
      This class holds up the configuration of the Model, Losses, Datasets, Logging, Training...
      Most of the Attrs are from the config.yaml file attached
-     
+
      However, some of the attrs are "computed" as default in the __init__ function and in setup_flag function, and in some other functions under Model subclass
 
         Attributes:
@@ -33,7 +33,8 @@ class Config:
             Lossses: the Losses Section - flags to use or not the losses
             Models: the Models options, including stride, inshape, number of FC heads, etc.
             Training: the Training options, including epochs, batch size, larning rate, etc.
-    """    
+    """
+
     def __init__(self):
         path = "config.yaml"
         full_path = os.path.join(os.path.dirname(__file__), path)
@@ -50,11 +51,12 @@ class Config:
         self.Training = Training(self.__config['Training'])
         now = datetime.now()
         dt_string = now.strftime("%d.%m.%Y %H:%M:%S")
-        self.model_path = 'DS=' + self.RunningSpecs.processed_data + "time = " + str(dt_string)
+        self.model_path = 'DS=' + self.RunningSpecs.processed_data + \
+            "time = " + str(dt_string)
         self.results_dir = '../data/emnist/data/results'
         self.model_dir = os.path.join(self.results_dir, self.model_path)
         self.setup_flag()
-        
+
     def setup_flag(self) -> None:
         """
         setup_flag This function set up the Architecture of the model using the FlagAt enum. The flags of the arch are attached to the Config object and later readed by the `create_model` function.
@@ -62,7 +64,7 @@ class Config:
         # TODO remove similar function from the FlagAt module under supplemtery package
 
         Returns: None (setting attributes of the Config object `self`)
-        """    
+        """
         model_flag = self.RunningSpecs.Flag
         if model_flag is Flag.BU2:
             self.use_bu1_flag = False
@@ -87,15 +89,15 @@ class Config:
             self.use_td_flag = False
             self.use_bu2_flag = False
             self.use_SF = False
-        
-
-
 
     def get_config(self):
         return self.__config
 
     def get_visibility(self):
         return self.Visibility
+    
+    def get_models(self):
+        return self.Models
 
 
 class Strings:
@@ -109,15 +111,15 @@ class Models:
             setattr(self, key, value)
         # self.features: str = config['features']
         # self.num_heads: str = config['num_heads']
-    
+
     def init_model_options(self):
         """
         init_model_options wrapped up an existing function from the v26.functions.inits module.
         The idea is to still support setting up the options with a parser as well as with config files
 
-        """        
+        """
         # init_model_options(config=self,flag_at=)
-        self.norm_fun = BatchNorm
+        self.norm_layer = BatchNorm
         self.activation_fun = nn.ReLU
 
 
@@ -155,11 +157,12 @@ class Losses:
         self.bu1_loss = nn.BCEWithLogitsLoss(reduction='mean')
         self.bu2_loss = multi_label_loss
         self.td_loss = nn.MSELoss(reduction='mean')
-        self.inputs_to_struct = inputs_to_struct 
+        self.inputs_to_struct = inputs_to_struct
         self.loss_fun = UnifiedCriterion
         self.task_accuracy = multi_label_accuracy_base
         # the UnifiedLossFun is a wrapper around the loss functions, and it must be the last one here since it using all the arguments of self
         # since there are not much accuracy functions written here, the multi_label_accuracy_base is hard coded most of the time
+
 
 class Folders:
     def __init__(self, config: dict):
@@ -170,12 +173,12 @@ class Folders:
         self.results = config['results']
 
 
-
 class Training:
     """
      _summary_
-    """    
-    def __init__(self,config: dict):        
-        for key,value in config.items():
-            self.__setattr__(key,value)
-        self.lr : float = float(config['lr'])
+    """
+
+    def __init__(self, config: dict):
+        for key, value in config.items():
+            self.__setattr__(key, value)
+        self.lr: float = float(config['lr'])

@@ -1,4 +1,5 @@
 import sys
+from types import NoneType
 sys.path.append(r'/home/idanta/BU-TD/yonathan/Recognicion/code/')
 import git
 from supp.create_model import create_model
@@ -14,8 +15,7 @@ from supp.get_dataset import get_dataset_for_spatial_realtions
 from supp.Parser import GetParser
 import pytorch_lightning as pl
 # TODO write an own import function using imp
-git_repo = git.Repo(__file__, search_parent_directories=True)
-git_root = git_repo.working_dir
+
 
 
 class Training_flag:
@@ -55,14 +55,19 @@ class Training_flag:
 
 
 def main(train_right=True, train_left=False):
-    project_path = Path(__file__).parents[2]
+    git_repo = git.Repo(__file__, search_parent_directories=True)
+    git_root = git_repo.working_dir
+    try:
+        project_path = Path(git_root)
+    except Exception:
+        project_path = Path(os.getcwd())
     data_path = os.path.join(
-        project_path, 'data/emnist/samples/24_extended_testing')
+        project_path.parent, 'data/6_extended_testing')
     # TODO change these hard coded paths!
     tmpdir = os.path.join(project_path, 'data/emnist/results/')
     checkpoint_path = os.path.join(tmpdir, 'MyFirstCkt.ckpt')
-    parser = GetParser(task_idx=0, direction_idx='right', flag=Flag.ZF)
-    # parser = Config()
+    parser = GetParser(task_idx=0, direction_idx='right', flag=Flag.TD)
+    parser = Config()
     ModelCkpt = ModelCheckpoint(
         dirpath=tmpdir, monitor="train_loss_epoch", mode="min")
     Checkpoint_saver = CheckpointSaver(
@@ -75,7 +80,7 @@ def main(train_right=True, train_left=False):
                          logger=wandb_logger, callbacks=[ModelCkpt])
     training_flag = Training_flag(
         train_all_model=True, train_arg=False, train_task_embedding=False, train_head=False)
-    # model = create_model(model_opts=parser)
+    model = create_model(model_opts=parser)
     learned_params = training_flag.Get_learned_params(
         parser.model, lang_idx=0, direction=0)
     if train_right:

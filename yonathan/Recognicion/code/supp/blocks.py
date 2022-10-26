@@ -197,7 +197,7 @@ class BUInitialBlock(nn.Module):
         self.use_lateral = opts.use_lateral_tdbu
         # The initial block downsampling from RGB.
         self.conv1 = nn.Sequential(shared.conv1, opts.norm_layer(
-            opts, self.filters), self.activation_fun())
+            num_channels=opts.ntasks, self.filters), self.activation_fun())
         if self.use_lateral:
             # Skip connection from the TD initial embedding.
             self.bot_lat = SideAndComb(opts, shared.bot_lat.filters)
