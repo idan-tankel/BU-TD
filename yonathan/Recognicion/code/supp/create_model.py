@@ -38,10 +38,10 @@ def create_model(model_opts: Config) -> nn.Module:
     # ConstantsBuTd.set_model(model)
     # ConstantsBuTd.set_model_opts(model_opts)
 
-    if args.model_flag is Flag.BU1_SIMPLE:
-        model = BUModelSimple(args)
+    if model_opts.RunningSpecs.Flag is Flag.BU1_SIMPLE:
+        model = BUModelSimple(opts=model_opts)
     else:
-        model = BUTDModelShared(args)
+        model = BUTDModelShared(opts=model_opts)
 
     return model
     # since the pytorch lightning trainer is used, the model is created here and the dev is controlled by the trainer

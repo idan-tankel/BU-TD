@@ -1,3 +1,4 @@
+from typing import Callable
 from torch import nn
 
 
@@ -7,7 +8,8 @@ from models.Hadamard import Hadamard
 class SideAndCombSharedBase():
     """
     SideAndCombSharedBase _summary_
-    """    
+    """
+
     def __init__(self, lateral_per_neuron, filters):
         """
         __init__ _summary_
@@ -15,7 +17,7 @@ class SideAndCombSharedBase():
         Args:
             lateral_per_neuron (bool): 
             filters (_type_): _description_
-        """ 
+        """
         # super(SideAndCombSharedBase, self).__init__()
         self.side = Hadamard(lateral_per_neuron, filters)
         self.filters = filters
@@ -27,19 +29,21 @@ class SideAndCombShared(nn.Module):
 
     Args:
         nn (_type_): _description_
-    """    
-    def __init__(self, shared, norm_layer, activation_fun):
+    """
+
+    def __init__(self, shared, norm_layer, activation_fun, orig_relus=False):
         """
-        __init__ _summary_
+        __init__ Initialize normalization layer with the given number of filters.
 
         Args:
             shared (_type_): _description_
             norm_layer (_type_): _description_
             activation_fun (_type_): _description_
-        """        
+            orig_relus (bool, optional): Use ReLU activation function in some places instead of. Defaults to False.
+        """
         super(SideAndCombShared, self).__init__()
         self.side = shared.side
-        self.norm = norm_layer(shared.filters)
+        self.norm = norm_layer(ntasks=4, num_channels=shared.filters)
         if not orig_relus:
             self.relu1 = activation_fun()
         self.relu2 = activation_fun()
@@ -59,8 +63,9 @@ class SideAndCombShared(nn.Module):
 class SideAndComb(nn.Module):
     """
     SideAndComb _summary_
-    """    
-    def __init__(self, lateral_per_neuron: int, filters, norm_layer, activation_fun):
+    """
+
+    def __init__(self, lateral_per_neuron: int, filters, norm_layer, activation_fun: Callable, orig_relus=False):
         """
         __init__ _summary_
 
@@ -69,7 +74,7 @@ class SideAndComb(nn.Module):
             filters (_type_): _description_
             norm_layer (_type_): _description_
             activation_fun (_type_): _description_
-        """        
+        """
         super(SideAndComb, self).__init__()
         self.side = Hadamard(lateral_per_neuron, filters)
         self.norm = norm_layer(filters)

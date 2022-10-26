@@ -59,6 +59,8 @@ Models:
   use_final_conv: False
   orig_relus: False # ('bool') use the original relu activation function in certain places
   norm_layer: BatchNorm # (`nn.Module`) one of the supported normalization layers
+  # Notice! this option affected also from training / dataset requirements
+  ntasks: 4 # (`int`) the number of tasks to train on. Will determine the number of heads in the model
 
 
 # Some other model params are initialized in the function `init_model_options` under `v26.functions.inits.py`

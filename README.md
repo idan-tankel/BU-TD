@@ -79,6 +79,8 @@ Shimon Ullman, Liav Assif, Alona Strugatski, Ben-Zion Vatashsky, Hila Levi, Aviv
 - change the `create_dataset` file to be idempotent - namely, when running the file after the dataset is cretaed it won't be downloaded again 
 - change the behaviour of the download function path to not be relative
 
+- using the AllOptions under `Dataset_and_model_type_specifications`, create a few "training profiles" for a several supported datasets, with a defined options. As a result, by specifiying only the dataset name, you will get a set of default options initialized
+
 
  - PLAN
     - The `beta` branch will be the major branch, chaging the main

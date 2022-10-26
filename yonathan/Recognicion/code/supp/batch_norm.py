@@ -94,12 +94,12 @@ def load_running_stats(model: nn.Module, task_emb_id: int,direction_id) -> None:
 
 
 class BatchNorm(nn.Module):
-    def __init__(self, opts, num_channels,  dims=2):
+    def __init__(self, num_channels,ntasks=None,  dims=2):
         """
          creates batch_norm class.
          For each task stores its mean,var as consecutive trainings override this variables.
         :param num_channels: num channels to apply batch_norm on.
-        :param num_tasks: access mean,var for each task
+        :param num_tasks(`int`): access mean,var for each task. optional.
         :param dims: apply 2d or 1d batch normalization.
         """
         super(BatchNorm, self).__init__()
@@ -109,19 +109,20 @@ class BatchNorm(nn.Module):
         else:
             norm = nn.BatchNorm1d(num_channels)
         self.norm = norm
-        # creates list that should store the mean, var for each task.
-        self.running_mean_list = []
-        self.running_var_list = []
-        for i in range(opts.ntasks):
-            self.running_mean_list.append(torch.zeros(1, num_channels))  # Initializes the mean.
-            self.running_var_list.append(torch.ones(1, num_channels))  # Initialized the variance.
+        if ntasks != None:
+            # creates list that should store the mean, var for each task.
+            # Concatenating all means.
+            self.running_mean_list = [torch.zeros(1, num_channels)] * ntasks
+            self.running_var_list = [torch.ones(1, num_channels)] * ntasks
 
-        self.running_mean_list = torch.cat(self.running_mean_list, dim=0)  # Concatenating all means.
-        self.running_var_list = torch.cat(self.running_var_list, dim=0)  # Concatenating all variances.
-        self.register_buffer("running_mean",
-                             self.running_mean_list)  # registering to the buffer to make it part of the meta-data.
-        self.register_buffer("running_var",
-                             self.running_var_list)  # registering to the buffer to make it part of the meta-data.
+            # Concatenating all means.
+            self.running_mean_list = torch.cat(self.running_mean_list, dim=0)
+            # Concatenating all variances.
+            self.running_var_list = torch.cat(self.running_var_list, dim=0)
+            self.register_buffer("running_mean",
+                                 self.running_mean_list)  # registering to the buffer to make it part of the meta-data.
+            self.register_buffer("running_var",
+                                 self.running_var_list)  # registering to the buffer to make it part of the meta-data.
 
     def forward(self, inputs):
         """
@@ -152,6 +153,7 @@ class BatchNorm(nn.Module):
         running_var = self.norm.running_var
         self.running_mean[task_emb_id, :] = running_mean
         self.running_var[task_emb_id, :] = running_var
+
 
 def store_running_stats(model: nn.Module, task_emb_id: int) -> None:
     """

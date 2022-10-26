@@ -82,7 +82,7 @@ def main(train_right=True, train_left=False):
         train_all_model=True, train_arg=False, train_task_embedding=False, train_head=False)
     model = create_model(model_opts=parser)
     learned_params = training_flag.Get_learned_params(
-        parser.model, lang_idx=0, direction=0)
+        model, lang_idx=0, direction=0)
     if train_right:
         train_dl, test_dl, val_dl, *the_datasets = get_dataset_for_spatial_realtions(
             parser, data_path, lang_idx=0, direction=0)

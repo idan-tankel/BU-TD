@@ -13,11 +13,11 @@ import skimage.transform as transforms
 import torch.utils.data as data
 from PIL import Image
 
-from Create_dataset_classes import Sample, ExampleClass, CharInfo, DataAugmentClass, MetaData
-from Raw_data import DataSet
+from create_dataset.Create_dataset_classes import Sample, ExampleClass, CharInfo, DataAugmentClass, MetaData
+from create_dataset.Raw_data import DataSet
 
 
-def store_sample_disk(parser: argparse, sample: Sample, store_dir: str) -> None:
+def store_sample_disk(parser: argparse.ArgumentParser, sample: Sample, store_dir: str) -> None:
     """
     Storing the sample on the disk.
     Args:

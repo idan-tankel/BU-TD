@@ -2,11 +2,17 @@ import argparse
 import os
 import pickle
 import sys
+from types import SimpleNamespace
 
 import torch
 from torch.utils.data import Dataset
 import torchvision.transforms as T
 from PIL import Image
+
+from Configs.Config import Config
+from create_dataset.create_dataset import get_create_config
+from typing import Union
+from supp.Dataset_and_model_type_specification import AllOptions
 
 sys.path.append(
     r'/home/sverkip/data/BU-TD/yonathan/Recognicion/code/create_dataset')
@@ -101,7 +107,7 @@ def struct_to_input(sample: object) -> tuple:
 
 
 class DatasetAllDataSetTypes(DataSetBase):
-    def __init__(self, root: str, opts: argparse, arg_and_head_index: int = 0, direction: int = 0, is_train=True, nexamples: int = None, obj_per_row=6,
+    def __init__(self, root: str, opts: Union[argparse.ArgumentParser,Config], arg_and_head_index: int = 0, direction: int = 0, is_train=True, nexamples: int = None, obj_per_row=6,
                  obj_per_col=1, split: bool = True):
         """
         Omniglot data-set.
@@ -118,8 +124,10 @@ class DatasetAllDataSetTypes(DataSetBase):
 
         super(DatasetAllDataSetTypes, self).__init__(
             root, nexamples, split, is_train=is_train)
+        if not isinstance(opts,argparse.ArgumentParser):
+            opts = get_create_config()
         self.ntasks = opts.ntasks
-        self.nclasses_existence = opts.nclasses[arg_and_head_index]
+        self.nclasses_existence = opts.nclasses
         self.direction = torch.tensor(direction)
         self.ndirections = opts.ndirections
         self.obj_per_row = obj_per_row

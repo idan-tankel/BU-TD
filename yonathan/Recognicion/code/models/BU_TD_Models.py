@@ -5,6 +5,7 @@ from torch import nn
 from models.Heads import OccurrenceHead, MultiLabelHead, ImageHead, MultiLabelHeadOnlyTask
 from models.SharedBase import ResNetLatSharedBase
 from models.ResNet import ResNetLatShared,ResNetTDLat
+from supp.Dataset_and_model_type_specification import inputs_to_struct
 
 
 class BUModel(nn.Module):
@@ -145,7 +146,7 @@ class BUTDModelShared(BUTDModel):
         self.use_bu1_flag = opts.use_bu1_flag
         self.use_lateral_butd = opts.Models.use_lateral_butd
         self.use_lateral_tdbu = opts.Models.use_lateral_tdbu
-        self.inputs_to_struct = opts.inputs_to_struct
+        self.inputs_to_struct = inputs_to_struct
 
 
 class BUTDModelDuplicate(BUTDModel):
@@ -169,7 +170,7 @@ class BUTDModelDuplicate(BUTDModel):
         self.use_bu1_flag = opts.use_bu1_flag
         self.use_lateral_butd = opts.use_lateral_butd
         self.use_lateral_tdbu = opts.use_lateral_tdbu
-        self.inputs_to_struct = opts.inputs_to_struct
+        self.inputs_to_struct = inputs_to_struct
 
 
 class BUTDModelSeparate(BUTDModel):
@@ -193,7 +194,7 @@ class BUTDModelSeparate(BUTDModel):
         self.use_bu1_flag = opts.use_bu1_flag
         self.use_lateral_butd = opts.use_lateral_butd
         self.use_lateral_tdbu = opts.use_lateral_tdbu
-        self.inputs_to_struct = opts.inputs_to_struct
+        self.inputs_to_struct = inputs_to_struct
 
 
 class BUModelSimple(nn.Module):
@@ -214,10 +215,10 @@ class BUModelSimple(nn.Module):
         self.bumodel = BUModel(opts)
         pre_top_shape = self.bumodel.trunk.inshapes[-2][-1]
         opts.avg_pool_size = tuple(pre_top_shape[1:].tolist())
-        self.inputs_to_struct = opts.inputs_to_struct
+        self.inputs_to_struct = inputs_to_struct
 
     def forward(self, inputs):
-        samples = self.inputs_to_struct(inputs)
+        samples = inputs_to_struct(inputs)
         images = samples.image
         flags = samples.flag
         model_inputs = [images, flags, None]

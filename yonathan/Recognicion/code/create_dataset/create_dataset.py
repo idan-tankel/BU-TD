@@ -1,7 +1,7 @@
-from parser import Get_parser
-from Create_dataset_classes import DsType
-from Create_dataset_funcs import create_samples, Save_meta_data_and_code_script
-from Raw_data import DataSet
+from create_dataset.parser import Get_parser
+from create_dataset.Create_dataset_classes import DsType
+from create_dataset.Create_dataset_funcs import create_samples, Save_meta_data_and_code_script
+from create_dataset.Raw_data import DataSet
 import yaml
 from types import SimpleNamespace
 import git
@@ -62,7 +62,8 @@ def get_create_config():
     return config_as_namespace
 
 
-main_emnist(6, 4)
+if __name__ == '__main__':
+    main_emnist(6, 4)
 
 # main_Omniglot([[35]])
 # main_Omniglot([[14],[39]])

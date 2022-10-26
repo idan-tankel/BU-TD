@@ -1,6 +1,9 @@
 ---
 # the default values are stored within the config.yaml file
 dataset: emnist # name of the dataset to work on (deafult: emnist)
+ntasks: 4  # (`int`) one task for each direction
+nclasses: 47 # (`int`) number of classes within the dataset
+
 
 # storing options
 path_data_raw: ../data # the path to the dataaset to be stored in, relative to the working dir (default='../data')

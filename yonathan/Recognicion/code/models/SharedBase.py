@@ -55,7 +55,7 @@ class BasicBlockLatShared(nn.Module):
         nn (_type_): _description_
     """
 
-    def __init__(self, shared, norm_layer, activation_fun):
+    def __init__(self, shared, norm_layer, activation_fun,orig_relus=False):
         super(BasicBlockLatShared, self).__init__()
         # Both self.conv1 and self.downsample layers downsample the input when stride != 1
         planes = shared.planes
