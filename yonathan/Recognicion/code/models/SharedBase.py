@@ -59,6 +59,7 @@ class BasicBlockLatShared(nn.Module):
         super(BasicBlockLatShared, self).__init__()
         # Both self.conv1 and self.downsample layers downsample the input when stride != 1
         planes = shared.planes
+        self.orig_relus = orig_relus
         self.conv1 = nn.Sequential(
             shared.conv1, norm_layer(planes), activation_fun())
         self.conv2 = nn.Sequential(
@@ -117,7 +118,7 @@ class BasicBlockLatShared(nn.Module):
             identity = inp
 
         x = x + identity
-        if orig_relus:
+        if self.orig_relus:
             x = self.relu(x)
 
         return x, laterals_out

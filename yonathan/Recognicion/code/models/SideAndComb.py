@@ -43,6 +43,7 @@ class SideAndCombShared(nn.Module):
         """
         super(SideAndCombShared, self).__init__()
         self.side = shared.side
+        self.orig_relus = orig_relus
         self.norm = norm_layer(ntasks=4, num_channels=shared.filters)
         if not orig_relus:
             self.relu1 = activation_fun()
@@ -53,7 +54,7 @@ class SideAndCombShared(nn.Module):
 
         side_val = self.side(lateral)
         side_val = self.norm(side_val)
-        if not orig_relus:
+        if not self.orig_relus:
             side_val = self.relu1(side_val)
         x = x + side_val
         x = self.relu2(x)
@@ -78,6 +79,7 @@ class SideAndComb(nn.Module):
         super(SideAndComb, self).__init__()
         self.side = Hadamard(lateral_per_neuron, filters)
         self.norm = norm_layer(filters)
+        self.orig_relus = orig_relus
         if not orig_relus:
             self.relu1 = activation_fun()
         self.relu2 = activation_fun()
@@ -87,7 +89,7 @@ class SideAndComb(nn.Module):
 
         side_val = self.side(lateral)
         side_val = self.norm(side_val)
-        if not orig_relus:
+        if not self.orig_relus:
             side_val = self.relu1(side_val)
         x = x + side_val
         x = self.relu2(x)

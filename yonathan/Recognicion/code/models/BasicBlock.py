@@ -1,9 +1,11 @@
+from turtle import up
 from torch import nn
 
 # from v26.functions.convs import conv3x3, conv3x3up, conv1x1
 # from v26.models.SideAndComb import SideAndComb
 from models.SideAndComb import SideAndComb
-from supp.general_functions import conv1x1, conv3x3, conv3x3up
+from functions.convs import conv3x3up
+from supp.general_functions import conv1x1, conv3x3
 
 
 class BasicBlockTDLat(nn.Module):
@@ -42,6 +44,7 @@ class BasicBlockTDLat(nn.Module):
             )
         self.upsample = upsample
         self.stride = stride
+        self.orig_relus = orig_relus
 
     def forward(self, inputs):
         x, laterals_in = inputs
@@ -61,7 +64,7 @@ class BasicBlockTDLat(nn.Module):
         laterals_out.append(x)
 
         x = self.conv2(x)
-        if orig_relus:
+        if self.orig_relus:
             x = self.relu2(x)
         if laterals_in is not None:
             x = self.lat3((x, lateral3_in))

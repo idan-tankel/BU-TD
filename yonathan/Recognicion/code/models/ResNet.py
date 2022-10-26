@@ -14,6 +14,7 @@ from models.SideAndComb import SideAndCombShared, SideAndComb
 from models.SharedBase import BasicBlockLatShared
 from models.BasicBlock import BasicBlockTDLat
 from supp.blocks import init_module_weights
+from supp.general_functions import get_laterals
 
 
 class ResNet(nn.Module):

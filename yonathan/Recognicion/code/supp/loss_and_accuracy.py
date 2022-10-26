@@ -1,8 +1,10 @@
 import argparse
+
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from supp.general_functions import preprocess
+from supp import Dataset_and_model_type_specification as DMS
 
 CE = nn.CrossEntropyLoss(reduction='none')
 
@@ -108,7 +110,8 @@ def multi_label_loss_weighted(outs, samples):
     loss_task = losses_task.sum() / loss_weight.sum()
     return loss_task
 
-def UnifiedCriterion(opts:argparse, inputs: list[torch.Tensor], outs: list[torch.Tensor]):
+
+def UnifiedCriterion(opts: argparse.ArgumentParser, inputs: list[torch.Tensor], outs: list[torch.Tensor], model=None) -> torch.Tensor:
     """Loss function based on BCE loss
 
     Args:
@@ -118,12 +121,16 @@ def UnifiedCriterion(opts:argparse, inputs: list[torch.Tensor], outs: list[torch
 
     Returns:
         _type_: _description_
-    """    
-    outs = opts.model.outs_to_struct(outs)  # The output from all the streams.
-    samples = opts.inputs_to_struct(inputs)  # Make samples from the raw data.
+    """
+    if model is None:
+        model = opts.model
+    outs = model.outs_to_struct(outs)  # The output from all the streams.
+    samples = DMS.inputs_to_struct(inputs)  # Make samples from the raw data.
+    if not isinstance(opts, argparse.ArgumentParser):
+        opts = opts.Losses
     loss = 0.0  # The general loss.
     if opts.use_bu1_loss:
-        loss_occ = opts.bu1_loss(outs.occurence_out,
+        loss_occ = opts.bu1_loss(outs.occurence,
                                  samples.label_existence)  # compute the binary existence classification loss
         loss += loss_occ  # Add the occurrence loss.
 

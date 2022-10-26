@@ -9,6 +9,7 @@ from supp.general_functions import preprocess
 import numpy as np
 import os
 import logging
+import argparse
 import torch.nn as nn
 
 class CheckpointSaver:
@@ -48,18 +49,35 @@ class CheckpointSaver:
         self.top_model_paths = self.top_model_paths[:self.top_n]
 
 class ModelWrapped(LightningModule):
-    def __init__(self, opts, learned_params, ckpt):
+    """
+    ModelWrapped Is a methond thats wrap the model and the training process using lightning
+    """    
+    def __init__(self, opts, learned_params, ckpt,model,nbatches_train):
+        """
+        __init__ Wrapped the already defined model with training steps and accuracy calculations 
+        that overrride the default pytorch lightning behaviour
+
+        Args:
+            opts (_type_): The model options - specifically the loss function and the accuracy function
+            learned_params (_type_): _description_
+            ckpt (CheckPoint): A checkpoint object to start the model from
+            model (nn.Module): One of the models created by `create_model` function or the Parser object
+        """        
         super().__init__()
         # Important: This property activates manual optimization.
         self.automatic_optimization = False
-        self.model = opts.model
+        self.model = model
         self.opts = opts
-        self.loss_fun = opts.criterion
+        if isinstance(opts,argparse.ArgumentParser):
+            self.loss_fun = opts.criterion
+        else:
+            self.loss_fun = opts.Losses.loss_fun
         # change this! the saving of something under the opts object without a reason is harder to understand
         self.ckpt = ckpt
         self.learned_params = learned_params
         self.accuracy = opts.task_accuracy
-        self.optimizer , self.scheduler =  create_optimizer_and_sched(self.opts, self.learned_params)
+        self.nbatches_train = nbatches_train
+        self.optimizer , self.scheduler =  create_optimizer_and_sched(self.opts.Training, self.learned_params,nbatches_train=self.nbatches_train)
 
     def training_step(self, batch, batch_idx):
         model = self.model
@@ -87,7 +105,7 @@ class ModelWrapped(LightningModule):
     def validation_step(self, batch, batch_idx):
         with torch.no_grad():
             outs = self.model(batch)
-            loss = self.loss_fun(opts=self.opts,inputs=batch, outs=outs)  # Compute the loss.
+            loss = self.loss_fun(opts=self.opts,inputs=batch, outs=outs,model = self.model)  # Compute the loss.
             outs = self.model.outs_to_struct(outs)
             samples = self.opts.inputs_to_struct(batch)
             _ , task_accuracy = self.accuracy(outs, samples)
@@ -98,7 +116,7 @@ class ModelWrapped(LightningModule):
             return task_accuracy.sum()
 
     def configure_optimizers(self):
-        opti, sched = create_optimizer_and_sched(self.opts, self.learned_params)
+        opti, sched = create_optimizer_and_sched(self.opts.Training, self.learned_params,nbatches_train=self.nbatches_train)
         return [opti], [sched]
 
     def validation_epoch_end(self, outputs):

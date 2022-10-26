@@ -2,8 +2,7 @@ import os.path
 from enum import Enum, auto
 from pathlib import Path
 
-from supp.loss_and_accuracy import multi_label_loss_weighted, multi_label_loss, multi_label_accuracy, \
-    multi_label_accuracy_weighted
+from supp.loss_and_accuracy import multi_label_loss_weighted, multi_label_loss, multi_label_accuracy, multi_label_accuracy_weighted
 
 
 class Flag(Enum):

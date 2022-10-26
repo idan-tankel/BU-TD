@@ -56,6 +56,9 @@ class Config:
         self.results_dir = '../data/emnist/data/results'
         self.model_dir = os.path.join(self.results_dir, self.model_path)
         self.setup_flag()
+        self.Data_obj = AllOptions(ds_type=DsType(self.Datasets.dataset), flag_at=Flag(self.RunningSpecs.Flag), ndirections=4)
+        self.task_accuracy = self.Data_obj.data_obj.task_accuracy
+
 
     def setup_flag(self) -> None:
         """
@@ -90,8 +93,8 @@ class Config:
             self.use_bu2_flag = False
             self.use_SF = False
         try:
-            self.flag_size = self.Models.nclasses[0][0] -1 + 4 
-            # The flag size should be number of classes + 4 (number of directios \ total tasks). Since there is a background class, we have added -1
+            self.flag_size = self.Models.nclasses[0][0] + 1  + 4 
+            # The flag size should be number of classes + 4 (number of directios \ total tasks). Since there is a background class, we have added +1
         except KeyError as e:
             print(f'The config.Models object was not initialized before calling up setup_flag {e}')
 

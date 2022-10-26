@@ -72,7 +72,7 @@ Training:
   num_workers: 2
   epochs: 200
   momentum: 0.9 # (`float`) Momentum of the Adam optimizer
-  weight_decay: 0.0001 #(`float`) The weight decay of the Adam optimizer
+  wd: 0.0001 #(`float`) The weight decay of the Adam optimizer
   lr: 0.0002 # (`float`)the initial learning rate # TODO support in also multiplication
   max_lr: 0.002  # (`float`) the maximum learning rate
   distributed: False # whether to use distributed data within training - accross some GPUs using DistributedSampler of torch

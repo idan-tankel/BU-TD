@@ -34,6 +34,7 @@ class Training_flag:
 
     def Get_learned_params(self, model: nn.Module, lang_idx: int, direction: int):
         """
+        *** MARKED FOR DEPRECATION ***
         Args:
             model: The model.
             lang_idx: Language index.
@@ -88,13 +89,13 @@ def main(train_right=True, train_left=False):
             parser, data_path, lang_idx=0, direction=0)
         # train_dl, test_dl, val_dl, train_ds, test_ds, val_ds
         # TODO: why return a tuple? turn this into a dict
-        model = ModelWrapped(parser, learned_params, ckpt=Checkpoint_saver)
-        trainer.fit(model, train_dataloaders=train_dl, val_dataloaders=test_dl)
+        model_wrapped = ModelWrapped(parser, learned_params, ckpt=Checkpoint_saver,model=model,nbatches_train=len(train_dl))
+        trainer.fit(model_wrapped, train_dataloaders=train_dl, val_dataloaders=test_dl)
     if train_left:
         train_dl, test_dl, val_dl, *the_datasets = get_dataset_for_spatial_realtions(
             parser, data_path,  lang_idx=0,    direction=1)
-        model = ModelWrapped(parser, learned_params, ckpt=Checkpoint_saver)
-        trainer.fit(model, train_dataloaders=train_dl, val_dataloaders=test_dl)
+        model_wrapped = ModelWrapped(parser, learned_params, ckpt=Checkpoint_saver)
+        trainer.fit(model_wrapped, train_dataloaders=train_dl, val_dataloaders=test_dl)
 
 
 main(True, False)
