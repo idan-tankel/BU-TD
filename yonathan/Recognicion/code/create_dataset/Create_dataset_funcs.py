@@ -1,4 +1,4 @@
-import argparse
+from argparse import ArgumentParser
 import datetime
 import os
 import pickle
@@ -13,11 +13,11 @@ import skimage.transform as transforms
 import torch.utils.data as data
 from PIL import Image
 
-from create_dataset.Create_dataset_classes import Sample, ExampleClass, CharInfo, DataAugmentClass, MetaData
-from create_dataset.Raw_data import DataSet
+from Create_dataset_classes import Sample, ExampleClass, CharInfo, DataAugmentClass, MetaData
+from Raw_data import DataSet
 
 
-def store_sample_disk(parser: argparse.ArgumentParser, sample: Sample, store_dir: str) -> None:
+def store_sample_disk(parser: ArgumentParser, sample: Sample, store_dir: str) -> None:
     """
     Storing the sample on the disk.
     Args:
@@ -46,7 +46,7 @@ def store_sample_disk(parser: argparse.ArgumentParser, sample: Sample, store_dir
         pickle.dump(sample, new_data_file)
 
 
-def Generate_raw_examples(parser: argparse, image_ids: list, k: int, ds_type: str, cur_nexamples: int, valid_pairs: np.array, valid_classes: np.array, test_chars_list: list, data_set: DataSet) -> list:
+def Generate_raw_examples(parser: ArgumentParser, image_ids: list, k: int, ds_type: str, cur_nexamples: int, valid_pairs: np.array, valid_classes: np.array, test_chars_list: list, data_set: DataSet) -> list:
     """
     Given the valid pairs, valid, we generate raw samples for each data-set type.
     Here we just choose the characters and there label_id (A specific character of all characters with the same label).
@@ -104,7 +104,7 @@ def Generate_raw_examples(parser: argparse, image_ids: list, k: int, ds_type: st
     return examples
 
 
-def gen_sample(parser: argparse.ArgumentParser, sample_id: int, ds_type: str, dataloader: DataSet, example: ExampleClass) -> Sample:
+def gen_sample(parser: ArgumentParser, sample_id: int, ds_type: str, dataloader: DataSet, example: ExampleClass) -> Sample:
     """
     Creates a single sample including image, label_task, label_all, label_existence, query_index.
     Args:
@@ -147,7 +147,7 @@ def gen_sample(parser: argparse.ArgumentParser, sample_id: int, ds_type: str, da
     return sample  # Returning the sample we are going to store.
 
 
-def gen_samples(parser: argparse, dataloader: DataSet, job_id: int, range_start: int, range_stop: int, examples: list, storage_dir: str, ds_type: str) -> None:
+def gen_samples(parser: ArgumentParser, dataloader: DataSet, job_id: int, range_start: int, range_stop: int, examples: list, storage_dir: str, ds_type: str) -> None:
     """
     Generates and stored samples, by calling to create_sample and store_sample_disk.
     Args:
@@ -190,7 +190,7 @@ def gen_samples(parser: argparse, dataloader: DataSet, job_id: int, range_start:
     print('%s: Done' % (datetime.datetime.now()))
 
 
-def Split_examples_into_jobs_and_generate_samples(parser: argparse.ArgumentParser, raw_data_set: DataSet, examples: list, storage_dir: str, ds_type: str):
+def Split_examples_into_jobs_and_generate_samples(parser: ArgumentParser, raw_data_set: DataSet, examples: list, storage_dir: str, ds_type: str):
     """
     After the examples are generate, we generate samples by splitting into parallel jobs and generate the samples including all supervision.
     Args:
@@ -352,7 +352,7 @@ def Get_label_task(example: ExampleClass, label_ordered: np.array, data_loader: 
     return label_task, flag
 
 
-def Get_valid_pairs_for_the_combinatorial_test(parser: argparse, nclasses: int, valid_classes: list) -> tuple:
+def Get_valid_pairs_for_the_combinatorial_test(parser: ArgumentParser, nclasses: int, valid_classes: list) -> tuple:
     """
     Exclude part of the training data. Validation set is from the train distribution. Test is only the excluded data (combinatorial generalization)
     How many strings (of nsample_chars) to exclude from training
@@ -446,7 +446,7 @@ def Get_sample_chars(parser, prng: random, valid_pairs: np.array, ds_type: bool,
     return sample_chars
 
 
-def create_examples_per_sample(parser: argparse, prng: random, ds_type: str, examples: list, sample_chars: list, chars: list, adj_types: list):
+def create_examples_per_sample(parser: ArgumentParser, prng: random, ds_type: str, examples: list, sample_chars: list, chars: list, adj_types: list):
     """
     Adding examples to the examples list.
     Args:
@@ -500,7 +500,7 @@ def Get_valid_classes_for_emnist_only(ds_name, use_only_valid_classes: bool, ncl
     return valid_classes
 
 
-def Make_data_dir(parser: argparse.ArgumentParser, ds_type, language_list: list) -> tuple:
+def Make_data_dir(parser: ArgumentParser, ds_type, language_list: list) -> tuple:
     """
     Making the data-dir, for the samples.
     Args:
@@ -526,7 +526,7 @@ def Make_data_dir(parser: argparse.ArgumentParser, ds_type, language_list: list)
     return base_samples_dir, Meta_data_fname
 
 
-def create_samples(parser: argparse, ds_type, raw_data_set: DataSet, language_list) -> dict:
+def create_samples(parser: ArgumentParser, ds_type, raw_data_set: DataSet, language_list) -> dict:
     """
     Args:
         parser: The dataset options.
@@ -579,7 +579,7 @@ def create_samples(parser: argparse, ds_type, raw_data_set: DataSet, language_li
     return num_samples_per_data_type_dict
 
 
-def Save_meta_data_and_code_script(parser: argparse, ds_type, nsamples_per_data_type_dict: dict, language_list: list):
+def Save_meta_data_and_code_script(parser: ArgumentParser, ds_type, nsamples_per_data_type_dict: dict, language_list: list):
     """
     Saving the metadata and the code.
     Args:

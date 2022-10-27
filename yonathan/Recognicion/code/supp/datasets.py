@@ -3,14 +3,13 @@ import os
 import pickle
 import sys
 from types import SimpleNamespace
-
+import yaml
 import torch
 from torch.utils.data import Dataset
 import torchvision.transforms as T
 from PIL import Image
-
+import git
 from Configs.Config import Config
-from create_dataset.create_dataset import get_create_config
 from typing import Union
 from supp.Dataset_and_model_type_specification import AllOptions
 
@@ -125,7 +124,12 @@ class DatasetAllDataSetTypes(DataSetBase):
         super(DatasetAllDataSetTypes, self).__init__(
             root, nexamples, split, is_train=is_train)
         if not isinstance(opts,argparse.ArgumentParser):
-            opts = get_create_config()
+            git_repo = git.Repo(__file__, search_parent_directories=True)
+            git_root = git_repo.working_dir
+            full_path = f"{git_root}/yonathan/Recognicion/code/Configs/create_config.yaml"
+            with open(full_path, 'r') as stream:
+                config_as_dict = yaml.safe_load(stream)
+                opts = SimpleNamespace(**config_as_dict)
         self.ntasks = opts.ntasks
         self.nclasses_existence = opts.nclasses
         self.direction = torch.tensor(direction)
@@ -165,7 +169,7 @@ class DatasetAllDataSetTypes(DataSetBase):
             torch.tensor(char), self.nclasses_existence)
         # Concatenating into one flag.
         flag = torch.concat(
-            [direction_type_ohe, task_type_ohe, char_type_one], dim=0).float()
+            [ task_type_ohe, char_type_one], dim=0).float()
         edge_class = self.nclasses_existence
         r, c = (label_all == char).nonzero()
         if self.direction == 0:

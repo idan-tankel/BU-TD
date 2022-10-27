@@ -1,6 +1,7 @@
 import argparse
 
 import torch
+from torch import cuda
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from supp.general_functions import preprocess
@@ -74,7 +75,30 @@ def multi_label_loss_base(outs: object, samples: object):
     Returns: The loss over all heads.
 
     """
-    loss_tasks = CE(outs.task, samples.label_task)
+    loss_tasks = torch.zeros(samples.label_task.shape)
+    direction_one_hot = samples.flag[:,0:4].type(torch.int64)
+        
+        
+        # since the directions are encoded as one hot vectors
+        # we can use simple BMM to get the output by the correct direction and zero out all 
+        # without using more complex functions as gather...
+
+
+        # direction_map = direction_one_hot.argmax(dim=1).view(-1,1,1)
+        # use gather and scatter of torch to get the loss of each task
+        # task_output = [outs.task[k,:,directions_flags[k]] for k in range(samples.flag.shape[0])]
+        # task_output = outs.task.gather(dim=2,index=direction_map.repeat(1,48,1))
+        
+    task_output = torch.bmm(outs.task,direction_one_hot.unsqueeze(2).type(torch.float))
+    task_output = task_output.squeeze(dim=2)
+        # TODO convert this part to scatter_add_
+    label_task = samples.label_task.squeeze(dim=1).type(torch.LongTensor)
+    loss_tasks = CE(task_output.to(cuda), label_task.to(cuda))  # compute the loss
+        # for k in range(self.num_outputs):
+        #     # task_output = outs.task[:, :, k]  # For each task extract its last layer (shape 10,48)
+        #     label_task = samples.label_task[:, k]  # The label for the loss 
+        #     loss_tasks[:, k] = loss_task  # Assign for each task its loss. (shape )
+    # loss_tasks = CE(outs.task, samples.label_task)
     return loss_tasks  # return the task loss
 
 

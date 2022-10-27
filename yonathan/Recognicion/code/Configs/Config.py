@@ -93,7 +93,7 @@ class Config:
             self.use_bu2_flag = False
             self.use_SF = False
         try:
-            self.flag_size = self.Models.nclasses[0][0] + 1  + 4 
+            self.flag_size = self.Models.nclasses[0][0] - 1  + 4 
             # The flag size should be number of classes + 4 (number of directios \ total tasks). Since there is a background class, we have added +1
         except KeyError as e:
             print(f'The config.Models object was not initialized before calling up setup_flag {e}')

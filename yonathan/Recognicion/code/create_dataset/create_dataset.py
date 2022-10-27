@@ -1,7 +1,7 @@
-from create_dataset.parser import Get_parser
-from create_dataset.Create_dataset_classes import DsType
-from create_dataset.Create_dataset_funcs import create_samples, Save_meta_data_and_code_script
-from create_dataset.Raw_data import DataSet
+from parser import Get_parser
+import Create_dataset_classes
+import Create_dataset_funcs
+from Raw_data import DataSet
 import yaml
 from types import SimpleNamespace
 import git
@@ -22,32 +22,32 @@ def main(ds_type: DataSet, language_list=None, nchars_per_row=6, num_rows_in_the
     raw_data_set = DataSet(parser, data_dir='/home/idanta/data' + ds_type.from_enum_to_str(),  dataset=ds_type,
                            raw_data_source=parser.path_data_raw,  language_list=language_list)  # Getting the raw data.
     # Iterating over all dataset types, and its number of desired number of samples.
-    nsamples_per_data_type_dict = create_samples(
+    nsamples_per_data_type_dict = Create_dataset_funcs.create_samples(
         parser, ds_type, raw_data_set, language_list)
     # Done creating and storing the samples.
     print('Done creating and storaging the samples, we are left only with saving the meta data and the code script.')
-    Save_meta_data_and_code_script(
+    Create_dataset_funcs.Save_meta_data_and_code_script(
         parser, ds_type, nsamples_per_data_type_dict,  language_list)
     print('Done saving the source code and the meta data!')
 
 
 def main_Omniglot(lists):
     for list in lists:
-        main(ds_type=DsType.Omniglot, language_list=list)
+        main(ds_type=Create_dataset_classes.DsType.Omniglot, language_list=list)
 
 
 def main_FashionEmnist(nchars_per_row=6, num_rows_in_the_image=1):
-    main(ds_type=DsType.Fashionmist, nchars_per_row=nchars_per_row,
+    main(ds_type=Create_dataset_classes.DsType.Fashionmist, nchars_per_row=nchars_per_row,
          num_rows_in_the_image=num_rows_in_the_image)
 
 
 def main_emnist(nchars_per_row=6, num_rows_in_the_image=1):
-    main(ds_type=DsType.Emnist, nchars_per_row=nchars_per_row,
+    main(ds_type=Create_dataset_classes.DsType.Emnist, nchars_per_row=nchars_per_row,
          num_rows_in_the_image=num_rows_in_the_image)
 
 
 def main_kmnist():
-    main(ds_type=DsType.Kmnist)
+    main(ds_type=Create_dataset_classes.DsType.Kmnist)
 
 
 def get_create_config():
