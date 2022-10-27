@@ -1,11 +1,11 @@
 import os.path
 from enum import Enum, auto
 from pathlib import Path
+from typing import Callable
 
 from supp.loss_and_accuracy import multi_label_loss_weighted, multi_label_loss, multi_label_accuracy, \
     multi_label_accuracy_weighted
 from supp.utils import get_omniglot_dictionary
-from typing import Union, Callable
 
 
 class Flag(Enum):
@@ -56,8 +56,7 @@ class GenericDataset:
         self.initial_tasks: list = [
             0]  # The initial tasks we first train in the zero forgetting continual learning experiments.
         self.ntasks: int = 1  # The number of tasks, in mnist,fashionmnist 1 for Omniglot 51.
-        self.nclasses: Union[list] = [47 for _ in range(
-            ndirections)]  # The number of classes for each task, 47 for mnist, 10 for fashion and for Omniglot its dictionary.
+        self.nclasses: dict = {i : 47 for i in range(ndirections)}  # The number of classes for each task, 47 for mnist, 10 for fashion and for Omniglot its dictionary.
         self.results_dir = os.path.join(self.project_path, 'data/{}/results'.format(
             ds_type.Enum_to_name()))  # The trained model directory.
         self.use_bu1_loss = True if flag_at is not Flag.NOFLAG else False  # Whether to use the bu1 loss only for Omniglot always False.

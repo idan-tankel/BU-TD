@@ -40,6 +40,7 @@ class CheckpointSaver:
         save = metric_val < self.best_metric_val if self.decreasing else metric_val >self.best_metric_val
         if save:
             store_running_stats(model, task_id=task_id, direction_id=direction)
+            print('Done storing running stats')
             logging.info(f"Current metric value better than {metric_val} better than best {self.best_metric_val}, saving model at {model_path}")
             self.best_metric_val = metric_val
             save_data = {'epoch': epoch, 'model_state_dict': model.state_dict(),
@@ -48,8 +49,10 @@ class CheckpointSaver:
             torch.save(save_data, model_path)
             self.top_model_paths.append({'path': model_path, 'score': metric_val})
             self.top_model_paths = sorted(self.top_model_paths, key=lambda o: o['score'], reverse=not self.decreasing)
+        '''
         if len(self.top_model_paths) > self.top_n:
             self.cleanup()
+        '''
 
     def cleanup(self):
         to_remove = self.top_model_paths[self.top_n:]
@@ -59,25 +62,25 @@ class CheckpointSaver:
         self.top_model_paths = self.top_model_paths[:self.top_n]
 
 class ModelWrapped(LightningModule):
-    def __init__(self, opts, learned_params, ckpt,direction):
+    def __init__(self, opts, learned_params, ckpt, direction_id,nbatches_train,task_id = 0):
         super().__init__()
         # Important: This property activates manual optimization.
         self.automatic_optimization = False
         self.model = opts.model
         self.opts = opts
-        self.direction = direction
+        self.direction = direction_id
         self.loss_fun = opts.criterion
         self.ckpt = ckpt
         self.learned_params = learned_params
         self.accuracy = opts.task_accuracy
-        self.optimizer , self.scheduler =  create_optimizer_and_scheduler(self.opts, self.learned_params)
+        self.optimizer , self.scheduler =  create_optimizer_and_scheduler(opts, learned_params, nbatches_train)
 
     def training_step(self, batch, batch_idx):
         model = self.model
         model.train()  # Move the model into the train mode.
         outs = model(batch)  # Compute the model output.
         loss = self.loss_fun(self.opts, batch, outs)  # Compute the loss.
-        self.optimizer.zero_grad(set_to_none = True)  # Reset the optimizer.
+        self.optimizer.zero_grad()  # Reset the optimizer.
         loss.backward()  # Do a backward pass.
         self.optimizer.step()  # Update the model.
         samples = self.model.inputs_to_struct(batch)
@@ -96,6 +99,7 @@ class ModelWrapped(LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
+        self.optimizer.zero_grad(set_to_none=True)
         model = self.model
         model.train()  # Move the model into the evaluation mode.
         with torch.no_grad():

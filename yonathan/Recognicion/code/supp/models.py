@@ -5,10 +5,11 @@ import torch
 import torch.nn as nn
 
 from supp.Dataset_and_model_type_specification import Flag, DsType
-from supp.blocks import BUInitialBlock, init_module_weights, InitialTaskEmbedding, SideAndComb, SideAndCombSharedBase
-from supp.Module_blocks import depthwise_separable_conv
-from supp.utils import get_laterals
+from supp.Model_Blocks import BUInitialBlock, init_module_weights, InitialTaskEmbedding, SideAndComb, \
+    SideAndCombSharedBase
+from supp.Module_blocks import Depthwise_separable_conv
 from supp.heads import MultiTaskHead, OccurrenceHead
+from supp.utils import get_laterals
 
 
 class TDModel(nn.Module):
@@ -212,7 +213,7 @@ class BUStreamShared(nn.Module):
         self.opts = opts
         inshape = np.array(opts.inshape)
         inshapes = []
-        self.conv1 = depthwise_separable_conv(inplanes, filters, kernel_size=7, stride=stride, padding=3,
+        self.conv1 = Depthwise_separable_conv(inplanes, filters, kernel_size=7, stride=stride, padding=3,
                                               bias=False)  # The first conv layer as in ResNet.
         self.inplanes = filters
         inshape = np.array(

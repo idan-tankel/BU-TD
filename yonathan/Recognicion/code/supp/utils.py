@@ -1,7 +1,8 @@
 import argparse
+import os
+
 import torch
 import torch.optim as optim
-import os
 
 
 def folder_size(path: str) -> int:
@@ -15,7 +16,7 @@ def folder_size(path: str) -> int:
     return len([_ for _ in os.scandir(path)])
 
 
-def create_dict(path: str) -> dict:
+def create_dict(path: str, offset: int = 0) -> dict:
     """
     Creates a dictionary assigning for each path in the folder the number of files in it.
     Args:
@@ -26,11 +27,11 @@ def create_dict(path: str) -> dict:
     """
     dict_language = {}
     for cnt, ele in enumerate(os.scandir(path)):  # for language in Omniglot_raw find the number of characters in it.
-        dict_language[cnt] = folder_size(ele)  # Find number of characters in the folder.
+        dict_language[cnt + offset] = folder_size(ele)  # Find number of characters in the folder.
     return dict_language
 
 
-def get_omniglot_dictionary(initial_tasks: list, raw_data_folderpath: str) -> list:
+def get_omniglot_dictionary(initial_tasks: list, raw_data_folderpath: str) -> dict:
     """
     Getting the omniglot dictionary, for each task the number of characters in it.
     Args:

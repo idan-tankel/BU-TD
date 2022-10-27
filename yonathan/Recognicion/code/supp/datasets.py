@@ -7,17 +7,17 @@ import torch
 from torch.utils.data import Dataset
 import torchvision.transforms as T
 from PIL import Image
+from pathlib import Path
 
-sys.path.append(r'/home/sverkip/data/BU-TD/yonathan/Recognicion/code/create_dataset')
+
 class DataSetBase(Dataset):
-
     """
     Base class OmniglotDataSetBase.
     Supports initialization and get item methods.
     """
 
-    def __init__(self, root: str, nclasses_existence: int, ndirections: int,is_train:bool, nexamples: int = None,
-                 split: bool = True) -> None:
+    def __init__(self, root: str, nclasses_existence: int, ndirections: int, is_train: bool, nexamples: int = None,
+                 split: bool = True):
         """
         Args:
             root: The root to the data.
@@ -30,9 +30,9 @@ class DataSetBase(Dataset):
         self.nclasses_existence = nclasses_existence
         self.ndirections = ndirections
         self.split = split
-        self.splitsize = 1000
         self.is_train = is_train
-        if nexamples is None:
+        self.splitsize = 1000
+        if nexamples is None:  # Getting all samples.
             filenames = [os.path.join(dp, f) for dp, dn, fn in os.walk(root) for f in fn]
             images = [f for f in filenames if f.endswith('_img.jpg')]
             self.nexamples = len(images)
@@ -41,6 +41,7 @@ class DataSetBase(Dataset):
 
     def get_root_by_index(self, index: int) -> str:
         """
+        Getting for each index the root to the sample.
         Args:
             index: The sample index.
 
@@ -52,8 +53,9 @@ class DataSetBase(Dataset):
             root = self.root
         return root
 
-    def get_raw_sample(self, index):
+    def get_raw_sample(self, index: int) -> pickle:
         """
+        Get the sample in that index.
         Args:
             index: The sample index.
 
@@ -71,17 +73,16 @@ class DataSetBase(Dataset):
         Returns: Length of the dataset.
 
         """
-
-
         if self.is_train:
-         nexamples = self.nexamples
+            nexamples = self.nexamples
         else:
-         nexamples = self.nexamples
-      #  nexamples = 1000
-        self.targets = [0 for _ in range(nexamples)]
+            nexamples = self.nexamples
+        #  nexamples = 1000
+        self.targets = [0 for _ in range(nexamples)]  # TODO - get rid of this.This is used only for Avalanche_AI.
         return nexamples
 
-def struct_to_input(sample: object) -> tuple:
+
+def struct_to_input(sample: object) -> tuple[torch]:
     """
     From sample to inputs.
     Args:
@@ -96,8 +97,10 @@ def struct_to_input(sample: object) -> tuple:
     label_task = sample.label_task
     return label_existence, label_all, flag, label_task
 
+
 class DatasetAllDataSetTypes(DataSetBase):
-    def __init__(self, root: str, opts:argparse, arg_and_head_index:int = 0, direction: tuple = (0, 0),is_train = True, nexamples: int = None, obj_per_row=6,
+    def __init__(self, root: str, opts: argparse, arg_and_head_index: int = 0, direction: tuple = (0, 0), is_train=True,
+                 nexamples: int = None, obj_per_row=6,
                  obj_per_col=1, split: bool = True):
         """
         Omniglot data-set.
@@ -112,17 +115,17 @@ class DatasetAllDataSetTypes(DataSetBase):
             split: Whether to split the dataset.
         """
 
-        super(DatasetAllDataSetTypes, self).__init__(root, nexamples, split, is_train=is_train)
+        super(DatasetAllDataSetTypes, self).__init__(ndirections=opts.ndirections,
+                                                     nclasses_existence=opts.nclasses[arg_and_head_index], root=root,
+                                                     nexamples=nexamples, split=split, is_train=is_train)
         self.ntasks = opts.ntasks
-        self.nclasses_existence = opts.nclasses[arg_and_head_index]
         self.direction = torch.tensor(direction)
-        self.ndirections = opts.ndirections
         self.obj_per_row = obj_per_row
         self.obj_per_col = obj_per_col
         self.task_idx = torch.tensor(arg_and_head_index)
         self.edge_class = self.nclasses_existence
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> tuple[torch]:
         """
         Args:
             index: sample index.
@@ -131,28 +134,29 @@ class DatasetAllDataSetTypes(DataSetBase):
 
         """
         # Getting root to the sample
-      #  (direction_x, direction_y) = self.direction
-        root = self.get_root_by_index(index)
+        #  (direction_x, direction_y) = self.direction
+        root = self.get_root_by_index(index)  # The path to the sample.
         fname = os.path.join(root, '%d_img.jpg' % index)
         # Opening the image and converting to Tensor
-        img = Image.open(fname).convert('RGB')
+        img = Image.open(fname).convert('RGB')  # Getting the image.
         img = T.ToTensor()(img)
-        # TODO: all those functions have changed in the beta branch to save all the images as tensors already in the Create dataset phase
         img = 255 * img  # converting to RGB
         # Get raw sample.
         sample = self.get_raw_sample(index)
         # Converting the sample into input.
         (label_existence, label_all, flag, label_task) = struct_to_input(sample)
         char = flag[1].item()  # The referred character
-        # Getting the task embedding.
+        # Getting the task embedding, telling which task we are solving now.
+        # For emnist,fashion this is always 0 but for Omniglot it says which language we use.
         task_type_ohe = torch.nn.functional.one_hot(self.task_idx, self.ntasks)
-        # Getting the direction embedding.
+        # Getting the direction embedding, telling which direction we solve now.
         direction_type_ohe = torch.nn.functional.one_hot(self.direction, self.ndirections)
         # Getting the character embedding.
         char_type_one = torch.nn.functional.one_hot(torch.tensor(char), self.nclasses_existence)
+        # Concatenating all three flags into one flag.
         flag = torch.concat([direction_type_ohe, task_type_ohe, char_type_one], dim=0).float()
-        # Concatenating into one flag.
-        r, c = (label_all == char).nonzero()
+
+        r, c = (label_all == char).nonzero()  # Getting the place we query about.
         r, c = r[0], c[0]
 
         '''
@@ -162,7 +166,7 @@ class DatasetAllDataSetTypes(DataSetBase):
             label_task = self.edge_class
         flag = torch.concat([direction_type_ohe, task_type_ohe, char_type_one], dim=0).float()
         '''
-
+        # Getting the label task according to the direction.
         if self.direction == 0:
             # right
             if c == (self.obj_per_row - 1):
@@ -191,26 +195,24 @@ class DatasetAllDataSetTypes(DataSetBase):
             else:
                 label_task = label_all[r - 1, c]
 
-        # TODO change this to use conv2d with the proper filter
         label_existence, label_all, label_task = map(torch.tensor, (label_existence, label_all, label_task))
-        label_task = label_task.view([-1])
+        #  label_task = label_task.view([-1])
         label_existence = label_existence.float()
         return img, label_task, flag, label_all, label_existence
 
+
 class DatasetAllDataSetTypesAll(DatasetAllDataSetTypes):
-    def calc_label_task_all(self, label_all, not_available_class):
+    def calc_label_task_all(self, label_all: torch) -> torch:
         """
         Compute for each character its neighbor is exists in the sample.
         Args:
             label_all: The label all flag.
-            not_available_class: The not available classes.
 
         Returns: The label all task.
 
         """
-        nclasses_existence = 47
-        edge_class = nclasses_existence
-        label_adj_all = not_available_class * torch.ones(nclasses_existence)
+        edge_class = self.nclasses_existence
+        label_adj_all = self.nclasses_existence * torch.ones(self.nclasses_existence)
         for r, row in enumerate(label_all):
             for c, char in enumerate(row):
                 if self.direction == 0:
@@ -237,15 +239,24 @@ class DatasetAllDataSetTypesAll(DatasetAllDataSetTypes):
                 elif self.direction == 3:
                     # Down
                     if r == 0:
-                       res = edge_class
+                        res = edge_class
                     else:
                         res = label_all[r - 1, c]
 
                 label_adj_all[char] = res
+
         return label_adj_all
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> tuple[torch]:
+        """
+        Getting the sample with the all label task.
+        Args:
+            index: The index.
+
+        Returns: The sample data.
+
+        """
         img, label_task, flag, label_all, label_existence = super().__getitem__(index)
-        not_available_class = 47
-        label_task = self.calc_label_task_all(label_all, not_available_class).long()
+        label_task = self.calc_label_task_all(
+            label_all=label_all).long()  # Change the label task to return all adjacent characters.
         return img, label_task, flag, label_all, label_existence
