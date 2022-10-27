@@ -1,13 +1,14 @@
 import argparse
 
 import torch
-from torch import cuda
+from torch import device
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from supp.general_functions import preprocess
 from supp import Dataset_and_model_type_specification as DMS
 
 CE = nn.CrossEntropyLoss(reduction='none')
+dev = device("cuda") if torch.cuda.is_available() else device("cpu")
 
 # Accuracy
 
@@ -42,8 +43,9 @@ def multi_label_accuracy(outs: object, samples: object):
 
     """
     preds, task_accuracy = multi_label_accuracy_base(outs, samples)
-    task_accuracy = task_accuracy.mean(axis=0)  # per single example
-    return preds, task_accuracy
+    # per single example
+    avg_task_accuracy = task_accuracy.mean()
+    return preds, avg_task_accuracy
 #
 
 
@@ -93,7 +95,7 @@ def multi_label_loss_base(outs: object, samples: object):
     task_output = task_output.squeeze(dim=2)
         # TODO convert this part to scatter_add_
     label_task = samples.label_task.squeeze(dim=1).type(torch.LongTensor)
-    loss_tasks = CE(task_output.to(cuda), label_task.to(cuda))  # compute the loss
+    loss_tasks = CE(task_output.to(dev), label_task.to(dev))  # compute the loss
         # for k in range(self.num_outputs):
         #     # task_output = outs.task[:, :, k]  # For each task extract its last layer (shape 10,48)
         #     label_task = samples.label_task[:, k]  # The label for the loss 

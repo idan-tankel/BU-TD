@@ -1,16 +1,18 @@
+from supp.Dataset_and_model_type_specification import inputs_to_struct
+import torch.nn as nn
+import argparse
+import logging
+import os
+import numpy as np
+from supp.general_functions import preprocess
+import torch.optim as optim
+import torch
+from supp.general_functions import create_optimizer_and_sched
+from pytorch_lightning import LightningModule
 import os.path
 import sys
 sys.path.append(r'/home/sverkip/data/BU-TD/yonathan/Recognicion/code/')
-from pytorch_lightning import LightningModule
-from supp.general_functions import create_optimizer_and_sched
-import torch
-import torch.optim as optim
-from supp.general_functions import preprocess
-import numpy as np
-import os
-import logging
-import argparse
-import torch.nn as nn
+
 
 class CheckpointSaver:
     def __init__(self, dirpath, decreasing=True, top_n=5):
@@ -19,25 +21,30 @@ class CheckpointSaver:
         decreasing: If decreasing is `True`, then lower metric is better
         top_n: Total number of models to track based on validation metric value
         """
-        if not os.path.exists(dirpath): os.makedirs(dirpath)
+        if not os.path.exists(dirpath):
+            os.makedirs(dirpath)
         self.dirpath = dirpath
         self.top_n = top_n
         self.decreasing = decreasing
         self.top_model_paths = []
         self.best_metric_val = np.Inf if decreasing else -np.Inf
 
-    def __call__(self, model, epoch, metric_val,optimizer,scheduler, parser):
-        model_path = os.path.join(self.dirpath, model.__class__.__name__ + f'_epoch{epoch}.pt')
-        save = metric_val<self.best_metric_val if self.decreasing else metric_val>self.best_metric_val
+    def __call__(self, model, epoch, metric_val, optimizer, scheduler, parser):
+        model_path = os.path.join(
+            self.dirpath, model.__class__.__name__ + f'_epoch{epoch}.pt')
+        save = metric_val < self.best_metric_val if self.decreasing else metric_val > self.best_metric_val
         if save:
-            logging.info(f"Current metric value better than {metric_val} better than best {self.best_metric_val}, saving model at {model_path}")
+            logging.info(
+                f"Current metric value better than {metric_val} better than best {self.best_metric_val}, saving model at {model_path}")
             self.best_metric_val = metric_val
             save_data = {'epoch': epoch, 'model_state_dict': model.state_dict(),
-             'optimizer_state_dict': optimizer.state_dict(),
-             'scheduler_state_dict': scheduler.state_dict(), 'parser': parser }
+                         'optimizer_state_dict': optimizer.state_dict(),
+                         'scheduler_state_dict': scheduler.state_dict(), 'parser': parser}
             torch.save(save_data, model_path)
-            self.top_model_paths.append({'path': model_path, 'score': metric_val})
-            self.top_model_paths = sorted(self.top_model_paths, key=lambda o: o['score'], reverse=not self.decreasing)
+            self.top_model_paths.append(
+                {'path': model_path, 'score': metric_val})
+            self.top_model_paths = sorted(
+                self.top_model_paths, key=lambda o: o['score'], reverse=not self.decreasing)
         if len(self.top_model_paths) > self.top_n:
             self.cleanup()
 
@@ -48,11 +55,13 @@ class CheckpointSaver:
             os.remove(o['path'])
         self.top_model_paths = self.top_model_paths[:self.top_n]
 
+
 class ModelWrapped(LightningModule):
     """
     ModelWrapped Is a methond thats wrap the model and the training process using lightning
-    """    
-    def __init__(self, opts, learned_params, ckpt,model,nbatches_train):
+    """
+
+    def __init__(self, opts, learned_params, ckpt, model: nn.Module, nbatches_train: int):
         """
         __init__ Wrapped the already defined model with training steps and accuracy calculations 
         that overrride the default pytorch lightning behaviour
@@ -62,13 +71,13 @@ class ModelWrapped(LightningModule):
             learned_params (_type_): _description_
             ckpt (CheckPoint): A checkpoint object to start the model from
             model (nn.Module): One of the models created by `create_model` function or the Parser object
-        """        
+        """
         super().__init__()
         # Important: This property activates manual optimization.
         self.automatic_optimization = False
         self.model = model
         self.opts = opts
-        if isinstance(opts,argparse.ArgumentParser):
+        if isinstance(opts, argparse.ArgumentParser):
             self.loss_fun = opts.criterion
         else:
             self.loss_fun = opts.Losses.loss_fun
@@ -77,23 +86,27 @@ class ModelWrapped(LightningModule):
         self.learned_params = learned_params
         self.accuracy = opts.task_accuracy
         self.nbatches_train = nbatches_train
-        self.optimizer , self.scheduler =  create_optimizer_and_sched(self.opts.Training, self.learned_params,nbatches_train=self.nbatches_train)
+        self.optimizer, self.scheduler = create_optimizer_and_sched(
+            self.opts.Training, self.learned_params, nbatches_train=self.nbatches_train)
 
     def training_step(self, batch, batch_idx):
         model = self.model
         model.train()  # Move the model into the train mode.
         outs = model(batch)  # Compute the model output.
-        loss = self.loss_fun( opts=self.opts,inputs=batch, outs=outs)  # Compute the loss.
+        # Compute the loss.
+        loss = self.loss_fun(opts=self.opts, inputs=batch,
+                             outs=outs, model=self.model)
         self.optimizer.zero_grad()  # Reset the optimizer.
         loss.backward()  # Do a backward pass.
         self.optimizer.step()  # Update the model.
-        samples = self.opts.inputs_to_struct(batch)
+        samples = inputs_to_struct(batch)
         outs = self.model.outs_to_struct(outs)
-        _ , acc = self.accuracy(outs, samples)
-        if type(self.scheduler) in [optim.lr_scheduler.CyclicLR, optim.lr_scheduler.OneCycleLR]:  # Make a scheduler step if needed.
+        _, acc = self.accuracy(outs, samples)
+        # Make a scheduler step if needed.
+        if type(self.scheduler) in [optim.lr_scheduler.CyclicLR, optim.lr_scheduler.OneCycleLR]:
             self.scheduler.step()
-        self.log('train_loss', loss, on_step=True, on_epoch=True, logger = True)
-        self.log('train_acc',acc, on_step=True, on_epoch=True, logger=True)
+        self.log('train_loss', loss, on_step=True, on_epoch=True, logger=True)
+        self.log('train_acc', acc, on_step=True, on_epoch=True, logger=True)
         return loss  # Return the loss and the output.
 
     def test_step(self, batch, batch_idx):
@@ -105,25 +118,31 @@ class ModelWrapped(LightningModule):
     def validation_step(self, batch, batch_idx):
         with torch.no_grad():
             outs = self.model(batch)
-            loss = self.loss_fun(opts=self.opts,inputs=batch, outs=outs,model = self.model)  # Compute the loss.
+            # Compute the loss.
+            loss = self.loss_fun(opts=self.opts, inputs=batch,
+                                 outs=outs, model=self.model)
             outs = self.model.outs_to_struct(outs)
-            samples = self.opts.inputs_to_struct(batch)
-            _ , task_accuracy = self.accuracy(outs, samples)
-            samples = self.opts.inputs_to_struct(batch)
-            _ , acc = self.accuracy(outs, samples)
-            self.log('val_loss', loss, on_step=True, on_epoch=True, logger=True)
-            self.log('val_acc', task_accuracy, on_step=True, on_epoch=True, logger=True)
+            samples = inputs_to_struct(batch)
+            _, task_accuracy = self.accuracy(outs, samples)
+            samples = inputs_to_struct(batch)
+            _, acc = self.accuracy(outs, samples)
+            self.log('val_loss', loss, on_step=True,
+                     on_epoch=True, logger=True)
+            self.log('val_acc', task_accuracy, on_step=True,
+                     on_epoch=True, logger=True)
             return task_accuracy.sum()
 
     def configure_optimizers(self):
-        opti, sched = create_optimizer_and_sched(self.opts.Training, self.learned_params,nbatches_train=self.nbatches_train)
+        opti, sched = create_optimizer_and_sched(
+            self.opts.Training, self.learned_params, nbatches_train=self.nbatches_train)
         return [opti], [sched]
 
     def validation_epoch_end(self, outputs):
         acc = sum(outputs) / len(outputs)
         print(acc)
         if self.ckpt != None:
-          self.ckpt(self.model,self.current_epoch,acc,self.optimizer,self.scheduler, self.opts)
+            self.ckpt(self.model, self.current_epoch, acc,
+                      self.optimizer, self.scheduler, self.opts)
         return sum(outputs) / len(outputs)
 
     def test_epoch_end(self, outputs):
@@ -137,13 +156,14 @@ class ModelWrapped(LightningModule):
             outs = self.model(inputs)
             samples = self.opts.inputs_to_struct(inputs)
             outs = self.model.outs_to_struct(outs)
-            pred , acc_batch = self.accuracy(outs, samples)
+            pred, acc_batch = self.accuracy(outs, samples)
             acc += acc_batch
         acc = acc / len(dl)
         return acc
 
+
 class Training_flag:
-    def __init__(self,parser, train_all_model: bool, train_arg: bool, train_task_embedding: bool, train_head: bool):
+    def __init__(self, parser, train_all_model: bool, train_arg: bool, train_task_embedding: bool, train_head: bool):
         """
         Args:
             train_all_model: Whether to train all model.
@@ -155,7 +175,7 @@ class Training_flag:
         self.train_arg = train_arg
         self.task_embedding = train_task_embedding
         self.head_learning = train_head
-        self.parser= parser
+        self.parser = parser
 
     def Get_learned_params(self, model: nn.Module, lang_idx: int, direction: int):
         """
