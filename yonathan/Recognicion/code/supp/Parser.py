@@ -77,7 +77,7 @@ def GetParser(task_idx=0, direction_idx='right', model_type=BUTDModelShared, fla
     parser.add_argument(
         '--ks', default=[7, 3, 3, 3], type=list, help='The ResNet kernel sizes')
     parser.add_argument(
-        '--ns', default=[0, 3, 3, 3], type=list, help='Number of blocks per filter size')
+        '--ns', default=[0, 1, 1, 1], type=list, help='Number of blocks per filter size')
     parser.add_argument('--nclasses', default=Data_obj.data_obj.nclasses,
                         type=list, help='The sizes of the Linear layers')
     parser.add_argument('--ntasks', default=Data_obj.data_obj.ntasks,

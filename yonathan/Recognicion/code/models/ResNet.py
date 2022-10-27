@@ -1,11 +1,20 @@
+from types import SimpleNamespace
 import torch
 from torch import nn
+import argparse
+from typing import Union
+from Configs.Config import Config
 
-from v26.funcs import instruct, init_module_weights, get_laterals
-from v26.functions.convs import conv1x1, conv2d_fun
-from v26.models.BasicBlock import BasicBlockTDLat
-from v26.models.SharedBase import BasicBlockLatShared
-from v26.models.SideAndComb import SideAndCombShared, SideAndComb
+# from v26.funcs import instruct, init_module_weights, get_laterals
+# from v26.functions.convs import conv1x1, conv2d_fun
+# from v26.models.BasicBlock import BasicBlockTDLat
+# from v26.models.SharedBase import BasicBlockLatShared
+# from v26.models.SideAndComb import SideAndCombShared, SideAndComb
+from models.SideAndComb import SideAndCombShared, SideAndComb
+from models.SharedBase import BasicBlockLatShared
+from models.BasicBlock import BasicBlockTDLat
+from supp.blocks import init_module_weights
+from supp.general_functions import get_laterals
 
 
 class ResNet(nn.Module):
@@ -79,24 +88,33 @@ class ResNet(nn.Module):
 
 
 class ResNetLatShared(nn.Module):
-    __doc__=r"""
+    __doc__ = r"""
     ResNetLatShared _summary_
     """
-    def __init__(self, opts, shared):
+
+    def __init__(self, opts: Union[Config, argparse.ArgumentParser, SimpleNamespace], shared):
         """
         __init__ _summary_
 
         Args:
-            opts (_type_): _description_
+            opts (`Config` | `argparse.ArgumentParser` | `SimpleNamespace`): The config options to the whole training process
             shared (_type_): _description_
-        """        
+        """
         super(ResNetLatShared, self).__init__()
-        model_options_section = opts.Models
-        self.norm_layer = model_options_section.norm_fun
+        # patch for backward compatibility
+        if isinstance(opts, Config):
+            model_options_section = opts.Models
+            model_options_section.init_model_options()
+        else:
+            model_options_section = opts
+
+        # now the model options will hold the norm_layer and activation_fun
+        self.norm_layer = model_options_section.norm_layer
         self.activation_fun = model_options_section.activation_fun
         self.inshapes = shared.inshapes
         self.use_lateral = shared.use_lateral  # incoming lateral
-        filters = opts.Models.nfilters[0]
+        self.orig_relus = model_options_section.orig_relus
+        filters = model_options_section.nfilters[0]
         self.use_bu1_flag = opts.use_bu1_flag
         if self.use_bu1_flag:
             # flag at BU1. It is shared across all the BU towers
@@ -106,9 +124,13 @@ class ResNetLatShared(nn.Module):
             self.h_flag_bu_resized = shared.h_flag_bu_resized
 
         self.conv1 = nn.Sequential(
-            shared.conv1, self.norm_layer(filters), self.activation_fun())
+            shared.conv1,
+            self.norm_layer(ntasks=model_options_section.ntasks,
+                            num_channels=filters),
+            self.activation_fun()
+        )
         self.bot_lat = SideAndCombShared(
-            shared.bot_lat, self.norm_layer, self.activation_fun)
+            shared.bot_lat, self.norm_layer, self.activation_fun, orig_relus=opts.Models.orig_relus)
 
         layers = []
         for shared_layer in shared.alllayers:
@@ -120,10 +142,10 @@ class ResNetLatShared(nn.Module):
             self.top_lat = SideAndCombShared(
                 shared.top_lat, self.norm_layer, self.activation_fun)
 
-        if not instruct(opts, 'use_top_flag'):
+        try:
+            use_top_flag = bool(opts.use_top_flag)
+        except:
             use_top_flag = False
-        else:
-            use_top_flag = opts.use_top_flag
         self.use_top_flag = use_top_flag
         if self.use_top_flag:
             # flag at BU2. It is not shared across the BU towers
@@ -141,7 +163,7 @@ class ResNetLatShared(nn.Module):
         layers = []
         for shared_block in blocks:
             layers.append(BasicBlockLatShared(
-                shared_block, norm_layer, self.activation_fun))
+                shared_block, norm_layer, self.activation_fun, orig_relus=self.orig_relus))
 
         return nn.ModuleList(layers)
 
@@ -156,7 +178,7 @@ class ResNetLatShared(nn.Module):
 
         Returns:
             _type_: _description_
-        """        
+        """
         if self.use_bu1_flag:
             f = self.h_flag_bu(flags)
             f = f.view(self.flag_shape)
@@ -199,6 +221,7 @@ class ResNetLatShared(nn.Module):
 
         return x, laterals_out
 
+
 class ResNetTDLat(nn.Module):
     """ResNetTDLat is ResNet network with lateral connections
     """
@@ -209,13 +232,13 @@ class ResNetTDLat(nn.Module):
         self.use_lateral = opts.Models.use_lateral_butd
         self.activation_fun = opts.Models.activation_fun
         self.use_td_flag = opts.use_td_flag
-        self.norm_layer = opts.Models.norm_fun
+        self.norm_layer = opts.Models.norm_layer
 
         top_filters = opts.Models.nfilters[-1]
         self.top_filters = top_filters
         self.inplanes = top_filters
         # TODO flag_size is missing
-        # When training on emnist flag_size should be `flag_size = ndirections + nclasses_existence` 
+        # When training on emnist flag_size should be `flag_size = ndirections + nclasses_existence`
         # When training on avatar flag_size should be `flag_size = nclasses_existence + nfeatures`
         if opts.use_td_flag:
             self.h_flag_td = nn.Sequential(nn.Linear(opts.flag_size, top_filters), self.norm_layer(top_filters, dims=1),
@@ -260,13 +283,13 @@ class ResNetTDLat(nn.Module):
             layers.append(block(self.inplanes, self.inplanes, 1,
                           norm_layer, self.activation_fun, self.use_lateral))
         layers.append(block(self.inplanes, planes, stride,
-                      norm_layer, self.activation_fun, self.use_lateral))
+                      norm_layer, self.activation_fun, self.use_lateral,orig_relus=False))
         self.inplanes = planes * block.expansion
 
         return nn.ModuleList(layers)
 
-    def forward(self, bu_out,flag,laterals_in):
-        #TODO change input model to **kwargs or to fix the inputs!
+    def forward(self, bu_out, flag, laterals_in):
+        # TODO change input model to **kwargs or to fix the inputs!
         # Get rid of the `inputs` variable
         # bu_out, flag, laterals_in = inputs
         laterals_out = []

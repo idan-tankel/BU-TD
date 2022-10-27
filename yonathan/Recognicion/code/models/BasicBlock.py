@@ -1,22 +1,30 @@
+from turtle import up
 from torch import nn
 
-from v26.funcs import orig_relus
-from v26.functions.convs import conv3x3, conv3x3up, conv1x1
-from v26.models.SideAndComb import SideAndComb
+# from v26.functions.convs import conv3x3, conv3x3up, conv1x1
+# from v26.models.SideAndComb import SideAndComb
+from models.SideAndComb import SideAndComb
+from functions.convs import conv3x3up
+from supp.general_functions import conv1x1, conv3x3
 
 
 class BasicBlockTDLat(nn.Module):
     expansion = 1
 
-    def __init__(self, inplanes, planes, stride, norm_layer, activation_fun, use_lateral):
+    def __init__(self, inplanes, planes, stride, norm_layer, activation_fun, use_lateral, orig_relus):
         super(BasicBlockTDLat, self).__init__()
         if use_lateral:
-            self.lat1 = SideAndComb(False, inplanes, norm_layer, activation_fun)
-            self.lat2 = SideAndComb(False, inplanes, norm_layer, activation_fun)
-            self.lat3 = SideAndComb(False, planes, norm_layer, activation_fun)
-        self.conv1 = nn.Sequential(conv3x3(inplanes, inplanes), norm_layer(inplanes))
+            self.lat1 = SideAndComb(
+                False, inplanes, norm_layer, activation_fun, orig_relus=orig_relus)
+            self.lat2 = SideAndComb(
+                False, inplanes, norm_layer, activation_fun, orig_relus=orig_relus)
+            self.lat3 = SideAndComb(
+                False, planes, norm_layer, activation_fun, orig_relus=orig_relus)
+        self.conv1 = nn.Sequential(
+            conv3x3(inplanes, inplanes), norm_layer(inplanes))
         self.relu1 = activation_fun()
-        self.conv2 = nn.Sequential(conv3x3up(inplanes, planes, stride), norm_layer(planes))
+        self.conv2 = nn.Sequential(
+            conv3x3up(inplanes, planes, stride), norm_layer(planes))
         if orig_relus:
             self.relu2 = activation_fun()
         self.relu3 = activation_fun()
@@ -24,7 +32,8 @@ class BasicBlockTDLat(nn.Module):
         outplanes = planes * BasicBlockTDLat.expansion
         if stride != 1:
             upsample = nn.Sequential(
-                nn.Upsample(scale_factor=stride, mode='bilinear', align_corners=False),
+                nn.Upsample(scale_factor=stride, mode='bilinear',
+                            align_corners=False),
                 conv1x1(inplanes, outplanes, stride=1),
                 norm_layer(outplanes)
             )
@@ -33,9 +42,9 @@ class BasicBlockTDLat(nn.Module):
                 conv1x1(inplanes, outplanes, stride=1),
                 norm_layer(outplanes)
             )
-
         self.upsample = upsample
         self.stride = stride
+        self.orig_relus = orig_relus
 
     def forward(self, inputs):
         x, laterals_in = inputs
@@ -55,7 +64,7 @@ class BasicBlockTDLat(nn.Module):
         laterals_out.append(x)
 
         x = self.conv2(x)
-        if orig_relus:
+        if self.orig_relus:
             x = self.relu2(x)
         if laterals_in is not None:
             x = self.lat3((x, lateral3_in))

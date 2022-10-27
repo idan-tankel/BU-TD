@@ -7,7 +7,7 @@ def Get_parser(ds_type, nchars_per_row=6, num_rows_in_the_image=1):
     repo_object = git.Repo(path=__file__, search_parent_directories=True)
     repo_object.working_tree_dir
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path_data_raw_for_omniglot',
+    parser.add_argument('--path_data_raw',
                         default='/home/sverkip/data/BU-TD/yonathan/Recognicion/data/omniglot/RAW', type=str, help='The Raw data path')
     parser.add_argument('--store_folder', default=f'{repo_object.working_tree_dir}/yonathan/Recognicion/data/' +
                         ds_type.from_enum_to_str()+'/samples/', type=str, help='The storing path')

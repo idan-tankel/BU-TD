@@ -4,6 +4,7 @@ dev = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 
 class Constants:
+    ''' ***DEPRECATION WARNING*** '''
     __dev = None
     __model = None
     __model_opts = None

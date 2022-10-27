@@ -33,7 +33,7 @@ class ChannelModulation(nn.Module):
         return inputs * self.weights  # performs the channel-modulation.
 
 
-def init_module_weights(modules: nn.Module) -> None:
+def init_module_weights(*modules: nn.Module) -> None:
     """
     Args:
         modules: All model's layers
@@ -54,7 +54,7 @@ def init_module_weights(modules: nn.Module) -> None:
 
 class SideAndComb(nn.Module):
     # performs the lateral connection BU1 -> TD or TD -> BU2
-    def __init__(self, opts: argparse, filters: int):
+    def __init__(self, opts: argparse.ArgumentParser, filters: int):
         """
         Args:
             opts: The model options.
@@ -63,7 +63,7 @@ class SideAndComb(nn.Module):
         super(SideAndComb, self).__init__()
         self.side = ChannelModulation(filters)  # channel-modulation layer.
         # batch norm after the channel-modulation of the lateral.
-        self.norm = opts.norm_layer(opts, filters)
+        self.norm = opts.norm_layer(ntasks = opts.ntasks, num_channels = filters)
         self.filters = filters
         self.relu1 = opts.activation_fun()  # activation_fun after the batch_norm layer
         self.relu2 = opts.activation_fun()  # activation_fun after the skip connection
@@ -196,8 +196,11 @@ class BUInitialBlock(nn.Module):
         self.ntasks = opts.ntasks
         self.use_lateral = opts.use_lateral_tdbu
         # The initial block downsampling from RGB.
-        self.conv1 = nn.Sequential(shared.conv1, opts.norm_layer(
-            opts, self.filters), self.activation_fun())
+        self.conv1 = nn.Sequential(
+            shared.conv1,
+            opts.norm_layer(ntasks=self.ntasks, num_channels=self.filters),
+            self.activation_fun()
+        )
         if self.use_lateral:
             # Skip connection from the TD initial embedding.
             self.bot_lat = SideAndComb(opts, shared.bot_lat.filters)
@@ -260,12 +263,12 @@ class BasicBlockBU(nn.Module):
             self.pixel_modulation_after_conv2 = Modulation(
                 opts=opts, shape=shape_spatial, pixel_modulation=True, task_embedding=self.task_embedding)
         self.conv1 = nn.Sequential(shared.conv1, opts.norm_layer(
-            opts, nchannels), opts.activation_fun())  # conv1
+            ntasks = opts.ntasks, num_channels = nchannels), opts.activation_fun())  # conv1
         self.conv2 = nn.Sequential(shared.conv2, opts.norm_layer(
-            opts, nchannels), opts.activation_fun())  # conv2
+            ntasks = opts.ntasks, num_channels = nchannels), opts.activation_fun())  # conv2
         if shared.downsample is not None:
-            downsample = nn.Sequential(shared.downsample, opts.norm_layer(opts,
-                                                                          nchannels))  # downsample,sometimes needed for the skip connection from the previous block.
+            downsample = nn.Sequential(shared.downsample, opts.norm_layer(ntasks = opts.ntasks,
+                                                                          num_channels = nchannels))  # downsample,sometimes needed for the skip connection from the previous block.
         else:
             downsample = None
         self.downsample = downsample
@@ -381,16 +384,16 @@ class InitialTaskEmbedding(nn.Module):
             # The task embedding.
             self.h_flag_task_td = nn.Sequential(nn.Linear(self.ndirections, self.top_filters // 2),
                                                 self.norm_layer(
-                                                    opts, self.top_filters // 2, dims=1),
+                                                    ntasks = opts.ntasks, num_channels = self.top_filters // 2, dims=1),
                                                 self.activation_fun())
             # The argument embedding.
             self.h_flag_arg_td = nn.Sequential(nn.Linear(self.nclasses[0], self.top_filters // 2),
                                                self.norm_layer(
-                                                   opts, self.top_filters // 2, dims=1),
+                                                   ntasks = opts.ntasks, num_channels = self.top_filters // 2, dims=1),
                                                self.activation_fun())
             # The projection layer.
             self.h_top_td = nn.Sequential(nn.Linear(self.top_filters * 2, self.top_filters),
-                                          self.norm_layer(opts, self.top_filters, dims=1), self.activation_fun())
+                                          self.norm_layer(ntasks = opts.ntasks, num_channels = self.top_filters, dims=1), self.activation_fun())
 
     def forward(self, inputs: tuple) -> tuple:
         """
@@ -456,19 +459,19 @@ class BasicBlockTD(nn.Module):
             self.lat2 = SideAndComb(opts, in_channels)
             self.lat3 = SideAndComb(opts, out_channels)
         self.conv1 = conv3x3(in_channels, in_channels)
-        self.conv1_norm = opts.norm_layer(opts, in_channels)
+        self.conv1_norm = opts.norm_layer(ntasks = opts.ntasks, num_channels = in_channels)
         self.relu1 = opts.activation_fun()
         self.conv2 = conv3x3up(in_channels, out_channels, size, stride > 1)
-        self.conv2_norm = opts.norm_layer(opts, out_channels)
+        self.conv2_norm = opts.norm_layer(ntasks = opts.ntasks, num_channels = out_channels)
         self.relu3 = opts.activation_fun()
         upsample = None
         out_channels = out_channels * BasicBlockTD.expansion
         if stride != 1:
             upsample = nn.Sequential(nn.Upsample(size=size, mode='bilinear', align_corners=False),
-                                     conv1x1(in_channels, out_channels, stride=1), opts.norm_layer(opts, out_channels))
+                                     conv1x1(in_channels, out_channels, stride=1), opts.norm_layer(ntasks = opts.ntasks, num_channels = out_channels))
         elif in_channels != out_channels:
             upsample = nn.Sequential(conv1x1(
-                in_channels, out_channels, stride=1), opts.norm_layer(opts, out_channels))
+                in_channels, out_channels, stride=1), opts.norm_layer(ntasks = opts.ntasks, num_channels = out_channels))
         self.upsample = upsample
 
     def forward(self, inputs):

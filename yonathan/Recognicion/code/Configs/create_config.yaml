@@ -1,6 +1,9 @@
 ---
 # the default values are stored within the config.yaml file
 dataset: emnist # name of the dataset to work on (deafult: emnist)
+ntasks: 4  # (`int`) one task for each direction
+nclasses: 47 # (`int`) number of classes within the dataset
+
 
 # storing options
 path_data_raw: ../data # the path to the dataaset to be stored in, relative to the working dir (default='../data')
@@ -8,15 +11,20 @@ store_folder: ../data # similar
 job_chunk_size: 1000 # (`int`) The number of samples each jobs processes
 folder_split: True   # (`bool`). If set to true, split the content of the raw data into folders of size `folder_size`
 folder_size: 1000  # (`int`) The size of the folder to split the data into
-threads: 10 # (`int`) The number of threads to use for the data processing
+nthreads: 10 # (`int`) The number of threads to use for the data processing
 
 # preprocessing options
-augment_data: True # (`bool`) If set to true, augment the data with random rotations, flips, and translations
+augment_sample: True # (`bool`) If set to true, augment the data with random rotations, flips, and translations
 letter_size: 28 # (`int`) The size of the letters to be used for the preprocessing (default=28)
-nchars_per_row: &nchars_per_row 6 # (`int`) The number of characters per row to be used in the image (default=5)
+nchars_per_row: 6 # (`int`) The number of characters per row to be used in the image (default=5)
 image_size: [112,224] # (`list` of length 2) The size of the image to use for the preprocessing (default=[112,224]). The image will be resized to this size
 sample_nchars:  # default=nchars_per_row * num_rows_in_the_image help='The number of characters in each image (`int`)
 num_rows_in_the_image: 1 # (`int`) The number of rows in the image 
+# scale parameters of the preprocessing
+minscale: 0.8 # (`float`) The minimum scale of the preprocessing ratio (default=0.8)
+maxscale: 1.1 # (`float`) The maximum scale of the preprocessing ratio (default=1.1)
+minshift: 0 # (`float`) The minimum shift in the image augmentation
+maxshift: 0 # (`float`) The maximum shift in the image augmentation
 
 
 # building traininga and validation set options

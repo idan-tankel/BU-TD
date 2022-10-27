@@ -1,7 +1,6 @@
 import torch
 from torch import nn
 
-from v26.functions.convs import conv3x3up
 
 dev = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
@@ -20,8 +19,17 @@ class ImageHead(nn.Module):
 
 
 class OccurrenceHead(nn.Module):
+    """
+    OccurrenceHead FullyConeccted layer of the output features
+    """    
 
     def __init__(self, opts):
+        """
+        __init__ based on `nn.Linear`
+
+        Args:
+            opts (`argparse.ArgumentParser` | `Config` | `SimpleNamespace` ): Model options to determine the number of filters
+        """        
         super(OccurrenceHead, self).__init__()
         opts = opts.Models
         filters = opts.nclasses[0][0]-1 # TODO-change to support to the 

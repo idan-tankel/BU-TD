@@ -1,5 +1,6 @@
 import sys
 sys.path.append(r'/home/idanta/BU-TD/yonathan/Recognicion/code/')
+
 import pytorch_lightning as pl
 from supp.Parser import GetParser
 from supp.get_dataset import get_dataset_for_spatial_realtions
@@ -11,11 +12,14 @@ from Checkpoint_model_definition import CheckpointSaver, ModelWrapped
 import torch.nn as nn
 from supp.Dataset_and_model_type_specification import Flag
 from Configs.Config import Config
+from supp.create_model import create_model
 import git
+import sys
+from types import NoneType
 # TODO write an own import function using imp
 git_repo = git.Repo(__file__, search_parent_directories=True)
 git_root = git_repo.working_dir
-
+sys.path.append(str(git_root))
 
 class Training_flag:
     def __init__(self, train_all_model: bool, train_arg: bool, train_task_embedding: bool, train_head: bool):
@@ -33,6 +37,7 @@ class Training_flag:
 
     def Get_learned_params(self, model: nn.Module, lang_idx: int, direction: int):
         """
+        *** MARKED FOR DEPRECATION ***
         Args:
             model: The model.
             lang_idx: Language index.
@@ -54,13 +59,18 @@ class Training_flag:
 
 
 def main(train_right=True, train_left=False):
-    project_path = Path(__file__).parents[2]
+    git_repo = git.Repo(__file__, search_parent_directories=True)
+    git_root = git_repo.working_dir
+    try:
+        project_path = Path(git_root)
+    except Exception:
+        project_path = Path(os.getcwd())
     data_path = os.path.join(
-        project_path, 'data/emnist/samples/24_extended_testing')
+        project_path.parent, 'data/6_extended_testing')
     # TODO change these hard coded paths!
     tmpdir = os.path.join(project_path, 'data/emnist/results/')
     checkpoint_path = os.path.join(tmpdir, 'MyFirstCkt.ckpt')
-    parser = GetParser(task_idx=0, direction_idx='right', flag=Flag.ZF)
+    parser = GetParser(task_idx=0, direction_idx='right', flag=Flag.TD)
     parser = Config()
     ModelCkpt = ModelCheckpoint(
         dirpath=tmpdir, monitor="train_loss_epoch", mode="min")
@@ -74,21 +84,23 @@ def main(train_right=True, train_left=False):
                          logger=wandb_logger, callbacks=[ModelCkpt])
     training_flag = Training_flag(
         train_all_model=True, train_arg=False, train_task_embedding=False, train_head=False)
-    model = 
+    model = create_model(model_opts=parser)
     learned_params = training_flag.Get_learned_params(
-        parser.model, lang_idx=0, direction=0)
+        model, lang_idx=0, direction=0)
     if train_right:
         train_dl, test_dl, val_dl, *the_datasets = get_dataset_for_spatial_realtions(
             parser, data_path, lang_idx=0, direction=0)
         # train_dl, test_dl, val_dl, train_ds, test_ds, val_ds
         # TODO: why return a tuple? turn this into a dict
-        model = ModelWrapped(parser, learned_params, ckpt=Checkpoint_saver)
-        trainer.fit(model, train_dataloaders=train_dl, val_dataloaders=test_dl)
     if train_left:
         train_dl, test_dl, val_dl, *the_datasets = get_dataset_for_spatial_realtions(
             parser, data_path,  lang_idx=0,    direction=1)
-        model = ModelWrapped(parser, learned_params, ckpt=Checkpoint_saver)
-        trainer.fit(model, train_dataloaders=train_dl, val_dataloaders=test_dl)
+    model_wrapped = ModelWrapped(
+        parser, learned_params, ckpt=Checkpoint_saver, model=model, nbatches_train=len(train_dl))
+    wandb_logger.watch(model=model_wrapped,log='all')
+    # log all model topology and grads tp the website
+    trainer.fit(model_wrapped, train_dataloaders=train_dl,
+                val_dataloaders=test_dl)
 
 
 main(True, False)

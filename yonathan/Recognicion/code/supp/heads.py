@@ -48,7 +48,7 @@ class HeadSingleTask(nn.Module):
 
 
 class MultiTaskHead(nn.Module):
-    def __init__(self, opts: argparse, transfer_learning_params:list = None ):
+    def __init__(self, opts: argparse.ArgumentParser, transfer_learning_params:list = None ):
         """
         Multi head task-head supporting all needed tasks.
         Args:
@@ -96,7 +96,7 @@ class MultiTaskHead(nn.Module):
 
 class OccurrenceHead(nn.Module):
 
-    def __init__(self, opts: argparse):
+    def __init__(self, opts: argparse.ArgumentParser):
         """
         Args:
             opts: The model options.
