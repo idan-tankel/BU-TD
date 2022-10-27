@@ -24,7 +24,6 @@ def get_dataset_for_spatial_realtions(opts: argparse, data_fname: str, lang_idx:
         direction: The direction tuple.
 
     Returns: The train_dl, test_dl, val_dl(if exists) datasets.
-
     """
 
     if opts.model_flag is not Flag.NOFLAG:  # Import 'All' dataset.
@@ -38,6 +37,7 @@ def get_dataset_for_spatial_realtions(opts: argparse, data_fname: str, lang_idx:
         MetaData = pickle.load(new_data_file)
     batch_size = opts.bs
     image_size = MetaData.parser.image_size  # Get the image size.
+    opts.inshape = (3, *image_size) # Updating the image size according to the actual data.
     obj_per_row = MetaData.parser.nchars_per_row  # Getting the number of chars per row.
     obj_per_col = MetaData.parser.num_rows_in_the_image  # Getting the number of chars per col.
     nsamples_train = MetaData.nsamples_dict['train']  # Getting the number of train samples.
@@ -64,10 +64,4 @@ def get_dataset_for_spatial_realtions(opts: argparse, data_fname: str, lang_idx:
                          obj_per_row, obj_per_col)
         val_dl = DataLoader(val_ds, batch_size=batch_size, num_workers=opts.workers, shuffle=False, pin_memory=True)
 
-    # Storing tht parameters into the Parser
-    '''
-    opts.img_channels = 3
-    opts.image_size = image_size
-    opts.inshape = (opts.img_channels, *opts.image_size)
-    '''
     return train_dl, test_dl, val_dl

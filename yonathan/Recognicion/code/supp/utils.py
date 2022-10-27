@@ -102,12 +102,13 @@ def num_params(params: list) -> int:
     return nparams
 
 
-def create_optimizer_and_scheduler(opts: argparse, learned_params: list) -> tuple:
+def create_optimizer_and_scheduler(opts: argparse, learned_params: list, nbatches_train:int) -> tuple:
     """
     Create optimizer and a scheduler according to opts.
     Args:
         opts: The model options.
         learned_params: The learned parameters.
+        nbatches_train: The numer of batches in the data-loader
 
     Returns: Optimizer, scheduler.
 
@@ -117,7 +118,7 @@ def create_optimizer_and_scheduler(opts: argparse, learned_params: list) -> tupl
         optimizer = optim.SGD(learned_params, lr=opts.initial_lr, momentum=opts.momentum, weight_decay=opts.wd)
         if opts.cycle_lr:
             scheduler = optim.lr_scheduler.CyclicLR(optimizer, base_lr=opts.base_lr, max_lr=opts.max_lr,
-                                                    step_size_up=opts.nbatches_train // 2, step_size_down=None,
+                                                    step_size_up=nbatches_train // 2, step_size_down=None,
                                                     mode='triangular', gamma=1.0, scale_fn=None,
                                                     cycle_momentum=True,
                                                     )
@@ -125,7 +126,7 @@ def create_optimizer_and_scheduler(opts: argparse, learned_params: list) -> tupl
         optimizer = optim.Adam(learned_params, lr=opts.base_lr, weight_decay=opts.wd)
         if opts.cycle_lr:
             scheduler = optim.lr_scheduler.CyclicLR(optimizer, base_lr=opts.base_lr, max_lr=opts.max_lr,
-                                                    step_size_up=opts.nbatches_train // 2, step_size_down=None,
+                                                    step_size_up=nbatches_train // 2, step_size_down=None,
                                                     mode='triangular', gamma=1.0, scale_fn=None,
                                                     cycle_momentum=False, )
 

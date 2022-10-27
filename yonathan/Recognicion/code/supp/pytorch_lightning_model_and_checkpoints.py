@@ -68,12 +68,13 @@ class ModelWrapped(LightningModule):
         self.automatic_optimization = False
         self.model = opts.model
         self.opts = opts
+        self.nbatches_train = nbatches_train
         self.direction = direction_id
         self.loss_fun = opts.criterion
         self.ckpt = ckpt
         self.learned_params = learned_params
         self.accuracy = opts.task_accuracy
-        self.optimizer , self.scheduler =  create_optimizer_and_scheduler(opts, learned_params, nbatches_train)
+        self.optimizer, self.scheduler = create_optimizer_and_scheduler(self.opts, self.learned_params, self.nbatches_train)
 
     def training_step(self, batch, batch_idx):
         model = self.model
@@ -114,8 +115,9 @@ class ModelWrapped(LightningModule):
             self.log('val_acc', task_accuracy, on_step=True, on_epoch=True, logger=True)
             return task_accuracy.sum()
 
+
     def configure_optimizers(self):
-        opti, sched = create_optimizer_and_scheduler(self.opts, self.learned_params)
+        opti, sched = create_optimizer_and_scheduler(self.opts, self.learned_params, self.nbatches_train)
         return [opti], [sched]
 
     def validation_epoch_end(self, outputs):
