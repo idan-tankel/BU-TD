@@ -2,13 +2,13 @@ import sys
 import warnings
 
 sys.path.append(r'/')
-from supp.general_functions import preprocess
+from supp.utils import preprocess
 from torch.utils.data import DataLoader
 import torch
 from avalanche.models.utils import avalanche_forward
 from avalanche.training.utils import copy_params_dict, zerolike_params_dict
 from avalanche.training.plugins import EWCPlugin
-
+# TODO - ADD SUPPORT TO EXCLUDED PARAMS.
 class MyEWCPlugin(EWCPlugin):
     def __init__( self,parser, mode="separate",   decay_factor=None,   keep_importance_data=False,prev_model = None, old_dataset = None ):
         """
@@ -28,12 +28,12 @@ class MyEWCPlugin(EWCPlugin):
         if prev_model != None and old_dataset != None:
             # Update importances and old params to begin with EWC training.
             print("Computing Importances")
-            importances = self.compute_importances(prev_model, parser.criterion, parser.optimizer, old_dataset, parser.device, parser.train_mb_size, False)
+            importances = self.compute_importances(prev_model, parser.criterion, parser.optimizer, old_dataset, parser.device, parser.train_mb_size, False, just_initialized  = True, train_exp_counter =0)
             self.update_importances(importances, 0)
             print("Done computing Importances")
             self.saved_params[0] = dict(copy_params_dict(prev_model.bumodel)) # Change to the excluded params.
 
-    def compute_importances(self, model, criterion, optimizer, dataset, device, batch_size,use_task_ids):
+    def compute_importances(self, model, criterion, optimizer, dataset, device, batch_size,use_task_ids, just_initialized = False,train_exp_counter = 0):
         """
         Compute EWC importance matrix for each parameter
         """
@@ -62,10 +62,16 @@ class MyEWCPlugin(EWCPlugin):
             else:
              x = preprocess(batch, device)
             task_labels = batch[-1].to(device)
+
+            if just_initialized:
+                task_id = 0
+            else:
+                task_id = train_exp_counter
+
             if len(x[1].shape) == 1:
              x[1] = x[1].view([-1,1])
             optimizer.zero_grad()
-            out = avalanche_forward(model, x, task_labels)
+            out = avalanche_forward(model, x, task_id)
             loss = criterion(self.parser, x, out)
             loss.backward()
 
@@ -97,7 +103,8 @@ class MyEWCPlugin(EWCPlugin):
                 strategy.experience.dataset,
                 strategy.device,
                 strategy.train_mb_size,
-                True
+                use_task_ids = True,
+                exp_counter = strategy.EpochClock.train_exp_counter
             )
             self.update_importances(importances, exp_counter)
             self.saved_params[exp_counter] = copy_params_dict(strategy.model.bumodel)

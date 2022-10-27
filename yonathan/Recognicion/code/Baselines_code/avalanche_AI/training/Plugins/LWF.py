@@ -25,10 +25,11 @@ class MyLwFPlugin(LwFPlugin):
 
         super().__init__()
 
-        self.alpha = parser.alpha_LWF
+        self.lamda = parser.lwf_lambda
         self.temperature =parser.temperature_LWF
         self.prev_model = copy.deepcopy(prev_model) if prev_model != None else None
         self.prev_classes = {"0": set()}
+        self.prev_tasks = {}
 
     def _distillation_loss(self, cur_out:torch, prev_out:torch, x:list[torch]):
         """
@@ -67,8 +68,7 @@ class MyLwFPlugin(LwFPlugin):
         if self.prev_model is None:
             return 0
         else:
-
-            y_prev = {"0": self.prev_model.forward_and_out_to_struct(x, head = 0)  }
+            y_prev = {"0": self.prev_model.forward_and_out_to_struct(x, head = 0)  } # TODO - CHANGE 0 TO GENERAL.
             y_curr = {"0": model.forward_and_out_to_struct(x, head = 0)  }
             dist_loss = 0
             for task_id in y_prev.keys():
@@ -88,9 +88,9 @@ class MyLwFPlugin(LwFPlugin):
             **kwargs: 
 
         """
-        alpha = ( self.alpha[strategy.clock.train_exp_counter]   if isinstance(self.alpha, (list, tuple)) else self.alpha  )
+        alpha = ( self.lamda[strategy.clock.train_exp_counter]   if isinstance(self.lamda, (list, tuple)) else self.lamda  )
         penalty = self.penalty(strategy.model, strategy.mb_x, alpha )
-        print(penalty)
+      #  print(penalty)
         strategy.loss += penalty
 
     def after_training_exp(self, strategy, **kwargs):

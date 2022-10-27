@@ -7,11 +7,18 @@ from avalanche.training.plugins.strategy_plugin import SupervisedPlugin
 from avalanche.training.utils import copy_params_dict, zerolike_params_dict
 from avalanche.models.utils import avalanche_forward
 
-def Initilize_grads(model):
-    for name , param in model.named_parameters():
-        param.grad = torch.zeros_like(param)
+def copy_params_dict(model, copy_grad=False):
+    """
+    Create a list of (name, parameter), where parameter is copied from model.
+    The list has as many parameters as model, with the same size.
 
-# TODO - REPLACE BUMODEL WITH FEATURES.
+    :param model: a pytorch model
+    :param copy_grad: if True returns gradients instead of parameter values
+    """
+    if copy_grad:
+        return [(k, p.grad.data.clone()) for k, p in model.named_parameters()]
+    else:
+        return [(k, p.data.clone()) for k, p in model.named_parameters()]
 
 class RWalkPlugin(SupervisedPlugin):
     """
@@ -29,11 +36,8 @@ class RWalkPlugin(SupervisedPlugin):
         this plug-in should be used in conjunction with a replay strategy
         (e.g., :class:`ReplayPlugin`).
     """
-    # ewc_lambda: float = 0.1, ewc_alpha: float = 0.9, delta_t: int = 10
-    def __init__(
-        self, parser
-    ):
 
+    def __init__(self, parser ):
         """
         :param ewc_lambda: hyperparameter to weigh the penalty inside the total
                loss. The larger the lambda, the larger the regularization.
@@ -46,18 +50,15 @@ class RWalkPlugin(SupervisedPlugin):
         """
 
         super().__init__()
+        # ewc_lambda: float = 0.1, ewc_alpha: float = 0.9, delta_t: int = 10
 
-        assert 0 <= parser.rwalk_ewc_alpha <= 1, "`ewc_alpha` must be in [0, 1]."
-        assert parser.rwalk_delta_t >= 1, "`delta_t` must be at least 1."
-
-        self.ewc_alpha = parser.rwalk_ewc_alpha
-        self.ewc_lambda = parser.rwalk_ewc_lambda
-        self.eps = 1e-8
-        self.delta_t = parser.rwalk_delta_t
+       # assert 0 <= ewc_alpha <= 1, "`ewc_alpha` must be in [0, 1]."
+     #   assert delta_t >= 1, "`delta_t` must be at least 1."
         self.parser = parser
-        #
-        Initilize_grads(parser.model)
-        #
+
+        self.rwalk_alpha = parser.rwalk_alpha
+        self.rwalk_lambda = parser.rwalk_lambda
+        self.delta_t = parser.rwalk_delta_t
 
         # Information computed every delta_t
         self.checkpoint_params = None
@@ -100,11 +101,12 @@ class RWalkPlugin(SupervisedPlugin):
                     )
                     module.train()
 
-        x, task_labels = batch[:-1], batch[-1]
+        x = batch[:-1]
+        y = batch[:-1]
 
         strategy.optimizer.zero_grad()
-        out = avalanche_forward(model, x, task_labels)
-        loss = strategy._criterion(self.parser, x, out)  # noqa
+        out = strategy.model(x)
+        loss = strategy._criterion(self.parser,y, out)  # noqa
         loss.backward()
 
         self.iter_grad = copy_params_dict(model.bumodel, copy_grad=True)
@@ -141,8 +143,8 @@ class RWalkPlugin(SupervisedPlugin):
                     (
                         k1,
                         (
-                            self.ewc_alpha * new_imp
-                            + (1 - self.ewc_alpha) * new_imp
+                            self.rwalk_alpha * new_imp
+                            + (1 - self.rwalk_alpha) * new_imp
                         ),
                     )
                 )
@@ -164,65 +166,11 @@ class RWalkPlugin(SupervisedPlugin):
             eps = torch.finfo(loss.dtype).eps
             score += loss / (0.5 * imp * (new_p - old_p).pow(2) + eps)
 
-
-    def before_training_exp(self, strategy, **kwargs):
-        super(RWalkPlugin, self).before_training_exp(strategy, **kwargs)
-        if strategy.EpochClock.pretrained_model and strategy.EpochClock.just_initialized:
-            #
-            self.checkpoint_loss = zerolike_params_dict(strategy.model.bumodel)
-            self.checkpoint_scores = zerolike_params_dict(strategy.model.bumodel)
-            self.checkpoint_params = copy_params_dict(strategy.model.bumodel)
-            #
-            self._update_importance(strategy)
-            self.exp_importance = self.iter_importance
-            self.exp_params = copy_params_dict(strategy.model.bumodel)
-
-            if self.exp_scores is None:
-                self.exp_scores = self.checkpoint_scores
-            else:
-                exp_scores = []
-
-                for (k1, p_score), (k2, p_cp_score) in zip(
-                        self.exp_scores, self.checkpoint_scores
-                ):
-                    assert k1 == k2, "Error in RWalk score computation."
-                    exp_scores.append((k1, 0.5 * (p_score + p_cp_score)))
-
-                self.exp_scores = exp_scores
-
-            # Compute weight penalties once for all successive iterations
-            # (t_k+1 variables remain constant in Eq. 8 in the paper)
-            self.exp_penalties = []
-
-            # Normalize terms in [0,1] interval, as suggested in the paper
-            # (the importance is already > 0, while negative scores are relu-ed
-            # out, hence we scale only the max-values of both terms)
-            max_score = max(map(lambda x: x[1].max(), self.exp_scores)) + self.eps
-            max_imp = max(map(lambda x: x[1].max(), self.exp_importance)) + self.eps
-
-            for (k1, imp), (k2, score) in zip(self.exp_importance, self.exp_scores):
-                assert k1 == k2, "Error in RWalk penalties computation."
-
-                self.exp_penalties.append(
-                    (k1, imp / max_imp + F.relu(score) / max_score)
-                )
-
-            self.checkpoint_scores = zerolike_params_dict(strategy.model.bumodel)
-
-        elif not strategy.EpochClock.pretrained_model and strategy.EpochClock.just_initialized:
-            #
-            self.checkpoint_loss = zerolike_params_dict(strategy.model.bumodel)
-            self.checkpoint_scores = zerolike_params_dict(strategy.model.bumodel)
-            self.checkpoint_params = copy_params_dict(strategy.model.bumodel)
-            #
-
     # Initialize t_0 checkpoint information
     def before_training(self, strategy, *args, **kwargs):
-        pass
-      #  if strategy.EpochClock.just_initialized:
-        #    self.checkpoint_loss = zerolike_params_dict(strategy.model.bumodel)
-       #     self.checkpoint_scores = zerolike_params_dict(strategy.model.bumodel)
-       #     self.checkpoint_params = copy_params_dict(strategy.model.bumodel)
+        self.checkpoint_loss = zerolike_params_dict(strategy.model.bumodel)
+        self.checkpoint_scores = zerolike_params_dict(strategy.model.bumodel)
+        self.checkpoint_params = copy_params_dict(strategy.model.bumodel)
 
     # Compute variables at t step, at the end of the iteration
     # it will be used to compute delta variations (t+1 - t)
@@ -233,8 +181,7 @@ class RWalkPlugin(SupervisedPlugin):
 
     # Add loss penalties (Eq. 8 in the RWalk paper)
     def before_backward(self, strategy, *args, **kwargs):
-        exp_counter = strategy.EpochClock.train_exp_counter
-        if exp_counter > 0:
+        if strategy.EpochClock.train_exp_counter > 0:
             ewc_loss = 0
 
             for (k1, penalty), (k2, param_exp), (k3, param) in zip(
@@ -245,8 +192,8 @@ class RWalkPlugin(SupervisedPlugin):
                 assert k1 == k2 == k3, "Error in RWalk loss computation."
 
                 ewc_loss += (penalty * (param - param_exp).pow(2)).sum()
-            print(self.ewc_lambda * ewc_loss)
-            strategy.loss += self.ewc_lambda * ewc_loss
+        #    print(self.rwalk_lambda * ewc_loss)
+            strategy.loss += self.rwalk_lambda * ewc_loss
 
     # Compute data at (t+1) time step. If delta_t steps has passed, update
     # also checkpoint data
@@ -295,4 +242,4 @@ class RWalkPlugin(SupervisedPlugin):
                     (k1, imp / max_imp + F.relu(score) / max_score)
                 )
 
-            self.checkpoint_scores = zerolike_params_dict(strategy.model.bumodel)
+            self.checkpoint_scores = zerolike_params_dict(strategy.model)

@@ -8,7 +8,7 @@ from avalanche.training.plugins.evaluation import EvaluationPlugin
 from supp.training_functions import load_model
 from supp.Dataset_and_model_type_specification import Flag, DsType, Model_Options_By_Flag_And_DsType
 from supp.Parser import GetParser
-from supp.general_functions import create_optimizer_and_sched
+from supp.utils import create_optimizer_and_scheduler
 from supp.get_dataset import get_dataset_for_spatial_realtions
 from supp.models import ResNet
 
@@ -28,7 +28,7 @@ tmpdir = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/emnist/results/'
 
 [the_datasets, train_dl ,  test_dl, val_dl , train_dataset, test_dataset, val_dataset] = get_dataset_for_spatial_realtions(parser, data_path,lang_idx = 0, direction = 1)
 #
-opts.optimizer, opts.scheduler = create_optimizer_and_sched(parser, parser.model.parameters())
+opts.optimizer, opts.scheduler = create_optimizer_and_scheduler(parser, parser.model.parameters())
 #
 train_dataset.targets = [0 for _ in range(len(train_dataset))] # [train_dataset[i][1] for i in range(len(train_dataset))]
 test_dataset.targets = [0 for _ in range(len(test_dataset))] # [test_dataset[i][1] for i in range(len(test_dataset))]

@@ -11,7 +11,7 @@ from avalanche.models.utils import avalanche_forward
 from avalanche.training.utils import copy_params_dict, zerolike_params_dict
 from avalanche.training.plugins import MASPlugin
 from torch.utils.data import Dataset
-from supp.general_functions import preprocess
+from supp.utils import preprocess
 from avalanche.training.templates.supervised import SupervisedTemplate
 # TODO - ALSO HERE GET RID OF THE BUMODEL, INSTEAD USE FEAUTURES.
 
@@ -49,7 +49,7 @@ class MyMASPlugin(MASPlugin):
         super().__init__()
 
         # Regularization Parameters
-        self._lambda = parser.mas_lambda_reg
+        self._lambda = parser.mas_lambda
         self.alpha = parser.mas_alpha
         # Model parameters
         self.params: Union[Dict, None] = None
@@ -63,7 +63,9 @@ class MyMASPlugin(MASPlugin):
         if parser.pretrained_model:
             self.model_old = copy.deepcopy(parser.model)
             self.old_data = parser.old_dataset
+            print("Computing Importances")
             self.importance = self._get_importance(self.model_old, self.old_data, self.batch_size, parser.device)
+            print("Done computing Importances")
             self.params = self.params = dict(copy_params_dict(self.model_old.bumodel))
 
     def _get_importance(self, model:nn.Module, dataset:Dataset, train_mb_size:int,device:Union['cuda','cpu']):
@@ -91,30 +93,26 @@ class MyMASPlugin(MASPlugin):
             # Get batch
 
             # Move batch to device
-            batch = preprocess(self.parser, batch)
+            batch = preprocess(batch, device)
 
             # Forward pass
             model.zero_grad()
-            out = avalanche_forward(model,batch, None)[1]
-
+            '''
             if len(batch) == 2 or len(batch) == 3:
                 x, _, t = batch[0], batch[1], batch[-1]
             else:
                 raise ValueError("Batch size is not valid")
-
+            '''
             # Move batch to device
-            x = x.to(device)
-
             # Forward pass
             model.zero_grad()
-            out = avalanche_forward(model, x, t)
+            out = model.forward_and_out_to_struct(batch, 0).classifier
             # Average L2-Norm of the output
             loss = torch.norm(out, p="fro", dim=1).mean()
             loss.backward()
 
             # Accumulate importance
             for name, param in model.bumodel.named_parameters():
-
                 if param.requires_grad:
                     # In multi-head architectures, the gradient is going
                     # to be None for all the heads different from the
@@ -123,10 +121,7 @@ class MyMASPlugin(MASPlugin):
                         importance[name] += param.grad.abs() * len(batch)
 
         # Normalize importance
-        importance = {
-            name: importance[name] / len(dataloader)
-            for name in importance.keys()
-        }
+        importance = { name: importance[name] / len(dataloader) for name in importance.keys()  }
 
         return importance
 
@@ -155,7 +150,7 @@ class MyMASPlugin(MASPlugin):
                 )
 
         # Update loss
-        print(self._lambda * loss_reg)
+     #   print(self._lambda * loss_reg)
         strategy.loss += self._lambda * loss_reg
 
     def before_training(self, strategy:SupervisedTemplate, **kwargs):

@@ -13,14 +13,14 @@ from supp.datasets import DatasetAllDataSetTypesAll as dataset
 sys.path.append(r'/home/idanta/BU-TD/yonathan/Recognicion/code/create_dataset')
 
 
-def get_dataset_for_spatial_realtions(opts: argparse, data_fname: str, lang_idx: int, direction: int) -> list:
+def get_dataset_for_spatial_realtions(opts: argparse, data_fname: str, lang_idx: int, direction: tuple) -> list:
     """
     Getting the train,test,val(if exists) datasets.
     Args:
         opts: The model options.
         data_fname: The data path.
         lang_idx: The language index.
-        direction: The direction.
+        direction: The direction tuple.
 
     Returns: The train, test, val(if exists) datasets.
     (`tuple`): train_dl, test_dl, val_dl, train_ds, test_ds, val_ds
@@ -66,8 +66,9 @@ def get_dataset_for_spatial_realtions(opts: argparse, data_fname: str, lang_idx:
     nbatches_test = len(test_dl)
     nbatches_val = 0
 
+
     if os.path.exists(os.path.join(data_fname, 'val')):
-        val_ds = dataset(os.path.join(data_fname, 'val'), opts, direction,False, nsamples_val, obj_per_row, obj_per_col)
+        val_ds = dataset(os.path.join(data_fname, 'val'), opts,  arg_and_head_index, direction, False, nsamples_val, obj_per_row, obj_per_col)
         val_dl = DataLoader(val_ds, batch_size=batch_size, num_workers=opts.workers, shuffle=False, pin_memory=True)
         nbatches_val = len(val_dl)
     else:

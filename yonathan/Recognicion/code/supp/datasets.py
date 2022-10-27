@@ -77,7 +77,7 @@ class DataSetBase(Dataset):
          nexamples = self.nexamples
         else:
          nexamples = self.nexamples
-        nexamples = 1000
+      #  nexamples = 1000
         self.targets = [0 for _ in range(nexamples)]
         return nexamples
 
@@ -97,7 +97,7 @@ def struct_to_input(sample: object) -> tuple:
     return label_existence, label_all, flag, label_task
 
 class DatasetAllDataSetTypes(DataSetBase):
-    def __init__(self, root: str, opts:argparse, arg_and_head_index:int = 0, direction: int = 0,is_train = True, nexamples: int = None, obj_per_row=6,
+    def __init__(self, root: str, opts:argparse, arg_and_head_index:int = 0, direction: tuple = (0, 0),is_train = True, nexamples: int = None, obj_per_row=6,
                  obj_per_col=1, split: bool = True):
         """
         Omniglot data-set.
@@ -105,7 +105,7 @@ class DatasetAllDataSetTypes(DataSetBase):
             root: Path to the data.
             opts: The model options.
             arg_and_head_index: The language index.
-            direction: The direction id.
+            direction: The direction tuple.
             nexamples: The number of examples.
             obj_per_row: Number of objects per row.
             obj_per_col: Number of columns per row.
@@ -120,6 +120,7 @@ class DatasetAllDataSetTypes(DataSetBase):
         self.obj_per_row = obj_per_row
         self.obj_per_col = obj_per_col
         self.task_idx = torch.tensor(arg_and_head_index)
+        self.edge_class = self.nclasses_existence
 
     def __getitem__(self, index):
         """
@@ -130,6 +131,7 @@ class DatasetAllDataSetTypes(DataSetBase):
 
         """
         # Getting root to the sample
+      #  (direction_x, direction_y) = self.direction
         root = self.get_root_by_index(index)
         fname = os.path.join(root, '%d_img.jpg' % index)
         # Opening the image and converting to Tensor
@@ -148,37 +150,47 @@ class DatasetAllDataSetTypes(DataSetBase):
         direction_type_ohe = torch.nn.functional.one_hot(self.direction, self.ndirections)
         # Getting the character embedding.
         char_type_one = torch.nn.functional.one_hot(torch.tensor(char), self.nclasses_existence)
-        # Concatenating into one flag.
         flag = torch.concat([direction_type_ohe, task_type_ohe, char_type_one], dim=0).float()
-        edge_class = self.nclasses_existence
+        # Concatenating into one flag.
         r, c = (label_all == char).nonzero()
+        r, c = r[0], c[0]
+
+        '''
+        if 0 <= r + direction_y <= self.obj_per_col-1 and 0 <= c + direction_x <= self.obj_per_row-1:
+            label_task = label_all[r + direction_x, c + direction_y]
+        else:
+            label_task = self.edge_class
+        flag = torch.concat([direction_type_ohe, task_type_ohe, char_type_one], dim=0).float()
+        '''
+
         if self.direction == 0:
             # right
             if c == (self.obj_per_row - 1):
-                label_task = edge_class
+                label_task = self.edge_class
             else:
                 label_task = label_all[r, c + 1]
 
         if self.direction == 1:
             # left
             if c == 0:
-                label_task = edge_class
+                label_task = self.edge_class
             else:
                 label_task = label_all[r, c - 1]
 
         elif self.direction == 2:
             # Up
             if r == (self.obj_per_col - 1):
-                label_task = edge_class
+                label_task = self.edge_class
             else:
                 label_task = label_all[r + 1, c]
 
         elif self.direction == 3:
             # Down
             if r == 0:
-                label_task = edge_class
+                label_task = self.edge_class
             else:
                 label_task = label_all[r - 1, c]
+
         # TODO change this to use conv2d with the proper filter
         label_existence, label_all, label_task = map(torch.tensor, (label_existence, label_all, label_task))
         label_task = label_task.view([-1])

@@ -7,7 +7,7 @@ import torch.nn as nn
 
 from supp.Dataset_and_model_type_specification import Flag
 from supp.Parser import GetParser
-from supp.general_functions import create_optimizer_and_sched
+from supp.utils import create_optimizer_and_scheduler
 from supp.get_dataset import get_dataset_for_spatial_realtions
 from supp.logger import print_detail
 from supp.loss_and_accuracy import accuracy
@@ -72,7 +72,7 @@ def train_omniglot(opts: argparse, lang_idx: int, the_datasets: list, training_f
     cudnn.benchmark = True  # TODO:understand what it is.
     # Deciding which parameters will be trained: if True all the model otherwise,only the task embedding.
     learned_params = training_flag.Get_learned_params(opts.model, lang_idx, direction)
-    opts.optimizer, opts.scheduler = create_optimizer_and_sched(opts, learned_params)
+    opts.optimizer, opts.scheduler = create_optimizer_and_scheduler(opts, learned_params)
     # Training the learned params of the model.
     return fit(opts, the_datasets, lang_idx, direction)
 

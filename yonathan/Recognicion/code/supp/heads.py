@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 
 from supp.Dataset_and_model_type_specification import Flag
-from supp.general_functions import flag_to_task
+from supp.utils import flag_to_task
 
 
 class HeadSingleTask(nn.Module):
@@ -62,7 +62,7 @@ class MultiTaskHead(nn.Module):
         self.ds_type = opts.ds_type
         self.num_classes = opts.nclasses  # num_classes to create the task-heads according to.
         for i in range(self.ntasks * self.ndirections):  # For each task create its task-head according to num_clases.
-            index = i // self.ndirections
+            index = i // self.ndirections 
             layer = HeadSingleTask(opts, self.num_classes[index])
             self.taskhead.append(layer)
             if transfer_learning_params != None:
@@ -78,14 +78,13 @@ class MultiTaskHead(nn.Module):
 
         """
         (bu2_out, flag) = inputs
-
         direction_flag = flag[:, :self.ndirections]  # The task vector.
         task_flag = flag[:, self.ndirections:self.ndirections + self.ntasks]
         direction_id = flag_to_task(direction_flag)
         task_id = flag_to_task(task_flag)
         idx = direction_id + self.ndirections * task_id
 
-        if idx_out != None:
+        if idx_out != None :
             idx = idx_out
         bu2_out = bu2_out.squeeze()  # Make it 1-dimensional.
         task_out = self.taskhead[idx](bu2_out)  # apply the appropriate task-head.

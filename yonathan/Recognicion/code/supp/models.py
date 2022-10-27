@@ -6,7 +6,8 @@ import torch.nn as nn
 
 from supp.Dataset_and_model_type_specification import Flag, DsType
 from supp.blocks import BUInitialBlock, init_module_weights, InitialTaskEmbedding, SideAndComb, SideAndCombSharedBase
-from supp.general_functions import depthwise_separable_conv, get_laterals
+from supp.Module_blocks import depthwise_separable_conv
+from supp.utils import get_laterals
 from supp.heads import MultiTaskHead, OccurrenceHead
 
 
@@ -31,7 +32,7 @@ class TDModel(nn.Module):
         self.task_embedding = [[] for _ in range(self.ndirections)]
         self.argument_embedding = [[] for _ in range(self.ntasks)]
         self.InitialTaskEmbedding = InitialTaskEmbedding(opts,self.task_embedding)
-        if opts.ds_type is DsType.Omniglot and self.model_flag is Flag.ZF:
+        if opts.ds_type is DsType.Omniglot and self.model_flag is Flag.CL:
             for j in range(self.ntasks):
                 self.argument_embedding[j].extend(self.InitialTaskEmbedding.argument_embedding[j])
 
@@ -140,8 +141,7 @@ class BUStream(nn.Module):
         self.filters = opts.nfilters[0]
         self.InitialBlock = BUInitialBlock(opts, shared)
         layers = []
-        for layer_idx, shared_layer in enumerate(
-                shared.alllayers):  # For each shared layer we create associate BU layer.
+        for layer_idx, shared_layer in enumerate(shared.alllayers):  # For each shared layer we create associate BU layer.
             layers.append(self._make_layer(shared_layer, is_bu2, layer_idx))
         self.alllayers = nn.ModuleList(layers)
         self.avgpool = shared.avgpool  # Avg pool layer.
@@ -184,8 +184,7 @@ class BUStream(nn.Module):
             layer_lats_out = []
             for block_id, block in enumerate(layer):
                 lateral_layer_id = layer_id + 1
-                cur_lat_in = get_laterals(laterals_in, lateral_layer_id,
-                                          block_id)  # Get the laterals associate with the layer,block_id.
+                cur_lat_in = get_laterals(laterals_in, lateral_layer_id, block_id)  # Get the laterals associate with the layer,block_id if exist.
                 x, block_lats_out = block((x, flags, cur_lat_in))  # Compute the block with the lateral connection.
                 layer_lats_out.append(block_lats_out)
             laterals_out.append(layer_lats_out)
@@ -294,7 +293,7 @@ class BUTDModelShared(nn.Module):
         self.argument_embedding = None
         self.transfer_learning = [[] for _ in range(self.ndirections * self.ntasks)]
         self.use_lateral_butd = opts.use_lateral_butd
-        self.inputs_to_struct = opts.inputs_to_struct
+        self.inputs_to_struct = self.inputs_to_struct
         self.use_lateral_tdbu = opts.use_lateral_tdbu
         self.model_flag = opts.model_flag  # The model type
         self.use_bu1_loss = opts.use_bu1_loss  # Whether to use the Occurrence loss.
@@ -309,7 +308,7 @@ class BUTDModelShared(nn.Module):
         self.tdmodel = TDModel(opts, shapes)  # The TD stream.
         self.bumodel2 = BUStream(opts, bu_shared, is_bu2=True)  # The BU2 stream.
         self.Head = MultiTaskHead(opts, self.transfer_learning)  # The task-head to transform the last layer output to the number of classes.
-        if self.model_flag is Flag.ZF:  # Storing the Task embedding.
+        if self.model_flag is Flag.CL:  # Storing the Task embedding.
             self.task_embedding = list(map(list.__add__,self.bumodel2.task_embedding, self.tdmodel.task_embedding))
             if self.ds_type is DsType.Omniglot:
                 self.argument_embedding = self.tdmodel.argument_embedding
@@ -351,6 +350,20 @@ class BUTDModelShared(nn.Module):
         outs = [occurrence_out, task_out, bu_out, bu2_out]
         return outs  # Return all the outputs from all streams.
 
+    class inputs_to_struct:
+        # class receiving list of tensors and makes to a class.
+        def __init__(self, inputs):
+            """
+            Args:
+                inputs: The tensor list.
+            """
+            img, label_task, flag, label_all, label_existence = inputs
+            self.image = img
+            self.label_all = label_all
+            self.label_existence = label_existence
+            self.label_task = label_task
+            self.flag = flag
+
     class outs_to_struct:
         def __init__(self, outs: list[torch]):
             """
@@ -360,7 +373,7 @@ class BUTDModelShared(nn.Module):
             """
             occurrence_out, task_out, bu_out, bu2_out = outs
             self.occurence_out = occurrence_out
-            self.task = task_out
+            self.classifier = task_out
             self.bu = bu_out
             self.bu2 = bu2_out
 
@@ -408,13 +421,27 @@ class ResNet(nn.Module):
         Returns:
 
         """
-        samples = self.opts.inputs_to_struct(inputs)
+        samples = self.inputs_to_struct(inputs)
         images = samples.image
         flags = samples.flag
         model_inputs = [images, flags, None]
         bu_out, _ = self.bumodel(model_inputs)
         task_out = self.taskhead((bu_out, flags),head)
-        return task_out, bu_out
+        return  bu_out, task_out
+
+    class inputs_to_struct:
+        # class receiving list of tensors and makes to a class.
+        def __init__(self, inputs):
+            """
+            Args:
+                inputs: The tensor list.
+            """
+            img, label_task, flag, label_all, label_existence = inputs
+            self.image = img
+            self.label_all = label_all
+            self.label_existence = label_existence
+            self.label_task = label_task
+            self.flag = flag
 
     def get_features(self, inputs):
         samples = self.opts.inputs_to_struct(inputs)
@@ -431,6 +458,11 @@ class ResNet(nn.Module):
             Args:
                 outs: The model outs.
             """
-            task_out, layer_out = outs
-            self.before_readout = layer_out
-            self.task = task_out
+            feautures, classifier = outs
+            self.features = feautures
+            self.classifier = classifier
+
+    def forward_and_out_to_struct(self,inputs, head = None):
+        outs = self(inputs, head)
+        return self.outs_to_struct(outs)
+

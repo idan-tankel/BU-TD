@@ -2,17 +2,17 @@ import os.path
 import sys
 sys.path.append(r'/home/sverkip/data/BU-TD/yonathan/Recognicion/code/')
 from pytorch_lightning import LightningModule
-from supp.general_functions import create_optimizer_and_sched
+from supp.utils import create_optimizer_and_scheduler
 import torch
 import torch.optim as optim
-from supp.general_functions import preprocess
+from supp.utils import preprocess
 import numpy as np
 import os
 import logging
 import torch.nn as nn
 from pathlib import Path
 import shutil
-
+from supp.batch_norm import store_running_stats
 # TODO - GET RID OF THE CHECKPOINT CLASS AS PYTORCH DOES IT.
 
 # TODO - USE AUTOMATIC OPTIMIZATION.
@@ -31,14 +31,15 @@ class CheckpointSaver:
         self.decreasing = decreasing
         self.top_model_paths = []
         self.best_metric_val = np.Inf if decreasing else -np.Inf
-        code_path = Path(__file__).parents[1]
+        code_path = os.path.join(dirpath, 'code')
         if not os.path.exists(os.path.join(code_path)):
-            shutil.copytree('code', os.path.join(self.dirpath, 'code'))
+            shutil.copytree(Path(__file__).parents[1], os.path.join(self.dirpath, 'code'))
 
-    def __call__(self, model, epoch, metric_val,optimizer,scheduler, parser,direction):
+    def __call__(self, model, epoch, metric_val,optimizer,scheduler, parser, task_id, direction):
         model_path = os.path.join(self.dirpath, model.__class__.__name__ + f'_epoch{epoch}_direction={direction}.pt')
-        save = metric_val<self.best_metric_val if self.decreasing else metric_val >self.best_metric_val
+        save = metric_val < self.best_metric_val if self.decreasing else metric_val >self.best_metric_val
         if save:
+            store_running_stats(model, task_id=task_id, direction_id=direction)
             logging.info(f"Current metric value better than {metric_val} better than best {self.best_metric_val}, saving model at {model_path}")
             self.best_metric_val = metric_val
             save_data = {'epoch': epoch, 'model_state_dict': model.state_dict(),
@@ -69,17 +70,17 @@ class ModelWrapped(LightningModule):
         self.ckpt = ckpt
         self.learned_params = learned_params
         self.accuracy = opts.task_accuracy
-        self.optimizer , self.scheduler =  create_optimizer_and_sched(self.opts, self.learned_params)
+        self.optimizer , self.scheduler =  create_optimizer_and_scheduler(self.opts, self.learned_params)
 
     def training_step(self, batch, batch_idx):
         model = self.model
         model.train()  # Move the model into the train mode.
         outs = model(batch)  # Compute the model output.
         loss = self.loss_fun(self.opts, batch, outs)  # Compute the loss.
-        self.optimizer.zero_grad()  # Reset the optimizer.
+        self.optimizer.zero_grad(set_to_none = True)  # Reset the optimizer.
         loss.backward()  # Do a backward pass.
         self.optimizer.step()  # Update the model.
-        samples = self.opts.inputs_to_struct(batch)
+        samples = self.model.inputs_to_struct(batch)
         outs = self.model.outs_to_struct(outs)
         _ , acc = self.accuracy(outs, samples)
         if type(self.scheduler) in [optim.lr_scheduler.CyclicLR, optim.lr_scheduler.OneCycleLR]:  # Make a scheduler step if needed.
@@ -95,27 +96,29 @@ class ModelWrapped(LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
+        model = self.model
+        model.train()  # Move the model into the evaluation mode.
         with torch.no_grad():
             outs = self.model(batch)
             loss = self.loss_fun(self.opts, batch, outs)  # Compute the loss.
             outs = self.model.outs_to_struct(outs)
-            samples = self.opts.inputs_to_struct(batch)
+            samples = self.model.inputs_to_struct(batch)
             _ , task_accuracy = self.accuracy(outs, samples)
-            samples = self.opts.inputs_to_struct(batch)
+            samples = self.model.inputs_to_struct(batch)
             _ , acc = self.accuracy(outs, samples)
             self.log('val_loss', loss, on_step=True, on_epoch=True, logger=True)
             self.log('val_acc', task_accuracy, on_step=True, on_epoch=True, logger=True)
             return task_accuracy.sum()
 
     def configure_optimizers(self):
-        opti, sched = create_optimizer_and_sched(self.opts, self.learned_params)
+        opti, sched = create_optimizer_and_scheduler(self.opts, self.learned_params)
         return [opti], [sched]
 
     def validation_epoch_end(self, outputs):
         acc = sum(outputs) / len(outputs)
         print(acc)
         if self.ckpt != None:
-          self.ckpt(self.model,self.current_epoch,acc,self.optimizer,self.scheduler, self.opts,self.direction)
+          self.ckpt(self.model,self.current_epoch,acc,self.optimizer,self.scheduler, self.opts,0, self.direction)
         return sum(outputs) / len(outputs)
 
     def test_epoch_end(self, outputs):

@@ -13,13 +13,16 @@ from Baselines_code.avalanche_AI.training.Plugins.LWF  import MyLwFPlugin
 from Baselines_code.avalanche_AI.training.Plugins.MAS import MyMASPlugin
 from Baselines_code.avalanche_AI.training.Plugins.LFL  import MyLFLPlugin
 from Baselines_code.avalanche_AI.training.Plugins.Clock import EpochClock
-from Baselines_code.avalanche_AI.training.Plugins.SI  import MySynapticIntelligencePlugin as MySIPlugin
+from Baselines_code.avalanche_AI.training.Plugins.SI  import SynapticIntelligencePlugin as MySIPlugin
 from Baselines_code.avalanche_AI.training.Plugins.RWALK import RWalkPlugin
-
+from Baselines_code.avalanche_AI.training.Plugins.AGEM import MyAGEMPlugin
+from Baselines_code.avalanche_AI.training.Plugins.IL import IL
+from Baselines_code.avalanche_AI.training.Plugins.GEM import GEMPlugin as MyGEMPlugin
 from supp.loss_and_accuracy import multi_label_accuracy_weighted # TODO - GIT RID OF THOSE STUPID FUNCTIONS.
 from avalanche.training.plugins import (
     SupervisedPlugin,
     EvaluationPlugin,
+    AGEMPlugin,
     SynapticIntelligencePlugin,
 )
 
@@ -55,7 +58,7 @@ class MySupervisedTemplate(SupervisedTemplate):
         """Current mini-batch input."""
         if len(self.mbatch[1].shape) == 1:
          self.mbatch[1] = self.mbatch[1].view([-1,1])
-        return self.mbatch[:5]
+        return self.mbatch[:-1]
 
     def criterion(self):
         """Loss function.""" 
@@ -79,7 +82,8 @@ class MySupervisedTemplate(SupervisedTemplate):
             sum += acc
             self._after_eval_iteration(**kwargs)
         sum = sum / len(self.dataloader)
-        self.checkpoint(self.model, self.epoch, sum, self.optimizer, self.scheduler, self.parser, 2)  # Updating checkpoint.
+        # TODO - SUPPORT ALSO Omniglot.
+        self.checkpoint(self.model, self.epoch, sum, self.optimizer, self.scheduler, self.parser,0, 2)  # Updating checkpoint.
         self.epoch += 1
 
 class MyEWC(MySupervisedTemplate):
@@ -193,7 +197,7 @@ class MySI(MySupervisedTemplate):
 
         # This implementation relies on the S.I. Plugin, which contains the
         # entire implementation of the strategy!
-        plugins.append(MySIPlugin(parser = parser, si_lambda = parser.si_lambda, eps = parser.si_eps ))
+        plugins.append(MySIPlugin( parser = parser, eps = parser.si_eps ))
 
         super().__init__(
             parser,                             
@@ -306,7 +310,7 @@ class MyLFL(MySupervisedTemplate):
             :class:`~Baselines_code.training.BaseTemplate` constructor arguments.
         """
 
-        lfl = MyLFLPlugin(parser.lambda_lfl, parser.model)
+        lfl = MyLFLPlugin(parser.lfl_lambda, parser.model)
         if plugins is None:
             plugins = [lfl]
         else:
@@ -421,6 +425,183 @@ class MyRWALK(MySupervisedTemplate):
             plugins=plugins,
             evaluator=evaluator,
             eval_every=eval_every,
+            **base_kwargs
+        )
+
+class AGEM(MySupervisedTemplate):
+    """Average Gradient Episodic Memory (A-GEM) strategy.
+
+    See AGEM plugin for details.
+    This strategy does not use task identities.
+    """
+
+    def __init__(
+        self,
+        parser,
+        old_data = None,
+        patterns_per_exp: int = 1000,
+        sample_size: int = 64,
+        device=None,
+        plugins: Optional[List[SupervisedPlugin]] = None,
+        evaluator: EvaluationPlugin = None,
+        eval_every=-1,
+        **base_kwargs
+    ):
+        """Init.
+
+        :param model: The model.
+        :param optimizer: The optimizer to use.
+        :param criterion: The loss criterion to use.
+        :param patterns_per_exp: number of patterns per experience in the memory
+        :param sample_size: number of patterns in memory sample when computing
+            reference gradient.
+        :param train_mb_size: The train minibatch size. Defaults to 1.
+        :param train_epochs: The number of training epochs. Defaults to 1.
+        :param eval_mb_size: The eval minibatch size. Defaults to 1.
+        :param device: The device to use. Defaults to None (cpu).
+        :param plugins: Plugins to be added. Defaults to None.
+        :param evaluator: (optional) instance of EvaluationPlugin for logging
+            and metric computations.
+        :param eval_every: the frequency of the calls to `eval` inside the
+            training loop. -1 disables the evaluation. 0 means `eval` is called
+            only at the end of the learning experience. Values >0 mean that
+            `eval` is called every `eval_every` epochs and at the end of the
+            learning experience.
+        :param base_kwargs: any additional
+            :class:`~avalanche.training.BaseTemplate` constructor arguments.
+        """
+
+        agem = MyAGEMPlugin(parser,old_data, patterns_per_exp, sample_size)
+        if plugins is None:
+            plugins = [agem]
+        else:
+            plugins.append(agem)
+
+        super().__init__(                                                                            
+            parser = parser,
+            device = device,
+            plugins = plugins,
+            evaluator = evaluator,
+            eval_every = eval_every,
+            **base_kwargs
+        )
+
+class GEM(MySupervisedTemplate):
+    """Average Gradient Episodic Memory (A-GEM) strategy.
+
+    See AGEM plugin for details.
+    This strategy does not use task identities.
+    """
+
+    def __init__(
+        self,
+        parser,
+        old_data = None,
+        checkpoint = None,
+        sample_size: int = 64,
+        device=None,
+        plugins: Optional[List[SupervisedPlugin]] = None,
+        evaluator: EvaluationPlugin = None,
+        eval_every=-1,
+        **base_kwargs
+    ):
+        """Init.
+
+        :param model: The model.
+        :param optimizer: The optimizer to use.
+        :param criterion: The loss criterion to use.
+        :param patterns_per_exp: number of patterns per experience in the memory
+        :param sample_size: number of patterns in memory sample when computing
+            reference gradient.
+        :param train_mb_size: The train minibatch size. Defaults to 1.
+        :param train_epochs: The number of training epochs. Defaults to 1.
+        :param eval_mb_size: The eval minibatch size. Defaults to 1.
+        :param device: The device to use. Defaults to None (cpu).
+        :param plugins: Plugins to be added. Defaults to None.
+        :param evaluator: (optional) instance of EvaluationPlugin for logging
+            and metric computations.
+        :param eval_every: the frequency of the calls to `eval` inside the
+            training loop. -1 disables the evaluation. 0 means `eval` is called
+            only at the end of the learning experience. Values >0 mean that
+            `eval` is called every `eval_every` epochs and at the end of the
+            learning experience.
+        :param base_kwargs: any additional
+            :class:`~avalanche.training.BaseTemplate` constructor arguments.
+        """
+
+        gem = MyGEMPlugin(parser,old_data, parser.patterns_per_exp, sample_size)
+        if plugins is None:
+            plugins = [gem]
+        else:
+            plugins.append(gem)
+
+        super().__init__(
+            parser = parser,
+            device = device,
+            checkpoint=checkpoint,
+            plugins = plugins,
+            evaluator = evaluator,
+            eval_every = eval_every,
+            **base_kwargs
+        )
+
+class MyIL(MySupervisedTemplate):
+    """Average Gradient Episodic Memory (A-GEM) strategy.
+
+    See AGEM plugin for details.
+    This strategy does not use task identities.
+    """
+
+    def __init__(
+        self,
+        parser,
+        old_data = None,
+        checkpoint = None,
+        patterns_per_exp: int = 100000,
+        sample_size: int = 64,
+        device=None,
+        plugins: Optional[List[SupervisedPlugin]] = None,
+        evaluator: EvaluationPlugin = None,
+        eval_every=-1,
+        **base_kwargs
+    ):
+        """Init.
+
+        :param model: The model.
+        :param optimizer: The optimizer to use.
+        :param criterion: The loss criterion to use.
+        :param patterns_per_exp: number of patterns per experience in the memory
+        :param sample_size: number of patterns in memory sample when computing
+            reference gradient.
+        :param train_mb_size: The train minibatch size. Defaults to 1.
+        :param train_epochs: The number of training epochs. Defaults to 1.
+        :param eval_mb_size: The eval minibatch size. Defaults to 1.
+        :param device: The device to use. Defaults to None (cpu).
+        :param plugins: Plugins to be added. Defaults to None.
+        :param evaluator: (optional) instance of EvaluationPlugin for logging
+            and metric computations.
+        :param eval_every: the frequency of the calls to `eval` inside the
+            training loop. -1 disables the evaluation. 0 means `eval` is called
+            only at the end of the learning experience. Values >0 mean that
+            `eval` is called every `eval_every` epochs and at the end of the
+            learning experience.
+        :param base_kwargs: any additional
+            :class:`~avalanche.training.BaseTemplate` constructor arguments.
+        """
+
+        gem = IL(parser,old_data, patterns_per_exp, sample_size)
+        if plugins is None:
+            plugins = [gem]
+        else:
+            plugins.append(gem)
+
+        super().__init__(
+            parser = parser,
+            device = device,
+            checkpoint=checkpoint,
+            plugins = plugins,
+            evaluator = evaluator,
+            eval_every = eval_every,
             **base_kwargs
         )
 

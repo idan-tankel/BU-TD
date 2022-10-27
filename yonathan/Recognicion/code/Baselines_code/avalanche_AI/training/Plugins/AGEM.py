@@ -1,18 +1,14 @@
+from avalanche.training.plugins import AGEMPlugin
 import warnings
-from typing import List
-
 import torch
-from torch.utils.data import random_split
-
-from avalanche.benchmarks.utils import AvalancheDataset
-from avalanche.benchmarks.utils.data_loader import (
-    GroupBalancedInfiniteDataLoader,
-)
 from avalanche.models import avalanche_forward
+from torch.utils.data import random_split
+from avalanche.benchmarks.utils import AvalancheDataset
+from avalanche.benchmarks.utils.data_loader import ( GroupBalancedInfiniteDataLoader,)
+from supp.utils import preprocess
 from avalanche.training.plugins.strategy_plugin import SupervisedPlugin
 
-
-class AGEMPlugin(SupervisedPlugin):
+class MyAGEMPlugin(AGEMPlugin):
     """Average Gradient Episodic Memory Plugin.
 
     AGEM projects the gradient on the current minibatch by using an external
@@ -22,7 +18,7 @@ class AGEMPlugin(SupervisedPlugin):
     This plugin does not use task identities.
     """
 
-    def __init__(self, patterns_per_experience: int, sample_size: int):
+    def __init__(self,parser, old_dataset,  patterns_per_experience: int, sample_size: int):
         """
         :param patterns_per_experience: number of patterns per experience in the
             memory.
@@ -30,18 +26,20 @@ class AGEMPlugin(SupervisedPlugin):
             reference gradient.
         """
 
-        super().__init__()
+        super().__init__(patterns_per_experience = patterns_per_experience, sample_size = sample_size)
 
-        self.patterns_per_experience = int(patterns_per_experience)
-        self.sample_size = int(sample_size)
 
-        self.buffers: List[AvalancheDataset] = []  # one AvalancheDataset for
-        # each experience.
-        self.buffer_dataloader = None
-        self.buffer_dliter = None
+        self.prev_data = old_dataset
+        self.parser = parser
 
-        self.reference_gradients = None
-        self.memory_x, self.memory_y = None, None
+        if parser.pretrained_model and self.prev_data != None:
+          self.update_memory(self.prev_data, num_workers=0)
+
+    def after_training_exp(self, strategy, **kwargs):
+        """Update replay memory with patterns from current experience."""
+        if strategy.EpochClock.train_exp_epochs == strategy.EpochClock.max_epochs:
+            print("Update memory")
+            self.update_memory(strategy.experience.dataset, **kwargs)
 
     def before_training_iteration(self, strategy, **kwargs):
         """
@@ -51,11 +49,11 @@ class AGEMPlugin(SupervisedPlugin):
             strategy.model.train()
             strategy.optimizer.zero_grad()
             mb = self.sample_from_memory()
-            xref, yref, tid = mb[0], mb[1], mb[-1]
-            xref, yref = xref.to(strategy.device), yref.to(strategy.device)
-
-            out = avalanche_forward(strategy.model, xref, tid)
-            loss = strategy._criterion(out, yref)
+            mb = preprocess(mb, device=strategy.device)
+          #  xref, yref, tid = mb[0], mb[1], mb[-1]
+           # xref, yref = xref.to(strategy.device), yref.to(strategy.device)
+            out = strategy.model(mb, head = 0) # TODO - SUPPORT ANY TASK ID OR OMIT THIS AS WE HAVE NO NEED FOR THIS.
+            loss = strategy._criterion(self.parser, mb, out)
             loss.backward()
             # gradient can be None for some head on multi-headed models
             self.reference_gradients = [
@@ -102,11 +100,6 @@ class AGEMPlugin(SupervisedPlugin):
                             grad_proj[count : count + n_param].view_as(p)
                         )
                     count += n_param
-
-    def after_training_exp(self, strategy, **kwargs):
-        """Update replay memory with patterns from current experience."""
-        if strategy.EpochClock.train_exp_epochs == strategy.EpochClock.max_epochs:
-            self.update_memory(strategy.experience.dataset, **kwargs)
 
     def sample_from_memory(self):
         """

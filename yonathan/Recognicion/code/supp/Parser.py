@@ -9,7 +9,7 @@ import torch.nn as nn
 
 import git
 
-from supp.Dataset_and_model_type_specification import Flag, DsType, AllOptions, inputs_to_struct
+from supp.Dataset_and_model_type_specification import Flag, DsType, AllOptions
 from supp.batch_norm import BatchNorm
 from supp.blocks import BasicBlockTD, BasicBlockBU, BasicBlockBUShared
 from supp.loss_and_accuracy import UnifiedCriterion
@@ -29,7 +29,7 @@ def GetParser(task_idx=0, direction_idx = 0, model_type=BUTDModelShared, flag=Fl
     """
     if flag is not Flag.NOFLAG and model_type is ResNet:
         raise Exception("Pure ResNet can be used only in NO-FLAG mode.")
-    Data_obj = AllOptions(ds_type=ds_type, flag_at=flag, ndirections=4)
+    Data_obj = AllOptions(ds_type=ds_type, flag_at=flag, ndirections=4, initial_task_for_omniglot = [27, 5, 42, 18, 33])
     parser = argparse.ArgumentParser()
     # Flags.
     parser.add_argument('--ds_type', default = ds_type, type=DsType, help='Flag that defines the data-set type')
@@ -42,7 +42,7 @@ def GetParser(task_idx=0, direction_idx = 0, model_type=BUTDModelShared, flag=Fl
     parser.add_argument('--base_lr', default=0.0002, type=float, help='Base lr of the cyclic Adam optimizer')
     parser.add_argument('--max_lr', default=0.002, type=float,  help='Max lr of the cyclic Adam optimizer before the lr returns to the base_lr')
     parser.add_argument('--momentum', default=0.9, type=float, help='Momentum of the Adam optimizer')
-    parser.add_argument('--bs', default=10, type=int, help='The training batch size')
+    parser.add_argument('--bs', default=64, type=int, help='The training batch size')
     parser.add_argument('--EPOCHS', default=100, type=int, help='Number of epochs in the training')
     # Model architecture arguments.
     parser.add_argument('--td_block_type', default=BasicBlockTD, type=nn.Module, help='Basic TD block')
@@ -65,7 +65,7 @@ def GetParser(task_idx=0, direction_idx = 0, model_type=BUTDModelShared, flag=Fl
     parser.add_argument('--use_bu2_loss', default=True, type=bool, help='Whether to use the classification loss at the end of the BU2 stream')
     parser.add_argument('--bu1_loss', default=nn.BCEWithLogitsLoss(reduction='mean'), type=nn.Module, help='The loss used at the end of the bu1 stream')
     parser.add_argument('--bu2_loss', default=Data_obj.data_obj.bu2_loss, type=Callable,help='The bu2 classification loss')
-    parser.add_argument('--inputs_to_struct', default=inputs_to_struct, help='')
+#    parser.add_argument('--inputs_to_struct', default=inputs_to_struct, help='')
     parser.add_argument('--criterion', default = UnifiedCriterion, type=Callable,  help='The unified loss function of all training')
     parser.add_argument('--task_accuracy', default=Data_obj.data_obj.task_accuracy, type=Callable,  help='The accuracy function')
     # Data arguments.
@@ -87,29 +87,32 @@ def GetParser(task_idx=0, direction_idx = 0, model_type=BUTDModelShared, flag=Fl
     ########################################
     # For Baselines only.
     ########################################
-    lambdas_LWF = [0.2, 0.1, 0.05, 0.025, 0.0125 ,0.125/2.0, 0.3]
+    lambdas_LWF = [0.025/2.0,0.025, 0.05,0.1,0.2,0.05, 0.1, 0.2, 0.5, 0.8, 1.6]
+    lambda_LFL = [1e-3, 1e-2,1e-1, 1e0/2, 1e0, 1e1, 1e1 * 5, 1e2, 1e3, 1e4]
+    lambda_rwalk = [20.0,30.0,40.0,50.0,10.0,5.0,2.5]
     # EWC
-    parser.add_argument('--ewc_lambda', default=1e10, type = float, help='The ewc strength')
+    parser.add_argument('--ewc_lambda', default=0.0, type = float, help='The ewc strength')
     # SI
-    parser.add_argument('--si_lambda', default=1000, type = float, help='The ewc strength')
+    parser.add_argument('--si_lambda', default = 1e1, type = float, help='The ewc strength')
     parser.add_argument('--si_eps', default = 0.0000001, type=float, help='The ewc strength')
     # LFL
-    parser.add_argument('--lambda_lfl', default=1e5, type = float, help='The ewc strength')
+    parser.add_argument('--lfl_lambda', default=lambda_LFL[0], type = float, help='The ewc strength')
     # LWF
-    parser.add_argument('--alpha_LWF', default = lambdas_LWF[6], type = float, help='The ewc strength')
+    parser.add_argument('--lwf_lambda', default = lambdas_LWF[0], type = float, help='The ewc strength')
     parser.add_argument('--temperature_LWF', default=2.0, type = float, help='The ewc strength')
     # MAS
-    parser.add_argument('--mas_alpha', default=100 * 20.0, type=float, help='The ewc strength')
-    parser.add_argument('--mas_lambda_reg', default=2, type=float, help='The ewc strength')
+    parser.add_argument('--mas_alpha', default = 0.5, type=float, help='The ewc strength')
+    parser.add_argument('--mas_lambda', default= 3.5/2.0, type=float, help='The ewc strength')
     # RWALK
    # ewc_lambda: float = 0.1, ewc_alpha: float = 0.9, delta_t: int = 10
-    parser.add_argument('--rwalk_ewc_lambda', default = 1e10, type=float, help='The ewc strength')
-    parser.add_argument('--rwalk_ewc_alpha', default=0.9, type=float, help='The ewc strength')
+    parser.add_argument('--rwalk_lambda', default = lambda_rwalk[-1], type=float, help='The ewc strength')
+    parser.add_argument('--rwalk_alpha', default=0.9, type=float, help='The ewc strength')
     parser.add_argument('--rwalk_delta_t', default=10, type=int, help='The ewc strength')
-    #
+    # IL
+    parser.add_argument('--patterns_per_exp', default=50000, type=int, help='The ewc strength')
     # General arguments.
-    parser.add_argument('--train_mb_size', default=10, type=int, help='The ewc strength')
-    parser.add_argument('--eval_mb_size', default=10, type=int, help='The ewc strength')
+    parser.add_argument('--train_mb_size', default=64, type=int, help='The ewc strength')
+    parser.add_argument('--eval_mb_size', default=64, type=int, help='The ewc strength')
     parser.add_argument('--train_epochs', default=1, type=int, help='The ewc strength')
     parser.add_argument('--epochs', default=20, type=int, help='The ewc strength')
     parser.add_argument('--pretrained_model', default=Begin_with_pretrained_model, type=int, help='The ewc strength')
