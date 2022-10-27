@@ -40,7 +40,7 @@ def multi_label_accuracy_base(outs: Union[SimpleNamespace,object], samples: obje
         label_task = samples.label_task.squeeze(-1)
         # Take the single original label for each sample
         task_accuracy = (
-            (predictions_by_correct_task == label_task).float()).sum()
+            (predictions_by_correct_task == label_task).float()).sum() / cur_batch_size
         # task_accuracy here is the number of correct predictions
         # Compare the number of matches and normalize by the batch size*num_outputs.
     else:
@@ -73,7 +73,10 @@ def multi_label_accuracy_base(outs: Union[SimpleNamespace,object], samples: obje
 
 def multi_label_accuracy(outs: object, samples: object):
     """
+    .. note:: Deprecated in 11_0
+    ### Marked for deprecation ###
     return the task accuracy mean over all samples.
+    
     Args:
         outs: The model outs.
         samples: The samples.
@@ -84,6 +87,7 @@ def multi_label_accuracy(outs: object, samples: object):
     preds, task_accuracy = multi_label_accuracy_base(outs, samples)
     # per single example
     avg_task_accuracy = task_accuracy.mean()
+
     return preds, avg_task_accuracy
 #
 
@@ -208,6 +212,8 @@ def UnifiedCriterion(opts: argparse.ArgumentParser, inputs: list[torch.Tensor], 
 
 def accuracy(parser: nn.Module, test_data_loader: DataLoader) -> float:
     """
+    *** Deprecated ***
+    Since that function accumulates the accuracy over the whole dataset, it is not suitable for large datasets. We will use the `wandb.log` function instead.
     Args:
         model: The model options.
         test_data_loader: The test data.
