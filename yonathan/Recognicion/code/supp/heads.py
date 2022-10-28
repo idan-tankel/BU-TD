@@ -4,8 +4,8 @@ import torch
 import torch.nn as nn
 
 from supp.Dataset_and_model_type_specification import Flag
-from supp.utils import flag_to_task
-
+from supp.utils import flag_to_idx
+from typing import Union
 
 class HeadSingleTask(nn.Module):
     # Task head for single task
@@ -38,7 +38,7 @@ class HeadSingleTask(nn.Module):
 
 
 class MultiTaskHead(nn.Module):
-    def __init__(self, opts: argparse, transfer_learning_params: list = None):
+    def __init__(self, opts: argparse, transfer_learning_params:Union[list, None] = None):
         """
         Multi head task-head allocating for each task and direction a single task head.
         Args:
@@ -71,8 +71,8 @@ class MultiTaskHead(nn.Module):
         (bu2_out, flag) = inputs
         direction_flag = flag[:, :self.ndirections]  # The direction one hot flag.
         task_flag = flag[:, self.ndirections:self.ndirections + self.ntasks]  # The task one hot flag.
-        direction_id = flag_to_task(direction_flag)  # The direction id.
-        task_id = flag_to_task(task_flag)  # The task id.
+        direction_id = flag_to_idx(direction_flag)  # The direction id.
+        task_id = flag_to_idx(task_flag)  # The task id.
         idx = direction_id + self.ndirections * task_id if idx_out is None else idx_out  # The head index with possible modification according to idx_out.
         task_out = self.taskhead[idx](bu2_out).squeeze()  # apply the appropriate task-head.
         #   if len(task_out.shape) == 2:

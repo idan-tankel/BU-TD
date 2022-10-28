@@ -124,7 +124,7 @@ def UnifiedCriterion(opts: argparse, inputs: list[torch.Tensor], outs: list[torc
     samples = opts.model.inputs_to_struct(inputs)  # Make samples from the raw data.
     loss = 0.0  # The general loss.
     if opts.use_bu1_loss:
-        loss_occ = opts.bu1_loss(outs.occurence_out,
+        loss_occ = opts.bu1_loss(outs.occurrence_out,
                                  samples.label_existence)  # compute the binary existence classification loss
         loss += loss_occ  # Add the occurrence loss.
 

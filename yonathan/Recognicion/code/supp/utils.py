@@ -3,6 +3,7 @@ import os
 
 import torch
 import torch.optim as optim
+import torch.nn as nn
 
 
 def folder_size(path: str) -> int:
@@ -47,7 +48,7 @@ def get_omniglot_dictionary(initial_tasks: list, raw_data_folderpath: str) -> di
     return nclasses
 
 
-def flag_to_task(flag: torch) -> int:
+def flag_to_idx(flag: torch) -> int:
     """
     From Flag get the id in which the flag is non-zero.
     Args:
@@ -75,13 +76,8 @@ def get_laterals(laterals: list[torch], layer_id: int, block_id: int) -> torch:
         return None
     if len(laterals) > layer_id:  # assert we access to an existing layer.
         layer_laterals = laterals[layer_id]  # Get all lateral associate with the layer.
-        if type(layer_laterals) == list and len(
-                layer_laterals) > block_id:  # If there are some several blocks in the layer we access according to block_id.
+        if len(layer_laterals) > block_id:  # If there are some several blocks in the layer we access according to block_id.
             return layer_laterals[block_id]  # We return all lateral associate with the block_id.
-        else:
-            return layer_laterals  # If there is only 1 lateral connection in the block we return it.
-    else:
-        return None
 
 
 def num_params(params: list) -> int:

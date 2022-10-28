@@ -49,10 +49,10 @@ class CheckpointSaver:
             torch.save(save_data, model_path)
             self.top_model_paths.append({'path': model_path, 'score': metric_val})
             self.top_model_paths = sorted(self.top_model_paths, key=lambda o: o['score'], reverse=not self.decreasing)
-        '''
-        if len(self.top_model_paths) > self.top_n:
+
+        if len(self.top_model_paths) > self.top_n and False:
             self.cleanup()
-        '''
+
 
     def cleanup(self):
         to_remove = self.top_model_paths[self.top_n:]
@@ -68,10 +68,10 @@ class ModelWrapped(LightningModule):
         self.automatic_optimization = False
         self.model = opts.model
         self.opts = opts
+        self.ckpt = ckpt
         self.nbatches_train = nbatches_train
         self.direction = direction_id
         self.loss_fun = opts.criterion
-        self.ckpt = ckpt
         self.learned_params = learned_params
         self.accuracy = opts.task_accuracy
         self.optimizer, self.scheduler = create_optimizer_and_scheduler(self.opts, self.learned_params, self.nbatches_train)
@@ -124,7 +124,7 @@ class ModelWrapped(LightningModule):
         acc = sum(outputs) / len(outputs)
         print(acc)
         if self.ckpt != None:
-          self.ckpt(self.model,self.current_epoch,acc,self.optimizer,self.scheduler, self.opts,0, self.direction)
+           self.ckpt(self.model,self.current_epoch,acc,self.optimizer,self.scheduler, self.opts,0, self.direction)
         return sum(outputs) / len(outputs)
 
     def test_epoch_end(self, outputs):
