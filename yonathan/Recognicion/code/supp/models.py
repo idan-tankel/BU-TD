@@ -10,6 +10,7 @@ from supp.Model_Blocks import BUInitialBlock, InitialTaskEmbedding
 from supp.Module_Blocks import Depthwise_separable_conv
 from supp.heads import MultiTaskHead, OccurrenceHead
 from supp.utils import get_laterals
+from typing import Union
 
 class BUStreamShared(nn.Module):
     def __init__(self, opts: argparse):
@@ -353,15 +354,15 @@ class BUTDModelShared(nn.Module):
 class ResNet(nn.Module):
     """
     A ResNet model.
+    Usually used as a Baseline model comapring to BU-TD in Continual learning.
     """
-
     def __init__(self, opts):
         """
         Args:
             opts:  The model options.
         """
         super(ResNet, self).__init__()
-      #  self.ntasks = opts.ntasks
+
         self.opts = opts
         self.ndirections = opts.ndirections
         self.feauture = BUModel(opts, use_task_embedding = False)
@@ -371,34 +372,35 @@ class ResNet(nn.Module):
         """
         Needed for switching a task-head given computed features.
         Args:
-            features:
-            inputs:
-            head:
+            features: The computed features.
+            inputs: The input.
+            head: The head we want to switch to if head != None.
 
-        Returns:
+        Returns: The switched taskout.
 
         """
         samples = self.opts.inputs_to_struct(inputs)
-        flags = samples.flag
-        task_out = self.taskhead((features, flags), head)
+        flags = samples.flag # Getting the flags.
+        task_out = self.taskhead((features, flags), head)  # Compute the switched taskhead.
         return task_out
 
     def forward(self, inputs,head = None):
         """
+        Computing the forward of the head to get class scores.
         Args:
-            inputs:
-            head:
+            inputs: The inputs to the model.
+            head: A head id if we want to switch to.
 
-        Returns:
+        Returns: The features and class scores.
 
         """
         samples = self.inputs_to_struct(inputs)
         images = samples.image
         flags = samples.flag
         model_inputs = [images, flags, None]
-        bu_out, _ = self.feauture(model_inputs)
-        task_out = self.classifier((bu_out, flags),head = head)
-        return  bu_out, task_out
+        features, _ = self.feauture(model_inputs)
+        classifier = self.classifier((features, flags),idx_out = head)
+        return  features, classifier
 
     class inputs_to_struct:
         # class receiving list of tensors and makes to a class.
@@ -414,12 +416,20 @@ class ResNet(nn.Module):
             self.label_task = label_task
             self.flag = flag
 
-    def get_features(self, inputs):
-        samples = self.opts.inputs_to_struct(inputs)
-        images = samples.image
-        flags = samples.flag
+    def get_features(self, inputs:tuple[torch])->torch:
+        """
+        Compute only the features of the model.
+        Args:
+            inputs: The model inputs.
+
+        Returns: The features.
+
+        """
+        samples = self.opts.inputs_to_struct(inputs) # Get the samples.
+        images = samples.image # The image.
+        flags = samples.flag # The flag.
         model_inputs = [images, flags, None]
-        features, _ = self.bumodel(model_inputs)
+        features, _ = self.bumodel(model_inputs) # The model output.
         return features
 
     class outs_to_struct:
@@ -433,7 +443,15 @@ class ResNet(nn.Module):
             self.features = feautures
             self.classifier = classifier
 
-    def forward_and_out_to_struct(self,inputs, head = None):
+    def forward_and_out_to_struct(self,inputs:tuple[torch], head:Union[int,None] = None):
+        """
+        Args:
+            inputs: The model input.
+            head: The head if we desire to switch to.
+
+        Returns: A struct containing the features and the class scores.
+
+        """
         outs = self(inputs, head)
         return self.outs_to_struct(outs)
 

@@ -13,8 +13,8 @@ from supp.pytorch_lightning_model_and_checkpoints import CheckpointSaver, ModelW
 from supp.Dataset_and_model_type_specification import Flag,DsType
 from datetime import datetime
 
-def main(train_right, train_left,ds_type=DsType.Emnist, flag=Flag.NOFLAG):
-    parser = GetParser(task_idx = 0, direction_idx = 'right', flag=flag, ds_type = ds_type, model_type = ResNet, use_lateral_bu_td=True)
+def main(train_right, train_left,ds_type=DsType.Emnist, flag=Flag.CL):
+    parser = GetParser(task_idx = 0, direction_idx = 'right', flag=flag, ds_type = ds_type, model_type = BUTDModelShared)
     project_path = Path(__file__).parents[1]
     data_path = os.path.join(project_path, 'data/{}/samples/18_extended'.format(ds_type.Enum_to_name()))
     tmpdir = os.path.join(project_path, 'data/emnist/results/')
