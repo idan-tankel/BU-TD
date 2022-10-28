@@ -8,11 +8,9 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 import os
 from pathlib import Path
-from Checkpoint_model_definition import CheckpointSaver, ModelWrapped
+from supp.pytorch_lightning_model_and_checkpoints import CheckpointSaver, ModelWrapped
 import torch.nn as nn
 from supp.Dataset_and_model_type_specification import Flag
-from Configs.Config import Config
-from supp.create_model import create_model
 import git
 import sys
 from types import NoneType
@@ -71,7 +69,7 @@ def main(train_right=True, train_left=False):
     tmpdir = os.path.join(project_path, 'data/emnist/results/')
     checkpoint_path = os.path.join(tmpdir, 'MyFirstCkt.ckpt')
     parser = GetParser(task_idx=0, direction_idx='right', flag=Flag.TD)
-    parser = Config()
+    # parser = Config()
     ModelCkpt = ModelCheckpoint(
         dirpath=tmpdir, monitor="train_loss_epoch", mode="min")
     Checkpoint_saver = CheckpointSaver(
@@ -84,7 +82,7 @@ def main(train_right=True, train_left=False):
                          logger=wandb_logger, callbacks=[ModelCkpt])
     training_flag = Training_flag(
         train_all_model=True, train_arg=False, train_task_embedding=False, train_head=False)
-    model = create_model(model_opts=parser)
+    model = parser.model
     learned_params = training_flag.Get_learned_params(
         model, lang_idx=0, direction=0)
     if train_right:
@@ -96,7 +94,7 @@ def main(train_right=True, train_left=False):
         train_dl, test_dl, val_dl, *the_datasets = get_dataset_for_spatial_realtions(
             parser, data_path,  lang_idx=0,    direction=1)
     model_wrapped = ModelWrapped(
-        parser, learned_params, ckpt=Checkpoint_saver, model=model, nbatches_train=len(train_dl))
+        parser, learned_params, nbatches_train=len(train_dl),direction_id=0)
     wandb_logger.watch(model=model_wrapped,log='all')
     # log all model topology and grads tp the website
     trainer.fit(model_wrapped, train_dataloaders=train_dl,
