@@ -10,15 +10,27 @@ class Flag(Enum):
     The possible training flags.
 
     """
-    TD = auto()  # ordinary BU-TD network.
-    NOFLAG = auto()  # NO TASK network.
-    ZF = auto()  # BU-TD network with allocating task embedding for each task.
-    BU2 = auto()
-    BU1 = auto()
+    TD = "BUTDModelShared"  # ordinary BU-TD network.
+    NOFLAG = "BUModelSimple"  # NO TASK network.
+    ZF = "BUTDModelShared"  # BU-TD network with allocating task embedding for each task.
+    BU2 = "BUTDModelShared"
+    BU1 = "BUTDModelShared"
     BU1_SIMPLE = auto()
     BU1_NOFLAG = auto()
     SF = auto()  # BU-TD network with allocating task embedding for each task and using the SF loss.
+    AttentionPretrained = auto()  # Attention network.
 
+
+
+        # "Flag.TD": BUTDModelShared,
+        # "Flag.NOFLAG": BUModelSimple,
+        # "Flag.ZF": BUTDModelShared,
+        # "Flag.BU2": BUTDModelShared,
+        # "Flag.BU1": BUTDModelShared,
+        # "Flag.BU1_SIMPLE": BUModelSimple,
+        # "Flag.BU1_NOFLAG": BUModelSimple,
+        # "Flag.SF": BUTDModelShared,
+        # "Flag.AttentionPretrained": BUTDModelShared,
 
 class DsType(Enum):
     """

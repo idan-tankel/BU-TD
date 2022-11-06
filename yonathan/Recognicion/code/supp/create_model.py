@@ -4,13 +4,8 @@ from types import SimpleNamespace
 from torch import nn as nn
 import torch
 import logging
-# from general_functions import *
-# from Flag import *
-# from models import *
-# from training_functions import *
-# from loss_and_accuracy import UnifiedLossFun
+import git
 from typing import Union
-from Configs.Config import Config
 # from v26.models.BU_TD_Models import BUTDModelShared,BUModelSimple
 # from v26 import ConstantsBuTd
 # from v26.funcs import logger
@@ -19,13 +14,34 @@ from supp.Dataset_and_model_type_specification import Flag
 from models.BU_TD_Models import BUTDModelShared, BUModelSimple
 logger = logging.getLogger(__name__)
 
+try:
+    from Configs.Config import Config
+except ImportError:
+    from code.Configs.Config import Config
 
-def create_model(model_opts: Config) -> nn.Module:
+
+def create_model(model_opts:Config) -> nn.Module:
     """
     Creating a model and make it parallel and move it to the cuda.
     :param args: arguments to create the model according to.
     :return: The desired model.
     """
+    switcher = {
+        "Flag.TD": BUTDModelShared,
+        "Flag.NOFLAG": BUModelSimple,
+        "Flag.ZF": BUTDModelShared,
+        "Flag.BU2": BUTDModelShared,
+        "Flag.BU1": BUTDModelShared,
+        "Flag.BU1_SIMPLE": BUModelSimple,
+        "Flag.BU1_NOFLAG": BUModelSimple,
+        "Flag.SF": BUTDModelShared,
+        "Flag.AttentionPretrained": BUTDModelShared,
+    }
+    model = switcher[model_opts.RunningSpecs.Flag](model_opts)
+    model = nn.DataParallel(model)
+    model = model.cuda()
+    return model
+
     if model_opts.RunningSpecs.Flag is Flag.BU1_SIMPLE:
         model = BUModelSimple(model_opts)
     else:

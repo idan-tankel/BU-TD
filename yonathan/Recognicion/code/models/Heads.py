@@ -2,7 +2,9 @@ import torch
 from torch import nn
 
 
-dev = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+dev = torch.device(
+    "cuda") if torch.cuda.is_available() else torch.device("cpu")
+
 
 class ImageHead(nn.Module):
 
@@ -21,7 +23,7 @@ class ImageHead(nn.Module):
 class OccurrenceHead(nn.Module):
     """
     OccurrenceHead FullyConeccted layer of the output features
-    """    
+    """
 
     def __init__(self, opts):
         """
@@ -29,10 +31,10 @@ class OccurrenceHead(nn.Module):
 
         Args:
             opts (`argparse.ArgumentParser` | `Config` | `SimpleNamespace` ): Model options to determine the number of filters
-        """        
+        """
         super(OccurrenceHead, self).__init__()
         opts = opts.Models
-        filters = opts.nclasses[0][0]-1 # TODO-change to support to the 
+        filters = opts.nclasses[0][0]-1  # TODO-change to support to the
         infilters = opts.nfilters[-1]
         self.fc = nn.Linear(infilters, filters)
 
@@ -47,17 +49,22 @@ class OccurrenceHead(nn.Module):
 class MultiLabelHead(nn.Module):
 
     def __init__(self, opts):
+        """
+        __init__ _summary_
+
+        Args:
+            opts (`config` | `argparse.ArgumentParser` | `SimpleNamespace`): model configuration object defined in `Configs.config.py`
+        """
         super(MultiLabelHead, self).__init__()
         layers = []
+        opts.Models.init_model_options()
         for k in range(len(opts.Models.nclasses)):
             filters = opts.Models.nclasses[k][0]
-            k_layers = []
             infilters = opts.Models.nfilters[-1]
-            for i in range(opts.Models.ntaskhead_fc - 1):
-                k_layers += [nn.Linear(infilters, infilters), opts.norm_fun(infilters, dims=1), opts.activation_fun()]
-
+            k_layers = [nn.Linear(infilters, infilters), opts.Models.norm_layer(infilters, dims=1), opts.Models.activation_fun()]*(opts.Models.ntaskhead_fc - 1)
             # add last FC: plain
-            k_layers += [nn.Linear(in_features=infilters, out_features=filters)]
+            k_layers += [nn.Linear(in_features=infilters,
+                                   out_features=filters)]
             if len(k_layers) > 1:
                 k_layers = nn.Sequential(*k_layers)
             else:

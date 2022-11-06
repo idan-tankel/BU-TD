@@ -1,7 +1,12 @@
 from matplotlib import transforms
 from torch import nn, device, cuda
 from transformers import ViTConfig, ViTModel, TrainingArguments, ViTForImageClassification
+from vit_pytorch import cct
+# local imports
+
+from .Heads import MultiLabelHead
 from typing import Union
+import yaml
 
 
 class Attention(nn.Module):
@@ -20,7 +25,7 @@ class Attention(nn.Module):
         proj_drop (torch.nn.Dropout): dropout layer
     """
 
-    def __init__(self, config: Union[ViTConfig, None]):
+    def __init__(self, config):
         """
         __init__ _summary_
 
@@ -29,17 +34,35 @@ class Attention(nn.Module):
         """
         super().__init__()
         dev = device("cuda" if cuda.is_available() else "cpu")
-        self.model_pretrained = ViTForImageClassification.from_pretrained(
-            'google/vit-base-patch16-224-in21k', num_labels=2).to(dev)
-        if config == None:
-            config = ViTConfig()
-        self.model = ViTForImageClassification(config=config).to(dev)
+        # self.model = ViTForImageClassification(config=config).to(dev)
+        self.cct = cct.CCT(
+            img_size=224,
+            embedding_dim=config.Models.nfilters[-1],
+            num_classes=config.Models.nfilters[-1],
+            n_conv_layers=2,
+            kernel_size=3,
+            stride=2,
+            padding=3,
+            pooling_kernel_size=3,
+            pooling_stride=2,
+            pooling_padding=1,
+            num_layers=4,
+            num_heads=2,
+            mlp_ratio=1.,
+        )
+        self.taskhead = MultiLabelHead(opts=config)
+        self.model = nn.Sequential(self.cct, self.taskhead)
+        self.model.to(dev)
 
-    def document2config(self, document):
+    def document2config(self, document, replace_now=True) -> ViTConfig:
         """
         document2config method converts yaml document to `ViTConfig` object.
         The attributes of the yaml document should be the same as the `transformers.ViTConfig` object.
         For more information about the `transformers.ViTConfig` object, please visit https://huggingface.co/transformers/model_doc/vit.html#transformers.ViTConfig
+
+
+        ## Attention! ##
+        This function overrides the model under the `self.model` attribute.
 
         Args:
             document (dict): document
@@ -47,7 +70,11 @@ class Attention(nn.Module):
         Returns:
             ViTConfig: ViTConfig object
         """
-        config = ViTConfig(**document)
+        with open(document, 'r') as stream:
+            config_as_dict = yaml.safe_load(stream)
+        config = ViTConfig(**config_as_dict)
+        if replace_now:
+            self.model = ViTForImageClassification(config=config)
         return config
 
     def forward(self, x):
