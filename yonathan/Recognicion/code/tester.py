@@ -3,7 +3,6 @@ from Configs.Config import Config
 
 
 def main():
-    print("hello world")
     config = Config()
     attention_model = Attention(config=config)
     attention_path = "/home/idanta/BU-TD/yonathan/Recognicion/code/Configs/Attention.yaml"

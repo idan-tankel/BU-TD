@@ -199,12 +199,17 @@ def UnifiedCriterion(opts: argparse.ArgumentParser, inputs: list[torch.Tensor], 
         opts = opts.Losses
     loss = 0.0  # The general loss.
     if opts.use_bu1_loss:
-        loss_occ = opts.bu1_loss(outs.occurence,
+        try:
+            loss_occ = opts.bu1_loss(outs.occurence,
                                  samples.label_existence)  # compute the binary existence classification loss
+        except KeyError:
+            raise KeyError(
+                "The model does not have an occurence stream, please check the model architecture and the losses flags")                            
         loss += loss_occ  # Add the occurrence loss.
 
     if opts.use_bu2_loss:
         loss_task = opts.bu2_loss(outs, samples)  # Compute the BU2 loss.
+        # TODO change the opts.bu2_loss to not be under the opts object
         loss += loss_task
 
     return loss

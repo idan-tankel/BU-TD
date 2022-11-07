@@ -12,12 +12,13 @@ from typing import Union
 from supp.Dataset_and_model_type_specification import Flag
 # from supp.models import BUTDModelShared,BUTDModel,BUModel,BUStream,BUStreamShared
 from models.BU_TD_Models import BUTDModelShared, BUModelSimple
+from models.Attention import Attention
 logger = logging.getLogger(__name__)
 
 try:
-    from Configs.Config import Config
+    from Configs.Config import Config,Models
 except ImportError:
-    from code.Configs.Config import Config
+    from code.Configs.Config import Config,Models
 
 
 def create_model(model_opts:Config) -> nn.Module:
@@ -27,18 +28,24 @@ def create_model(model_opts:Config) -> nn.Module:
     :return: The desired model.
     """
     switcher = {
-        "Flag.TD": BUTDModelShared,
-        "Flag.NOFLAG": BUModelSimple,
-        "Flag.ZF": BUTDModelShared,
-        "Flag.BU2": BUTDModelShared,
-        "Flag.BU1": BUTDModelShared,
-        "Flag.BU1_SIMPLE": BUModelSimple,
-        "Flag.BU1_NOFLAG": BUModelSimple,
-        "Flag.SF": BUTDModelShared,
-        "Flag.AttentionPretrained": BUTDModelShared,
+        Flag.TD: BUTDModelShared,
+        Flag.NOFLAG: BUModelSimple,
+        Flag.ZF: BUTDModelShared,
+        Flag.BU2: BUTDModelShared,
+        Flag.BU1: BUTDModelShared,
+        Flag.BU1_SIMPLE: BUModelSimple,
+        Flag.BU1_NOFLAG: BUModelSimple,
+        Flag.SF: BUTDModelShared,
+        Flag.AttentionPretrained: BUTDModelShared,
+        Flag.Attention: Attention
     }
-    model = switcher[model_opts.RunningSpecs.Flag](model_opts)
-    model = nn.DataParallel(model)
+    try:
+        model = switcher[model_opts.RunningSpecs.Flag](model_opts)
+    except KeyError:
+        model_opts = model_opts.Models
+        model = switcher[model_opts.RunningSpecs.Flag](model_opts)
+        # try to fix local problems with the transition from config file to a parser
+    # model = nn.DataParallel(model)
     model = model.cuda()
     return model
 

@@ -192,7 +192,7 @@ class ResNetLatSharedBase():
 
         self.use_bu2_flag = opts.use_bu2_flag
         if self.use_bu2_flag:
-            top_filters = opts.nfilters[k]
+            top_filters = opts.Models.nfilters[k]
             self.top_filters = top_filters
             self.h_flag_bu2 = nn.Linear(opts.flag_size, top_filters)
             self.h_top_bu2 = nn.Linear(top_filters * 2, top_filters)

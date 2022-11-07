@@ -2,8 +2,13 @@ from matplotlib import transforms
 from torch import nn, device, cuda
 from transformers import ViTConfig, ViTModel, TrainingArguments, ViTForImageClassification
 from vit_pytorch import cct
+from torchvision.transforms import transforms
+from types import SimpleNamespace
 # local imports
-
+try:
+    from supp.Dataset_and_model_type_specification import inputs_to_struct
+except ImportError:
+    from ..supp.Dataset_and_model_type_specification import inputs_to_struct
 from .Heads import MultiLabelHead
 from typing import Union
 import yaml
@@ -82,9 +87,27 @@ class Attention(nn.Module):
         forward method forward pass
 
         Args:
-            x (torch.Tensor): input tensor
+            x (torch.Tensor): input tensor - unstructured data
 
         Returns:
             torch.Tensor: output tensor
         """
-        return self.model(x)
+        x = inputs_to_struct(x)
+        model_inputs = transforms.Resize(size=(224, 224))(x.image)
+        # TODO change this to support parameter and not hard coded
+        model_inputs = self.cct(model_inputs)
+        return self.taskhead(model_inputs)
+    
+    def outs_to_struct(self, outs):
+        """
+        outs_to_struct change the output of the forward pass to a structured output
+
+        Args:
+            outs (torch.Tensor): output of the forward pass
+
+        Returns:
+            SimpleNamespace: structured output
+        """        
+        task_out = outs
+        outs_ns = SimpleNamespace(task=task_out)
+        return outs_ns
