@@ -54,6 +54,7 @@ class Attention(nn.Module):
             num_layers=4,
             num_heads=2,
             mlp_ratio=1.,
+            
         )
         self.taskhead = MultiLabelHead(opts=config)
         self.model = nn.Sequential(self.cct, self.taskhead)

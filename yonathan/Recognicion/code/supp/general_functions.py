@@ -195,7 +195,7 @@ def create_optimizer_and_sched(opts: argparse.ArgumentParser, learned_params: li
 
     """
     if opts.optimizer == 'SGD':
-        optimizer = optim.SGD(learned_params, lr=opts.initial_lr, momentum=opts.momentum, weight_decay=opts.wd)
+        optimizer = optim.SGD(learned_params, lr=opts.base_lr, momentum=opts.momentum, weight_decay=opts.wd)
         if opts.cycle_lr:
             scheduler = optim.lr_scheduler.CyclicLR(optimizer, base_lr=opts.base_lr, max_lr=opts.max_lr,
                                                     step_size_up=nbatches_train // 2, step_size_down=None,

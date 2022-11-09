@@ -60,7 +60,7 @@ Models:
   orig_relus: False # ('bool') use the original relu activation function in certain places
   norm_layer: BatchNorm # (`nn.Module`) one of the supported normalization layers
   # Notice! this option affected also from training / dataset requirements
-  ntasks: 4 # (`int`) the number of tasks to train on. Will determine the number of heads in the model
+  ntasks: 1 # (`int`) the number of tasks to train on. Will determine the number of heads in the model
 
 
 # Some other model params are initialized in the function `init_model_options` under `v26.functions.inits.py`
@@ -72,7 +72,7 @@ Training:
   num_workers: 2
   epochs: 200
   momentum: 0.9 # (`float`) Momentum of the Adam optimizer
-  wd: 0.0001 #(`float`) The weight decay of the Adam optimizer
+  wd: 0.001 #(`float`) The weight decay of the Adam optimizer
   lr: 1e-4 # (`float`)the initial learning rate # TODO support in also multiplication
   max_lr: 0.002  # (`float`) the maximum learning rate
   distributed: False # whether to use distributed data within training - accross some GPUs using DistributedSampler of torch

@@ -15,9 +15,9 @@ nthreads: 10 # (`int`) The number of threads to use for the data processing
 
 # preprocessing options
 augment_sample: True # (`bool`) If set to true, augment the data with random rotations, flips, and translations
-letter_size: 28 # (`int`) The size of the letters to be used for the preprocessing (default=28)
+letter_size: 16 # (`int`) The size of the letters to be used for the preprocessing (default=28)
 nchars_per_row: 6 # (`int`) The number of characters per row to be used in the image (default=5)
-image_size: [112,224] # (`list` of length 2) The size of the image to use for the preprocessing (default=[112,224]). The image will be resized to this size
+image_size: [224,224] # (`list` of length 2) The size of the image to use for the preprocessing (default=[112,224]). The image will be resized to this size
 sample_nchars:  # default=nchars_per_row * num_rows_in_the_image help='The number of characters in each image (`int`)
 num_rows_in_the_image: 1 # (`int`) The number of rows in the image 
 # scale parameters of the preprocessing
