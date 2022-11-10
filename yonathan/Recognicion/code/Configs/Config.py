@@ -8,7 +8,7 @@ import torch
 from supp.Dataset_and_model_type_specification import DsType, Flag, inputs_to_struct,AllOptions
 # from v26.functions.inits import init_model_options
 from supp.batch_norm import BatchNorm
-from supp.loss_and_accuracy import multi_label_loss, UnifiedCriterion, multi_label_accuracy_base
+from supp.loss_and_accuracy import multi_label_loss, UnifiedCriterion, multi_label_accuracy_base,multi_label_loss_weighted
 # from supp.emnist_dataset import inputs_to_struct
 
 # from supp.training_functions import create_optimizer_and_sched

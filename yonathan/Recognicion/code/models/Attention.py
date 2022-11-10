@@ -9,7 +9,10 @@ try:
     from supp.Dataset_and_model_type_specification import inputs_to_struct
 except ImportError:
     from ..supp.Dataset_and_model_type_specification import inputs_to_struct
-from .Heads import MultiLabelHead
+try:
+    from .Heads import MultiLabelHead,OccurrenceHead
+except ImportError:
+    from Heads import MultiLabelHead,OccurrenceHead
 from typing import Union
 import yaml
 

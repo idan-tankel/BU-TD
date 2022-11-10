@@ -29,12 +29,12 @@ def get_dataset_for_spatial_realtions(opts: Union[argparse.ArgumentParser, Confi
 
     """
     try:
-        model_flag = bool(opts.RunningSpecs.Flag)
+        model_flag = opts.RunningSpecs.Flag
     except AttributeError:
-        model_flag = bool(opts.Flag)
-    if model_flag is not Flag.NOFLAG:
+        model_flag = opts.Flag
+    if model_flag not in [Flag.NOFLAG,Flag.Attention]:
         from supp.datasets import DatasetAllDataSetTypes as dataset
-    elif model_flag is Flag.NOFLAG:
+    else:
         from supp.datasets import DatasetAllDataSetTypesAll as dataset
 
     path_fname = os.path.join(data_fname, 'MetaData')

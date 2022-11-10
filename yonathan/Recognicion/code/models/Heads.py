@@ -50,7 +50,8 @@ class MultiLabelHead(nn.Module):
 
     def __init__(self, opts):
         """
-        __init__ _summary_
+        __init__ Initialize the head and the layers with `nn.sequential` as a list of `nn.Linear` layers by the parameters
+         within the opts
 
         Args:
             opts (`config` | `argparse.ArgumentParser` | `SimpleNamespace`): model configuration object defined in `Configs.config.py`
@@ -58,8 +59,15 @@ class MultiLabelHead(nn.Module):
         super(MultiLabelHead, self).__init__()
         layers = []
         opts.Models.init_model_options()
-        for k in range(len(opts.Models.nclasses)):
-            filters = opts.Models.nclasses[k][0]
+        if len(opts.Models.nclasses) == 1 or type(opts.Models.nclasses) == int:
+            try:
+                number_of_heads = opts.Models.number_of_linear_heads
+                filters = opts.Models.nclasses[0][0]
+            except AttributeError:
+                number_of_heads = len(opts.Models.nclasses)
+        for k in range(number_of_heads):
+            if filters is None:
+                filters = opts.Models.nclasses[k][0]
             infilters = opts.Models.nfilters[-1]
             k_layers = [nn.Linear(infilters, infilters), opts.Models.norm_layer(infilters, dims=1), opts.Models.activation_fun()]*(opts.Models.ntaskhead_fc - 1)
             # add last FC: plain

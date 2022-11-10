@@ -15,7 +15,7 @@ dev = device("cuda") if torch.cuda.is_available() else device("cpu")
 # Accuracy
 
 
-def multi_label_accuracy_base(outs: Union[SimpleNamespace,object], samples: object, compound_all=False) -> tuple:
+def multi_label_accuracy_base(outs: Union[SimpleNamespace, object], samples: object, compound_all=False,occurence_only=True) -> tuple:
     """
     The base class for all modes.
     Here for each head we compute its accuracy according to the model out and label task.
@@ -30,6 +30,19 @@ def multi_label_accuracy_base(outs: Union[SimpleNamespace,object], samples: obje
     cur_batch_size = samples.image.shape[0]
     predictions = torch.argmax(input=outs.task, dim=1, keepdim=False)
     # TODO: update the structure of the data_loader to include the flag
+    if occurence_only:
+        direction_one_hot = samples.label_existence
+        predictions_by_correct_task = torch.mul(
+            predictions, direction_one_hot)
+        labels_by_correct_task = torch.mul(samples.label_task,direction_one_hot)
+        # since the border class is not zero,naturally it will not be added to the number of successes - it will be 0 - 0 = 0
+        number_of_errors = (predictions_by_correct_task - labels_by_correct_task).count_nonzero()
+        total_number_of_tasks = samples.label_existence.count_nonzero()
+        task_accuracy = (total_number_of_tasks - number_of_errors) /cur_batch_size
+        return predictions, task_accuracy
+        
+
+
     direction_one_hot = samples.flag[:,
                                      0:total_number_of_tasks].type(torch.int64)
     if not compound_all:
@@ -76,7 +89,7 @@ def multi_label_accuracy(outs: object, samples: object):
     .. note:: Deprecated in 11_0
     ### Marked for deprecation ###
     return the task accuracy mean over all samples.
-    
+
     Args:
         outs: The model outs.
         samples: The samples.
@@ -87,7 +100,6 @@ def multi_label_accuracy(outs: object, samples: object):
     preds, task_accuracy = multi_label_accuracy_base(outs, samples)
     # per single example
     avg_task_accuracy = task_accuracy.mean()
-
     return preds, avg_task_accuracy
 #
 
@@ -110,7 +122,7 @@ def multi_label_accuracy_weighted(outs, inputs):
 # Loss
 
 
-def multi_label_loss_base(outs: object, samples: object):
+def multi_label_loss_base(outs: object, samples: object, guided:bool=False):
     """
     Here for each head we compute its loss according to the model out and label task.
     Args:
@@ -122,7 +134,6 @@ def multi_label_loss_base(outs: object, samples: object):
     """
     loss_tasks = torch.zeros(samples.label_task.shape)
     direction_one_hot = samples.flag[:, 0:4].type(torch.int64)
-
     # since the directions are encoded as one hot vectors
     # we can use simple BMM to get the output by the correct direction and zero out all
     # without using more complex functions as gather...
@@ -131,14 +142,23 @@ def multi_label_loss_base(outs: object, samples: object):
     # use gather and scatter of torch to get the loss of each task
     # task_output = [outs.task[k,:,directions_flags[k]] for k in range(samples.flag.shape[0])]
     # task_output = outs.task.gather(dim=2,index=direction_map.repeat(1,48,1))
-
-    task_output = torch.bmm(
-        outs.task, direction_one_hot.unsqueeze(2).type(torch.float))
-    task_output = task_output.squeeze(dim=2)
+    label_task = samples.label_task.squeeze(dim=1).type(torch.FloatTensor).to(dev)
+    if guided:
+        task_output = torch.bmm(
+            outs.task, direction_one_hot.unsqueeze(2).type(torch.float))
+    else:
+        task_output = outs.task
+        label_task *= samples.label_existence
+        task_output = torch.argmax(task_output,dim=1,keepdim=True).type(torch.FloatTensor).to(dev)
+        # the reason why dim 1 is that the shape was (batch_size,probability_to_get_i_on_location_j,location_j)
+        # that is important since the last layer is only a concatentation of the outputs of the heads
+        task_output *= samples.label_existence.unsqueeze(1)
+    task_output = task_output.squeeze(dim=1)
     # TODO convert this part to scatter_add_
-    label_task = samples.label_task.squeeze(dim=1).type(torch.LongTensor)
+    # in order to verify that the CE will taken according to the classes that do appear in the image only
+    # out of 48 available classes we have to multiply the CE by the existence of the class in the image (one hot)
     # compute the loss
-    loss_tasks = CE(task_output.to(dev), label_task.to(dev))
+    loss_tasks = CE(task_output, label_task)
     # for k in range(self.num_outputs):
     #     # task_output = outs.task[:, :, k]  # For each task extract its last layer (shape 10,48)
     #     label_task = samples.label_task[:, k]  # The label for the loss
@@ -164,6 +184,7 @@ def multi_label_loss(outs, samples):
 
 def multi_label_loss_weighted(outs, samples):
     """
+    *** MARKED FOR DEPRECATION ***
     The loss over all existing characters in the batch.
     Args:
         outs: The model outputs.
@@ -201,10 +222,10 @@ def UnifiedCriterion(opts: argparse.ArgumentParser, inputs: list[torch.Tensor], 
     if opts.use_bu1_loss:
         try:
             loss_occ = opts.bu1_loss(outs.occurence,
-                                 samples.label_existence)  # compute the binary existence classification loss
+                                     samples.label_existence)  # compute the binary existence classification loss
         except KeyError:
             raise KeyError(
-                "The model does not have an occurence stream, please check the model architecture and the losses flags")                            
+                "The model does not have an occurence stream, please check the model architecture and the losses flags")
         loss += loss_occ  # Add the occurrence loss.
 
     if opts.use_bu2_loss:
