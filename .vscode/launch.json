@@ -11,7 +11,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "justMyCode": true,
+            "justMyCode": false,
             "env": {
                 "LD_LIBRARY_PATH": "/home/idanta/anaconda3/envs/tankel/lib",
                 "DISPLAY": "localhost:16.0"

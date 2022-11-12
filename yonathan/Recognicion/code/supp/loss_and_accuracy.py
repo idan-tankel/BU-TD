@@ -38,7 +38,8 @@ def multi_label_accuracy_base(outs: Union[SimpleNamespace, object], samples: obj
         # since the border class is not zero,naturally it will not be added to the number of successes - it will be 0 - 0 = 0
         number_of_errors = (predictions_by_correct_task - labels_by_correct_task).count_nonzero()
         total_number_of_tasks = samples.label_existence.count_nonzero()
-        task_accuracy = (total_number_of_tasks - number_of_errors) /cur_batch_size
+        task_accuracy = (total_number_of_tasks - number_of_errors) /total_number_of_tasks
+        assert task_accuracy <= 1
         return predictions, task_accuracy
         
 
@@ -142,27 +143,29 @@ def multi_label_loss_base(outs: object, samples: object, guided:bool=False):
     # use gather and scatter of torch to get the loss of each task
     # task_output = [outs.task[k,:,directions_flags[k]] for k in range(samples.flag.shape[0])]
     # task_output = outs.task.gather(dim=2,index=direction_map.repeat(1,48,1))
-    label_task = samples.label_task.squeeze(dim=1).type(torch.FloatTensor).to(dev)
+    label_task = samples.label_task.squeeze(dim=1).type(torch.LongTensor).to(dev)
     if guided:
         task_output = torch.bmm(
             outs.task, direction_one_hot.unsqueeze(2).type(torch.float))
     else:
+        # 2 is the number of tasks, representing 47 different tasks - one for each char
         task_output = outs.task
-        label_task *= samples.label_existence
-        task_output = torch.argmax(task_output,dim=1,keepdim=True).type(torch.FloatTensor).to(dev)
-        # the reason why dim 1 is that the shape was (batch_size,probability_to_get_i_on_location_j,location_j)
-        # that is important since the last layer is only a concatentation of the outputs of the heads
-        task_output *= samples.label_existence.unsqueeze(1)
+        label_task *= samples.label_existence.type(torch.LongTensor).to(dev)
+        task_output *= samples.label_existence.unsqueeze(2).to(dev)
     task_output = task_output.squeeze(dim=1)
     # TODO convert this part to scatter_add_
     # in order to verify that the CE will taken according to the classes that do appear in the image only
     # out of 48 available classes we have to multiply the CE by the existence of the class in the image (one hot)
     # compute the loss
     loss_tasks = CE(task_output, label_task)
-    # for k in range(self.num_outputs):
-    #     # task_output = outs.task[:, :, k]  # For each task extract its last layer (shape 10,48)
-    #     label_task = samples.label_task[:, k]  # The label for the loss
-    #     loss_tasks[:, k] = loss_task  # Assign for each task its loss. (shape )
+    loss_tasks_old = torch.zeros_like(loss_tasks).to(dev)
+    for k in range(48):
+        # task_output = outs[:, :, k]  # For each task extract its last layer (shape 10,48)
+        # label_task = samples.label_task[:, k]  # The label for the loss
+        taskk_out = task_output[:,:,k]
+        label_taskk = label_task[:,k]
+        loss_tasks_old[:, k] += CE(input=taskk_out,target=label_taskk)  # Assign for each task its loss. (shape )
+    assert loss_tasks_old == loss_tasks
     # loss_tasks = CE(outs.task, samples.label_task)
     return loss_tasks  # return the task loss
 
