@@ -158,7 +158,7 @@ def multi_label_loss_base(outs: object, samples: object, guided:bool=False):
     # out of 48 available classes we have to multiply the CE by the existence of the class in the image (one hot)
     # compute the loss
     loss_tasks = CE(task_output, label_task)
-    loss_tasks_old = torch.zeros_like(loss_tasks).to(dev)
+    loss_tasks_old = torch.zeros_like(loss_tasks).to(dev,non_blocking=True)
     for k in range(48):
         # task_output = outs[:, :, k]  # For each task extract its last layer (shape 10,48)
         # label_task = samples.label_task[:, k]  # The label for the loss
