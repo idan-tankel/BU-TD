@@ -97,7 +97,7 @@ class Attention(nn.Module):
             torch.Tensor: output tensor
         """
         x = inputs_to_struct(x)
-        model_inputs = transforms.Resize(size=(224, 224))(x.image)
+        model_inputs = x.image
         # TODO change this to support parameter and not hard coded
         model_inputs = self.cct(model_inputs)
         return self.taskhead(model_inputs)

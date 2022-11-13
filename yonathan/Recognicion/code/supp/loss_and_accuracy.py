@@ -133,7 +133,6 @@ def multi_label_loss_base(outs: object, samples: object, guided:bool=False):
     Returns: The loss over all heads.
 
     """
-    loss_tasks = torch.zeros(samples.label_task.shape)
     direction_one_hot = samples.flag[:, 0:4].type(torch.int64)
     # since the directions are encoded as one hot vectors
     # we can use simple BMM to get the output by the correct direction and zero out all
@@ -147,25 +146,15 @@ def multi_label_loss_base(outs: object, samples: object, guided:bool=False):
     if guided:
         task_output = torch.bmm(
             outs.task, direction_one_hot.unsqueeze(2).type(torch.float))
+        task_output = task_output.squeeze(dim=1)
     else:
         # 2 is the number of tasks, representing 47 different tasks - one for each char
         task_output = outs.task
-        label_task *= samples.label_existence.type(torch.LongTensor).to(dev)
-        task_output *= samples.label_existence.unsqueeze(2).to(dev)
-    task_output = task_output.squeeze(dim=1)
     # TODO convert this part to scatter_add_
     # in order to verify that the CE will taken according to the classes that do appear in the image only
     # out of 48 available classes we have to multiply the CE by the existence of the class in the image (one hot)
     # compute the loss
     loss_tasks = CE(task_output, label_task)
-    loss_tasks_old = torch.zeros_like(loss_tasks).to(dev)
-    for k in range(48):
-        # task_output = outs[:, :, k]  # For each task extract its last layer (shape 10,48)
-        # label_task = samples.label_task[:, k]  # The label for the loss
-        taskk_out = task_output[:,:,k]
-        label_taskk = label_task[:,k]
-        loss_tasks_old[:, k] += CE(input=taskk_out,target=label_taskk)  # Assign for each task its loss. (shape )
-    assert loss_tasks_old == loss_tasks
     # loss_tasks = CE(outs.task, samples.label_task)
     return loss_tasks  # return the task loss
 
