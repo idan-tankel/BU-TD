@@ -4,7 +4,8 @@ Visibility:
 
 RunningSpecs:
   distributed: False
-  Flag: Attention # the model specification to run. Defined as (`supp.Dataset_and_model_type_specifications.Flag`)
+  Flag: AttentionHuggingFace # the model specification to run. Defined as (`supp.Dataset_and_model_type_specifications.Flag`)
+  backbone: BU_Attention # (currently Supported BU_Attention, CCT) the backbone to use. Defined as (`supp.Dataset_and_model_type_specifications.backbone`)
   flag_size:
   isFit: True
   processed_data: '6_extended' # The name of the model result directory

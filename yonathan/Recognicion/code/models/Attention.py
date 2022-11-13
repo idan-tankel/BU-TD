@@ -38,7 +38,7 @@ class Attention(nn.Module):
         __init__ _summary_
 
         Args:
-            config (`ViTConfig` | `None`): The model configuration in case of a not pretrained model. In case that the config is None, some default values are used from empty ViTConfig object.
+            config (`Configs.Config.config`): The model configuration - gloabl configuration. In case that the config is None, some default values are used from empty ViTConfig object.
         """
         super().__init__()
         dev = device("cuda" if cuda.is_available() else "cpu")
@@ -63,7 +63,7 @@ class Attention(nn.Module):
         self.model = nn.Sequential(self.cct, self.taskhead)
         self.model.to(dev)
 
-    def document2config(self, document, replace_now=True) -> ViTConfig:
+    def document2attentionconfig(self, document, override=True) -> ViTConfig:
         """
         document2config method converts yaml document to `ViTConfig` object.
         The attributes of the yaml document should be the same as the `transformers.ViTConfig` object.
@@ -82,7 +82,7 @@ class Attention(nn.Module):
         with open(document, 'r') as stream:
             config_as_dict = yaml.safe_load(stream)
         config = ViTConfig(**config_as_dict)
-        if replace_now:
+        if override:
             self.model = ViTForImageClassification(config=config)
         return config
 
@@ -115,3 +115,50 @@ class Attention(nn.Module):
         task_out = outs
         outs_ns = SimpleNamespace(task=task_out)
         return outs_ns
+
+
+
+class Attention2(ViTForImageClassification):
+    """
+    Attention2 Class is an implementation of BU-TD approach instead of BU approach
+    """
+    def __init__(self,config):
+        """
+        __init__ _summary_
+
+        Args:
+            config (config): The Config class object - global model and trainig configuration
+        """
+        super().__init__(config=ViTConfig(
+            image_size=224,
+            hidden_size=768,
+            num_hidden_layers=12,
+            num_attention_heads=12,
+            num_channels=3,
+            qkv_bias=True,
+            patch_size=16,
+            hidden_act="gelu",
+            num_labels=0,
+            # as tested the weight initialization is not the problem - the pretrained function is only implemented for models from the hub
+        ))
+        # Now the self.vit is the ViT model and self.classifier is the built-in classifier        
+        self.taskhead = MultiLabelHead(opts=config)
+        # save the model attribute
+        self.model = nn.Sequential(self.vit, self.taskhead)
+
+
+
+    def forward(self,x):
+        """
+        forward method forward pass
+
+        Args:
+            x (torch.Tensor): input tensor - unstructured data
+
+        Returns:
+            torch.Tensor: output tensor
+        """
+        x = inputs_to_struct(x)
+        # the input to struct function is of the dataset - to crete a structured data
+        model_inputs = x.image
+        return self.taskhead(self.vit(model_inputs))

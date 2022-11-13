@@ -97,6 +97,7 @@ class Config:
             # The flag size should be number of classes + 4 (number of directios \ total tasks). Since there is a background class, we have added +1
         except KeyError as e:
             print(f'The config.Models object was not initialized before calling up setup_flag {e}')
+        
 
     def get_config(self):
         return self.__config
@@ -142,6 +143,7 @@ class RunningSpecs:
         self.Flag = Flag[config['Flag']]
         self.isFit = config['isFit']
         self.processed_data = config['processed_data']
+        self.backbone = config['backbone']
 
 
 class Datasets:

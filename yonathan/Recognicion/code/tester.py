@@ -6,8 +6,8 @@ def main():
     config = Config()
     attention_model = Attention(config=config)
     attention_path = "/home/idanta/BU-TD/yonathan/Recognicion/code/Configs/Attention.yaml"
-    Attention.document2config(
-        attention_model, attention_path, replace_now=True)
+    Attention.document2attentionconfig(
+        attention_model, attention_path, override=True)
     model = Attention(config=config)
     print(model)
 

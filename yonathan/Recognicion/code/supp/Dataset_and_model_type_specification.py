@@ -19,6 +19,7 @@ class Flag(Enum):
     BU1_NOFLAG = auto()
     SF = auto()  # BU-TD network with allocating task embedding for each task and using the SF loss.
     AttentionPretrained = auto()  # Attention network.
+    AttentionHuggingFace = auto()  # Attention network.
     Attention = auto()  # Attention network.
 
 
