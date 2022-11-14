@@ -32,7 +32,7 @@ def get_dataset_for_spatial_realtions(opts: Union[argparse.ArgumentParser, Confi
         model_flag = opts.RunningSpecs.Flag
     except AttributeError:
         model_flag = opts.Flag
-    if model_flag not in [Flag.NOFLAG,Flag.Attention]:
+    if model_flag not in [Flag.NOFLAG,Flag.Attention,Flag.AttentionHuggingFace]:
         from supp.datasets import DatasetAllDataSetTypes as dataset
     else:
         from supp.datasets import DatasetAllDataSetTypesAll as dataset

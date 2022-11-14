@@ -40,7 +40,7 @@ def multi_label_accuracy_base(outs: Union[SimpleNamespace, object], samples: obj
         # since the border class is not zero,naturally it will not be added to the number of successes - it will be 0 - 0 = 0
         number_of_errors = (predictions_by_correct_task -
                             labels_by_correct_task).count_nonzero()
-        total_number_of_tasks = torch.numel(samples.label_existence)
+        total_number_of_tasks = torch.count_nonzero(samples.label_existence)
         task_accuracy = (total_number_of_tasks -
                          number_of_errors) / total_number_of_tasks
         assert task_accuracy <= 1
@@ -154,24 +154,13 @@ def multi_label_loss_base(outs: object, samples: object, guided: bool = False):
     else:
         # 2 is the number of tasks, representing 47 different tasks - one for each char
         task_output = outs.task
-        # label_task *= samples.label_existence.type(torch.LongTensor).to(dev)
-        # task_output *= samples.label_existence.unsqueeze(2).to(dev)
+        label_task *= samples.label_existence.type(torch.LongTensor).to(dev)
+        task_output *= samples.label_existence.unsqueeze(2).to(dev)
     # TODO convert this part to scatter_add_
     # in order to verify that the CE will taken according to the classes that do appear in the image only
     # out of 48 available classes we have to multiply the CE by the existence of the class in the image (one hot)
     # compute the loss
     loss_tasks = CE(task_output, label_task)
-    # loss_tasks_old = torch.zeros(label_task.shape).to(dev, non_blocking=True)
-    # for k in range(47):
-    #     # task_output = outs[:, :, k]  # For each task extract its last layer (shape 10,48)
-    #     # label_task = samples.label_task[:, k]  # The label for the loss
-    #     taskk_out = outs.task[:, :, k]
-    #     label_taskk = samples.label_task[:, k]
-    #     # Assign for each task its loss. (shape )
-    #     loss_taskk = CE(input=taskk_out, target=label_taskk)
-    #     loss_tasks_old[:, k] = loss_taskk
-    # assert loss_tasks_old == loss_tasks
-    # loss_tasks = CE(outs.task, samples.label_task)
     return loss_tasks  # return the task loss
 
 

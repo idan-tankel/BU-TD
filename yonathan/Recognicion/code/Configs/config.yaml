@@ -49,9 +49,9 @@ Models:
   num_heads: "only_features"
   inshape: [3, 112, 224] # `[int,int,int]` the spahe of the incoming data. The inshape being a list rather than a tuple is simpler, since a YAML formatter would treat the tuple as a string, and accessing the elements of the tuple would just concat the string '('.
   nclasses: [[47]] # the number of classes within the dataset TOOD
-  number_of_linear_heads: 47 # each linear head correspond to a class
+  number_of_linear_heads: 47 # each linear head correspond to a class in the MultiHeadAttention
   strides: [2, 2, 1, 2]
-  nfilters: [128] # For CCT
+  nfilters: [768] # For CCT
   ns: [0, 1, 1, 1] # the number of blocks in 
   ks: [7, 3, 3, 3] # kernel size 
   ntaskhead_fc: 1 # get out only 1 task!

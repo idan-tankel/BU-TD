@@ -19,7 +19,7 @@ def main(ds_type: DataSet, language_list=None, nchars_per_row=6, num_rows_in_the
     parser = Get_parser(ds_type, nchars_per_row=nchars_per_row,
                         num_rows_in_the_image=num_rows_in_the_image)
     parser = get_create_config()
-    raw_data_set = DataSet(parser, data_dir='/home/idanta/data' + ds_type.from_enum_to_str(),  dataset=ds_type,
+    raw_data_set = DataSet(parser, data_dir='/home/idanta/data/' + ds_type.from_enum_to_str(),  dataset=ds_type,
                            raw_data_source=parser.path_data_raw,  language_list=language_list)  # Getting the raw data.
     # Iterating over all dataset types, and its number of desired number of samples.
     nsamples_per_data_type_dict = Create_dataset_funcs.create_samples(

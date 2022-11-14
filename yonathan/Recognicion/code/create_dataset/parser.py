@@ -38,7 +38,7 @@ def Get_parser(ds_type, nchars_per_row=6, num_rows_in_the_image=1):
     parser.add_argument('--ndirections', default=2, type=int,
                         help='Number of directions to create from')
     parser.add_argument(
-        '--image_size', default=[112, 224], type=list, help='The image size')
+        '--image_size', default=[64, 224], type=list, help='The image size')
     parser.add_argument('--create_all_directions', default=False,
                         type=bool,   help='Whether to create all directions')
     parser.add_argument('--ngenerate', default=5, type=int,

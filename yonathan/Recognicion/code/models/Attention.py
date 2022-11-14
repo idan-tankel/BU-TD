@@ -3,6 +3,7 @@ from torch import nn, device, cuda
 from transformers import ViTConfig, ViTModel, TrainingArguments, ViTForImageClassification
 from vit_pytorch import cct
 from torchvision.transforms import transforms
+from Configs.Config import Config
 from types import SimpleNamespace
 # local imports
 try:
@@ -122,7 +123,7 @@ class Attention2(ViTForImageClassification):
     """
     Attention2 Class is an implementation of BU-TD approach instead of BU approach
     """
-    def __init__(self,config):
+    def __init__(self,cfg:Config):
         """
         __init__ _summary_
 
@@ -132,17 +133,18 @@ class Attention2(ViTForImageClassification):
         super().__init__(config=ViTConfig(
             image_size=224,
             hidden_size=768,
-            num_hidden_layers=12,
-            num_attention_heads=12,
+            num_hidden_layers=4,
+            num_attention_heads=2,
+            num_labels=0, # adding another linear layer on the top of the first CLS token - that is the 
             num_channels=3,
             qkv_bias=True,
             patch_size=16,
             hidden_act="gelu",
-            num_labels=0,
             # as tested the weight initialization is not the problem - the pretrained function is only implemented for models from the hub
         ))
         # Now the self.vit is the ViT model and self.classifier is the built-in classifier        
-        self.taskhead = MultiLabelHead(opts=config)
+        self.taskhead = MultiLabelHead(opts=cfg)
+        self.vit.to(device("cuda" if cuda.is_available() else "cpu"))
         # save the model attribute
         self.model = nn.Sequential(self.vit, self.taskhead)
 
@@ -161,4 +163,22 @@ class Attention2(ViTForImageClassification):
         x = inputs_to_struct(x)
         # the input to struct function is of the dataset - to crete a structured data
         model_inputs = x.image
-        return self.taskhead(self.vit(model_inputs))
+        vit_outputs = super().forward(model_inputs).logits
+        return self.taskhead(vit_outputs)
+        # since the BaseModelOutputWithPooling is an output wrapper for the ViT model as documented here 
+        # https://huggingface.co/transformers/v4.4.2/main_classes/output.html
+
+
+    def outs_to_struct(self, outs):
+        """
+        outs_to_struct change the output of the forward pass to a structured output
+
+        Args:
+            outs (torch.Tensor): output of the forward pass
+
+        Returns:
+            SimpleNamespace: structured output
+        """        
+        task_out = outs
+        outs_ns = SimpleNamespace(task=task_out)
+        return outs_ns
