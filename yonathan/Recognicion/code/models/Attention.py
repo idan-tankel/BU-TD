@@ -1,6 +1,6 @@
 from matplotlib import transforms
 from torch import nn, device, cuda
-from transformers import ViTConfig, ViTModel, TrainingArguments, ViTForImageClassification
+from transformers import ViTConfig, ViTModel, TrainingArguments, ViTForImageClassification,ViTFeatureExtractor
 from vit_pytorch import cct
 from torchvision.transforms import transforms
 from Configs.Config import Config
@@ -130,18 +130,9 @@ class Attention2(ViTForImageClassification):
         Args:
             config (config): The Config class object - global model and trainig configuration
         """
-        super().__init__(config=ViTConfig(
-            image_size=224,
-            hidden_size=768,
-            num_hidden_layers=4,
-            num_attention_heads=2,
-            num_labels=0, # adding another linear layer on the top of the first CLS token - that is the 
-            num_channels=3,
-            qkv_bias=True,
-            patch_size=16,
-            hidden_act="gelu",
-            # as tested the weight initialization is not the problem - the pretrained function is only implemented for models from the hub
-        ))
+        super().__init__(ViTConfig())
+        self.feature_extractor =  ViTFeatureExtractor.from_pretrained('google/vit-base-patch16-224')
+        self.vit = ViTForImageClassification.from_pretrained("google/vit-base-patch16-224")
         # Now the self.vit is the ViT model and self.classifier is the built-in classifier        
         self.taskhead = MultiLabelHead(opts=cfg)
         self.vit.to(device("cuda" if cuda.is_available() else "cpu"))
@@ -163,7 +154,7 @@ class Attention2(ViTForImageClassification):
         x = inputs_to_struct(x)
         # the input to struct function is of the dataset - to crete a structured data
         model_inputs = x.image
-        vit_outputs = super().forward(model_inputs).logits
+        vit_outputs = self.vit(model_inputs).logits
         return self.taskhead(vit_outputs)
         # since the BaseModelOutputWithPooling is an output wrapper for the ViT model as documented here 
         # https://huggingface.co/transformers/v4.4.2/main_classes/output.html

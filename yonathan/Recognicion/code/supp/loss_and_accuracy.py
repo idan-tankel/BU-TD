@@ -32,7 +32,7 @@ def multi_label_accuracy_base(outs: Union[SimpleNamespace, object], samples: obj
     # TODO: update the structure of the data_loader to include the flag
     if unguided:
         # without any guide, all the directions are tested 
-        direction_one_hot = torch.ones_like(samples.label_existence)
+        direction_one_hot = samples.label_existence
         predictions_by_correct_task = torch.mul(
             predictions, direction_one_hot)
         labels_by_correct_task = torch.mul(

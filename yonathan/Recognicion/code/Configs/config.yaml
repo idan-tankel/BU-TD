@@ -51,7 +51,7 @@ Models:
   nclasses: [[47]] # the number of classes within the dataset TOOD
   number_of_linear_heads: 47 # each linear head correspond to a class in the MultiHeadAttention
   strides: [2, 2, 1, 2]
-  nfilters: [768] # For CCT
+  nfilters: [1000] # For CCT
   ns: [0, 1, 1, 1] # the number of blocks in 
   ks: [7, 3, 3, 3] # kernel size 
   ntaskhead_fc: 1 # get out only 1 task!
