@@ -1239,7 +1239,7 @@ def train_and_fit(checkpoint_dir=None):
         train_opts.load_model_if_exists= True
         train_opts.save_model = True
     
-    checkpoint = torch.load(os.path.join(os.path.join('/home/liav/code/counter_stream/data/emnist/results','food_pyt_v27_vit_cs_cct2_binary_floatimg_nosepnorm_xavier_nodroppath_wdropout_food101'),'model_latest.pt'));
+    checkpoint = torch.load(os.path.join('/home/idanta/data/emnist/results/v27_vit_p16_normimg_nowd_cct4_224sz_128dim_food101','model_latest.pt'))
     state_dict = checkpoint['model_state_dict']
     for key in ['module.taskhead.layers.0.weight','module.taskhead.layers.0.bias']:
         state_dict[key]=model.state_dict()[key]
@@ -1581,7 +1581,7 @@ if interactive_session:
                     print('%0.f %%' % (100*i/len(ds.dl.dataset)))
         print('done dataset')
         return i
-
+    
     cur_samples_dir = os.path.join(model_dir,'samples')
     new_nsamples_train= store_samples(train_dataset,os.path.join(cur_samples_dir,'train'),True)
     new_nsamples_test = store_samples(test_dataset,os.path.join(cur_samples_dir,'test'),False)
