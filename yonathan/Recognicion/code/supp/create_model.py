@@ -21,12 +21,17 @@ except ImportError:
     from code.Configs.Config import Config,Models
 
 
-def create_model(model_opts:Config) -> nn.Module:
+def get_or_create_model(model_opts:Config) -> nn.Module:
     """
+    If the model exists, and specified in the config, it will be loaded.
     Creating a model and make it parallel and move it to the cuda.
     :param args: arguments to create the model according to.
     :return: The desired model.
     """
+    if model_opts.Training.load_existing_path:
+        model = nn.Module() # creare an e model
+        assert os.path.exists(model_opts.Training.path_loading), f"Path {model_opts.Training.path_loading} does not exist."
+        model.load_state_dict(torch.load(model_opts.Training.path_loading))
     switcher = {
         Flag.TD: BUTDModelShared,
         Flag.NOFLAG: BUModelSimple,

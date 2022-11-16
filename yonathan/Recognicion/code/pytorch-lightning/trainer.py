@@ -12,7 +12,7 @@ from Checkpoint_model_definition import CheckpointSaver, ModelWrapped
 import torch.nn as nn
 from supp.Dataset_and_model_type_specification import Flag
 from Configs.Config import Config
-from supp.create_model import create_model
+from supp.create_model import get_or_create_model
 import git
 import sys
 from types import NoneType
@@ -83,7 +83,8 @@ def main(train_right=True, train_left=False):
                          logger=wandb_logger, callbacks=[ModelCkpt])
     training_flag = Training_flag(
         train_all_model=True, train_arg=False, train_task_embedding=False, train_head=False)
-    model = create_model(model_opts=parser)
+    
+    model = get_or_create_model(model_opts=parser)
     learned_params = training_flag.Get_learned_params(
         model, lang_idx=0, direction=0)
     if train_right:

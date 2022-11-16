@@ -14,7 +14,7 @@ folder_size: 1000  # (`int`) The size of the folder to split the data into
 nthreads: 10 # (`int`) The number of threads to use for the data processing
 
 # preprocessing options
-augment_sample: True # (`bool`) If set to true, augment the data with random rotations, flips, and translations
+augment_sample: False # (`bool`) If set to true, augment the data with random rotations, flips, and translations
 letter_size: 16 # (`int`) The size of the letters to be used for the preprocessing (default=28)
 nchars_per_row: 6 # (`int`) The number of characters per row to be used in the image (default=5)
 image_size: [224,224] # (`list` of length 2) The size of the image to use for the preprocessing (default=[112,224]). The image will be resized to this size
@@ -29,7 +29,7 @@ maxshift: 0 # (`float`) The maximum shift in the image augmentation
 
 # building traininga and validation set options
 # recall this is the number of images - the total number of samples by each dataset is dubled due to the `ngenerate` option
-nsamples_train: 10000 # (`int`) The number of samples to use for training (default=10000)
+nsamples_train: 50000 # (`int`) The number of samples to use for training (default=10000)
 nsamples_test: 2000 # (`int`) The number of samples to use for testing 
 nsamples_val: 2000 # (`int`) The number of samples to use for validation (default=2000)
 
@@ -39,6 +39,6 @@ use_only_valid_classes: True # (`bool`) If set to true, use only specific classe
 generalize: True # (`bool`) If set to true, use some samples for generalization (default=true)
 ndirections: 2 # (`int`) The number of directions to use for the training (default=2)
 create_all_directions: True # (`bool`) If set to true, create all the directions for the training (default=false)
-ngenerate: 5 # (`int`) The number of samples to create for the same image (default=5) which would lead to the same number of queries later
+ngenerate: 1 # (`int`) The number of samples to create for the same image (default=5) which would lead to the same number of queries later
 single_feat_to_generate: False # (`bool`) If set to true, create multiple queries on the same image (default=false)
 ntest_strings: 1 # (default=1) (`int`) The number of samples strings for the combinatorial test
