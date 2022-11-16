@@ -34,7 +34,7 @@ def gen_init(mytype='internal',ngpus_per_node=None, args=None,log_msgs=None):
     ENABLE_LOGGING = True
     home_dir = os.path.expanduser('~')
     cs_dir = os.path.join(home_dir,'code/counter_stream')
-    data_dir = os.path.join(cs_dir,'data')
+    data_dir = os.path.join(home_dir,'data')
     new_ds_conf=False
     emnist_dir = os.path.join(data_dir, 'emnist')
     if new_ds_conf:
