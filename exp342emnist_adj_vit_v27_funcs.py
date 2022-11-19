@@ -42,7 +42,7 @@ def gen_init(mytype='internal',ngpus_per_node=None, args=None,log_msgs=None):
     else:
         base_tf_records_dir = 'emnist_adj_2dir_6_ids_10k_aug_genmore1nb_5cs_split'
     new_emnist_dir=os.path.join(emnist_dir,'samples')
-    base_samples_dir=os.path.join(new_emnist_dir,base_tf_records_dir)
+    base_samples_dir=os.path.join(home_dir,"data/6_extended_testing")
     data_fname=os.path.join(base_samples_dir,'conf')
     results_dir = os.path.join(emnist_dir, 'results')
     flag_at=FlagAt.NOFLAG
@@ -90,6 +90,7 @@ if interactive_session or is_main:
 
 # %% load samples
 def load_samples():
+    dummyds = True
     if not dummyds:
         with open(data_fname, "rb") as new_data_file:
             if new_ds_conf:
@@ -116,7 +117,7 @@ def load_samples():
         nsamples_train=200
         nsamples_test=200
         ntypes = nclasses * np.ones(nclasses_existence,dtype=np.int)
-        IMAGE_SIZE = [112,224]
+        IMAGE_SIZE = [224,224]
         img_channels = 3
 
     not_existing_class = not_available_class
@@ -173,7 +174,7 @@ def dataset():
             char = char_ohe.nonzero()[0][0]
             return adj_type, char
 
-        train_ds = CachedDataset(dataset(os.path.join(base_samples_dir,'train'),nclasses_existence, ndirections, nexamples = nsamples_train,split = True), cache_supplier=Cache(shuffle=True,shuffle_type = args.distributed,num_gpus=num_gpus) if use_cache else None)
+        train_ds = CachedDataset(dataset(os.path.join(base_samples_dir,'train'),47, 1, nexamples = nsamples_train,split = True), cache_supplier=Cache(shuffle=True,shuffle_type = args.distributed,num_gpus=num_gpus) if use_cache else None)
         normalize_image = False
         if normalize_image:
             # just for getting the mean image
@@ -208,7 +209,7 @@ def dataset():
         val_sampler = None
         batch_size = batch_size * ubs
 
-    train_dl = DataLoader(train_ds, batch_size=batch_size,num_workers=args.workers,shuffle=not args.distributed and not use_cache,pin_memory=True, sampler=train_sampler)
+    train_dl = DataLoader(train_ds, batch_size=batch_size,num_workers=args.workers,shuffle=True,pin_memory=True, sampler=train_sampler)
     # train_dl = DataLoader(train_ds, batch_size=batch_size,num_workers=0,shuffle=False,pin_memory=True, sampler=train_sampler)
     test_dl = DataLoader(test_ds, batch_size=batch_size,num_workers=args.workers,shuffle=False,pin_memory=True, sampler=test_sampler)
     val_dl = DataLoader(val_ds, batch_size=batch_size,num_workers=args.workers,shuffle=False,pin_memory=True, sampler=val_sampler)

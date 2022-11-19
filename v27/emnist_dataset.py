@@ -269,9 +269,9 @@ class EMNISTAdjDatasetDummyAdjAll(EMNISTAdjDatasetBase):
         label_all = torch.tensor(label_all, dtype=torch.int)
         flag = torch.zeros(flag_size, dtype=torch.float)
         id = torch.tensor(index)
-        label_adj_all = calc_label_adj_all(label_all.numpy(),not_available_class,adj_type = 0)
+        label_adj_all = calc_label_adj_all(label_all.numpy(),47,adj_type = 0)
         label_adj_all = torch.tensor(label_adj_all)
-        loss_weight = label_adj_all!=not_available_class
+        loss_weight = label_adj_all!=47
         label_task = label_adj_all
         loss_weight = loss_weight.float()
         return img,seg,label_existence,label_all,label_task,id, flag,loss_weight
