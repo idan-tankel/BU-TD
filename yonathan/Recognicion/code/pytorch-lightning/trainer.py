@@ -1,8 +1,5 @@
 import sys
-sys.path.append(r'/home/idanta/BU-TD/yonathan/Recognicion/code/')
-
 import pytorch_lightning as pl
-from supp.Parser import GetParser
 from supp.get_dataset import get_dataset_for_spatial_realtions
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
@@ -10,16 +7,14 @@ import os
 from pathlib import Path
 from Checkpoint_model_definition import CheckpointSaver, ModelWrapped
 import torch.nn as nn
-from supp.Dataset_and_model_type_specification import Flag
 from Configs.Config import Config
 from supp.create_model import get_or_create_model
 import git
-import sys
-from types import NoneType
 # TODO write an own import function using imp
 git_repo = git.Repo(__file__, search_parent_directories=True)
 git_root = git_repo.working_dir
 sys.path.append(str(git_root))
+
 
 class Training_flag:
     def __init__(self, train_all_model: bool, train_arg: bool, train_task_embedding: bool, train_head: bool):
@@ -83,7 +78,7 @@ def main(train_right=True, train_left=False):
                          logger=wandb_logger, callbacks=[ModelCkpt])
     training_flag = Training_flag(
         train_all_model=True, train_arg=False, train_task_embedding=False, train_head=False)
-    
+
     model = get_or_create_model(model_opts=parser)
     learned_params = training_flag.Get_learned_params(
         model, lang_idx=0, direction=0)
@@ -97,7 +92,7 @@ def main(train_right=True, train_left=False):
             parser, data_path,  lang_idx=0,    direction=1)
     model_wrapped = ModelWrapped(
         parser, learned_params, ckpt=Checkpoint_saver, model=model, nbatches_train=len(train_dl))
-    wandb_logger.watch(model=model_wrapped,log='all')
+    wandb_logger.watch(model=model_wrapped, log='all')
     # log all model topology and grads tp the website
     trainer.fit(model_wrapped, train_dataloaders=train_dl,
                 val_dataloaders=test_dl)
