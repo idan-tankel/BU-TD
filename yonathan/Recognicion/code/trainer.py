@@ -5,7 +5,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 import os
 from pathlib import Path
-from Checkpoint_model_definition import CheckpointSaver, ModelWrapped
+from src.Checkpoint_model_definition import CheckpointSaver, ModelWrapped
 import torch.nn as nn
 from Configs.Config import Config
 from supp.create_model import get_or_create_model
