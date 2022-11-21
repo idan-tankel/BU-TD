@@ -8,6 +8,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 import os
 from pathlib import Path
+<<<<<<< HEAD
 try:
     from Checkpoint_model_definition import CheckpointSaver, ModelWrapped
 except:
@@ -20,6 +21,14 @@ from supp.create_model import create_model
 import git
 import sys
 # from types import NoneType
+=======
+from supp.pytorch_lightning_model_and_checkpoints import CheckpointSaver, ModelWrapped
+import torch.nn as nn
+from supp.Dataset_and_model_type_specification import Flag
+import git
+import sys
+from types import NoneType
+>>>>>>> a9d158e27127b18c9e86cb0adf9014f4c10f7bee
 # TODO write an own import function using imp
 git_repo = git.Repo(__file__, search_parent_directories=True)
 git_root = git_repo.working_dir
@@ -70,11 +79,20 @@ def main(train_right=True, train_left=False):
     except Exception:
         project_path = Path(os.getcwd())
     data_path = os.path.join(
+<<<<<<< HEAD
         project_path, 'yonathan/Recognicion/data/emnist/samples/18_extended/')
     # TODO change these hard coded paths!
     tmpdir = os.path.join(project_path, 'data/emnist/results/')
     checkpoint_path = os.path.join(tmpdir, 'MyFirstCkt233322.ckpt')
     parser = GetParser(task_idx=0, direction_idx='right', flag=Flag.TD)
+=======
+        project_path.parent, 'data/6_extended_testing')
+    # TODO change these hard coded paths!
+    tmpdir = os.path.join(project_path, 'data/emnist/results/')
+    checkpoint_path = os.path.join(tmpdir, 'MyFirstCkt.ckpt')
+    parser = GetParser(task_idx=0, direction_idx='right', flag=Flag.TD)
+    # parser = Config()
+>>>>>>> a9d158e27127b18c9e86cb0adf9014f4c10f7bee
     ModelCkpt = ModelCheckpoint(
         dirpath=tmpdir, monitor="train_loss_epoch", mode="min")
     Checkpoint_saver = CheckpointSaver(
@@ -99,7 +117,11 @@ def main(train_right=True, train_left=False):
         train_dl, test_dl, val_dl, *the_datasets = get_dataset_for_spatial_realtions(
             parser, data_path,  lang_idx=0,    direction=1)
     model_wrapped = ModelWrapped(
+<<<<<<< HEAD
         parser, learned_params, ckpt=Checkpoint_saver, model=model, nbatches_train=len(train_dl))
+=======
+        parser, learned_params, nbatches_train=len(train_dl),direction_id=0)
+>>>>>>> a9d158e27127b18c9e86cb0adf9014f4c10f7bee
     wandb_logger.watch(model=model_wrapped,log='all')
     # log all model topology and grads tp the website
     trainer.fit(model_wrapped, train_dataloaders=train_dl,

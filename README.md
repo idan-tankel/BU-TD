@@ -9,8 +9,8 @@ Currently the repository contains the code for the Persons and EMNIST experiment
 The code creates the data sets used in the paper and also the bottom up (BU) - top down (TD) network model (counter stream).
 
 
-## Code
-The code is based on Python 3.6 and uses PyTorch (version 1.6) as well as torchvision (0.7). Newer versions would probably work as well.
+## Code usage
+The code is based on Python 3.9 and uses PyTorch (version 1.6) as well as torchvision (0.7). Newer versions would probably work as well (with proper cuda toolkit)
 Requirements are in requirements.txt and can also be installed by:
 
 `conda install matplotlib scikit-image Pillow`
@@ -18,6 +18,9 @@ Requirements are in requirements.txt and can also be installed by:
 For image augmentation also install:
 
 `conda install imgaug py-opencv`
+
+
+another required packages
 
 ## Persons details
 ![persons](/figures/persons.png)
@@ -57,6 +60,9 @@ Run the training code for the sufficient set (using `-e` for the extended set an
 
 A folder with all the learned models and a log file will be created under the `data/results` folder.
 
+## Omniglot
+
+
 ## Extracting scene structures
 Code will be added soon.
 
@@ -68,16 +74,16 @@ If you find our work useful in your research or publication, please cite our wor
 Shimon Ullman, Liav Assif, Alona Strugatski, Ben-Zion Vatashsky, Hila Levi, Aviv Netanyahu, Adam Yaari
 
 
+## Citation
 
 
-## TODO 
-- change the design of `create_dataset` to be one big file with plugins to each dataset 
-    - mnist
-    - persons
-    - clevr
-- change the `create_dataset` file to be idempotent - namely, when running the file after the dataset is cretaed it won't be downloaded again 
-- change the behaviour of the download function path to not be relative
 
-### specifications fot this branch
-- Change the parser to config files similar to the one in the beta version
-- remove copy of code when running - change that to copy commit details (at most) and upload commit files to `wandb.ai`
+## Acknoledgements
+This project is joint work with
+This peoject is based on Avalanch repository
+
+
+
+# things to update - code review
+Conda environment exported
+- relunch test 
