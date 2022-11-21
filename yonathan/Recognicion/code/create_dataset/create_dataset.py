@@ -65,6 +65,4 @@ def get_create_config():
 if __name__ == '__main__':
     main_emnist(6, 4)
 
-# main_Omniglot([[35]])
-# main_Omniglot([[14],[39]])
-# main_emnist()
+

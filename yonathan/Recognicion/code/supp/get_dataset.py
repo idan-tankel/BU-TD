@@ -39,8 +39,12 @@ def get_dataset_for_spatial_realtions(opts: Union[argparse.ArgumentParser, Confi
 
     path_fname = os.path.join(data_fname, 'MetaData')
     # Opening the conf file and retrieve number of samples, img shape,number of objects per image.
-    with open(path_fname, "rb") as new_data_file:
-        MetaData = pickle.load(new_data_file)
+    try:
+        with open(path_fname, "rb") as new_data_file:
+            MetaData = pickle.load(new_data_file)
+    except FileNotFoundError:
+        print("MetaData file not found, considre running create_dataset.py")
+        raise FileNotFoundError
     image_size = MetaData.parser.image_size
     nsamples_train = MetaData.nsamples_dict['train']
     nsamples_test = MetaData.nsamples_dict['test']
