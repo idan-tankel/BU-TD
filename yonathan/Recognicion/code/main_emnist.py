@@ -116,4 +116,4 @@ def main_emnist(train_right: bool, train_left: bool,direction:int):
         train_omniglot(parser, lang_idx=0, the_datasets=the_datasets, training_flag=training_flag, direction=direction)
 
 
-main_emnist(True, True, direction = 0)
+main_emnist(False, True, direction = 0)
