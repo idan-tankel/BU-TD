@@ -1,6 +1,7 @@
-# BU-TD
+# Zero Forgetting - continual learning
 ## Official code for the paper [Image interpretation by iterative bottom-up top-down processing](https://arxiv.org/abs/2105.05592)
 [![arXiv](https://img.shields.io/badge/arXiv-2108.00946-b31b1b.svg)](https://arxiv.org/abs/2105.05592)
+
 
 Scene understanding requires the extraction and representation of scene components, such as objects and their parts, people, and places, together with their individual properties, as well as relations and interactions between them. We describe a model in which meaningful scene structures are extracted from the image by an iterative process, combining bottom-up (BU) and top-down (TD) networks, interacting through a symmetric bi-directional communication between them (‘counter-streams’ structure). The BU-TD model extracts and recognizes scene constituents with their selected properties and relations, and uses them to describe and understand the image.
 ![Counter stream](/figures/Counter-stream.png)

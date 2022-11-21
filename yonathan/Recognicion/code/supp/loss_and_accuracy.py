@@ -125,7 +125,7 @@ def multi_label_accuracy_weighted(outs, inputs):
 # Loss
 
 
-def multi_label_loss_base(outs: object, samples: object, guided: bool = False):
+def multi_label_loss_base(outs: object, samples: object, guided: bool = False,occurence_only: bool = False):
     """
     Here for each head we compute its loss according to the model out and label task.
     Args:

@@ -63,7 +63,7 @@ def main(train_right=True, train_left=False):
     data_path = os.path.join(
         project_path.parent, 'data/6_extended_testing')
     # TODO change these hard coded paths!
-    tmpdir = os.path.join(project_path, 'data/emnist/results/')
+    tmpdir = os.path.join(project_path.parent, 'data/emnist/results/')
     checkpoint_path = os.path.join(tmpdir, 'MyFirstCkt.ckpt')
     parser = Config()
     ModelCkpt = ModelCheckpoint(

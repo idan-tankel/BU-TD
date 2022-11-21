@@ -1,6 +1,6 @@
 from matplotlib import transforms
 from torch import nn, device, cuda
-from transformers import ViTConfig, ViTModel, TrainingArguments, ViTForImageClassification,ViTFeatureExtractor
+from transformers import ViTConfig, ViTModel, TrainingArguments, ViTForImageClassification, ViTFeatureExtractor
 from vit_pytorch import cct
 from torchvision.transforms import transforms
 from Configs.Config import Config
@@ -11,9 +11,9 @@ try:
 except ImportError:
     from ..supp.Dataset_and_model_type_specification import inputs_to_struct
 try:
-    from .Heads import MultiLabelHead,OccurrenceHead
+    from .Heads import MultiLabelHead, OccurrenceHead
 except ImportError:
-    from Heads import MultiLabelHead,OccurrenceHead
+    from Heads import MultiLabelHead, OccurrenceHead
 from typing import Union
 import yaml
 
@@ -45,7 +45,7 @@ class Attention(nn.Module):
         dev = device("cuda" if cuda.is_available() else "cpu")
         # self.model = ViTForImageClassification(config=config).to(dev)
         self.cct = cct.CCT(
-            img_size=224,
+            img_size=config.Models.inshape[1:],
             embedding_dim=config.Models.nfilters[-1],
             num_classes=config.Models.nfilters[-1],
             n_conv_layers=2,
@@ -55,12 +55,13 @@ class Attention(nn.Module):
             pooling_kernel_size=3,
             pooling_stride=2,
             pooling_padding=1,
-            num_layers=4,
+            num_layers=2,
             num_heads=2,
             mlp_ratio=1.,
-            
+
         )
         self.taskhead = MultiLabelHead(opts=config)
+        self.occurence_head = OccurrenceHead(opts=config)
         self.model = nn.Sequential(self.cct, self.taskhead)
         self.model.to(dev)
 
@@ -101,8 +102,10 @@ class Attention(nn.Module):
         model_inputs = x.image
         # TODO change this to support parameter and not hard coded
         model_inputs = self.cct(model_inputs)
-        return self.taskhead(model_inputs)
-    
+        occurence_out = self.occurence_head(model_inputs)
+        task_out = self.taskhead(model_inputs)
+        return occurence_out, task_out
+
     def outs_to_struct(self, outs):
         """
         outs_to_struct change the output of the forward pass to a structured output
@@ -112,18 +115,18 @@ class Attention(nn.Module):
 
         Returns:
             SimpleNamespace: structured output
-        """        
-        task_out = outs
-        outs_ns = SimpleNamespace(task=task_out)
+        """
+        occurence_out, task_out = outs
+        outs_ns = SimpleNamespace(task=task_out, occurence=occurence_out)
         return outs_ns
-
 
 
 class Attention2(ViTForImageClassification):
     """
     Attention2 Class is an implementation of BU-TD approach instead of BU approach
     """
-    def __init__(self,cfg:Config):
+
+    def __init__(self, cfg: Config):
         """
         __init__ _summary_
 
@@ -131,17 +134,17 @@ class Attention2(ViTForImageClassification):
             config (config): The Config class object - global model and trainig configuration
         """
         super().__init__(ViTConfig())
-        self.feature_extractor =  ViTFeatureExtractor.from_pretrained('google/vit-base-patch16-224')
-        self.vit = ViTForImageClassification.from_pretrained("google/vit-base-patch16-224")
-        # Now the self.vit is the ViT model and self.classifier is the built-in classifier        
+        self.feature_extractor = ViTFeatureExtractor.from_pretrained(
+            'google/vit-base-patch16-224')
+        self.vit = ViTForImageClassification.from_pretrained(
+            "google/vit-base-patch16-224")
+        # Now the self.vit is the ViT model and self.classifier is the built-in classifier
         self.taskhead = MultiLabelHead(opts=cfg)
         self.vit.to(device("cuda" if cuda.is_available() else "cpu"))
         # save the model attribute
         self.model = nn.Sequential(self.vit, self.taskhead)
 
-
-
-    def forward(self,x):
+    def forward(self, x):
         """
         forward method forward pass
 
@@ -156,9 +159,8 @@ class Attention2(ViTForImageClassification):
         model_inputs = x.image
         vit_outputs = self.vit(model_inputs).logits
         return self.taskhead(vit_outputs)
-        # since the BaseModelOutputWithPooling is an output wrapper for the ViT model as documented here 
+        # since the BaseModelOutputWithPooling is an output wrapper for the ViT model as documented here
         # https://huggingface.co/transformers/v4.4.2/main_classes/output.html
-
 
     def outs_to_struct(self, outs):
         """
@@ -169,7 +171,7 @@ class Attention2(ViTForImageClassification):
 
         Returns:
             SimpleNamespace: structured output
-        """        
+        """
         task_out = outs
         outs_ns = SimpleNamespace(task=task_out)
         return outs_ns

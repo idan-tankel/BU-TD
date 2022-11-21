@@ -34,15 +34,16 @@ class OccurrenceHead(nn.Module):
         """
         super(OccurrenceHead, self).__init__()
         opts = opts.Models
-        filters = opts.nclasses[0][0]-1  # TODO-change to support to the
+        filters = opts.nclasses[0][0]  # TODO-change to support to the
         infilters = opts.nfilters[-1]
         self.fc = nn.Linear(infilters, filters)
+        self.activation = nn.Sigmoid()
 
     def forward(self, inputs):
         x = inputs
         x = torch.flatten(x, 1)
         x = self.fc(x)
-        #        x = nn.Sigmoid()(x)
+        x = self.activation(x)
         return x
 
 
@@ -98,8 +99,5 @@ class MultiLabelHeadOnlyTask(MultiLabelHead):
         outs = []
         for index, layer in enumerate(self.layers):
             y = layer(x)
-            # TODO itsik!!!!Here should get the task - and check if should activate loss - for each one of images in the batch
-            #  checkfor imgae - the flag - and append it if relevant
-
             outs.append(y)
-        return torch.stack(outs, dim=-1)  # Here output of: taskhead
+        return torch.stack(outs, dim=-1)
