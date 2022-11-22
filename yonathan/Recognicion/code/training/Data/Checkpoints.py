@@ -62,10 +62,11 @@ class CheckpointSaver:
                      'optimizer_state_dict': optimizer.state_dict(),
                      'scheduler_state_dict': scheduler.state_dict(), 'parser': parser}
         torch.save(save_data, model_path_latest)
-        torch.save(save_data, model_path_curr)
+     #   torch.save(save_data, model_path_curr)
         if better_than_optimum:
             print('New optimum: {}, better than {}'.format(metric_val, self.best_metric_val))
             torch.save(save_data, model_path_best)
+            torch.save(save_data, model_path_curr)
 
 
 def load_model(model: nn.Module, results_path: str, model_path: str) -> dict:

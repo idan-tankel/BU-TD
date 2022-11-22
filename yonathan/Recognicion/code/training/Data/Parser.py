@@ -74,7 +74,7 @@ def GetParser(task_idx: int = 0, direction_idx: int = 0, model_type: nn.Module =
                         help='Number of tasks the model should handle')
     parser.add_argument('--ndirections', default=Data_specification.data_obj.ndirections, type=int,
                         help='Number of directions the model should handle')
-    parser.add_argument('--inshape', default=(3, 112, 224), type=tuple,  # TODO - CHANGE
+    parser.add_argument('--inshape', default=(3,*Data_specification.data_obj.image_size), type=tuple,  # TODO - CHANGE
                         help='The input image shape, maybe override in get_dataset')
     parser.add_argument('--num_heads', default=Data_specification.data_obj.num_heads, type=list,
                         help='The number of headed for each task, direction')

@@ -169,7 +169,7 @@ class DatasetGuided(DataSetBase):
         img = Image.open(fname).convert('RGB')  # Getting the image.
         img = T.ToTensor()(img)  # From Image to Tensor.
         img = 255 * img  # converting to RGB
-        img = self.trans(img)
+     #   img = self.trans(img)
         # Get raw sample.
         sample = self.get_raw_sample(index)
         # Converting the sample into input.

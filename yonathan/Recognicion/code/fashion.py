@@ -36,14 +36,14 @@ def main(train_right, train_left, ds_type=DsType.Emnist, flag=Flag.CL, model_typ
         training_flag = Training_flag(parser, train_all_model=True, train_arg=False, train_task_embedding=True,
                                       train_head=False)
         direction = (1, 0)
-        learned_params = list(model.parameters())
-      #  learned_params = training_flag.Get_learned_params(model, lang_idx=0, direction=direction)
+       # learned_params = list(model.parameters())
+        learned_params = training_flag.Get_learned_params(model, task_idx = 0, direction=direction)
         DataLoaders = get_dataset_for_spatial_relations(parser, data_path, lang_idx=0, direction=direction)
         wrapped_model = ModelWrapped(parser, model, learned_params, check_point=Checkpoint_saver,
                                      direction_id=direction,
                                      task_id=0,
                                      nbatches_train=len(DataLoaders['train_dl']))
-        wrapped_model.load_model(model_path='Model_(1,0)/BUTDModel_epoch32_direction=(1, 0).pt')
+      #  wrapped_model.load_model(model_path='Model_(1,0)/BUTDModel_epoch32_direction=(1, 0).pt')
        # print(wrapped_model.accuracy_dl(DataLoaders['test_dl']))
         trainer.fit(wrapped_model, train_dataloaders=DataLoaders['train_dl'], val_dataloaders=DataLoaders['test_dl'])
 
@@ -58,9 +58,9 @@ def main(train_right, train_left, ds_type=DsType.Emnist, flag=Flag.CL, model_typ
                                      direction_id=direction,
                                      task_id=0,
                                      nbatches_train=len(DataLoaders['train_dl']))
-        wrapped_model.load_model(model_path='model11.21.202212:45:51/BUTDModel_latest_direction=(1, 0).pt')
+        wrapped_model.load_model(model_path='model11.21.202218:22:37/best.pt')
         print(wrapped_model.accuracy_dl(DataLoaders['test_dl']))
         parser.model = model
         trainer.fit(wrapped_model, train_dataloaders=DataLoaders['train_dl'], val_dataloaders=DataLoaders['test_dl'])
 
-main(False, True, ds_type=DsType.FashionMnist, model_type=BUTDModel, flag=Flag.CL, task = (-1,0))
+main(True, True, ds_type=DsType.FashionMnist, model_type=BUTDModel, flag=Flag.CL, task = (-1,0))

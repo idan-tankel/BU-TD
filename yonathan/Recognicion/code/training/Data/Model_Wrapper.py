@@ -60,6 +60,9 @@ class ModelWrapped(LightningModule):
         loss = self.loss_fun(self.opts, samples, outs)  # Compute the loss.
         self.optimizer.zero_grad()  # Reset the optimizer.
         loss.backward()  # Do a backward pass.
+      #  for param in self.learned_params:
+      #      if param.grad is None:
+      #          print(param)
         self.optimizer.step()  # Update the model.
         _, acc = self.accuracy(samples, outs)  # The accuracy.
         if type(self.scheduler) in [optim.lr_scheduler.CyclicLR, optim.lr_scheduler.OneCycleLR]:

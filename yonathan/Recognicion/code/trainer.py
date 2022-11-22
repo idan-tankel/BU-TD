@@ -24,8 +24,8 @@ cmd_parser.add_argument('--ds_type', default='Emnist',type = str, help = "Data s
 
 
 def define_wrapped_model(parser, training_flag, model,data_path, direction,lang_idx, Checkpoint_saver ):
-    learned_params = training_flag.Get_learned_params(model, task_idx=0, direction=direction)
-    Initial_DataLoaders = get_dataset_for_spatial_relations(parser, data_path, lang_idx=0, direction=direction)
+    learned_params = training_flag.Get_learned_params(model, task_idx=lang_idx, direction=direction)
+    Initial_DataLoaders = get_dataset_for_spatial_relations(parser, data_path, lang_idx=lang_idx, direction=direction)
     wrapped_model = ModelWrapped(parser, model, learned_params, check_point=Checkpoint_saver,
                                  direction_id=direction,
                                  task_id=lang_idx,
@@ -33,11 +33,11 @@ def define_wrapped_model(parser, training_flag, model,data_path, direction,lang_
     return wrapped_model, Initial_DataLoaders
 
 
-def main(flag=Flag.CL, lang_idx = 0):
+def main(flag=Flag.CL):
     ds_type = cmd_parser.parse_args().ds_type
     if ds_type  == "Emnist":
         Data_type = DsType.Emnist
-        Non_initial_tasks = [(0,1),(1,1),(-1,-1),(2,0)] # Four additional tasks.
+        Non_initial_tasks:list[tuple[tuple[int,int],int]] = [((0,1),0),((1,1),0),((-1,-1),0),((2,0),0)] # Four additional tasks.
         initial_tasks = [(1,0),(-1,0)]
         All_tasks = [(1,0),(0,1),(1,1),(-1,-1),(2,0)]
     elif ds_type == "Fashionmnist":
@@ -59,29 +59,27 @@ def main(flag=Flag.CL, lang_idx = 0):
     model = create_model(parser)
 
     # Train the initial Task:
-    direction = initial_tasks[0]
+    initial_direction,initial_task = initial_tasks[0]
     training_flag = Training_flag(parser, train_all_model = True)
-    wrapped_model, Initial_DataLoaders = define_wrapped_model(parser, training_flag, model,data_path, direction,lang_idx, Checkpoint_saver )
+    wrapped_model, Initial_DataLoaders = define_wrapped_model(parser, training_flag, model,data_path, initial_direction, initial_task, Checkpoint_saver )
     trainer.fit(wrapped_model, train_dataloaders=Initial_DataLoaders['train_dl'], val_dataloaders=Initial_DataLoaders['test_dl'])
     print("Begin to train on the initial tasks:")
     Old_models = [copy.deepcopy(model)]
     print("Done fitting the model on the initial tasks")
     if (Data_type is DsType.Emnist or Data_type is DsType.FashionMnist):
-        lang_idx = 0
-        for task in Non_initial_tasks:
-            direction = task  #
+        for direction, task in Non_initial_tasks:
             training_flag = Training_flag(parser, train_task_embedding=True,  train_head=True) # Train the embedding and the read-out head.
             wrapped_model, DataLoaders = define_wrapped_model(parser, training_flag, model, data_path,
-                                                                      direction, lang_idx, Checkpoint_saver)
+                                                                      direction, task, Checkpoint_saver)
             trainer.fit(wrapped_model, train_dataloaders=DataLoaders['train_dl'], val_dataloaders=DataLoaders['test_dl'])
             trainer = pl.Trainer(accelerator='gpu', max_epochs=parser.EPOCHS, logger=wandb_logger, callbacks=[Model_checkpoint])
             Old_models.append(copy.deepcopy(model))
     print("Done training on the new tasks")
     Acc_old =  []
     Acc_new =  []
-    for task_idx, task in enumerate(All_tasks):
+    for task_idx, (direction, task) in enumerate(All_tasks):
             _ , DataLoaders = define_wrapped_model(parser, training_flag, model, data_path,
-                                                              task, lang_idx, Checkpoint_saver)
+                                                              task, task, Checkpoint_saver)
             Sub_task = All_tasks[task_idx]
             load_running_stats(model, 0, Sub_task)  # Loading the saved running statistics.
             load_running_stats(Old_models[task_idx], 0, Sub_task)  # Loading the saved running statistics.
