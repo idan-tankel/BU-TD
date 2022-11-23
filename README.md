@@ -100,4 +100,4 @@ Shimon Ullman, Liav Assif, Alona Strugatski, Ben-Zion Vatashsky, Hila Levi, Aviv
 
 ## Contribute
 
-@yonatansverdlov @idan-tankel @liavassif
+@yonatansverdlov @idan-tankel @liavassif @itsik-shapira

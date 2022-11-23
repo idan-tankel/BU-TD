@@ -13,14 +13,12 @@ from Configs.Config import Config
 from typing import Union
 from supp.Dataset_and_model_type_specification import AllOptions
 
-sys.path.append(
-    r'/home/sverkip/data/BU-TD/yonathan/Recognicion/code/create_dataset')
 
 
 class DataSetBase(Dataset):
 
     """
-    Base class OmniglotDataSetBase.
+    Base class For each Dataset
     Supports initialization and get item methods.
     """
 

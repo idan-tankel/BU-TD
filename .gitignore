@@ -38,14 +38,7 @@ data*
 *.amlignore.amltmp
 .vscode/settings.json
 .vscode/settings.json
-# wandb
-wandb/*
-lightning_logs/version_16116/events.out.tfevents.1666560648.n120.mcl11.weizmann.ac.il.26796.0
-lightning_logs/version_16116/events.out.tfevents.1666560805.n120.mcl11.weizmann.ac.il.32687.0
-lightning_logs/version_16116/events.out.tfevents.1666560845.n120.mcl11.weizmann.ac.il.34044.0
-lightning_logs/version_16116/hparams.yaml
-lightning_logs/version_16137/events.out.tfevents.1666614222.n120.mcl11.weizmann.ac.il.25911.0
-lightning_logs/version_16137/hparams.yaml
-lightning_logs/*
+wandb*
+lightning_logs*
 .vscode/launch.json
 .vscode/launch.json
