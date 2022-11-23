@@ -4,6 +4,7 @@ from torch import nn, device, cuda
 from transformers import ViTForImageClassification, ViTConfig
 import torch.nn.functional as F
 from torch.optim import Adam
+from torch import no_grad
 
 
 class ModelWrapper(
@@ -30,16 +31,16 @@ class ModelWrapper(
         self.log('train_acc', acc, on_step=True, on_epoch=True, logger=True)
         return loss
 
-
-
     def validation_step(self, batch):
-        x, y = batch
-        x_hat = self.model(x)
-        loss = F.cross_entropy(x_hat.logits, y)
-        acc = (x_hat.logits.argmax(dim=1) - y).count_nonzero() / y.numel()
-        self.log('val_loss', loss, on_step=True, on_epoch=True, logger=True)
-        self.log('val_acc', acc, on_step=True, on_epoch=True, logger=True)
-        return loss
+        # with no_grad():
+            x, y = batch
+            x_hat = self.model(x)
+            loss = F.cross_entropy(x_hat.logits, y)
+            acc = (x_hat.logits.argmax(dim=1) - y).count_nonzero() / y.numel()
+            self.log('val_loss', loss, on_step=True,
+                     on_epoch=True, logger=True)
+            self.log('val_acc', acc, on_step=True, on_epoch=True, logger=True)
+            return loss
 
     def configure_optimizers(self):
         optimizer = Adam(self.parameters(), lr=1e-3)
