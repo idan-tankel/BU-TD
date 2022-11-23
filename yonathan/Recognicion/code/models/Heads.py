@@ -35,7 +35,7 @@ class OccurrenceHead(nn.Module):
         super(OccurrenceHead, self).__init__()
         opts = opts.Models
         filters = opts.nclasses[0][0]  # TODO-change to support to the
-        infilters = opts.nfilters[-1]
+        infilters = opts.nfilters[1]
         self.fc = nn.Linear(infilters, filters)
         self.activation = nn.Sigmoid()
 

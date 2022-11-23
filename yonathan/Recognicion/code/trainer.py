@@ -61,7 +61,7 @@ def main(train_right=True, train_left=False):
     except Exception:
         project_path = Path(os.getcwd())
     data_path = os.path.join(
-        project_path.parent, 'data/6_extended_testing')
+        project_path.parent, 'data/1_extended_testing')
     # TODO change these hard coded paths!
     tmpdir = os.path.join(project_path.parent, 'data/emnist/results/')
     checkpoint_path = os.path.join(tmpdir, 'MyFirstCkt.ckpt')

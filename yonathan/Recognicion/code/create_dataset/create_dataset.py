@@ -63,6 +63,6 @@ def get_create_config():
 
 
 if __name__ == '__main__':
-    main_emnist(6, 4)
+    main_emnist(1, 1)
 
 

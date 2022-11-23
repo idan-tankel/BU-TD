@@ -85,6 +85,7 @@ def Generate_raw_examples(parser: ArgumentParser, image_ids: list, k: int, ds_ty
             image_id.append(label_id)
             label_ids.append(label_id)
         image_id_hash = str(image_id)
+        # TODO bug here
         if image_id_hash in image_ids:
             continue
         image_ids.add(image_id_hash)
@@ -427,6 +428,8 @@ def Get_sample_chars(parser, prng: random, valid_pairs: np.array, ds_type: bool,
                 sample_chars = []
                 cur_char = prng.choice(valid_classes, 1)[0]
                 sample_chars.append(cur_char)
+                if num_characters_per_sample == 1:
+                    break
                 for _ in range(num_characters_per_sample - 1):
                     cur_char_adjs = valid_pairs[cur_char].nonzero()[0]
                     # create a permutation: choose each character at most once
@@ -540,6 +543,7 @@ def create_samples(parser: ArgumentParser, ds_type, raw_data_set: DataSet, langu
 
     nclasses = raw_data_set.nclasses  # The number of classes in the dataset.
     parser.letter_size = raw_data_set.letter_size
+    # TODO this is a bug!
     # The valid classes, relevant for mnist.
     valid_classes = Get_valid_classes_for_emnist_only(
         ds_type, parser.use_only_valid_classes, nclasses)
@@ -567,8 +571,10 @@ def create_samples(parser: ArgumentParser, ds_type, raw_data_set: DataSet, langu
     num_samples_per_data_type_dict = {}
     # Iterating over all dataset types and generating raw examples for each and then generating samples.
     for k, (ds_type, cur_nexamples) in enumerate(zip(ds_types, nexamples_vec)):
+
         examples = Generate_raw_examples(
             parser, image_ids, k, ds_type, cur_nexamples, valid_pairs, valid_classes, CG_chars_list, raw_data_set)
+        assert examples is not None and len(examples) > 0, "no examples created"
         cur_nexamples = len(examples)
         num_samples_per_data_type_dict[ds_type] = cur_nexamples
         # print the number of sampled examples.

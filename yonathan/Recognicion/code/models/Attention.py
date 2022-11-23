@@ -46,8 +46,7 @@ class Attention(nn.Module):
         # self.model = ViTForImageClassification(config=config).to(dev)
         self.cct = cct.CCT(
             img_size=config.Models.inshape[1:],
-            embedding_dim=config.Models.nfilters[-1],
-            num_classes=config.Models.nfilters[-1],
+            embedding_dim=config.Models.nfilters[0],
             n_conv_layers=2,
             kernel_size=3,
             stride=2,
