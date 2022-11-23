@@ -28,7 +28,7 @@ class DataSetBase(Dataset):
                  split: bool = True) -> None:
         """
         Args:
-            root: The root to the data.
+            root: The root path to the data.
             nclasses_existence:
             ndirections: The number of classes.
             nexamples: The number of classes.
