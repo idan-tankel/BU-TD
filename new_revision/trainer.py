@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader
 from torch import cuda, device
 from Configs.Config import Config
 from types import SimpleNamespace
+from datasets import DatasetAllDataSetTypesAll
 import git
 import os
 git_repo = git.Repo(os.getcwd(), search_parent_directories=True)
@@ -20,23 +21,6 @@ os.makedirs(data_dir, exist_ok=True)
 checkpoints_dir = rf"{git_root.parent}/data/emnist/checkpoints/"
 os.makedirs(results_dir, exist_ok=True)
 
-global_config = {
-    "batch_size": 10,
-    "learning_rate": 1e-4,
-    "num_workers": 10,
-    "num_epochs": 60,
-    "image_size": 224,
-    "num_channels": 1,
-    "num_gpus": 1,
-    "num_nodes": 1,
-    "precision": 16,
-    "optimizer": "adam",
-    "scheduler": "cosine",
-    "scheduler_warmup_steps": 0,
-    "scheduler_t_max": 10,
-    
-}
-global_config = SimpleNamespace(**global_config)
 global_config = Config()
 
 transform = transforms.Compose([transforms.ToTensor(),transforms.Resize((224,224))])
@@ -54,23 +38,29 @@ test_dl = DataLoader(test_ds, batch_size=global_config.Training.batch_size,
 test_dl = DataLoader(val_ds, batch_size=global_config.Training.batch_size,
                      shuffle=False, num_workers=global_config.Training.num_workers)
 
-
+compatibility_dataset = DatasetAllDataSetTypesAll(root=rf'/home/idanta/data/6_extended_testing/train/', opts=global_config,  direction=1,
+                       is_train=True, obj_per_row=6, obj_per_col=1, split=True)
+compatibility_dl = DataLoader(compatibility_dataset, batch_size=global_config.Training.batch_size,num_workers=global_config.Training.num_workers)
+compatibility_dataset[0]
 wandb_logger = WandbLogger(project="My_first_project_5.10",
                            job_type='train', log_model=True, save_dir=results_dir)
 wandb_checkpoints = ModelCheckpoint(
     dirpath=checkpoints_dir, monitor="train_loss_epoch", mode="min")
 
 
-model = ViTForImageClassification(
-    ViTConfig(
-        image_size=global_config.Models.image_size,
-        hidden_size=768,
-        num_hidden_layers=4,
-        num_classes=101,
-        qkv_bias=True
+if global_config.Models.pretrained_model_name is not None:
+    model = ViTForImageClassification.from_pretrained(global_config.Models.pretrained_model_name)
+# else create the model according to the config params
+else:
+    model = ViTForImageClassification(
+        ViTConfig(
+            image_size=global_config.Models.image_size,
+            hidden_size=768,
+            num_hidden_layers=4,
+            num_classes=101,
+            qkv_bias=True
+        )
     )
-)
-# model = ViTForImageClassification.from_pretrained('google/vit-base-patch16-224')
 model = ModelWrapper(model=model)
 
 
