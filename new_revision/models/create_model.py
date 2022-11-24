@@ -22,7 +22,7 @@ class ModelWrapper(
         model.classifier = nn.Linear(768, 101, bias=True)
         self.model = model
 
-    def training_step(self, batch):
+    def training_step(self, batch,batch_index):
         x, y = batch
         x_hat = self.model(x)
         loss = F.cross_entropy(x_hat.logits, y)
@@ -31,8 +31,18 @@ class ModelWrapper(
         self.log('train_acc', acc, on_step=True, on_epoch=True, logger=True)
         return loss
 
-    def validation_step(self, batch):
-        # with no_grad():
+    def validation_step(self, batch,batch_index):
+        """
+        validation_step This is implementation of the dataset 
+
+        Args:
+            batch (_type_): _description_
+            batch_index (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """        
+        with no_grad():
             x, y = batch
             x_hat = self.model(x)
             loss = F.cross_entropy(x_hat.logits, y)
@@ -40,7 +50,7 @@ class ModelWrapper(
             self.log('val_loss', loss, on_step=True,
                      on_epoch=True, logger=True)
             self.log('val_acc', acc, on_step=True, on_epoch=True, logger=True)
-            return loss
+        return loss
 
     def configure_optimizers(self):
         optimizer = Adam(self.parameters(), lr=1e-3)

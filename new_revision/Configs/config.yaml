@@ -48,6 +48,8 @@ Models:
   features: "all"
   num_heads: "only_features"
   inshape: [3, 32, 32] # `[int,int,int]` the spahe of the incoming data. The inshape being a list rather than a tuple is simpler, since a YAML formatter would treat the tuple as a string, and accessing the elements of the tuple would just concat the string '('.
+  image_size: 224 # int, the size of the image to be used in the model
+  num_channels: 3
   nclasses: [[47]] # the number of classes within the dataset TOOD
   number_of_linear_heads: 47 # each linear head correspond to a class in the MultiHeadAttention
   strides: [2, 2, 1, 2]
@@ -70,7 +72,7 @@ Models:
 
 
 Training:
-  bs: 10 # batch size (int)
+  batch_size: 10 # batch size (int)
   num_workers: 2
   epochs: 200
   momentum: 0.9 # (`float`) Momentum of the Adam optimizer

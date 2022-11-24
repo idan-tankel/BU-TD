@@ -7,6 +7,7 @@ from torchvision import datasets, transforms
 from models.create_model import ModelWrapper
 from torch.utils.data import DataLoader
 from torch import cuda, device
+from Configs.Config import Config
 from types import SimpleNamespace
 import git
 import os
@@ -36,6 +37,7 @@ global_config = {
     
 }
 global_config = SimpleNamespace(**global_config)
+global_config = Config()
 
 transform = transforms.Compose([transforms.ToTensor(),transforms.Resize((224,224))])
 train_ds = datasets.Food101(
@@ -45,12 +47,12 @@ val_ds = datasets.Food101(
 test_ds = datasets.EMNIST(download=True, root=data_dir,
                           split='balanced', train=False, transform=transform)
 
-train_dl = DataLoader(train_ds, batch_size=global_config.batch_size,
-                      shuffle=True, num_workers=global_config.num_workers)
-test_dl = DataLoader(test_ds, batch_size=global_config.batch_size,
-                     shuffle=False, num_workers=global_config.num_workers)
-test_dl = DataLoader(val_ds, batch_size=global_config.batch_size,
-                     shuffle=False, num_workers=global_config.num_workers)
+train_dl = DataLoader(train_ds, batch_size=global_config.Training.batch_size,
+                      shuffle=True, num_workers=global_config.Training.num_workers)
+test_dl = DataLoader(test_ds, batch_size=global_config.Training.batch_size,
+                     shuffle=False, num_workers=global_config.Training.num_workers)
+test_dl = DataLoader(val_ds, batch_size=global_config.Training.batch_size,
+                     shuffle=False, num_workers=global_config.Training.num_workers)
 
 
 wandb_logger = WandbLogger(project="My_first_project_5.10",
@@ -58,7 +60,18 @@ wandb_logger = WandbLogger(project="My_first_project_5.10",
 wandb_checkpoints = ModelCheckpoint(
     dirpath=checkpoints_dir, monitor="train_loss_epoch", mode="min")
 
-model = ModelWrapper(model=ViTForImageClassification.from_pretrained('google/vit-base-patch16-224'))
+
+model = ViTForImageClassification(
+    ViTConfig(
+        image_size=global_config.Models.image_size,
+        hidden_size=768,
+        num_hidden_layers=4,
+        num_classes=101,
+        qkv_bias=True
+    )
+)
+# model = ViTForImageClassification.from_pretrained('google/vit-base-patch16-224')
+model = ModelWrapper(model=model)
 
 
 

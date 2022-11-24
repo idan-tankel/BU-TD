@@ -5,10 +5,8 @@ from torch import nn
 import yaml
 import numpy as np
 import torch
-from supp.Dataset_and_model_type_specification import DsType, Flag, inputs_to_struct,AllOptions
-# from v26.functions.inits import init_model_options
-from supp.batch_norm import BatchNorm
-from supp.loss_and_accuracy import multi_label_loss, UnifiedCriterion, multi_label_accuracy_base,multi_label_loss_weighted
+# from supp.Dataset_and_model_type_specification import DsType, Flag ,AllOptions
+
 # from supp.emnist_dataset import inputs_to_struct
 
 # from supp.training_functions import create_optimizer_and_sched
@@ -55,9 +53,8 @@ class Config:
             "time = " + str(dt_string)
         self.results_dir = '../data/emnist/data/results'
         self.model_dir = os.path.join(self.results_dir, self.model_path)
-        self.setup_flag()
-        self.Data_obj = AllOptions(ds_type=DsType(self.Datasets.dataset), flag_at=Flag(self.RunningSpecs.Flag), ndirections=4)
-        self.task_accuracy = self.Data_obj.data_obj.task_accuracy
+        # self.setup_flag()
+        # self.Data_obj = AllOptions(ds_type=DsType(self.Datasets.dataset), flag_at=Flag(self.RunningSpecs.Flag), ndirections=4)
 
 
     def setup_flag(self) -> None:
@@ -118,18 +115,7 @@ class Models:
     def __init__(self, config: dict):
         for key, value in config.items():
             setattr(self, key, value)
-        # self.features: str = config['features']
-        # self.num_heads: str = config['num_heads']
 
-    def init_model_options(self):
-        """
-        init_model_options wrapped up an existing function from the v26.functions.inits module.
-        The idea is to still support setting up the options with a parser as well as with config files
-
-        """
-        # init_model_options(config=self,flag_at=)
-        self.norm_layer = BatchNorm
-        self.activation_fun = nn.ReLU
 
 
 class Visibility:
@@ -140,7 +126,6 @@ class Visibility:
 class RunningSpecs:
     def __init__(self, config: dict):
         self.distributed = config['distributed']
-        self.Flag = Flag[config['Flag']]
         self.isFit = config['isFit']
         self.processed_data = config['processed_data']
         self.backbone = config['backbone']
@@ -148,7 +133,7 @@ class RunningSpecs:
 
 class Datasets:
     def __init__(self, config: dict):
-        self.dataset = DsType[config['dataset']]
+        # self.dataset = DsType[config['dataset']]
         self.dummyds = config['dummyds']
 
 
@@ -164,12 +149,6 @@ class Losses:
         self.use_bu1_loss = config['use_bu1_loss']
         self.use_bu2_loss = config['use_bu2_loss']
         self.activation_fun = nn.__getattribute__(config['activation_fun'])
-        self.bu1_loss = nn.BCEWithLogitsLoss(reduction='mean')
-        self.bu2_loss = multi_label_loss
-        self.td_loss = nn.MSELoss(reduction='mean')
-        self.inputs_to_struct = inputs_to_struct
-        self.loss_fun = UnifiedCriterion
-        self.task_accuracy = multi_label_accuracy_base
         # the UnifiedLossFun is a wrapper around the loss functions, and it must be the last one here since it using all the arguments of self
         # since there are not much accuracy functions written here, the multi_label_accuracy_base is hard coded most of the time
 
