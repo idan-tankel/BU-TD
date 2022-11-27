@@ -26,7 +26,7 @@ class ModelWrapper(
         x, y = batch
         x_hat = self.model(x)
         loss = F.cross_entropy(x_hat.logits, y)
-        acc = (x_hat.logits.argmax(dim=1) - y).count_nonzero() / y.numel()
+        acc = 1 - (x_hat.logits.argmax(dim=1) - y).count_nonzero() / y.numel()
         self.log('train_loss', loss, on_step=True, on_epoch=True, logger=True)
         self.log('train_acc', acc, on_step=True, on_epoch=True, logger=True)
         return loss

@@ -13,6 +13,12 @@ import git
 from Configs.Config import Config
 from typing import Union
 
+# for compatibility dataset - that is within the pickle file
+from create_dataset.Create_dataset_classes import MetaData,Sample
+from create_dataset.Create_dataset_classes import *
+import create_dataset.Create_dataset_classes as Create_dataset_classes
+
+
 sys.path.append(
     r'/home/sverkip/data/BU-TD/yonathan/Recognicion/code/create_dataset')
 
@@ -123,7 +129,7 @@ class DatasetAllDataSetTypes(DataSetBase):
         """
 
         super(DatasetAllDataSetTypes, self).__init__(
-            root, nexamples, split, is_train=is_train)
+            root, nexamples, ndirections=4,split=split, is_train=is_train)
         if not isinstance(opts, argparse.ArgumentParser):
             git_repo = git.Repo(__file__, search_parent_directories=True)
             git_root = git_repo.working_dir
@@ -148,7 +154,10 @@ class DatasetAllDataSetTypes(DataSetBase):
 
         """
         # Getting root to the sample
-        root = self.get_root_by_index(index)
+        if self.split:
+            root = self.get_root_by_index(index)
+        else:
+            root = self.root
         fname = os.path.join(root, '%d_img.jpg' % index)
         # Opening the image and converting to Tensor
         img = Image.open(fname).convert('RGB')
@@ -260,4 +269,4 @@ class DatasetAllDataSetTypesAll(DatasetAllDataSetTypes):
         not_available_class = 47
         label_task = self.calc_label_task_all(
             label_all, not_available_class).long()
-        return img, label_task, flag, label_all, label_existence
+        return SimpleNamespace(img=img, label_task=label_task, flag=flag, label_all=label_all, label_existence=label_existence)

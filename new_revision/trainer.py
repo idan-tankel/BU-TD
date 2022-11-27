@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from torch import cuda, device
 from Configs.Config import Config
 from types import SimpleNamespace
-from datasets import DatasetAllDataSetTypesAll
+from create_dataset.datasets import DatasetAllDataSetTypesAll
 import git
 import os
 git_repo = git.Repo(os.getcwd(), search_parent_directories=True)
@@ -39,9 +39,8 @@ test_dl = DataLoader(val_ds, batch_size=global_config.Training.batch_size,
                      shuffle=False, num_workers=global_config.Training.num_workers)
 
 compatibility_dataset = DatasetAllDataSetTypesAll(root=rf'/home/idanta/data/6_extended_testing/train/', opts=global_config,  direction=1,
-                       is_train=True, obj_per_row=6, obj_per_col=1, split=True)
+                       is_train=True, obj_per_row=6, obj_per_col=1, split=False)
 compatibility_dl = DataLoader(compatibility_dataset, batch_size=global_config.Training.batch_size,num_workers=global_config.Training.num_workers)
-compatibility_dataset[0]
 wandb_logger = WandbLogger(project="My_first_project_5.10",
                            job_type='train', log_model=True, save_dir=results_dir)
 wandb_checkpoints = ModelCheckpoint(
