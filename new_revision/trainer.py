@@ -23,11 +23,12 @@ os.makedirs(results_dir, exist_ok=True)
 
 global_config = Config()
 
-transform = transforms.Compose([transforms.ToTensor(),transforms.Resize((224,224))])
+transform = transforms.Compose(
+    [transforms.ToTensor(), transforms.Resize((224, 224))])
 train_ds = datasets.Food101(
     download=True, root=data_dir, split="train", transform=transform)
 val_ds = datasets.Food101(
-    download=True, root=data_dir,split="test", transform=transform)
+    download=True, root=data_dir, split="test", transform=transform)
 test_ds = datasets.EMNIST(download=True, root=data_dir,
                           split='balanced', train=False, transform=transform)
 
@@ -39,8 +40,9 @@ test_dl = DataLoader(val_ds, batch_size=global_config.Training.batch_size,
                      shuffle=False, num_workers=global_config.Training.num_workers)
 
 compatibility_dataset = DatasetAllDataSetTypesAll(root=rf'/home/idanta/data/6_extended_testing/train/', opts=global_config,  direction=1,
-                       is_train=True, obj_per_row=6, obj_per_col=1, split=False)
-compatibility_dl = DataLoader(compatibility_dataset, batch_size=global_config.Training.batch_size,num_workers=global_config.Training.num_workers)
+                                                  is_train=True, obj_per_row=6, obj_per_col=1, split=False)
+compatibility_dl = DataLoader(compatibility_dataset, batch_size=global_config.Training.batch_size,
+                              num_workers=global_config.Training.num_workers)
 wandb_logger = WandbLogger(project="My_first_project_5.10",
                            job_type='train', log_model=True, save_dir=results_dir)
 wandb_checkpoints = ModelCheckpoint(
@@ -48,7 +50,8 @@ wandb_checkpoints = ModelCheckpoint(
 
 
 if global_config.Models.pretrained_model_name is not None:
-    model = ViTForImageClassification.from_pretrained(global_config.Models.pretrained_model_name)
+    model = ViTForImageClassification.from_pretrained(
+        global_config.Models.pretrained_model_name)
 # else create the model according to the config params
 else:
     model = ViTForImageClassification(
@@ -56,17 +59,16 @@ else:
             image_size=global_config.Models.image_size,
             hidden_size=768,
             num_hidden_layers=4,
-            num_classes=101,
+            num_classes=global_config.Models.num_classes,
             qkv_bias=True
         )
     )
-model = ModelWrapper(model=model)
-
-
+model = ModelWrapper(model=model, config=global_config)
 
 
 wandb_logger.watch(model=model, log='all')
 trainer = pl.Trainer(accelerator='gpu', max_epochs=60,
                      logger=wandb_logger, callbacks=[wandb_checkpoints])
 
-trainer.fit(model=model, train_dataloaders=train_dl, val_dataloaders=test_dl)
+trainer.fit(model=model, train_dataloaders=compatibility_dl,
+            val_dataloaders=compatibility_dl)

@@ -269,4 +269,5 @@ class DatasetAllDataSetTypesAll(DatasetAllDataSetTypes):
         not_available_class = 47
         label_task = self.calc_label_task_all(
             label_all, not_available_class).long()
-        return SimpleNamespace(img=img, label_task=label_task, flag=flag, label_all=label_all, label_existence=label_existence)
+        # note! pytorch dataloader will not support more complex data structures than dict, list, tuple, number or string
+        return dict(img=img, label_task=label_task, flag=flag, label_all=label_all, label_existence=label_existence)

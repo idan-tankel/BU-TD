@@ -11,7 +11,7 @@ store_folder: ../data # similar
 job_chunk_size: 1000 # (`int`) The number of samples each jobs processes
 folder_split: False   # (`bool`). If set to true, split the content of the raw data into folders of size `folder_size`
 folder_size: 1000  # (`int`) The size of the folder to split the data into
-nthreads: 1 # (`int`) The number of threads to use for the data processing
+nthreads: 10 # (`int`) The number of threads to use for the data processing
 
 # preprocessing options
 augment_sample: False # (`bool`) If set to true, augment the data with random rotations, flips, and translations
@@ -29,9 +29,9 @@ maxshift: 0 # (`float`) The maximum shift in the image augmentation
 
 # building traininga and validation set options
 # recall this is the number of images - the total number of samples by each dataset is dubled due to the `ngenerate` option
-nsamples_train: 50000 # (`int`) The number of samples to use for training (default=10000)
-nsamples_test: 2000 # (`int`) The number of samples to use for testing 
-nsamples_val: 2000 # (`int`) The number of samples to use for validation (default=2000)
+nsamples_train: 500000 # (`int`) The number of samples to use for training (default=10000)
+nsamples_test: 20000 # (`int`) The number of samples to use for testing 
+nsamples_val: 20000 # (`int`) The number of samples to use for validation (default=2000)
 
 
 # another options
