@@ -14,7 +14,7 @@ from Configs.Config import Config
 from typing import Union
 
 # for compatibility dataset - that is within the pickle file
-from create_dataset.Create_dataset_classes import MetaData,Sample
+from create_dataset.Create_dataset_classes import MetaData, Sample
 from create_dataset.Create_dataset_classes import *
 import create_dataset.Create_dataset_classes as Create_dataset_classes
 
@@ -53,7 +53,6 @@ class DataSetBase(Dataset):
             self.nexamples = len(images)
         else:
             self.nexamples = nexamples
-
 
     def get_root_by_index(self, index: int) -> str:
         """
@@ -129,7 +128,7 @@ class DatasetAllDataSetTypes(DataSetBase):
         """
 
         super(DatasetAllDataSetTypes, self).__init__(
-            root, nexamples, ndirections=4,split=split, is_train=is_train)
+            root=root, nclasses_existence=47,nexamples=nexamples, ndirections=4, split=split, is_train=is_train)
         if not isinstance(opts, argparse.ArgumentParser):
             git_repo = git.Repo(__file__, search_parent_directories=True)
             git_root = git_repo.working_dir

@@ -25,22 +25,22 @@ global_config = Config()
 
 transform = transforms.Compose(
     [transforms.ToTensor(), transforms.Resize((224, 224))])
-train_ds = datasets.Food101(
-    download=True, root=data_dir, split="train", transform=transform)
-val_ds = datasets.Food101(
-    download=True, root=data_dir, split="test", transform=transform)
-test_ds = datasets.EMNIST(download=True, root=data_dir,
-                          split='balanced', train=False, transform=transform)
+# train_ds = datasets.Food101(
+#     download=True, root=data_dir, split="train", transform=transform)
+# val_ds = datasets.Food101(
+#     download=True, root=data_dir, split="test", transform=transform)
+# test_ds = datasets.EMNIST(download=True, root=data_dir,
+#                           split='balanced', train=False, transform=transform)
 
-train_dl = DataLoader(train_ds, batch_size=global_config.Training.batch_size,
-                      shuffle=True, num_workers=global_config.Training.num_workers)
-test_dl = DataLoader(test_ds, batch_size=global_config.Training.batch_size,
-                     shuffle=False, num_workers=global_config.Training.num_workers)
-test_dl = DataLoader(val_ds, batch_size=global_config.Training.batch_size,
-                     shuffle=False, num_workers=global_config.Training.num_workers)
+# train_dl = DataLoader(train_ds, batch_size=global_config.Training.batch_size,
+#                       shuffle=True, num_workers=global_config.Training.num_workers)
+# test_dl = DataLoader(test_ds, batch_size=global_config.Training.batch_size,
+#                      shuffle=False, num_workers=global_config.Training.num_workers)
+# test_dl = DataLoader(val_ds, batch_size=global_config.Training.batch_size,
+#                      shuffle=False, num_workers=global_config.Training.num_workers)
 
 compatibility_dataset = DatasetAllDataSetTypesAll(root=rf'/home/idanta/data/6_extended_testing/train/', opts=global_config,  direction=1,
-                                                  is_train=True, obj_per_row=6, obj_per_col=1, split=False)
+                                                  is_train=True, obj_per_row=6, obj_per_col=1, split=False,nexamples=100000)
 compatibility_dl = DataLoader(compatibility_dataset, batch_size=global_config.Training.batch_size,
                               num_workers=global_config.Training.num_workers)
 wandb_logger = WandbLogger(project="My_first_project_5.10",
@@ -67,7 +67,7 @@ model = ModelWrapper(model=model, config=global_config)
 
 
 wandb_logger.watch(model=model, log='all')
-trainer = pl.Trainer(accelerator='gpu', max_epochs=60,
+trainer = pl.Trainer(accelerator='gpu', max_epochs=200,
                      logger=wandb_logger, callbacks=[wandb_checkpoints])
 
 trainer.fit(model=model, train_dataloaders=compatibility_dl,

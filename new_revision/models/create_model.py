@@ -33,7 +33,7 @@ class ModelWrapper(
         self.model = model
 
     def training_step(self, batch, batch_index):
-        x, y = batch['img'], batch['label_all']
+        x, y = batch['img'], batch['label_task']
         x_hat = self.model(x)
         y.squeeze_()
         loss = nn.CrossEntropyLoss(reduction='mean')(x_hat.logits, y)
