@@ -1,119 +1,66 @@
-import argparse
 import os
+from datetime import datetime
 from pathlib import Path
 
-import torch.backends.cudnn as cudnn
-import torch.nn as nn
+import pytorch_lightning as pl
+from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.loggers import WandbLogger
 
-from supp.Dataset_and_model_type_specification import Flag
-from supp.Parser import GetParser
-from supp.utils import create_optimizer_and_scheduler
-from supp.get_dataset import get_dataset_for_spatial_realtions
-from supp.logger import print_detail
-from supp.loss_and_accuracy import accuracy
-from supp.measurments import Measurements
-from supp.measurments import set_datasets_measurements
-from supp.models import BUTDModelShared
-from supp.training_functions import fit
-
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-cudnn.benchmark = True
-
-class Training_flag:
-    def __init__(self, train_all_model: bool, train_arg: bool, task_embedding: bool, head_learning: bool):
-        """
-        Args:
-            train_all_model: Whether to train all model.
-            train_arg: Whether to train arg.
-            task_embedding: Whether to train the task embedding.
-            head_learning: Whether to train the read out head.
-        """
-        self.train_all_model = train_all_model
-        self.train_arg = train_arg
-        self.task_embedding = task_embedding
-        self.head_learning = head_learning
-
-    def Get_learned_params(self, model: nn.Module, lang_idx: int, direction: int):
-        """
-        Args:
-            model: The model.
-            lang_idx: Language index.
-            direction: The direction.
-
-        Returns: The desired parameters.
-
-        """
-        if self.train_all_model:
-            return list(model.parameters())
-        idx = lang_idx * 4 + direction
-        learned_params = []
-        if self.task_embedding:
-            learned_params.extend(model.task_embedding[direction])
-        if self.head_learning:
-            learned_params.extend(model.transfer_learning[idx])
-        if self.train_arg:
-            learned_params.extend(model.tdmodel.argument_embedding[lang_idx])
-        return learned_params
+from training.Data.Checkpoints import CheckpointSaver
+from training.Data.Data_params import Flag, DsType
+from training.Data.Get_dataset import get_dataset_for_spatial_relations
+from training.Data.Model_Wrapper import ModelWrapped
+from training.Data.Parser import GetParser, update_parser
+from training.Data.Structs import Training_flag
+from training.Modules.Create_Models import create_model
+from training.Modules.Models import BUTDModel, ResNet
 
 
-def train_omniglot(opts: argparse, lang_idx: int, the_datasets: list, training_flag: Training_flag, direction: int):
-    """
-    Args:
-        opts: The model options.
-        lang_idx: The language index.
-        the_datasets: The datasets.
-        training_flag: The training flag.
-        direction: The direction.
-
-    Returns: The optimum and the learning history.
-
-    """
-    set_datasets_measurements(the_datasets, Measurements, opts, opts.model)
-    cudnn.benchmark = True  # TODO:understand what it is.
-    # Deciding which parameters will be trained: if True all the model otherwise,only the task embedding.
-    learned_params = training_flag.Get_learned_params(opts.model, lang_idx, direction)
-    opts.optimizer, opts.scheduler = create_optimizer_and_scheduler(opts, learned_params)
-    # Training the learned params of the model.
-    return fit(opts, the_datasets, lang_idx, direction)
-
-def main_emnist(train_right: bool, train_left: bool,direction:int):
-    """
-    Args:
-        train_right: Whether to train right.
-        train_left: Whether to train left.
-
-    Returns: None.
-    """
-    parser = GetParser(language_idx=0,model_type=BUTDModelShared,flag=Flag.TD)
-    print_detail(parser)
+def main(train_right, train_left, ds_type=DsType.Emnist, flag=Flag.CL, model_type=BUTDModel, task=(-1, 0)):
+    parser = GetParser(task_idx=0, direction_idx=0, model_flag=flag, ds_type=ds_type, model_type=model_type)
+    # parser.ns = [0,3,3,3]
     project_path = Path(__file__).parents[1]
-    data_path =  os.path.join(project_path, 'data/{}/samples/6_extended'.format('emnist'))
-    # Create the data for right.
-    [the_datasets, train_dl, test_dl, _ , _, _, _] = get_dataset_for_spatial_realtions(parser, data_path, lang_idx=0, direction = 0)
-    # Training Right.
-    path_loading = 'Model_up_1/model_right_best.pt'
+    results_dir = os.path.join(project_path, 'data/{}/results/model'.format(str(ds_type)))
+    data_path = os.path.join(project_path, 'data/{}/samples/(4,4)_extended_format'.format(str(ds_type)))
+    tmpdir = os.path.join(project_path, 'data/emnist/results/')
+    now = datetime.now()
+    time = now.strftime("%m.%d.%Y%H:%M:%S")
+    Model_checkpoint = ModelCheckpoint(dirpath=tmpdir, monitor="val_loss_epoch", mode="min")
+    Checkpoint_saver = CheckpointSaver(dirpath=results_dir + time,store_running_statistics=flag is Flag.CL)
+    wandb_logger = WandbLogger(project="My_first_project_5.10", job_type='train',
+                               save_dir=results_dir)
+    trainer = pl.Trainer(accelerator='gpu', max_epochs=parser.EPOCHS, logger=wandb_logger, callbacks=[Model_checkpoint],
+                         reload_dataloaders_every_n_epochs=1)
 
-    model_path = parser.results_dir
-   # load_model(parser.model, model_path, path_loading, load_optimizer_and_schedular=False);
-    #   load_running_stats(parser.model, task_emb_id = 0,direction_id =0);
-    acc = accuracy(parser, test_dl)
-    print("Done training right, with accuracy : " + str(acc))
-  #  print(num_params(parser.model.parameters()))
+    model = create_model(parser)
     if train_right:
-        parser.EPOCHS = 60
-        training_flag = Training_flag(train_all_model=True, train_arg=True, task_embedding=False, head_learning=True)
-        train_omniglot(parser, lang_idx=0, the_datasets=the_datasets, training_flag=training_flag, direction=0)
+        training_flag = Training_flag(parser, train_all_model=True)
+        direction = (1, 0)
+        # learned_params = list(model.parameters())
+        learned_params = training_flag.Get_learned_params(model, task_idx=0, direction=direction)
+        DataLoaders = get_dataset_for_spatial_relations(parser, data_path, lang_idx=0, direction_tuple=direction)
+        wrapped_model = ModelWrapped(parser, model, learned_params, check_point=Checkpoint_saver,
+                                     direction_tuple=direction,
+                                     task_id=0,
+                                     nbatches_train=len(DataLoaders['train_dl']))
+        #  wrapped_model.load_model(model_path='Model_(1,0)/BUTDModel_epoch32_direction=(1, 0).pt')
+        # print(wrapped_model.Accuracy(DataLoaders['test_dl']))
+        trainer.fit(wrapped_model, train_dataloaders=DataLoaders['train_dl'], val_dataloaders=DataLoaders['test_dl'])
 
     if train_left:
-     #   load_model(parser.model_old, model_path, path_loading, load_optimizer_and_schedular=False)
-        #    parser.model_old = copy.deepcopy(parser.model)
-        # parser.model_old = copy.deepcopy(parser.model_old)
-        # acc = accuracy(parser.model_old, test_dl)
-        parser.EPOCHS = 100
-        [the_datasets, _ , _ , _, train_ds, test_ds , _ ] = get_dataset_for_spatial_realtions(parser, data_path, lang_idx=0, direction=direction)
-#        compute_for_each_direction_the_stats(train_ds)
-        training_flag = Training_flag(train_all_model=False, train_arg=False, task_embedding=False, head_learning=True)
-        train_omniglot(parser, lang_idx=0, the_datasets=the_datasets, training_flag=training_flag, direction=direction)
+        direction = task  #
+
+        training_flag = Training_flag(parser,train_task_embedding=True,  train_head=True)
+        learned_params = training_flag.Get_learned_params(model, task_idx=0, direction=direction)
+        DataLoaders = get_dataset_for_spatial_relations(parser, data_path, lang_idx=0, direction_tuple=direction)
+        wrapped_model = ModelWrapped(parser, model, learned_params, check_point=Checkpoint_saver,
+                                     direction_tuple=direction,
+                                     task_id=0,
+                                     nbatches_train=len(DataLoaders['train_dl']))
+        wrapped_model.load_model(model_path='Right_bs_10/BUTDModel_epoch56_direction=(1, 0).pt')
+      #  print(wrapped_model.Accuracy(DataLoaders['test_dl']))
+        #  parser.model = model
+        trainer.fit(wrapped_model, train_dataloaders=DataLoaders['train_dl'], val_dataloaders=DataLoaders['test_dl'])
 
 
-main_emnist(False, True, direction = 0)
+main(False, True, ds_type=DsType.Emnist, model_type=BUTDModel, flag=Flag.CL, task=(-2,0))

@@ -16,19 +16,19 @@ from training.Modules.Create_Models import create_model
 from training.Modules.Models import BUTDModel
 
 
-def main(train_right, train_left, ds_type=DsType.Fashionmnist, flag=Flag.CL, model_type = BUTDModel, task = (-1, 0)):
+def main(train_right, train_left, ds_type=DsType.Emnist, flag=Flag.CL, model_type = BUTDModel, task = (-1, 0)):
     parser = GetParser(task_idx=0, direction_idx=0, model_flag=flag, ds_type=ds_type, model_type=model_type)
     project_path = Path(__file__).parents[1]
     results_dir = os.path.join(project_path, 'data/{}/results/model'.format(str(ds_type)))
-    data_path = os.path.join(project_path, 'data/{}/samples/(3,3)_extended_format'.format(str(ds_type)))
+    data_path = os.path.join(project_path, 'data/{}/samples/5LANG'.format(str(ds_type)))
     tmpdir = os.path.join(project_path, 'data/emnist/results/')
     now = datetime.now()
     time = now.strftime("%m.%d.%Y%H:%M:%S")
     Model_checkpoint = ModelCheckpoint(dirpath=tmpdir, monitor="val_loss_epoch", mode="min")
-    Checkpoint_saver = CheckpointSaver(dirpath=results_dir + time, store_running_statistics=flag is Flag.CL)
+    Checkpoint_saver = CheckpointSaver(dirpath=results_dir + time,store_running_statistics=True)
     wandb_logger = WandbLogger(project="My_first_project_5.10", job_type='train',
                                save_dir=results_dir)
-    trainer = pl.Trainer(accelerator='gpu', max_epochs=60, logger=wandb_logger, callbacks=[Model_checkpoint],
+    trainer = pl.Trainer(accelerator='gpu', max_epochs=parser.EPOCHS, logger=wandb_logger, callbacks=[Model_checkpoint],
                          reload_dataloaders_every_n_epochs=1)
 
     model = create_model(parser)
@@ -36,12 +36,13 @@ def main(train_right, train_left, ds_type=DsType.Fashionmnist, flag=Flag.CL, mod
         training_flag = Training_flag(parser, train_all_model=True)
         direction = (1, 0)
        # learned_params = list(model.parameters())
-        learned_params = training_flag.Get_learned_params(model, task_idx = 0, direction=direction)
-        DataLoaders = get_dataset_for_spatial_relations(parser, data_path, lang_idx=0, direction_tuple=direction)
+        learned_params = training_flag.Get_learned_params(model, task_idx = 50, direction=direction)
+        DataLoaders = get_dataset_for_spatial_relations(parser, data_path, lang_idx=50, direction_tuple=direction)
         wrapped_model = ModelWrapped(parser, model, learned_params, check_point=Checkpoint_saver,
                                      direction_tuple=direction,
-                                     task_id=0,
+                                     task_id=50,
                                      nbatches_train=len(DataLoaders['train_dl']))
+     #   wrapped_model.load_model(model_path='Right_long/BUTDModel_epoch71_direction=(1, 0).pt')
      #   wrapped_model.load_model(model_path='Right_model/BUTDModel_latest_direction=(1, 0).pt')
        # print(wrapped_model.Accuracy(DataLoaders['test_dl']))
         trainer.fit(wrapped_model, train_dataloaders=DataLoaders['train_dl'], val_dataloaders=DataLoaders['test_dl'])
@@ -49,17 +50,17 @@ def main(train_right, train_left, ds_type=DsType.Fashionmnist, flag=Flag.CL, mod
     if train_left:
         direction = task  #
 
-        training_flag = Training_flag(parser, train_all_model=False, train_arg=False, train_task_embedding=True,
-                                      train_head=True)
+        training_flag = Training_flag(parser, train_task_embedding=True, train_head=True)
         learned_params = training_flag.Get_learned_params(model, task_idx = 0, direction=direction)
         DataLoaders = get_dataset_for_spatial_relations(parser, data_path, lang_idx=0, direction_tuple=direction)
         wrapped_model = ModelWrapped(parser, model, learned_params, check_point=Checkpoint_saver,
                                      direction_tuple=direction,
                                      task_id=0,
                                      nbatches_train=len(DataLoaders['train_dl']))
-        wrapped_model.load_model(model_path='Right_model/BUTDModel_latest_direction=(1, 0).pt')
-        print(wrapped_model.accuracy(DataLoaders['test_dl']))
+        wrapped_model.load_model(model_path='Right_very_long/BUTDModel_epoch57_direction=(1, 0).pt')
+     #   print(res['epoch'])
+     #   print(wrapped_model.Accuracy(DataLoaders['test_dl']))
         parser.model = model
         trainer.fit(wrapped_model, train_dataloaders=DataLoaders['train_dl'], val_dataloaders=DataLoaders['test_dl'])
 
-main(True, True, ds_type=DsType.Fashionmnist, model_type=BUTDModel, flag=Flag.CL, task = (-1,0))
+main(True, True, ds_type=DsType.Omniglot, model_type=BUTDModel, flag=Flag.CL, task = (-1,0))

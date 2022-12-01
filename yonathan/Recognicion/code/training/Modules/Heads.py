@@ -8,11 +8,11 @@ from training.Data.Data_params import Flag
 from training.Utils import Flag_to_task
 
 
-# Here we define all task-head modules.
+# Here we define the task-head modules.
 
 class HeadSingleTask(nn.Module):
-    # Task head for single task
-    # Allocates tasks according to the desired output size.
+    # Task head for single task.
+    # Allocate tasks according to the desired output size.
     # if model flag is NOFLAG we allocate subhead for each character.
     def __init__(self, opts: argparse, nclasses: int, num_heads=1) -> None:
         """
@@ -38,7 +38,7 @@ class HeadSingleTask(nn.Module):
 
         """
         x = inputs.squeeze()  # Squeeze the input.
-        outs = [layer(x) for layer in self.layers]
+        outs = [layer(x) for layer in self.layers]  # Compute all task-head outputs for all layers.
         return torch.stack(outs, dim=-1)  # stacks all tensor into one tensor
 
 
@@ -51,10 +51,10 @@ class MultiTaskHead(nn.Module):
             transfer_learning_params: list containing the associate taskhead params of the task, direction.
         """
         super(MultiTaskHead, self).__init__()
-        self.opts = opts
+        self.opts = opts  # The options.
         self.ntasks = opts.ntasks  # The number of tasks.
         self.ndirections = opts.ndirections  # The number of directions.
-        self.num_heads = opts.num_heads
+        self.num_heads = opts.num_heads  # The number of heads.
         self.num_classes = opts.nclasses  # The number of classes for each task to create the head according to.
         self.taskhead = nn.ModuleList()
         # For each task, direction create its task-head according to num_classes.
@@ -64,12 +64,12 @@ class MultiTaskHead(nn.Module):
                 layer = HeadSingleTask(opts, self.num_classes[i], num_heads)  # create a taskhead.
                 self.taskhead.append(layer)
                 if transfer_learning_params is not None:
-                    transfer_learning_params[i].extend(layer.parameters())  # Storing the taskhead params.
+                    transfer_learning_params[i][j].extend(layer.parameters())  # Storing the taskhead params.
 
     def forward(self, inputs: torch) -> torch:
         """
         Args:
-            inputs: The output from BU2, the flag.
+            inputs: The output from BU2, and the flag.
 
         Returns: A tensor in the desired shape.
 
@@ -101,6 +101,6 @@ class OccurrenceHead(nn.Module):
         Returns: The binary classification input.
 
         """
-        x = inputs.squeeze()
-        x = self.occurrence_transform(x)  # Apply the transform for the BU1 loss.
+        #   x = inputs.squeeze()
+        x = self.occurrence_transform(inputs)  # Apply the transform for the BU1 loss.
         return x

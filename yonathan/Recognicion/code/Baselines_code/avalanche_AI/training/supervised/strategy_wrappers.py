@@ -1,33 +1,54 @@
+from avalanche.training.plugins import (
+    SupervisedPlugin,
+    EvaluationPlugin
+)
+#TODO - CHANGE NAMES.
+from Baselines_code.avalanche_AI.training.Plugins.EWC import MyEWCPlugin
+from Baselines_code.avalanche_AI.training.Plugins.LWF import MyLwFPlugin
+from Baselines_code.avalanche_AI.training.Plugins.MAS import MyMASPlugin
+from Baselines_code.avalanche_AI.training.Plugins.LFL import MyLFLPlugin
+from Baselines_code.avalanche_AI.training.Plugins.SI import SynapticIntelligencePlugin as SIPlugin
+from training.Data.Data_params import Flag
+from Baselines_code.avalanche_AI.training.Plugins.RWALK import RWalkPlugin
 import argparse
 import sys
+import os
 from typing import Optional, Sequence, List, Union
-
 from avalanche.training.plugins.evaluation import default_evaluator
 from avalanche.training.templates.supervised import SupervisedTemplate
 from torch.nn import Module, CrossEntropyLoss
 from torch.optim import Optimizer
+from avalanche.training.plugins import LRSchedulerPlugin
+from pathlib import Path
+from training.Metrics.Accuracy import multi_label_accuracy_weighted, multi_label_accuracy, accuracy
 
-sys.path.append(r'/home/sverkip/data/BU-TD/yonathan/Recognicion/code/Baselines_code')
-from Baselines_code.avalanche_AI.training.Plugins.EWC import MyEWCPlugin
-from Baselines_code.avalanche_AI.training.Plugins.LWF  import MyLwFPlugin
-from Baselines_code.avalanche_AI.training.Plugins.MAS import MyMASPlugin
-from Baselines_code.avalanche_AI.training.Plugins.LFL  import MyLFLPlugin
-from Baselines_code.avalanche_AI.training.Plugins.Clock import EpochClock
-from Baselines_code.avalanche_AI.training.Plugins.SI  import SynapticIntelligencePlugin as MySIPlugin
-from Baselines_code.avalanche_AI.training.Plugins.RWALK import RWalkPlugin
-from Baselines_code.avalanche_AI.training.Plugins.AGEM import MyAGEMPlugin
-from Baselines_code.avalanche_AI.training.Plugins.IL import IL
-from Baselines_code.avalanche_AI.training.Plugins.GEM import GEMPlugin as MyGEMPlugin
-from supp.loss_and_accuracy import multi_label_accuracy_weighted # TODO - GIT RID OF THOSE STUPID FUNCTIONS.
-from avalanche.training.plugins import (
-    SupervisedPlugin,
-    EvaluationPlugin,
-    AGEMPlugin,
-    SynapticIntelligencePlugin,
-)
 
 class MySupervisedTemplate(SupervisedTemplate):
-    def __init__(self, parser:argparse, checkpoint=None,  device="cpu", test_dl = None,logger = None,   plugins: Optional[Sequence["SupervisedPlugin"]] = None, evaluator=default_evaluator,  eval_every=-1, **base_kwargs):
+    def __init__(self, parser: argparse, checkpoint=None, logger=None,
+                 plugins: Optional[Sequence["SupervisedPlugin"]] = None, evaluator=default_evaluator,
+                 eval_every: int = -1):
+        """
+        Args:
+            parser: The parser.
+            checkpoint: The checkpoint.
+            device: The device.
+            logger: The logger.
+            plugins: Possible plugins.
+            evaluator: The evaluator.
+            eval_every: Interval evaluation.
+            **base_kwargs: Optional args
+        """
+        self.task_id = 0
+        self.direction_id = 0
+        self.parser = parser  # The parser.
+        self.logger = logger  # The logger.
+        self.checkpoint = checkpoint  # The Checkpoint
+        self.inputs_to_struct = parser.inputs_to_struct
+        self.outs_to_struct = parser.outs_to_struct
+        self.scheduler = LRSchedulerPlugin(parser.scheduler, reset_scheduler=False, reset_lr=False,
+                                           step_granularity='iteration')  # Every iteration updatable scheduler.
+        plugins.append(self.scheduler)  # Add the scheduler to the Plugins.
+
         super().__init__(
             model=parser.model,
             optimizer=parser.optimizer,
@@ -35,56 +56,49 @@ class MySupervisedTemplate(SupervisedTemplate):
             train_mb_size=parser.train_mb_size,
             train_epochs=parser.train_epochs,
             eval_mb_size=parser.eval_mb_size,
-            device=device,
+            device=parser.device,
             plugins=plugins,
             evaluator=evaluator,
-            eval_every=eval_every,
+            eval_every=eval_every
         )
-
-        self.test_dl = test_dl
-        self.logger = logger
-        self.accuracy_fun = multi_label_accuracy_weighted
-        self.checkpoint = checkpoint
-        self.optimum = 0.0
-        self.pretrined_model = parser.pretrained_model
-        self.EpochClock = EpochClock(parser.epochs, self.pretrined_model)
-        self.plugins.append(self.EpochClock)
-        self.scheduler = plugins[0].scheduler
-        self.parser = parser
-        self.epoch = 0
 
     @property
     def mb_x(self):
-        """Current mini-batch input."""
-        if len(self.mbatch[1].shape) == 1:
-         self.mbatch[1] = self.mbatch[1].view([-1,1])
-        return self.mbatch[:-1]
+        """
+        Current mini-batch input.
+        Omit the ids and make a struct.
+        """
+
+        return self.parser.inputs_to_struct(self.mbatch[:-1])
 
     def criterion(self):
-        """Loss function.""" 
-        return self._criterion(self.parser, self.mb_x, self.mb_output)
+        """
+        Loss function.
+        Make output struct.
+        """
+        out = self.parser.outs_to_struct(self.mb_output)
+        return self._criterion(self.parser, self.mb_x, out)
 
     def eval_epoch(self, **kwargs):
         """Evaluation loop over the current `self.dataloader`."""
-        super().eval_epoch()
-    #    print(self.evaluator.get_last_metrics())
-        sum = 0.0
-        for self.mbatch in self.dataloader:
-            self._unpack_minibatch()
-            self._before_eval_iteration(**kwargs)
-            self._before_eval_forward(**kwargs)
-            self.mb_output = self.forward()
-            mb_output = self.model.forward_and_out_to_struct(self.mbatch[:5])
-            input_struct = self.model.inputs_to_struct(self.mbatch[:5])
-            self._after_eval_forward(**kwargs)
-            self.loss = self.criterion()
-            _ , acc = self.accuracy_fun(mb_output, input_struct)
-            sum += acc
-            self._after_eval_iteration(**kwargs)
-        sum = sum / len(self.dataloader)
-        # TODO - SUPPORT ALSO Omniglot.
-        self.checkpoint(self.model, self.epoch, sum, self.optimizer, self.scheduler, self.parser,0, 2)  # Updating checkpoint.
-        self.epoch += 1
+        super().eval_epoch(**kwargs)
+        Metrics = self.evaluator.get_last_metrics()
+      #  print(Metrics.keys())
+        if Metrics == {}:
+            acc = 0.0
+        else:
+            for key in Metrics.keys():
+                if 'Top1_Acc_Exp/eval_phase/test_stream' in key:
+                 acc = Metrics[key]
+                 print("The Accuracy is: {}".format(acc))
+        # TODO -Get the task, direction from somewhere.
+        self.checkpoint(self.model, self.clock.train_exp_epochs, acc, self.optimizer, self.parser.scheduler, self.parser,0 , 2)  # Updating checkpoint.
+     #   print(self.evaluator.get_all_metrics())
+
+    def update_task(self, task_id: int, direction_id: int):
+        self.task_id = task_id
+        self.direction_id = direction_id
+
 
 class MyEWC(MySupervisedTemplate):
     def __init__(
@@ -93,48 +107,25 @@ class MyEWC(MySupervisedTemplate):
             mode: str = "separate",
             decay_factor: Optional[float] = None,
             keep_importance_data: bool = False,
-         #   eval_mb_size: int = None,
-            device=None,
             plugins: Optional[List[SupervisedPlugin]] = None,
-            evaluator = None,
-          #  evaluator: EvaluationPlugin = default_evaluator(),
+            evaluator=default_evaluator,
             eval_every=-1,
+            prev_model= None,
             **base_kwargs
     ):
-        """Init.
-
-        :param model: The model.
-        :param optimizer: The optimizer to use.
-        :param criterion: The loss criterion to use.
-        :param ewc_lambda: hyperparameter to weigh the penalty inside the total
-               loss. The larger the lambda, the larger the regularization.
-        :param mode: `separate` to keep a separate penalty for each previous
-               experience. `onlinesum` to keep a single penalty summed over all
-               previous tasks. `onlineweightedsum` to keep a single penalty
-               summed with a decay factor over all previous tasks.
-        :param decay_factor: used only if mode is `onlineweightedsum`.
-               It specify the decay term of the importance matrix.
-        :param keep_importance_data: if True, keep in memory both parameter
-                values and importances for all previous task, for all modes.
-                If False, keep only last parameter values and importances.
-                If mode is `separate`, the value of `keep_importance_data` is
-                set to be True.
-        :param train_mb_size: The train minibatch size. Defaults to 1.
-        :param train_epochs: The number of training epochs. Defaults to 1.
-        :param eval_mb_size: The eval minibatch size. Defaults to 1.
-        :param device: The device to use. Defaults to None (cpu).
-        :param plugins: Plugins to be added. Defaults to None.
-        :param evaluator: (optional) instance of EvaluationPlugin for logging
-            and metric computations.
-        :param eval_every: the frequency of the calls to `eval` inside the
-            training loop. -1 disables the evaluation. 0 means `eval` is called
-            only at the end of the learning experience. Values >0 mean that
-            `eval` is called every `eval_every` epochs and at the end of the
-            learning experience.
-        :param base_kwargs: any additional
-            :class:`~Baselines_code.training.BaseTemplate` constructor arguments.
         """
-        ewc = MyEWCPlugin(parser, mode, decay_factor, keep_importance_data,parser.model, parser.old_dataset)
+        Args:
+            parser: The parser.
+            mode: The EWC mode 'online' or 'separate'.
+            decay_factor: The decay factor.
+            keep_importance_data:
+            device: The device.
+            plugins: The optional plugins.
+            evaluator: The evaluator.
+            eval_every: The evaluation interval.
+            **base_kwargs: Optional args.
+        """
+        ewc = MyEWCPlugin(parser, mode, decay_factor, keep_importance_data, prev_model, parser.old_dataset)
         if plugins is None:
             plugins = [ewc]
         else:
@@ -142,135 +133,51 @@ class MyEWC(MySupervisedTemplate):
 
         super().__init__(
             parser,
-            device=device,
             plugins=plugins,
             evaluator=evaluator,
             eval_every=eval_every,
             **base_kwargs
         )
 
-class MySI(MySupervisedTemplate):
+
+class LWF(MySupervisedTemplate):
+    """
+    Learning without forgetting.
+    """
+
     def __init__(
             self,
-            parser,
-            device="cpu",
-            plugins: Optional[Sequence["SupervisedPlugin"]] = None,
-            evaluator = None,
-            eval_every=-1,
-            **base_kwargs
-    ):
-        """Init.
-
-        :param model: The model.
-        :param optimizer: The optimizer to use.
-        :param criterion: The loss criterion to use.
-        :param ewc_lambda: hyperparameter to weigh the penalty inside the total
-               loss. The larger the lambda, the larger the regularization.
-        :param mode: `separate` to keep a separate penalty for each previous
-               experience. `onlinesum` to keep a single penalty summed over all
-               previous tasks. `onlineweightedsum` to keep a single penalty
-               summed with a decay factor over all previous tasks.
-        :param decay_factor: used only if mode is `onlineweightedsum`.
-               It specify the decay term of the importance matrix.
-        :param keep_importance_data: if True, keep in memory both parameter
-                values and importances for all previous task, for all modes.
-                If False, keep only last parameter values and importances.
-                If mode is `separate`, the value of `keep_importance_data` is
-                set to be True.
-        :param train_mb_size: The train minibatch size. Defaults to 1.
-        :param train_epochs: The number of training epochs. Defaults to 1.
-        :param eval_mb_size: The eval minibatch size. Defaults to 1.
-        :param device: The device to use. Defaults to None (cpu).
-        :param plugins: Plugins to be added. Defaults to None.
-        :param evaluator: (optional) instance of EvaluationPlugin for logging
-            and metric computations.
-        :param eval_every: the frequency of the calls to `eval` inside the
-            training loop. -1 disables the evaluation. 0 means `eval` is called
-            only at the end of the learning experience. Values >0 mean that
-            `eval` is called every `eval_every` epochs and at the end of the
-            learning experience.
-        :param base_kwargs: any additional
-            :class:`~Baselines_code.training.BaseTemplate` constructor arguments.
-        """
-        if plugins is None:
-            plugins = []
-
-        # This implementation relies on the S.I. Plugin, which contains the
-        # entire implementation of the strategy!
-        plugins.append(MySIPlugin( parser = parser, eps = parser.si_eps ))
-
-        super().__init__(
-            parser,                             
-            device = device,
-            plugins = plugins,
-            evaluator = evaluator,
-            eval_every = eval_every,
-            **base_kwargs
-        )
-
-class Mylwf(MySupervisedTemplate):
-    def __init__(
-            self,
-            parser,
-            train_mb_size: int = 1,
-            train_epochs: int = 1,
-            eval_mb_size: int = None,
-            device=None,
+            parser: argparse,
             plugins: Optional[List[SupervisedPlugin]] = None,
             evaluator: EvaluationPlugin = default_evaluator,
-            eval_every=-1,
+            eval_every: int = -1,
+            prev_model = None,
             **base_kwargs
     ):
-        """Init.
-
-        :param model: The model.
-        :param optimizer: The optimizer to use.
-        :param criterion: The loss criterion to use.
-        :param alpha: distillation hyperparameter. It can be either a float
-                number or a list containing alpha for each experience.
-        :param temperature: softmax temperature for distillation
-        :param train_mb_size: The train minibatch size. Defaults to 1.
-        :param train_epochs: The number of training epochs. Defaults to 1.
-        :param eval_mb_size: The eval minibatch size. Defaults to 1.
-        :param device: The device to use. Defaults to None (cpu).
-        :param plugins: Plugins to be added. Defaults to None.
-        :param evaluator: (optional) instance of EvaluationPlugin for logging
-            and metric computations.
-        :param eval_every: the frequency of the calls to `eval` inside the
-            training loop. -1 disables the evaluation. 0 means `eval` is called
-            only at the end of the learning experience. Values >0 mean that
-            `eval` is called every `eval_every` epochs and at the end of the
-            learning experience.
-        :param base_kwargs: any additional
-            :class:`~Baselines_code.training.BaseTemplate` constructor arguments.
         """
-
-        model = parser.model
-        optimizer = parser.optimizer
-        criterion = parser.criterion
-        if parser.pretrained_model:
-            prev_model = model
-        else:
-         prev_model = None
-        lwf = MyLwFPlugin(parser, prev_model)
+        Args:
+           parser: The parser.
+           plugins: The optional plugins.
+           evaluator: The evaluator.
+           eval_every: The interval evaluation.
+           **base_kwargs: Optional args.
+        """
+        lwf = MyLwFPlugin(parser, prev_model=prev_model)
         if plugins is None:
             plugins = [lwf]
         else:
             plugins.append(lwf)
 
         super().__init__(
-            parser = parser,
-            train_mb_size=train_mb_size,
-            train_epochs=train_epochs,
-            eval_mb_size=eval_mb_size,
-            device=device,
+            parser,
             plugins=plugins,
             evaluator=evaluator,
             eval_every=eval_every,
             **base_kwargs
         )
 
-class MyLFL(MySupervisedTemplate):
+
+class LFL(MySupervisedTemplate):
     """Less Forgetful Learning strategy.
 
     See LFL plugin for details.
@@ -281,36 +188,21 @@ class MyLFL(MySupervisedTemplate):
     def __init__(
             self,
             parser: argparse,
-            device=None,
             plugins: Optional[List[SupervisedPlugin]] = None,
-            evaluator=None,
-            #  evaluator: EvaluationPlugin = default_evaluator(),
-            eval_every=-1,
+            evaluator: EvaluationPlugin = default_evaluator,
+            eval_every: int = -1,
+            prev_model = None,
             **base_kwargs
     ):
-        """Init.
-
-        :param model: The model.
-        :param optimizer: The optimizer to use.
-        :param criterion: The loss criterion to use.
-        :param lambda_e: euclidean loss hyper parameter. It can be either a
-                float number or a list containing lambda_e for each experience.
-        :param train_mb_size: The train minibatch size. Defaults to 1.
-        :param train_epochs: The number of training epochs. Defaults to 1.
-        :param eval_mb_size: The eval minibatch size. Defaults to 1.
-        :param device: The device to use. Defaults to None (cpu).
-        :param plugins: Plugins to be added. Defaults to None.
-        :param evaluator: (optional) instance of EvaluationPlugin for logging
-            and metric computations.
-        :param eval_every: the frequency of the calls to `eval` inside the
-            training loop. -1 disables the evaluation. 0 means `eval` is called
-            only at the end of the learning experience. Values >0 mean that
-            `eval` is called every `eval_every` epochs and at the end of the
-            learning experience.
-            :class:`~Baselines_code.training.BaseTemplate` constructor arguments.
         """
-
-        lfl = MyLFLPlugin(parser.lfl_lambda, parser.model)
+        Args:
+           parser: The parser.
+           plugins: Optional plugins.
+           evaluator: The evaluator.
+           eval_every: Evaluation interval.
+           **base_kwargs:
+        """
+        lfl = MyLFLPlugin(parser.LFL_lambda, prev_model)
         if plugins is None:
             plugins = [lfl]
         else:
@@ -318,12 +210,12 @@ class MyLFL(MySupervisedTemplate):
 
         super().__init__(
             parser,
-            device=device,
             plugins=plugins,
             evaluator=evaluator,
             eval_every=eval_every,
             **base_kwargs
         )
+
 
 class MyMAS(MySupervisedTemplate):
     """Less Forgetful Learning strategy.
@@ -333,39 +225,19 @@ class MyMAS(MySupervisedTemplate):
     This strategy does not use task identities.
     """
 
-    def __init__(
-            self,
-            parser: argparse,
-            device=None,
-            plugins: Optional[List[SupervisedPlugin]] = None,
-            evaluator=None,
-            #  evaluator: EvaluationPlugin = default_evaluator(),
-            eval_every=-1,
-            **base_kwargs
-    ):
-        """Init.
-
-        :param model: The model.
-        :param optimizer: The optimizer to use.
-        :param criterion: The loss criterion to use.
-        :param lambda_e: euclidean loss hyper parameter. It can be either a
-                float number or a list containing lambda_e for each experience.
-        :param train_mb_size: The train minibatch size. Defaults to 1.
-        :param train_epochs: The number of training epochs. Defaults to 1.
-        :param eval_mb_size: The eval minibatch size. Defaults to 1.
-        :param device: The device to use. Defaults to None (cpu).
-        :param plugins: Plugins to be added. Defaults to None.
-        :param evaluator: (optional) instance of EvaluationPlugin for logging
-            and metric computations.
-        :param eval_every: the frequency of the calls to `eval` inside the
-            training loop. -1 disables the evaluation. 0 means `eval` is called
-            only at the end of the learning experience. Values >0 mean that
-            `eval` is called every `eval_every` epochs and at the end of the
-            learning experience.
-            :class:`~Baselines_code.training.BaseTemplate` constructor arguments.
+    def __init__(self, parser: argparse, device: str = 'cuda', plugins: Optional[List[SupervisedPlugin]] = None,
+                 evaluator: EvaluationPlugin = default_evaluator, eval_every: int = -1, prev_mode = None, **base_kwargs):
         """
+       Args:
+          parser: The parser.
+          plugins: Optional plugins.
+          evaluator: The evaluator.
+          eval_every: Evaluation interval.
+          prev_model
+          **base_kwargs:
+       """
 
-        MAS = MyMASPlugin(parser)
+        MAS = MyMASPlugin(parser, prev_mode)
         if plugins is None:
             plugins = [MAS]
         else:
@@ -373,45 +245,31 @@ class MyMAS(MySupervisedTemplate):
 
         super().__init__(
             parser,
-            device=device,
             plugins=plugins,
             evaluator=evaluator,
             eval_every=eval_every,
             **base_kwargs
         )
 
+
 class MyRWALK(MySupervisedTemplate):
     def __init__(
             self,
             parser: argparse,
-            device=None,
+            device: str = 'cuda',
             plugins: Optional[List[SupervisedPlugin]] = None,
-            evaluator=None,
-            #  evaluator: EvaluationPlugin = default_evaluator(),
-            eval_every=-1,
+            evaluator: EvaluationPlugin = default_evaluator,
+            eval_every: int = -1,
             **base_kwargs
     ):
-        """Init.
-
-        :param model: The model.
-        :param optimizer: The optimizer to use.
-        :param criterion: The loss criterion to use.
-        :param lambda_e: euclidean loss hyper parameter. It can be either a
-                float number or a list containing lambda_e for each experience.
-        :param train_mb_size: The train minibatch size. Defaults to 1.
-        :param train_epochs: The number of training epochs. Defaults to 1.
-        :param eval_mb_size: The eval minibatch size. Defaults to 1.
-        :param device: The device to use. Defaults to None (cpu).
-        :param plugins: Plugins to be added. Defaults to None.
-        :param evaluator: (optional) instance of EvaluationPlugin for logging
-            and metric computations.
-        :param eval_every: the frequency of the calls to `eval` inside the
-            training loop. -1 disables the evaluation. 0 means `eval` is called
-            only at the end of the learning experience. Values >0 mean that
-            `eval` is called every `eval_every` epochs and at the end of the
-            learning experience.
-            :class:`~Baselines_code.training.BaseTemplate` constructor arguments.
         """
+        Args:
+          parser: The parser.
+          plugins: Optional plugins.
+          evaluator: The evaluator.
+          eval_every: Evaluation interval.
+          **base_kwargs:
+       """
 
         RWalk = RWalkPlugin(parser)
         if plugins is None:
@@ -421,270 +279,35 @@ class MyRWALK(MySupervisedTemplate):
 
         super().__init__(
             parser,
-            device=device,
             plugins=plugins,
             evaluator=evaluator,
             eval_every=eval_every,
             **base_kwargs
         )
 
-class AGEM(MySupervisedTemplate):
-    """Average Gradient Episodic Memory (A-GEM) strategy.
-
-    See AGEM plugin for details.
-    This strategy does not use task identities.
-    """
-
-    def __init__(
-        self,
-        parser,
-        old_data = None,
-        patterns_per_exp: int = 1000,
-        sample_size: int = 64,
-        device=None,
-        plugins: Optional[List[SupervisedPlugin]] = None,
-        evaluator: EvaluationPlugin = None,
-        eval_every=-1,
-        **base_kwargs
-    ):
-        """Init.
-
-        :param model: The model.
-        :param optimizer: The optimizer to use.
-        :param criterion: The loss criterion to use.
-        :param patterns_per_exp: number of patterns per experience in the memory
-        :param sample_size: number of patterns in memory sample when computing
-            reference gradient.
-        :param train_mb_size: The train minibatch size. Defaults to 1.
-        :param train_epochs: The number of training epochs. Defaults to 1.
-        :param eval_mb_size: The eval minibatch size. Defaults to 1.
-        :param device: The device to use. Defaults to None (cpu).
-        :param plugins: Plugins to be added. Defaults to None.
-        :param evaluator: (optional) instance of EvaluationPlugin for logging
-            and metric computations.
-        :param eval_every: the frequency of the calls to `eval` inside the
-            training loop. -1 disables the evaluation. 0 means `eval` is called
-            only at the end of the learning experience. Values >0 mean that
-            `eval` is called every `eval_every` epochs and at the end of the
-            learning experience.
-        :param base_kwargs: any additional
-            :class:`~avalanche.training.BaseTemplate` constructor arguments.
+class SI(MySupervisedTemplate):
+    def __init__(self, parser: argparse, device: str = 'cuda', plugins: Optional[List[SupervisedPlugin]] = None,
+                 evaluator: EvaluationPlugin = default_evaluator, eval_every: int = -1, exc = None, **base_kwargs):
         """
+       Args:
+          parser: The parser.
+          plugins: Optional plugins.
+          evaluator: The evaluator.
+          eval_every: Evaluation interval.
+          prev_model
+          **base_kwargs:
+       """
 
-        agem = MyAGEMPlugin(parser,old_data, patterns_per_exp, sample_size)
+        SIP = SIPlugin(parser.si_lambda,excluded_parameters = None)
         if plugins is None:
-            plugins = [agem]
+            plugins = [SIP]
         else:
-            plugins.append(agem)
-
-        super().__init__(                                                                            
-            parser = parser,
-            device = device,
-            plugins = plugins,
-            evaluator = evaluator,
-            eval_every = eval_every,
-            **base_kwargs
-        )
-
-class GEM(MySupervisedTemplate):
-    """Average Gradient Episodic Memory (A-GEM) strategy.
-
-    See AGEM plugin for details.
-    This strategy does not use task identities.
-    """
-
-    def __init__(
-        self,
-        parser,
-        old_data = None,
-        checkpoint = None,
-        sample_size: int = 64,
-        device=None,
-        plugins: Optional[List[SupervisedPlugin]] = None,
-        evaluator: EvaluationPlugin = None,
-        eval_every=-1,
-        **base_kwargs
-    ):
-        """Init.
-
-        :param model: The model.
-        :param optimizer: The optimizer to use.
-        :param criterion: The loss criterion to use.
-        :param patterns_per_exp: number of patterns per experience in the memory
-        :param sample_size: number of patterns in memory sample when computing
-            reference gradient.
-        :param train_mb_size: The train minibatch size. Defaults to 1.
-        :param train_epochs: The number of training epochs. Defaults to 1.
-        :param eval_mb_size: The eval minibatch size. Defaults to 1.
-        :param device: The device to use. Defaults to None (cpu).
-        :param plugins: Plugins to be added. Defaults to None.
-        :param evaluator: (optional) instance of EvaluationPlugin for logging
-            and metric computations.
-        :param eval_every: the frequency of the calls to `eval` inside the
-            training loop. -1 disables the evaluation. 0 means `eval` is called
-            only at the end of the learning experience. Values >0 mean that
-            `eval` is called every `eval_every` epochs and at the end of the
-            learning experience.
-        :param base_kwargs: any additional
-            :class:`~avalanche.training.BaseTemplate` constructor arguments.
-        """
-
-        gem = MyGEMPlugin(parser,old_data, parser.patterns_per_exp, sample_size)
-        if plugins is None:
-            plugins = [gem]
-        else:
-            plugins.append(gem)
+            plugins.append(SIP)
 
         super().__init__(
-            parser = parser,
-            device = device,
-            checkpoint=checkpoint,
-            plugins = plugins,
-            evaluator = evaluator,
-            eval_every = eval_every,
-            **base_kwargs
-        )
-
-class MyIL(MySupervisedTemplate):
-    """Average Gradient Episodic Memory (A-GEM) strategy.
-
-    See AGEM plugin for details.
-    This strategy does not use task identities.
-    """
-
-    def __init__(
-        self,
-        parser,
-        old_data = None,
-        checkpoint = None,
-        patterns_per_exp: int = 100000,
-        sample_size: int = 64,
-        device=None,
-        plugins: Optional[List[SupervisedPlugin]] = None,
-        evaluator: EvaluationPlugin = None,
-        eval_every=-1,
-        **base_kwargs
-    ):
-        """Init.
-
-        :param model: The model.
-        :param optimizer: The optimizer to use.
-        :param criterion: The loss criterion to use.
-        :param patterns_per_exp: number of patterns per experience in the memory
-        :param sample_size: number of patterns in memory sample when computing
-            reference gradient.
-        :param train_mb_size: The train minibatch size. Defaults to 1.
-        :param train_epochs: The number of training epochs. Defaults to 1.
-        :param eval_mb_size: The eval minibatch size. Defaults to 1.
-        :param device: The device to use. Defaults to None (cpu).
-        :param plugins: Plugins to be added. Defaults to None.
-        :param evaluator: (optional) instance of EvaluationPlugin for logging
-            and metric computations.
-        :param eval_every: the frequency of the calls to `eval` inside the
-            training loop. -1 disables the evaluation. 0 means `eval` is called
-            only at the end of the learning experience. Values >0 mean that
-            `eval` is called every `eval_every` epochs and at the end of the
-            learning experience.
-        :param base_kwargs: any additional
-            :class:`~avalanche.training.BaseTemplate` constructor arguments.
-        """
-
-        gem = IL(parser,old_data, patterns_per_exp, sample_size)
-        if plugins is None:
-            plugins = [gem]
-        else:
-            plugins.append(gem)
-
-        super().__init__(
-            parser = parser,
-            device = device,
-            checkpoint=checkpoint,
-            plugins = plugins,
-            evaluator = evaluator,
-            eval_every = eval_every,
-            **base_kwargs
-        )
-
-class Naive_with_freezing(MySupervisedTemplate):
-    """Naive finetuning.
-
-    The simplest (and least effective) Continual Learning strategy. Naive just
-    incrementally fine tunes a single model without employing any method
-    to contrast the catastrophic forgetting of previous knowledge.
-    This strategy does not use task identities.
-
-    Naive is easy to set up and its results are commonly used to show the worst
-    performing baseline.
-    """
-
-    def __init__(
-        self,
-        model: Module,
-        optimizers: List[Optimizer],
-        criterion=CrossEntropyLoss(),
-        train_mb_size: int = 1,
-        train_epochs: list[int] = [1],
-        eval_mb_size: Optional[int] = None,
-        device=None,
-        plugins: Optional[List[SupervisedPlugin]] = None,
-        evaluator: EvaluationPlugin = None,
-        eval_every=-1,
-        **base_kwargs
-    ):
-        """
-        Creates an instance of the Naive strategy.
-
-        :param model: The model.
-        :param optimizer: The optimizer to use.
-        :param criterion: The loss criterion to use.
-        :param train_mb_size: The train minibatch size. Defaults to 1.
-        :param train_epochs: The number of training epochs. Defaults to 1.
-        :param eval_mb_size: The eval minibatch size. Defaults to 1.
-        :param device: The device to use. Defaults to None (cpu).
-        :param plugins: Plugins to be added. Defaults to None.
-        :param evaluator: (optional) instance of EvaluationPlugin for logging
-            and metric computations.
-        :param eval_every: the frequency of the calls to `eval` inside the
-            training loop. -1 disables the evaluation. 0 means `eval` is called
-            only at the end of the learning experience. Values >0 mean that
-            `eval` is called every `eval_every` epochs and at the end of the
-            learning experience.
-        :param base_kwargs: any additional
-            :class:`~Baselines_code.training.BaseTemplate` constructor arguments.
-        """
-        self.optimizers = optimizers
-        self.epochs_list = train_epochs
-        optimizer = optimizers[0]
-        train_epoch = train_epochs[0]
-        super().__init__(
-            model = model,
-            optimizer = optimizer,
-            criterion = criterion,
-            train_mb_size=train_mb_size,
-            train_epochs = train_epoch,
-            eval_mb_size=eval_mb_size,
-            device=device,
+            parser,
             plugins=plugins,
             evaluator=evaluator,
             eval_every=eval_every,
             **base_kwargs
         )
-        
-    def _after_training_exp(self, **kwargs):
-        """
-        Switching the optimizer, number of parameters.
-        Args:
-            **kwargs:
-
-        Returns:
-
-        """
-        super(Naive_with_freezing, self)._after_training_exp()
-        nexperiences_trained_so_far = self.clock.train_exp_counter
-        if nexperiences_trained_so_far  < len(self.optimizers):
-          new_exp_idx= nexperiences_trained_so_far
-          self.optimizer = self.optimizers[new_exp_idx]
-          self.train_epochs = self.epochs_list[new_exp_idx]
-          print("switch_optimizer")
-        
-             

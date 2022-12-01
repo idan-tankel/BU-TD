@@ -6,7 +6,7 @@ from typing import Callable
 import torch
 import torch.nn as nn
 
-from training.Data.Data_params import Flag, DsType, AllOptions
+from training.Data.Data_params import Flag, DsType, AllDataSetOptions
 from training.Data.Structs import inputs_to_struct, outs_to_struct
 from training.Metrics.Loss import UnifiedCriterion
 from training.Modules.Batch_norm import BatchNorm
@@ -15,7 +15,7 @@ from training.Modules.Models import BUTDModel, ResNet
 
 
 def GetParser(task_idx: int = 0, direction_idx: int = 0, model_type: nn.Module = BUTDModel,
-              model_flag: Flag = Flag.NOFLAG, ds_type: DsType = DsType.Emnist, begin_with_pretrained_model=False):
+              model_flag: Flag = Flag.NOFLAG, ds_type: DsType = DsType.Emnist):
     """
     Args:
         task_idx: The task index.
@@ -23,7 +23,6 @@ def GetParser(task_idx: int = 0, direction_idx: int = 0, model_type: nn.Module =
         model_type: The model type BUTD or ResNet.
         model_flag: The model flag.
         ds_type: The model type e.g. mnist, fashionmnist, omniglot.
-        begin_with_pretrained_model: Whether to begin with pretrained model.
 
     Returns: A parser.
 
@@ -35,8 +34,8 @@ def GetParser(task_idx: int = 0, direction_idx: int = 0, model_type: nn.Module =
     if task_idx != 0 and (ds_type is DsType.Emnist or ds_type is DsType.FashionMnist):
         raise Exception("The task id is used only for Omniglot.")
     #
-    Data_specification = AllOptions(ds_type=ds_type, flag_at=model_flag,
-                                    initial_task_for_omniglot_only=[27, 5, 42, 18, 33])
+    Data_specification = AllDataSetOptions(ds_type=ds_type, flag_at=model_flag,
+                                           initial_task_for_omniglot_only=5)
     parser = argparse.ArgumentParser()
     # Flags.
     parser.add_argument('--ds_type', default=ds_type, type=DsType, help='Flag that defines the data-set type')
@@ -50,8 +49,8 @@ def GetParser(task_idx: int = 0, direction_idx: int = 0, model_type: nn.Module =
     parser.add_argument('--max_lr', default=0.002, type=float,
                         help='Max lr of the cyclic Adam optimizer before the lr returns to the base_lr')
     parser.add_argument('--momentum', default=0.9, type=float, help='Momentum of the optimizer')
-    parser.add_argument('--bs', default=64, type=int, help='The training batch size')
-    parser.add_argument('--EPOCHS', default=70, type=int, help='Number of epochs in the training')
+    parser.add_argument('--bs', default=10, type=int, help='The training batch size')
+    parser.add_argument('--EPOCHS', default=100, type=int, help='Number of epochs in the training')
     # Model architecture arguments.
     parser.add_argument('--model_type', default=model_type, type=DsType, help='The model type BUTD or ResNet')
     parser.add_argument('--td_block_type', default=BasicBlockTD, type=nn.Module, help='Basic TD block')
@@ -74,7 +73,7 @@ def GetParser(task_idx: int = 0, direction_idx: int = 0, model_type: nn.Module =
                         help='Number of tasks the model should handle')
     parser.add_argument('--ndirections', default=Data_specification.data_obj.ndirections, type=int,
                         help='Number of directions the model should handle')
-    parser.add_argument('--inshape', default=(3,*Data_specification.data_obj.image_size), type=tuple,  # TODO - CHANGE
+    parser.add_argument('--inshape', default=(3, *Data_specification.data_obj.image_size), type=tuple,
                         help='The input image shape, maybe override in get_dataset')
     parser.add_argument('--num_heads', default=Data_specification.data_obj.num_heads, type=list,
                         help='The number of headed for each task, direction')
@@ -92,7 +91,7 @@ def GetParser(task_idx: int = 0, direction_idx: int = 0, model_type: nn.Module =
     parser.add_argument('--criterion', default=UnifiedCriterion, type=Callable,
                         help='The unified loss function of all training')
     parser.add_argument('--task_accuracy', default=Data_specification.data_obj.task_accuracy, type=Callable,
-                        help='The accuracy function')
+                        help='The Accuracy function')
     # Struct variables.
     parser.add_argument('--inputs_to_struct', default=inputs_to_struct, type=inputs_to_struct,
                         help='The struct transform the list of inputs to struct.')
@@ -104,12 +103,12 @@ def GetParser(task_idx: int = 0, direction_idx: int = 0, model_type: nn.Module =
                         help='The device we use,usually cuda')
     parser.add_argument('--workers', default=2, type=int, help='Number of workers to use')
     # Training procedure.
-    parser.add_argument('--initial_tasks', default=Data_specification.data_obj.initial_tasks, type=list,
+    parser.add_argument('--initial_directions', default=Data_specification.data_obj.initial_directions, type=list,
                         help='The initial tasks to train first')
     # Change to another function
-    now = datetime.now()
-    dt_string = now.strftime("%d.%m.%Y %H:%M:%S")
-    model_path = "Model_task_{}_direction_{}_ds_{}".format(task_idx, direction_idx, ds_type.Enum_to_name())
+    # now = datetime.now()
+    #  dt_string = now.strftime("%d.%m.%Y %H:%M:%S")
+    model_path = "Model_task_{}_direction_{}_ds_{}".format(task_idx, direction_idx, str(ds_type))
     parser.add_argument('--results_dir', default=Data_specification.data_obj.results_dir, type=str,
                         help='The path the model will be stored')
     model_dir = os.path.join(Data_specification.data_obj.results_dir, model_path)
@@ -123,34 +122,34 @@ def GetParser(task_idx: int = 0, direction_idx: int = 0, model_type: nn.Module =
     lambda_rwalk = [20.0, 30.0, 40.0, 50.0, 10.0, 5.0, 2.5]
     mas_lambdas = [0.5, 1.0, 0.25]
     # EWC
-    parser.add_argument('--ewc_lambda', default=100, type=float, help='The ewc strength')
+    parser.add_argument('--EWC_lambda', default=100, type=float, help='The ewc strength')
     # SI
     parser.add_argument('--si_lambda', default=1e1, type=float, help='The SI strength')
     parser.add_argument('--si_eps', default=0.0000001, type=float, help='The SI strength')
     # LFL
-    parser.add_argument('--lfl_lambda', default=0.0, type=float, help='The LFL strength')
+    parser.add_argument('--LFL_lambda', default=0.0, type=float, help='The LFL strength')
     # LWF
-    parser.add_argument('--lwf_lambda', default=0.1, type=float, help='The LWF strength')
+    parser.add_argument('--LWF_lambda', default=0.1, type=float, help='The LWF strength')
     parser.add_argument('--temperature_LWF', default=lambdas_LWF[1], type=float, help='The LWF temperature')
     # MAS
     parser.add_argument('--mas_alpha', default=0.5, type=float, help='The MAS continual importance weight')
-    parser.add_argument('--mas_lambda', default=mas_lambdas[0], type=float, help='The MAS strength')
+    parser.add_argument('--MAS_lambda', default=mas_lambdas[0], type=float, help='The MAS strength')
     # RWALK
     parser.add_argument('--rwalk_lambda', default=lambda_rwalk[-1], type=float, help='The rwalk strength')
     parser.add_argument('--rwalk_alpha', default=0.9, type=float, help='The rwalk continual importance weight')
     parser.add_argument('--rwalk_delta_t', default=10, type=int, help='The rwalk step')
+    #
+    parser.add_argument('--SI_lambda', default=0.01, type=float, help='The rwalk strength')
+    #
     # General arguments.
     parser.add_argument('--train_mb_size', default=64, type=int, help='The avalanche training bs')
     parser.add_argument('--eval_mb_size', default=64, type=int, help='The avalanche evaluation bs')
-    parser.add_argument('--train_epochs', default=20, type=int,
-                        help='The number of epochs')  # TODO - MERGE THIS INTO ONE VARIABLE.
-    parser.add_argument('--epochs', default=20, type=int,
-                        help='The overall number of epochs')  # TODO - MERGE THIS INTO ONE VARIABLE.
-    parser.add_argument('--Begin_with_pretrained_model', default=begin_with_pretrained_model, type=bool,
-                        help='The overall number of epochs')  # TODO - MERGE THIS INTO ONE VARIABLE.
+    parser.add_argument('--train_epochs', default=40, type=int,
+                        help='The number of epochs')
     return parser.parse_args()
 
-def update_parser(parser:argparse,attr:str,new_value:any)->None:
+
+def update_parser(parser: argparse, attr: str, new_value: any) -> None:
     """
     Update existing parser attribute to new_value.
     Args:
@@ -159,5 +158,4 @@ def update_parser(parser:argparse,attr:str,new_value:any)->None:
         new_value: The new value we want to assign
 
     """
-    setattr(parser,attr,new_value)
-
+    setattr(parser, attr, new_value)

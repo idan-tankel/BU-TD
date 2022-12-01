@@ -25,9 +25,9 @@ cmd_parser.add_argument('--ds_type', default='Emnist',type = str, help = "Data s
 
 def define_wrapped_model(parser, training_flag, model,data_path, direction,lang_idx, Checkpoint_saver ):
     learned_params = training_flag.Get_learned_params(model, task_idx=lang_idx, direction=direction)
-    Initial_DataLoaders = get_dataset_for_spatial_relations(parser, data_path, lang_idx=lang_idx, direction=direction)
+    Initial_DataLoaders = get_dataset_for_spatial_relations(parser, data_path, lang_idx=lang_idx, direction_tuple=direction)
     wrapped_model = ModelWrapped(parser, model, learned_params, check_point=Checkpoint_saver,
-                                 direction_id=direction,
+                                 direction_tuple=direction,
                                  task_id=lang_idx,
                                  nbatches_train=len(Initial_DataLoaders['train_dl']))
     return wrapped_model, Initial_DataLoaders
@@ -90,12 +90,12 @@ def main(flag=Flag.CL):
     for idx, task in enumerate(All_tasks):
         old = Acc_old[idx]
         new = Acc_new[idx]
-        print("The accuracy on the task:{} was: {.3f} and now is: {.3f}".format(task,old,new))
+        print("The Accuracy on the task:{} was: {.3f} and now is: {.3f}".format(task,old,new))
    # print(Acc_new)
   #  print(Acc_old)
-  #  print("The accuracy on the initial task was: {}".format(acc_old) )
+  #  print("The Accuracy on the initial task was: {}".format(acc_old) )
 
-   # print("The accuracy on the initial task now is: {}".format(acc_new))
+   # print("The Accuracy on the initial task now is: {}".format(acc_new))
     print("As all rows No forgetting!")
 
 main()

@@ -6,16 +6,17 @@ import torch
 from avalanche.training.plugins import LwFPlugin
 from typing import Union
 import torch.nn as nn
+from training.Utils import tuple_direction_to_index
+from avalanche.training.templates.supervised import SupervisedTemplate
 
 class MyLwFPlugin(LwFPlugin):
     """
-    A Learning without Forgetting plugin.
+    Learning without Forgetting plugin.
     LwF uses distillation to regularize the current loss with soft targets
     taken from a previous version of the model.
     This plugin does not use task identities.
     When used with multi-headed models, all heads are distilled.
     """
-
     def __init__(self, parser:argparse, prev_model:Union[nn.Module, None] = None):
         """
         Args:
@@ -24,17 +25,31 @@ class MyLwFPlugin(LwFPlugin):
         """
 
         super().__init__()
-
-        self.lamda = parser.lwf_lambda
+        self.parser= parser
+        self.lamda = parser.LWF_lambda
         self.temperature =parser.temperature_LWF
-        self.prev_model = copy.deepcopy(prev_model) if prev_model != None else None
-        self.prev_classes = {"0": set()}
-        self.prev_tasks = {}
+        self.num_exps = 0
+        self.inputs_to_struct = parser.inputs_to_struct
+        if prev_model is not None:
+             self.prev_model = copy.deepcopy(prev_model)
+             self.num_exps = 1
+             for i, task in enumerate(prev_model.trained_tasks):
+                self.prev_tasks = {i : task }
 
-    def _distillation_loss(self, cur_out:torch, prev_out:torch, x:list[torch]):
+    #TODO - IT WORKS FOR RESNET ONLY, FOR BU-TD WE NEED TO CONSIDER SOLUTIONS.
+    def construct_flag(self,flag, task_id, direction_id):
+        B = flag.shape[0]
+        direction_dir, _ = tuple_direction_to_index(self.parser.num_x_axis, self.parser.num_y_axis, direction_id, self.parser.ndirections, task_id)
+        task_id = torch.tensor(task_id)
+        New_task_flag = torch.nn.functional.one_hot(task_id, self.parser.ntasks)
+        New_direction_flag = torch.nn.functional.one_hot(direction_dir, self.parser.ndirections)
+        New_flag = torch.concat([New_direction_flag, New_task_flag], dim=0).float()
+        return New_flag.expand(B,-1)
+
+    def _distillation_loss(self, cur_out:torch, prev_out:torch, x:list[torch])->float:
         """
         Compute distillation loss between output of the current model and
-        and output of the previous (saved) model.
+        output of the previous (saved) model.
         Args:
             cur_out: The current output.
             prev_out: The previous output.
@@ -44,16 +59,16 @@ class MyLwFPlugin(LwFPlugin):
 
         """
         loss_weight = x.label_existence.unsqueeze(dim = 2) # Getting the loss weight.
-        cur_out = torch.transpose(cur_out.classifier, 2, 1)
-        prev_out = torch.transpose(prev_out.classifier, 2, 1)
-        cur_out_softmax = torch.log_softmax(cur_out / self.temperature, dim = 2 )
-        prev_out_softmax = torch.softmax(prev_out / self.temperature, dim = 2)
-        dist_loss = - cur_out_softmax * prev_out_softmax
-        dist_loss = dist_loss * loss_weight
-        dist_loss = dist_loss.sum() / loss_weight.size(0)
+        cur_out = torch.transpose(cur_out.classifier, 2, 1) # Get in the order of [B,CHAR,class].
+        prev_out = torch.transpose(prev_out.classifier, 2, 1) # Get in the order of [B,CHAR,class].
+        cur_out_softmax = torch.log_softmax(cur_out / self.temperature, dim = 2 ) # Compute the log-probabilities.
+        prev_out_softmax = torch.softmax(prev_out / self.temperature, dim = 2)# Compute the probabilities.
+        dist_loss = - cur_out_softmax * prev_out_softmax # Compute the loss.
+        dist_loss = dist_loss * loss_weight # Count only existing characters.
+        dist_loss = dist_loss.sum() / loss_weight.size(0) # Average the loss
         return dist_loss
 
-    def penalty(self, model:nn.Module, x:list[torch], alpha:float):
+    def penalty(self, model:nn.Module, x:list[torch], alpha:float)->float:
         """
         Compute weighted distillation loss.
         Args:
@@ -64,23 +79,24 @@ class MyLwFPlugin(LwFPlugin):
         Returns: The penalty.
 
         """
-        # TODO - CHANGE TO THE TASK IDENTITIES.
-        if self.prev_model is None:
-            return 0
+
+        if self.num_exps == 0:
+            return 0.0
         else:
-            y_prev = {"0": self.prev_model.forward_and_out_to_struct(x, head = 0)  } # TODO - CHANGE 0 TO GENERAL.
-            y_curr = {"0": model.forward_and_out_to_struct(x, head = 0)  }
             dist_loss = 0
-            for task_id in y_prev.keys():
-                # compute kd only for previous heads.
-                if task_id in self.prev_classes:
-                    yp = y_prev[task_id]
-                    yc = y_curr[task_id]
-                    input_strcut = model.inputs_to_struct(x)
-                    dist_loss += self._distillation_loss(yc, yp, input_strcut)
+           # input_struct = self.inputs_to_struct(x)
+            # TODO - TOMORROW BUILD THIS FUNCTION.
+         #   New_flag = construct_flag(input_struct.flag, old_task)
+            # compute kd only for previous heads.
+            for task_id, direction_id in self.prev_tasks.values():
+                New_flag = self.construct_flag(x.flag, task_id, direction_id)
+                x.flag = New_flag
+                y_prev =  self.prev_model.forward_and_out_to_struct(x)
+                y_curr =  model.forward_and_out_to_struct(x)
+                dist_loss += self._distillation_loss(y_curr, y_prev, x)
             return alpha * dist_loss
 
-    def before_backward(self, strategy, **kwargs):
+    def before_backward(self, strategy:SupervisedTemplate, **kwargs):
         """
         Summing all losses together.
         Args:
@@ -88,27 +104,17 @@ class MyLwFPlugin(LwFPlugin):
             **kwargs: 
 
         """
-        alpha = ( self.lamda[strategy.clock.train_exp_counter]   if isinstance(self.lamda, (list, tuple)) else self.lamda  )
+        alpha =  self.lamda
         penalty = self.penalty(strategy.model, strategy.mb_x, alpha )
-      #  print(penalty)
+        print(penalty)
         strategy.loss += penalty
 
-    def after_training_exp(self, strategy, **kwargs):
+    def after_training_exp(self, strategy:SupervisedTemplate, **kwargs):
         """
         Save a copy of the model after each experience and
         update self.prev_classes to include the newly learned classes.
-        # TODO - GET RID OF MY CLOCK.
         """
-        if strategy.EpochClock.train_exp_epochs == strategy.EpochClock.max_epochs:
-            print("copy")
-            self.prev_model = copy.deepcopy(strategy.model)
+        print("Copy the model ")
+        self.prev_model = copy.deepcopy(strategy.model)
         # For class incremental problems only.
-        task_ids = strategy.experience.dataset.task_set
-        for task_id in task_ids:
-            task_data = strategy.experience.dataset.task_set[task_id]
-            pc = set(task_data.targets)
 
-            if task_id not in self.prev_classes:
-                self.prev_classes[str(task_id)] = pc
-            else:
-                self.prev_classes[str(task_id)] = self.prev_classes[task_id].union(pc)

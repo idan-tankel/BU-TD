@@ -169,6 +169,7 @@ class BUStream(nn.Module):
         if self.use_lateral and lateral_in is not None:
             x = self.top_lat((x, lateral_in))  # last lateral connection before the end.
         laterals_out.append([x])
+        x = x.squeeze()
         return x, laterals_out
 
 
@@ -214,9 +215,9 @@ class TDModel(nn.Module):
                 self.argument_embedding[j].extend(self.InitialTaskEmbedding.top_td_arg_emb[j].parameters())
 
         # copy the task embedding.
-        if self.model_flag is Flag.CL:
-            self.task_embedding = [[self.InitialTaskEmbedding.top_td_task_emb[i]] for i in
-                                   range(self.ndirections)]
+     #   if self.model_flag is Flag.CL:
+#            self.task_embedding = [[self.InitialTaskEmbedding.top_td_task_emb[i]] for i in
+       #                            range(self.ndirections)]
         init_module_weights(self.modules(), self.model_flag)  # Init the weights.
 
     def _make_layer(self, planes: int, num_blocks: int, stride: int = 1, index: int = 0):
@@ -306,7 +307,7 @@ class BUTDModel(nn.Module):
         self.bumodel1 = BUStream(opts, bu_shared, is_bu2=False)  # The BU1 stream.
         self.tdmodel = TDModel(opts, shapes, avg_pool_size)  # The TD stream.
         self.bumodel2 = BUStream(opts, bu_shared, is_bu2=True)  # The BU2 stream.
-        self.transfer_learning = [[] for _ in range(opts.ntasks * opts.ndirections)]
+        self.transfer_learning = [[[] for _ in range(opts.ndirections)] for _ in range(opts.ntasks )]
         self.Head = MultiTaskHead(opts,
                                   self.transfer_learning)  # The task-head to transform to the number of classes.
         if self.model_flag is Flag.CL:  # Storing the Task embedding.
@@ -348,7 +349,7 @@ class BUTDModel(nn.Module):
             model_inputs += [[td_out]]
         bu2_out, bu2_laterals_out = self.bumodel2(
             model_inputs)  # The input to the TD stream is the images, flags, the lateral connections.
-        bu2_out = bu2_out.squeeze()
+        bu2_out = bu2_out
         head_input = [bu2_out, flags]
         task_out = self.Head(head_input)  # Compute the classification layer.
         outs = [occurrence_out, bu_out, bu2_out, task_out]
@@ -383,8 +384,9 @@ class ResNet(nn.Module):
         self.ntasks = opts.ntasks
         self.ndirections = opts.ndirections
         self.feature = BUModel(opts, use_task_embedding=False)  # Create the backbone without the task embedding.
-        self.TL = [[] for _ in range(self.ntasks * self.ndirections)]  # Store the read-out parameters.
+        self.TL = [[[] for _ in range(opts.ndirections)] for _ in range(opts.ntasks )]  # Store the read-out parameters.
         self.classifier = MultiTaskHead(opts, self.TL)  # The classifier head.
+        self.trained_tasks:set[int,tuple[int,int]] = set()
 
     def forward_features(self, samples: inputs_to_struct, features: torch, head: Union[None, int] = None) -> torch:
         """
@@ -415,11 +417,10 @@ class ResNet(nn.Module):
         features, _ = self.feature(model_inputs)  # The features.
         return features
 
-    def forward(self, samples: inputs_to_struct, head: Union[None, int] = None):
+    def forward(self, samples: inputs_to_struct):
         """
         Args:
             samples: The model inputs.
-            head: The head index if we want to switch.
 
         Returns: Compute the features and the classification head.
 
@@ -429,16 +430,15 @@ class ResNet(nn.Module):
         task_out = self.classifier((bu_out, flags))  # The classifier.
         return [None, None, bu_out, task_out]
 
-    def forward_and_out_to_struct(self, samples: inputs_to_struct, head: Union[int, None] = None):
+    def forward_and_out_to_struct(self, samples: inputs_to_struct):
         """
         Args:
             samples: The model inputs.
-            head: The head idx.
 
         Returns: The output struct.
 
         """
-        outs = self.forward(samples, head)  # The model output.
+        outs = self.forward(samples)  # The model output.
         return self.opts.outs_to_struct(outs)  # Making the struct.
 
     def Get_learned_params(self, task_id: int, direction_id: tuple) -> list:
@@ -458,3 +458,6 @@ class ResNet(nn.Module):
                                             task_id)
         learned_param.extend(self.classifier[head_idx].parameters())
         return learned_param
+
+    def update_task_set(self,task):
+        self.trained_tasks.add(task)

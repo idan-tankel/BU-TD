@@ -30,31 +30,31 @@ def multi_label_accuracy_base(samples: inputs_to_struct, outs: outs_to_struct) -
 
 def multi_label_accuracy(samples: inputs_to_struct, outs: outs_to_struct):
     """
-    Compute the task accuracy mean over all samples for the guided model.
+    Compute the task Accuracy mean over all samples for the guided model.
     Args:
         samples: The samples.
         outs: The model outs.
 
 
-    Returns: The predictions and task accuracy over the batch.
+    Returns: The predictions and task Accuracy over the batch.
 
     """
-    preds, task_accuracy = multi_label_accuracy_base(samples, outs)  # The accuracy and the prediction.
-    task_accuracy = task_accuracy.mean()  # Compute the mean accuracy over all batch.
+    preds, task_accuracy = multi_label_accuracy_base(samples, outs)  # The Accuracy and the prediction.
+    task_accuracy = task_accuracy.mean()  # Compute the mean Accuracy over the batch.
     return preds, task_accuracy  # return the predictions and the accuracy.
 
 
 def multi_label_accuracy_weighted(samples: inputs_to_struct, outs: outs_to_struct):
     """
-    Compute the task accuracy weighted mean over the existing characters in the image.
+    Compute the task Accuracy weighted mean over the existing characters in the image.
     Args:
         samples: The inputs samples.
         outs: The model outs.
 
-    Returns: The predication and mean accuracy over the batch.
+    Returns: The predication and mean Accuracy over the batch.
 
     """
-    preds, task_accuracy = multi_label_accuracy_base(samples, outs)  # The accuracy and the prediction.
+    preds, task_accuracy = multi_label_accuracy_base(samples, outs)  # The Accuracy and the prediction.
     loss_weight = samples.label_existence  # The weight of the desired characters.
     task_accuracy = task_accuracy * loss_weight  # Compute the accuracy over only existing characters.
     # Compute the mean over all characters and samples in the batch.
@@ -70,7 +70,7 @@ def accuracy(parser: argparse, model: nn.Module, test_data_loader: DataLoader) -
         model: The model.
         test_data_loader: The test data.
 
-    Returns: The accuracy over the test loadr.
+    Returns: The Accuracy over the test loadr.
 
     """
     model.eval()
@@ -81,6 +81,6 @@ def accuracy(parser: argparse, model: nn.Module, test_data_loader: DataLoader) -
         samples = parser.inputs_to_struct(inputs)  # Make it a struct.
         outs = model(samples)  # Compute the output.
         outs = parser.outs_to_struct(outs)  # From output to struct.
-        (_, task_accuracy_batch) = parser.task_accuracy(samples, outs)  # Compute the accuracy on the batch.
+        (_, task_accuracy_batch) = parser.task_accuracy(samples, outs)  # Compute the Accuracy on the batch.
         num_correct_preds += task_accuracy_batch  # Sum all accuracies on the batches.
     return num_correct_preds / len(test_data_loader)  # Compute the mean.

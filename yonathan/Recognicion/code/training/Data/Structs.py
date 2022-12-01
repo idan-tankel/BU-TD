@@ -6,7 +6,7 @@ import torch.nn as nn
 from training.Utils import tuple_direction_to_index
 
 
-# Here we define all used structs including input to struct, out to struct, and training flag.
+# Here we define used structs including input to struct, out to struct, and training flag.
 
 class inputs_to_struct:
     # class receiving list of tensors and makes to a class.
@@ -16,11 +16,12 @@ class inputs_to_struct:
             inputs: The tensor list.
         """
         img, label_task, flag, label_all, label_existence = inputs
-        self.image = img
-        self.label_all = label_all
-        self.label_existence = label_existence
-        self.label_task = label_task
-        self.flag = flag
+        self.image = img  # The image.
+        self.label_all = label_all  # The label all.
+        self.label_existence = label_existence  # The label existence.
+        self.label_task = label_task  # The label task.
+        self.flag = flag  # The flag.
+
 
 class outs_to_struct:
     def __init__(self, outs: list[torch]):
@@ -30,10 +31,10 @@ class outs_to_struct:
             outs: The model outs.
         """
         occurrence_out, bu_features, bu2_features, classifier = outs
-        self.occurrence_out = occurrence_out
-        self.classifier = classifier
-        self.bu = bu_features
-        self.features = bu2_features
+        self.occurrence_out = occurrence_out  # The occurrence output.
+        self.classifier = classifier  # The classes output.
+        self.bu = bu_features  # The BU1 output
+        self.features = bu2_features  # The features output.
 
 
 class Training_flag:
@@ -71,10 +72,12 @@ class Training_flag:
             learned_params.extend(model.TE[direction_idx])
         if self.head_learning:
             # Train the task-head associated with the task, direction.
-            learned_params.extend(model.transfer_learning[idx])
+            learned_params.extend(model.transfer_learning[task_idx][direction_idx])
         if self.train_arg:
             # Train the argument embedding associated with the task.
             learned_params.extend(model.tdmodel.argument_embedding[task_idx])
+
         if self.train_all_model:
+            # Train all model.
             learned_params = list(model.parameters())
         return learned_params

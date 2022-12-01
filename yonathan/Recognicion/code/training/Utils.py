@@ -30,23 +30,29 @@ def create_dict(path: str, offset: int = 0) -> dict:
     dict_language = {}
     for cnt, ele in enumerate(os.scandir(path)):  # for language in Omniglot_raw find the number of characters in it.
         dict_language[cnt + offset] = folder_size(ele)  # Find number of characters in the folder.
+
     return dict_language
 
 
-def get_omniglot_dictionary(initial_tasks: list, raw_data_folderpath: str) -> dict:
+def get_omniglot_dictionary(num_tasks: int, raw_data_folderpath: str) -> dict:
     """
     Getting the omniglot dictionary, for each task the number of characters in it.
     Args:
-        initial_tasks: The initial tasks set.
+        num_tasks: The initial tasks set.
         raw_data_folderpath: The path to the raw data.
 
     Returns: A dictionary assigning for each task its number of characters.
 
     """
     nclasses = create_dict(raw_data_folderpath, offset=1)  # Receiving for each task the number of characters in it.
-    nclasses[0] = sum(
-        nclasses[task + 1] for task in initial_tasks[0])  # receiving number of characters in the initial tasks.
-    return nclasses
+  #  nclasses[0] = sum(
+  #      nclasses[51-task-2] for task in range(num_tasks))  # receiving number of characters in the initial tasks.
+    nclasses = {k: v for k, v in sorted(nclasses.items(), key=lambda item: item[1])}
+    nclasses_New = {}
+    for i, key in enumerate(nclasses.keys()):
+        nclasses_New[i] = nclasses[key]
+    nclasses_New[50] = sum(nclasses_New[50-task-2] for task in range(num_tasks))
+    return nclasses_New
 
 
 def flag_to_idx(flag: torch) -> int:

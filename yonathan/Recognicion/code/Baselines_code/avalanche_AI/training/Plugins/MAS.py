@@ -1,19 +1,18 @@
 import copy
 import sys
-sys.path.append(r'/')
-from tqdm.auto import tqdm
 from typing import Dict, Union
 import torch.nn as nn
 from torch.utils.data import DataLoader
 import argparse
 import torch
-from avalanche.models.utils import avalanche_forward
 from avalanche.training.utils import copy_params_dict, zerolike_params_dict
 from avalanche.training.plugins import MASPlugin
 from torch.utils.data import Dataset
-from supp.utils import preprocess
+from training.Utils import preprocess
 from avalanche.training.templates.supervised import SupervisedTemplate
-# TODO - ALSO HERE GET RID OF THE BUMODEL, INSTEAD USE FEAUTURES.
+
+sys.path.append(r'/')
+
 
 class MyMASPlugin(MASPlugin):
     """
@@ -34,100 +33,69 @@ class MyMASPlugin(MASPlugin):
     https://github.com/mmasana/FACIL/blob/master/src/approach/mas.py
     """
 
-    def __init__( self, parser:argparse, verbose:bool = False ):
+    def __init__(self, parser: argparse, prev_model: Union[nn.Module, None] = None):
         """
-        :param lambda_reg: hyperparameter weighting the penalty term
-               in the loss.
-        :param alpha: hyperparameter used to update the importance
-               by also considering the influence in the previous
-               experience.
-        :param verbose: when True, the computation of the influence
-               shows a progress bar using tqdm.
+        Args:
+            parser: The parser options.
+            prev_model: The previous model.
         """
 
         # Init super class
         super().__init__()
 
         # Regularization Parameters
-        self._lambda = parser.mas_lambda
+        self.batch_size = parser.bs
+        self.device = parser.device
+        self.parser = parser
+        self._lambda = parser.MAS_lambda
         self.alpha = parser.mas_alpha
         # Model parameters
         self.params: Union[Dict, None] = None
         self.importance: Union[Dict, None] = None
-        self.batch_size = parser.bs
-        self.device = parser.device
-        self.parser = parser
-        # Progress bar
-        self.verbose = verbose
-        self.pretrained_model = parser.pretrained_model
-        if parser.pretrained_model:
-            self.model_old = copy.deepcopy(parser.model)
-            self.old_data = parser.old_dataset
+        self.num_exp = 0
+        self.inputs_to_struct = parser.inputs_to_struct
+        if prev_model is not None:
+            self.prev_model = copy.deepcopy(prev_model)
+            self.prev_data = parser.prev_data
             print("Computing Importances")
-            self.importance = self._get_importance(self.model_old, self.old_data, self.batch_size, parser.device)
+            self.importance = self._get_importance(self.prev_model, self.prev_data, self.batch_size, parser.device)
             print("Done computing Importances")
-            self.params = self.params = dict(copy_params_dict(self.model_old.bumodel))
+            self.params = self.params = dict(copy_params_dict(self.prev_model.feature))
+            self.num_exp = 1
 
-    def _get_importance(self, model:nn.Module, dataset:Dataset, train_mb_size:int,device:Union['cuda','cpu']):
+    def _get_importance(self, model: nn.Module, dataset: Dataset, train_mb_size: int, device: Union['cuda', 'cpu']):
 
         # Initialize importance matrix
-        importance = dict(zerolike_params_dict(model.bumodel))
-
-        '''
-        if not strategy.experience:
-            raise ValueError("Current experience is not available")
-
-        if strategy.experience.dataset is None:
-            raise ValueError("Current dataset is not available")
-        '''
+        importance = dict(zerolike_params_dict(model.feature))
         # Do forward and backward pass to accumulate L2-loss gradients
         model.train()
-        dataloader = DataLoader(dataset,  batch_size=train_mb_size,)
-
+        dataloader = DataLoader(dataset, batch_size=train_mb_size, )
         # Progress bar
-        if self.verbose:
-            print("Computing importance")
-            dataloader = tqdm(dataloader)
-
         for _, batch in enumerate(dataloader):
             # Get batch
-
             # Move batch to device
-            batch = preprocess(batch, device)
-
+            batch = preprocess(batch[:-1], device)
+            batch = self.inputs_to_struct(batch)
             # Forward pass
             model.zero_grad()
-            '''
-            if len(batch) == 2 or len(batch) == 3:
-                x, _, t = batch[0], batch[1], batch[-1]
-            else:
-                raise ValueError("Batch size is not valid")
-            '''
-            # Move batch to device
             # Forward pass
-            model.zero_grad()
-            out = model.forward_and_out_to_struct(batch, 0).classifier
+            out = model.forward_and_out_to_struct(batch).classifier
             # Average L2-Norm of the output
             loss = torch.norm(out, p="fro", dim=1).mean()
             loss.backward()
-
             # Accumulate importance
-            for name, param in model.bumodel.named_parameters():
+            for name, param in model.feature.named_parameters():
                 if param.requires_grad:
-                    # In multi-head architectures, the gradient is going
-                    # to be None for all the heads different from the
-                    # current one.
                     if param.grad is not None:
-                        importance[name] += param.grad.abs() * len(batch)
+                        importance[name] += param.grad.abs()
 
         # Normalize importance
-        importance = { name: importance[name] / len(dataloader) for name in importance.keys()  }
-
+        importance = {name: importance[name] / len(dataloader) for name in importance.keys()}
         return importance
 
-    def before_backward(self, strategy, **kwargs):
+    def before_backward(self, strategy: SupervisedTemplate, **kwargs):
         # Check if the task is not the first
-        exp_counter = strategy.EpochClock.train_exp_counter
+        exp_counter = strategy.clock.train_exp_counter + self.num_exp
         if exp_counter == 0:
             return
 
@@ -142,22 +110,17 @@ class MyMASPlugin(MASPlugin):
             raise ValueError("Loss is not available")
 
         # Apply penalty term
-        for name, param in strategy.model.bumodel.named_parameters():
-
+        for name, param in strategy.model.feature.named_parameters():
             if name in self.importance.keys():
-                loss_reg += torch.sum(
-                    self.importance[name] * (param - self.params[name]).pow(2)
-                )
+                loss_reg += torch.sum(self.importance[name] * (param - self.params[name]).pow(2))
 
         # Update loss
-     #   print(self._lambda * loss_reg)
         strategy.loss += self._lambda * loss_reg
 
-    def before_training(self, strategy:SupervisedTemplate, **kwargs):
+    def before_training(self, strategy: SupervisedTemplate, **kwargs):
         # Parameters before the first task starts
 
-        if strategy.EpochClock.just_initialized and not self.pretrained_model:
-
+        if self.num_exp == 0:
             if not self.params:
                 self.params = dict(copy_params_dict(strategy.model))
 
@@ -166,20 +129,17 @@ class MyMASPlugin(MASPlugin):
                 self.importance = dict(zerolike_params_dict(strategy.model))
 
     def after_training_exp(self, strategy, **kwargs):
-        if strategy.EpochClock.train_exp_epochs == strategy.EpochClock.max_epochs:
-            print("update")
-            self.params = dict(copy_params_dict(strategy.model))
+        print("update")
+        self.params = dict(copy_params_dict(strategy.model))
 
-            # Check if previous importance is available
-            if not self.importance:
-                raise ValueError("Importance is not available")
+        # Check if previous importance is available
+        if not self.importance:
+            raise ValueError("Importance is not available")
 
-            # Get importance
-            curr_importance = self._get_importance(strategy.model,strategy.experience.dataset, strategy.train_mb_size, strategy.device)
+        # Get importance
+        curr_importance = self._get_importance(strategy.model, strategy.experience.dataset, strategy.train_mb_size,
+                                               strategy.device)
 
-            # Update importance
-            for name in self.importance.keys():
-                self.importance[name] = (
-                    self.alpha * self.importance[name]
-                    + (1 - self.alpha) * curr_importance[name]
-                )
+        # Update importance
+        for name in self.importance.keys():
+            self.importance[name] = (self.alpha * self.importance[name] + (1 - self.alpha) * curr_importance[name])

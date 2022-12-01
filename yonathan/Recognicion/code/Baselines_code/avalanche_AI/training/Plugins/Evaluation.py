@@ -17,73 +17,31 @@ from avalanche.evaluation import Metric, PluginMetric, GenericPluginMetric
 from avalanche.evaluation.metric_utils import phase_and_task
 from avalanche.evaluation.metrics.mean import Mean
 from torch import Tensor
-from supp.Dataset_and_model_type_specification import Flag
-from supp.loss_and_accuracy import multi_label_accuracy_weighted, multi_label_accuracy
+from training.Data.Data_params import Flag
+from training.Metrics.Accuracy import multi_label_accuracy_weighted, multi_label_accuracy
 from avalanche.evaluation.metrics.accuracy import Accuracy
 
+import argparse
 class MyAccuracy(Accuracy):
-    """
-    The Accuracy metric. This is a standalone metric.
 
-    The metric keeps a dictionary of <task_label, accuracy value> pairs.
-    and update the values through a running average over multiple
-    <prediction, target> pairs of Tensors, provided incrementally.
-    The "prediction" and "target" tensors may contain plain labels or
-    one-hot/logit vectors.
+    def __init__(self,parser:argparse):
 
-    Each time `result` is called, this metric emits the average accuracy
-    across all predictions made since the last `reset`.
-
-    The reset method will bring the metric to its initial state. By default
-    this metric in its initial state will return an accuracy value of 0.
-    """
-
-    def __init__(self,parser):
-        """
-        Creates an instance of the standalone Accuracy metric.
-
-        By default this metric in its initial state will return an accuracy
-        value of 0. The metric can be updated by using the `update` method
-        while the running accuracy can be retrieved using the `result` method.
-        """
-        self.out_to_struct = parser.model.outs_to_struct
-        self.inputs_to_struct = parser.model.inputs_to_struct
+        self.out_to_struct = parser.outs_to_struct
+        self.inputs_to_struct = parser.inputs_to_struct
         self._mean_accuracy = defaultdict(Mean)
         if parser.model_flag is Flag.NOFLAG:
          self.accuracy_fun = multi_label_accuracy_weighted
         else:
          self.accuracy_fun = multi_label_accuracy
-        """
-        The mean utility that will be used to store the running accuracy
-        for each task label.
-        """
 
     @torch.no_grad()
     def update(self, predicted_y: Tensor, gt: Tensor, task_labels: Union[float, Tensor],) -> None:
-        """
-        Update the running accuracy given the true and predicted labels.
-        Parameter `task_labels` is used to decide how to update the inner
-        dictionary: if Float, only the dictionary value related to that task
-        is updated. If Tensor, all the dictionary elements belonging to the
-        task labels will be updated.
-
-        :param predicted_y: The model prediction. Both labels and logit vectors
-            are supported.
-        :param true_y: The ground truth. Both labels and one-hot vectors
-            are supported.
-        :param task_labels: the int task label associated to the current
-            experience or the task labels vector showing the task label
-            for each pattern.
-
-        :return: None.
-        """
         if isinstance(task_labels, int):
             #
             predicted_y_struct = self.out_to_struct(predicted_y)
-            gt = self.inputs_to_struct(gt)
-            preds, task_accuracy = self.accuracy_fun(predicted_y_struct, gt)
+            preds, task_accuracy = self.accuracy_fun(gt, predicted_y_struct)
             task_accuracy = task_accuracy.sum()
-            self._mean_accuracy[task_labels].update(task_accuracy , predicted_y[0].shape[0])
+            self._mean_accuracy[task_labels].update(task_accuracy ,preds.shape[0])
 
         elif isinstance(task_labels, Tensor):
             for pred, true, t in zip(predicted_y, gt[1], task_labels):
@@ -96,17 +54,6 @@ class MyAccuracy(Accuracy):
             )
 
     def result(self, task_label=None) -> Dict[int, float]:
-        """
-        Retrieves the running accuracy.
-
-        Calling this method will not change the internal state of the metric.
-
-        :param task_label: if None, return the entire dictionary of accuracies
-            for each task. Otherwise return the dictionary
-            `{task_label: accuracy}`.
-        :return: A dict of running accuracies for each task label,
-            where each value is a float value between 0 and 1.
-        """
         assert task_label is None or isinstance(task_label, int)
         if task_label is None:
             return {k: v.result() for k, v in self._mean_accuracy.items()}
@@ -166,10 +113,10 @@ class MyGenericPluginMetric(GenericPluginMetric[float]):
 
 class MinibatchAccuracy(MyGenericPluginMetric):
     """
-    The minibatch plugin accuracy metric.
+    The minibatch plugin Accuracy metric.
     This metric only works at training time.
 
-    This metric computes the average accuracy over patterns
+    This metric computes the average Accuracy over patterns
     from a single minibatch.
     It reports the result after each iteration.
 
@@ -188,10 +135,10 @@ class MinibatchAccuracy(MyGenericPluginMetric):
 
 class EpochAccuracy(MyGenericPluginMetric):
     """
-    The average accuracy over a single training epoch.
+    The average Accuracy over a single training epoch.
     This plugin metric only works at training time.
 
-    The accuracy will be logged after each training epoch by computing
+    The Accuracy will be logged after each training epoch by computing
     the number of correctly predicted patterns during the epoch divided by
     the overall number of patterns encountered in that epoch.
     """
@@ -210,11 +157,11 @@ class EpochAccuracy(MyGenericPluginMetric):
 
 class RunningEpochAccuracy(MyGenericPluginMetric):
     """
-    The average accuracy across all minibatches up to the current
+    The average Accuracy across all minibatches up to the current
     epoch iteration.
     This plugin metric only works at training time.
 
-    At each iteration, this metric logs the accuracy averaged over all patterns
+    At each iteration, this metric logs the Accuracy averaged over all patterns
     seen so far in the current epoch.
     The metric resets its state after each training epoch.
     """
@@ -234,7 +181,7 @@ class RunningEpochAccuracy(MyGenericPluginMetric):
 class ExperienceAccuracy(MyGenericPluginMetric):
     """
     At the end of each experience, this plugin metric reports
-    the average accuracy over all patterns seen in that experience.
+    the average Accuracy over all patterns seen in that experience.
     This metric only works at eval time.
     """
 
@@ -250,7 +197,7 @@ class ExperienceAccuracy(MyGenericPluginMetric):
 class StreamAccuracy(MyGenericPluginMetric):
     """
     At the end of the entire stream of experiences, this plugin metric
-    reports the average accuracy over all patterns seen in all experiences.
+    reports the average Accuracy over all patterns seen in all experiences.
     This metric only works at eval time.
     """
 
@@ -268,7 +215,7 @@ class StreamAccuracy(MyGenericPluginMetric):
 class TrainedExperienceAccuracy(MyGenericPluginMetric):
     """
     At the end of each experience, this plugin metric reports the average
-    accuracy for only the experiences that the model has been trained on so far.
+    Accuracy for only the experiences that the model has been trained on so far.
 
     This metric only works at eval time.
     """
@@ -291,7 +238,7 @@ class TrainedExperienceAccuracy(MyGenericPluginMetric):
 
     def update(self, strategy):
         """
-        Only update the accuracy with results from experiences that have been
+        Only update the Accuracy with results from experiences that have been
         trained on
         """
         if strategy.experience.current_experience <= self._current_experience:
@@ -315,17 +262,17 @@ def accuracy_metrics(
     plugin metrics.
 
     :param minibatch: If True, will return a metric able to log
-        the minibatch accuracy at training time.
+        the minibatch Accuracy at training time.
     :param epoch: If True, will return a metric able to log
-        the epoch accuracy at training time.
+        the epoch Accuracy at training time.
     :param epoch_running: If True, will return a metric able to log
-        the running epoch accuracy at training time.
+        the running epoch Accuracy at training time.
     :param experience: If True, will return a metric able to log
-        the accuracy on each evaluation experience.
+        the Accuracy on each evaluation experience.
     :param stream: If True, will return a metric able to log
-        the accuracy averaged over the entire evaluation stream of experiences.
+        the Accuracy averaged over the entire evaluation stream of experiences.
     :param trained_experience: If True, will return a metric able to log
-        the average evaluation accuracy only for experiences that the
+        the average evaluation Accuracy only for experiences that the
         model has been trained on
 
     :return: A list of plugin metrics.

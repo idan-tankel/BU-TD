@@ -11,10 +11,14 @@ from torch.utils.data import DataLoader
 from training.Data.Checkpoints import CheckpointSaver
 from training.Utils import create_optimizer_and_scheduler, preprocess
 
+from typing import Callable, Optional, Any
+
+# Define the model wrapper class.
+# Support training and load_model.
 
 class ModelWrapped(LightningModule):
     def __init__(self, opts: argparse, model: nn.Module, learned_params: list, check_point: CheckpointSaver,
-                 direction_id: tuple[int, int], task_id: int, nbatches_train: int):
+                 direction_tuple: tuple[int, int], task_id: int, nbatches_train: int):
         """
         This is the model wrapper for pytorch lightning training.
         Args:
@@ -22,26 +26,34 @@ class ModelWrapped(LightningModule):
             model: The model.
             learned_params: The parameters we desire to train.
             check_point: The check point.
-            direction_id: The direction id.
+            direction_tuple: The direction id.
             task_id: The task id.
             nbatches_train: The number of batches to train.
         """
         super().__init__()
-        # Important: This property activates manual optimization.
-        self.automatic_optimization = False
-        self.model = model  # The model.
-        self.learned_params = learned_params  # The learned parameters.
-        self.loss_fun = opts.criterion  # The loss criterion.
-        self.accuracy = opts.task_accuracy  # The accuracy criterion.
-        self.dev = opts.device  # The device.
-        self.opts = opts  # The model options.
-        self.check_point = check_point  # The checkpoint saver.
-        self.nbatches_train = nbatches_train  # The number of train batches.
-        self.direction = direction_id  # The direction id.
-        self.task_id = task_id  # The task id.
+        self.automatic_optimization:bool = False # We don't use automatic optimization
+        self.model:nn.Module = model  # The model.
+        self.learned_params:list = learned_params  # The learned parameters.
+        self.loss_fun:Callable = opts.criterion  # The loss criterion.
+        self.accuracy:Callable = opts.task_accuracy  # The Accuracy criterion.
+        self.dev:str = opts.device  # The device.
+        self.opts:argparse = opts  # The model options.
+        self.check_point:CheckpointSaver = check_point  # The checkpoint saver.
+        self.nbatches_train:int = nbatches_train  # The number of train batches.
+        self.direction:tuple = direction_tuple  # The direction id.
+        self.task_id:int = task_id  # The task id.
         # Define the optimizer, scheduler.
         self.optimizer, self.scheduler = create_optimizer_and_scheduler(self.opts, self.learned_params,
                                                                         self.nbatches_train)
+
+    def lr_scheduler_step(
+        self,
+        scheduler,
+        optimizer_idx: int,
+        metric: Optional[Any],
+    ) -> None:
+        scheduler.step()
+    #    print(scheduler.get_last_lr())
 
     def training_step(self, batch: list[torch], batch_idx: int) -> float:
         """
@@ -60,16 +72,14 @@ class ModelWrapped(LightningModule):
         loss = self.loss_fun(self.opts, samples, outs)  # Compute the loss.
         self.optimizer.zero_grad()  # Reset the optimizer.
         loss.backward()  # Do a backward pass.
-      #  for param in self.learned_params:
-      #      if param.grad is None:
-      #          print(param)
         self.optimizer.step()  # Update the model.
-        _, acc = self.accuracy(samples, outs)  # The accuracy.
-        if type(self.scheduler) in [optim.lr_scheduler.CyclicLR, optim.lr_scheduler.OneCycleLR]:
+        _, acc = self.accuracy(samples, outs)  # The Accuracy.
+        if type(self.scheduler) is optim.lr_scheduler.CyclicLR:
             self.scheduler.step()  # Make a scheduler step if needed.
+      #  print("%.15f" % self.scheduler.get_last_lr()[0])
         self.log('train_loss', loss, on_step=True, on_epoch=True, logger=True)  # Update loss.
         self.log('train_acc', acc, on_step=True, on_epoch=True, logger=True)  # Update acc.
-        return loss  # Return the loss and the output.
+        return loss  # Return the loss.
 
     def validation_step(self, batch: list[torch], batch_idx: int) -> float:
         """
@@ -78,7 +88,7 @@ class ModelWrapped(LightningModule):
             batch: The input.
             batch_idx: The batch id.
 
-        Returns: The task accuracy on the batch.
+        Returns: The task Accuracy on the batch.
 
         """
 
@@ -88,40 +98,42 @@ class ModelWrapped(LightningModule):
         with torch.no_grad():  # Without grad.
             outs = self.model.forward_and_out_to_struct(samples)  # Forward and make a struct.
             loss = self.loss_fun(self.opts, samples, outs)  # Compute the loss.
-            _, acc = self.accuracy(samples, outs)  # Compute the accuracy.
+            _, acc = self.accuracy(samples, outs)  # Compute the Accuracy.
             self.log('val_loss', loss, on_step=True, on_epoch=True, logger=True)  # Update the loss.
             self.log('val_acc', acc, on_step=True, on_epoch=True, logger=True)  # Update the acc.
-        return acc.item()
+        return acc # Return the Accuracy.
 
     def configure_optimizers(self) -> tuple[optim, optim.lr_scheduler]:
         """
         Returns the optimizer, scheduler.
         """
         opti, scheduler = create_optimizer_and_scheduler(self.opts, self.learned_params, self.nbatches_train)
+        scheduler = {'scheduler':scheduler,"interval":"step"}
         return [opti], [scheduler]
 
     def validation_epoch_end(self, outputs: list) -> float:
         """
         Args:
-            outputs: All accuracy outputs.
+            outputs: All Accuracy outputs.
 
-        Returns: The overall accuracy.
+        Returns: The overall Accuracy.
 
         """
         self.optimizer.zero_grad(
             set_to_none=True)  # Set to None for not used parameters in order to avoid moving of not used weights.
-        acc = sum(outputs) / len(outputs)  # The accuracy.
-        if self.check_point is not None:  # Update the checkpoint.
+        acc = sum(outputs) / len(outputs)  # The Accuracy.
+        # Update the checkpoint.
+        if self.check_point is not None:
             self.check_point(self.model, self.current_epoch, acc, self.optimizer, self.scheduler, self.opts,
                              self.task_id, self.direction)
         return acc
 
-    def accuracy_dl(self, dl: DataLoader) -> float:
+    def Accuracy(self, dl: DataLoader) -> float:
         """
         Args:
             dl: The data loader we desire to test.
 
-        Returns: The overall accuracy over the batch.
+        Returns: The overall Accuracy over the data-set.
 
         """
         acc = 0.0
@@ -130,8 +142,8 @@ class ModelWrapped(LightningModule):
             inputs = preprocess(inputs, device=self.dev)  # Move to the device.
             samples = self.opts.inputs_to_struct(inputs)  # From input to Samples.
             outs = self.model.forward_and_out_to_struct(samples)  # Forward and making a struct.
-            _, acc_batch = self.accuracy(samples, outs)  # Compute the accuracy.
-            acc += acc_batch
+            _, acc_batch = self.accuracy(samples, outs)  # Compute the Accuracy.
+            acc += acc_batch # Add to the Accuracy
         acc = acc / len(dl)  # Normalize to [0,1].
         return acc
 
