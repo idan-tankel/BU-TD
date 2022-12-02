@@ -41,12 +41,12 @@ def GetParser(task_idx: int = 0, direction_idx: int = 0, model_type: nn.Module =
     parser.add_argument('--ds_type', default=ds_type, type=DsType, help='Flag that defines the data-set type')
     parser.add_argument('--model_flag', default=model_flag, type=Flag, help='Flag that defines the model type')
     # Optimization arguments.
-    parser.add_argument('--wd', default=0.00001, type=float, help='The weight decay of the Adam optimizer')
+    parser.add_argument('--wd', default=0.001, type=float, help='The weight decay of the Adam optimizer')
     parser.add_argument('--SGD', default=False, type=bool, help='Whether to use SGD or Adam optimizer')
     parser.add_argument('--initial_lr', default=0.001, type=float, help='Base lr for the SGD optimizer')
     parser.add_argument('--cycle_lr', default=True, type=bool, help='Whether to cycle the lr')
     parser.add_argument('--base_lr', default=0.0002, type=float, help='Base lr of the cyclic Adam optimizer')
-    parser.add_argument('--max_lr', default=0.002, type=float,
+    parser.add_argument('--max_lr', default=0.001, type=float,
                         help='Max lr of the cyclic Adam optimizer before the lr returns to the base_lr')
     parser.add_argument('--momentum', default=0.9, type=float, help='Momentum of the optimizer')
     parser.add_argument('--bs', default=10, type=int, help='The training batch size')
@@ -81,6 +81,7 @@ def GetParser(task_idx: int = 0, direction_idx: int = 0, model_type: nn.Module =
                         help='The neighbor radius in the x-axis.')
     parser.add_argument('--num_y_axis', default=Data_specification.data_obj.num_y_axis,
                         help='The neighbor radius in the y-axis.')
+    parser.add_argument('--shared',default=True,help = 'Whether the conv layers of BU1, BU2 are identical.')
     # Training and evaluation arguments.
     parser.add_argument('--use_bu1_loss', default=Data_specification.data_obj.use_bu1_loss, type=bool,
                         help='Whether to use the binary classification loss at the end of the BU1 stream')

@@ -26,7 +26,7 @@ class Depthwise_separable_conv(nn.Module):
                                    groups=channels_in,
                                    bias=bias)  # Preserves the number of channels but may downsample by stride.
         self.pointwise = nn.Conv2d(channels_in, channels_out, kernel_size=(1, 1),
-                                   bias=bias)  # Preserves the inner channels but changes the number of channels.
+                                   bias=bias)  # Preserves the inner channels but may change the number of channels.
 
     def forward(self, x: torch) -> torch:
         """
@@ -43,7 +43,7 @@ class Depthwise_separable_conv(nn.Module):
 
 def conv3x3(in_channels: int, out_channels: int, stride: int = 1, bias=False) -> nn.Module:
     """
-    Create specific version of Depthwise_separable_conv with kernel = 3.
+    Create specific version of Depthwise_separable_conv with kernel equal 3.
     Args:
         in_channels: In channels of the input tensor
         out_channels: Out channels of the output tensor.
@@ -59,7 +59,7 @@ def conv3x3(in_channels: int, out_channels: int, stride: int = 1, bias=False) ->
 
 def conv3x3up(in_channels: int, out_channels: int, size: tuple, upsample=False) -> nn.Module:
     """
-    upsample version of Conv3x3.
+    Upsampling version of Conv3x3.
     Args:
         in_channels: The number of channels in the input. out_channels < in_channels
         out_channels: The number of channels in the output. out_channels < in_channels
@@ -93,7 +93,7 @@ def conv1x1(in_channels: int, out_channels: int, stride: int = 1, bias=False) ->
 
 class Modulation_and_Lat(nn.Module):
     # performs the lateral connection BU1 -> TD or TD -> BU2.
-    # Applies channel modulation, BN, relu on the lateral connection.
+    # Applies channel modulation, BN, ReLU on the lateral connection.
     # Then perform the lateral connection to the input and then more relu is applied.
 
     def __init__(self, opts: argparse, filters: int):
@@ -110,22 +110,21 @@ class Modulation_and_Lat(nn.Module):
         self.relu1 = opts.activation_fun()  # activation_fun after the batch_norm layer
         self.relu2 = opts.activation_fun()  # activation_fun after the skip connection
 
-    def forward(self, inputs: torch) -> torch:
+    def forward(self, x:torch, lateral:torch) -> torch:
         """
         Args:
-            inputs: Two tensors, the first is the input and the second is the lateral connection.
+            x: The model input.
+            lateral: The previous stream lateral connection, of the same shape.
 
         Returns: The output after the lateral connection.
 
         """
-        x, lateral = inputs  # input, lateral connection.
         side_val = lateral * self.side  # channel-modulation(CM)
         side_val = self.norm(side_val)  # Batch_norm after the CM
         side_val = self.relu1(side_val)  # Activation_fun after the batch_norm
         x = x + side_val  # The lateral skip connection
         x = self.relu2(x)  # Activation_fun after the skip connection
         return x
-
 
 class Modulation(nn.Module):  # Modulation layer.
     def __init__(self, opts: argparse, shape: list, pixel_modulation: bool, task_embedding: list):
@@ -138,18 +137,16 @@ class Modulation(nn.Module):  # Modulation layer.
             pixel_modulation: Whether to create pixel/channel modulation.
         """
         super(Modulation, self).__init__()
-        self.opts = opts
+        self.opts = opts # Store the model opts.
         self.modulations = nn.ParameterList()  # Module list containing modulation for all directions.
         if pixel_modulation:
             size = [1, *shape]  # If pixel modulation matches the inner spatial of the input
         else:
             size = [shape, 1, 1]  # If channel modulation matches the number of channels
-        # inshapes = int(np.prod(shape))  # Compute the shape needed for initializing.
-        ndirections = opts.ndirections
-        for i in range(ndirections):  # allocating for every task its task embedding
-            layer = nn.Parameter(torch.Tensor(*size))
-            task_embedding[i].append(layer)
-            self.modulations.append(layer)
+        for i in range(opts.ndirections):  # allocating for every direction its task embedding
+            layer = nn.Parameter(torch.Tensor(*size)) # The task embedding.
+            task_embedding[i].append(layer) # Add to the learnable parameters.
+            self.modulations.append(layer) # Add to the modulation list.
 
     def forward(self, x: torch, flag: torch) -> torch:
         """

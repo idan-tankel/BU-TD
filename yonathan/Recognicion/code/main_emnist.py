@@ -14,6 +14,7 @@ from training.Data.Parser import GetParser, update_parser
 from training.Data.Structs import Training_flag
 from training.Modules.Create_Models import create_model
 from training.Modules.Models import BUTDModel, ResNet
+from training.Utils import num_params
 
 
 def main(train_right, train_left, ds_type=DsType.Emnist, flag=Flag.CL, model_type=BUTDModel, task=(-1, 0)):
@@ -21,7 +22,7 @@ def main(train_right, train_left, ds_type=DsType.Emnist, flag=Flag.CL, model_typ
     # parser.ns = [0,3,3,3]
     project_path = Path(__file__).parents[1]
     results_dir = os.path.join(project_path, 'data/{}/results/model'.format(str(ds_type)))
-    data_path = os.path.join(project_path, 'data/{}/samples/(4,4)_extended_format'.format(str(ds_type)))
+    data_path = os.path.join(project_path, 'data/{}/samples/(4,4)_extended'.format(str(ds_type)))
     tmpdir = os.path.join(project_path, 'data/emnist/results/')
     now = datetime.now()
     time = now.strftime("%m.%d.%Y%H:%M:%S")
@@ -49,7 +50,7 @@ def main(train_right, train_left, ds_type=DsType.Emnist, flag=Flag.CL, model_typ
 
     if train_left:
         direction = task  #
-
+    #    print(num_params(model.bumodel1.parameters()))
         training_flag = Training_flag(parser,train_task_embedding=True,  train_head=True)
         learned_params = training_flag.Get_learned_params(model, task_idx=0, direction=direction)
         DataLoaders = get_dataset_for_spatial_relations(parser, data_path, lang_idx=0, direction_tuple=direction)

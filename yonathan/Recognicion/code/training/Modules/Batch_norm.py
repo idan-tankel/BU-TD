@@ -35,9 +35,9 @@ class BatchNorm(nn.Module):
         # creates list that should store the mean, var for each task and direction.
         if self.save_stats:
             # The running mean.
-            self.running_mean_list = torch.zeros((opts.ndirections * opts.ntasks, num_channels))
+            self.running_mean_list = torch.zeros(opts.ndirections * opts.ntasks, num_channels)
             # The running variance.
-            self.running_var_list = torch.zeros((opts.ndirections * opts.ntasks, num_channels))
+            self.running_var_list = torch.zeros(opts.ndirections * opts.ntasks, num_channels)
             # Save the mean, variance.
             self.register_buffer("running_mean",
                                  self.running_mean_list)  # registering to the buffer to make it part of the meta-data.
