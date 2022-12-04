@@ -1,6 +1,7 @@
 # this file represent a switcher for the models and as interface
 import pytorch_lightning as pl
 from torch import nn, device, cuda
+import torch
 from transformers import ViTForImageClassification, ViTConfig
 import torch.nn.functional as F
 from torch.optim import Adam
@@ -33,9 +34,10 @@ class ModelWrapper(
         self.model = model
 
     def training_step(self, batch, batch_index):
-        x, y = batch['img'], batch['label_task']
+        x, y = batch['img'], batch['label_all']
         x_hat = self.model(x)
         y.squeeze_()
+        y.to(device("cuda") if cuda.is_available() else device("cpu"))
         loss = nn.CrossEntropyLoss(reduction='mean')(x_hat.logits, y)
         acc = 1 - (x_hat.logits.argmax(dim=1) - y).count_nonzero() / y.numel()
         self.log('train_loss', loss, on_step=True, on_epoch=True, logger=True)
@@ -47,21 +49,23 @@ class ModelWrapper(
         validation_step This is implementation of the dataset 
 
         Args:
-            batch (_type_): _description_
-            batch_index (_type_): _description_
+            batch (Torch.Tensor): The batch of the data
+            batch_index (`int`):  The index of the batch
 
         Returns:
-            _type_: _description_
+            float: The loss of the batch
         """
         self.model.eval()
         with no_grad():
             x, y = batch['img'], batch['label_all']
             x_hat = self.model(x)
             y.squeeze_()
+            y.to(device("cuda") if cuda.is_available() else device("cpu"))
             loss = nn.CrossEntropyLoss(reduction='mean')(x_hat.logits, y)
-            acc = 1 - (x_hat.logits.argmax(dim=1) - y).count_nonzero() / y.numel()
+            acc = 1 - (x_hat.logits.argmax(dim=1) -
+                       y).count_nonzero() / y.numel()
             self.log('val_loss', loss, on_step=True,
-                    on_epoch=True, logger=True)
+                     on_epoch=True, logger=True)
             self.log('val_acc', acc, on_step=True, on_epoch=True, logger=True)
         return loss
 

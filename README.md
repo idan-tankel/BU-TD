@@ -69,7 +69,12 @@ If you find our work useful in your research or publication, please cite our wor
 Shimon Ullman, Liav Assif, Alona Strugatski, Ben-Zion Vatashsky, Hila Levi, Aviv Netanyahu, Adam Yaari
 
 
+## Notes about this branch
 
+This branch (one-zero) containing training for vision transformers as a backbone.
+Technical new implementations - 
+- using a models from huggingfacehub and other pretrained model
+- using the `transformers` package from huggingface as a standard to the 
 
 ## TODO 
 - change the design of `create_dataset` to be one big file with plugins to each dataset 

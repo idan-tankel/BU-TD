@@ -14,11 +14,11 @@ import git
 import os
 git_repo = git.Repo(os.getcwd(), search_parent_directories=True)
 git_root = Path(git_repo.working_dir)
-results_dir = rf"{git_root.parent}/data/emnist/results/"
+results_dir = rf"{git_root.parent}/data/emnist/results"
 os.makedirs(results_dir, exist_ok=True)
 data_dir = Path(rf"{git_root.parent}/data")
 os.makedirs(data_dir, exist_ok=True)
-checkpoints_dir = rf"{git_root.parent}/data/emnist/checkpoints/"
+checkpoints_dir = rf"{git_root.parent}/data/emnist/checkpoints"
 os.makedirs(results_dir, exist_ok=True)
 
 global_config = Config()

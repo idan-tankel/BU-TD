@@ -4,14 +4,8 @@ from datetime import datetime
 from torch import nn
 import yaml
 import numpy as np
-import torch
-# from supp.Dataset_and_model_type_specification import DsType, Flag ,AllOptions
-
-# from supp.emnist_dataset import inputs_to_struct
-
-# from supp.training_functions import create_optimizer_and_sched
-# configuration class
-# from v26.models.flag_at import FlagAt
+import yacs
+from yacs.config import CfgNode as CN
 
 
 class Config:
