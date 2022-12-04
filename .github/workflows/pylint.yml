@@ -19,7 +19,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install pylint flake8
     - name: Run flake8
-      uses: suo/flake8-github-action@releases/v1
+      uses: jonasrk/flake8-action@master
       with:
         args: "--max-line-length=120 --exclude .ipython --ignore E266,W503,E203,E722,E501"
       env:
