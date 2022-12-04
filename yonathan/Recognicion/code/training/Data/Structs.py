@@ -9,7 +9,7 @@ from training.Utils import tuple_direction_to_index
 # Here we define used structs including input to struct, out to struct, and training flag.
 
 class inputs_to_struct:
-    # class receiving list of tensors and makes to a class.
+    # class receiving list of input tensors and makes to a class.
     def __init__(self, inputs: tuple[torch]):
         """
         Args:
@@ -42,6 +42,8 @@ class Training_flag:
                  train_task_embedding: bool = False,
                  train_head: bool = False):
         """
+        For continual learning, we freeze some of the layers.
+        For that, we have created a class containing which layer groups we want to train.
         Args:
             train_all_model: Whether to train all model.
             train_arg: Whether to train arg.
@@ -56,6 +58,7 @@ class Training_flag:
 
     def Get_learned_params(self, model: nn.Module, task_idx: int, direction: tuple[int, int]):
         """
+        Given model, direction, task we return the desired trainable parameters.
         Args:
             model: The model.
             task_idx: Language index.

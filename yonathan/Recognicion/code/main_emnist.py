@@ -50,9 +50,9 @@ def main(train_right, train_left, ds_type=DsType.Emnist, flag=Flag.CL, model_typ
 
     if train_left:
         direction = task  #
-    #    print(num_params(model.bumodel1.parameters()))
+       # print(num_params(model.parameters()))
         training_flag = Training_flag(parser,train_task_embedding=True,  train_head=True)
-        learned_params = training_flag.Get_learned_params(model, task_idx=0, direction=direction)
+        learned_params = training_flag.Get_learned_params(model, task_idx=0, direction=task)
         DataLoaders = get_dataset_for_spatial_relations(parser, data_path, lang_idx=0, direction_tuple=direction)
         wrapped_model = ModelWrapped(parser, model, learned_params, check_point=Checkpoint_saver,
                                      direction_tuple=direction,

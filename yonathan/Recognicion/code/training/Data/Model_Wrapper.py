@@ -61,12 +61,13 @@ class ModelWrapped(LightningModule):
         samples = self.opts.inputs_to_struct(batch)  # Compute the sample struct.
         outs = model.forward_and_out_to_struct(samples)  # Compute the model output.
         loss = self.loss_fun(self.opts, samples, outs)  # Compute the loss.
-        '''
-        for param in self.learned_params:
-            if param.grad is None:
-                print(param)
-        self.optimizer.zero_grad(set_to_none=True)
-        '''
+      #  print(len(self.learned_params))
+
+       # for param in self.learned_params:
+        #    if param.grad is None:
+     #           print(param)
+   #     self.optimizer.zero_grad(set_to_none=True)
+   #
         _ , acc = self.accuracy(samples, outs)  # The Accuracy.
         self.log('train_loss', loss, on_step=True, on_epoch=True, logger=True)  # Update loss.
         self.log('train_acc', acc, on_step=True, on_epoch=True, logger=True)  # Update acc.

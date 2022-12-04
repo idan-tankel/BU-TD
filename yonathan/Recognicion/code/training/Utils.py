@@ -70,7 +70,7 @@ def flag_to_idx(flag: torch) -> int:
 
 def get_laterals(laterals: list[torch], layer_id: int, block_id: int) -> torch:
     """
-    Returns the lateral connections associated with the layer, block.
+    Returns the lateral connections associated with the block in the layer.
     Args:
         laterals: All lateral connections from the previous stream, if exists.
         layer_id: The layer id in the stream.
@@ -79,7 +79,7 @@ def get_laterals(laterals: list[torch], layer_id: int, block_id: int) -> torch:
     Returns: All the lateral connections associate with the block(usually 3).
 
     """
-    if laterals is None:  # If BU1, there are not any lateral connections.
+    if laterals is None:  # If BU1, there are no lateral connections.
         return None
     try:
         # Trying to access that index.
@@ -99,11 +99,10 @@ def num_params(params: Union[list, Iterator]) -> int:
 
     """
     num_param = 0
-    for param in params:  # For each parameter in the model we sum its parameters
-        cnt = 1
-        for p in param.shape:  # The number of params in each weight is the product if its shape.
-            cnt = cnt * p
-        num_param = num_param + cnt  # Sum for all params.
+    for param in params:
+        # For each parameter in the model we multiply all its shape dimensions.
+        shape = torch.tensor(param.shape) # Make a tensor.
+        num_param = num_param + torch.prod(shape) # Add to the sum.
     return num_param
 
 
