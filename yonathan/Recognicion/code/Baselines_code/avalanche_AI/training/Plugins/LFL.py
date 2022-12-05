@@ -13,7 +13,7 @@ class MyLFLPlugin(LFLPlugin):
     """Less-Forgetful Learning (LFL) Plugin.
     LFL satisfies two properties to mitigate catastrophic forgetting.
     1) To keep the decision boundaries unchanged
-    2) The feature space should not change much on target(new) data
+    2) The feature space should not change much on target(new) Data_Creation
     LFL uses euclidean loss between features from current and previous version
     of model as regularization to maintain the feature space and avoid
     catastrophic forgetting.

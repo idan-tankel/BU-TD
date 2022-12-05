@@ -19,7 +19,7 @@ from training.Modules.Create_Models import create_model
 from training.Modules.Models import BUTDModel
 
 cmd_parser = argparse.ArgumentParser()
-cmd_parser.add_argument('--data_dir',default='16_extended',type =str,help = "The data name")
+cmd_parser.add_argument('--data_dir',default='16_extended',type =str,help = "The Data_Creation name")
 cmd_parser.add_argument('--ds_type', default='Emnist',type = str, help = "Data set type flag")
 
 
@@ -47,9 +47,9 @@ def main(flag=Flag.CL):
 
     parser = GetParser(task_idx=0, direction_idx=0, model_flag=flag, ds_type=Data_type, model_type=BUTDModel)
     project_path = Path(__file__).parents[1]
-    results_dir = os.path.join(project_path, 'data/{}/results/model'.format(Data_type.Enum_to_name()))
-    data_path = os.path.join(project_path, 'data/{}/samples/{}'.format(Data_type.Enum_to_name(), cmd_parser.parse_args().data_dir))
-    logger_dir = os.path.join(project_path, 'data/emnist/results/')
+    results_dir = os.path.join(project_path, 'Data_Creation/{}/results/model'.format(Data_type.Enum_to_name()))
+    data_path = os.path.join(project_path, 'Data_Creation/{}/samples/{}'.format(Data_type.Enum_to_name(), cmd_parser.parse_args().data_dir))
+    logger_dir = os.path.join(project_path, 'Data_Creation/emnist/results/')
     Model_checkpoint = ModelCheckpoint(dirpath=logger_dir, monitor="val_loss_epoch", mode="min")
     Checkpoint_saver = CheckpointSaver(dirpath = parser.model_dir , store_running_statistics=flag is Flag.CL)
     wandb_logger = WandbLogger(project="My_first_project_5.10", job_type='train',

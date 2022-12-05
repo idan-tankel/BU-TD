@@ -21,9 +21,9 @@ def main(train_right, train_left, ds_type=DsType.Emnist, flag=Flag.CL, model_typ
     parser = GetParser(task_idx=0, direction_idx=0, model_flag=flag, ds_type=ds_type, model_type=model_type)
     # parser.ns = [0,3,3,3]
     project_path = Path(__file__).parents[1]
-    results_dir = os.path.join(project_path, 'data/{}/results/model'.format(str(ds_type)))
-    data_path = os.path.join(project_path, 'data/{}/samples/(1,6)_data_set_matrix_test'.format(str(ds_type)))
-    tmpdir = os.path.join(project_path, 'data/emnist/results/')
+    results_dir = os.path.join(project_path, 'Data_Creation/{}/results/model'.format(str(ds_type)))
+    data_path = os.path.join(project_path, 'Data_Creation/{}/samples/(1,6)_data_set_matrix_test'.format(str(ds_type)))
+    tmpdir = os.path.join(project_path, 'Data_Creation/emnist/results/')
     now = datetime.now()
     time = now.strftime("%m.%d.%Y%H:%M:%S")
     Model_checkpoint = ModelCheckpoint(dirpath=tmpdir, monitor="val_loss_epoch", mode="min")

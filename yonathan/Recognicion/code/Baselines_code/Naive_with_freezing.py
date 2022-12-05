@@ -23,8 +23,8 @@ import torch.optim as optim
 opts = Model_Options_By_Flag_And_DsType(Flag=Flag.NOFLAG, DsType=DsType.Emnist)
 parser = GetParser(opts=opts, language_idx= 0,direction = 'left',model_type=ResNet)
 data_path = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/emnist/samples/6_extended'
-# Create the data for right.
-tmpdir = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/emnist/results/'
+# Create the Data_Creation for right.
+tmpdir = '/home/sverkip/Data_Creation/BU-TD/yonathan/Recognicion/Data_Creation/emnist/results/'
 
 [the_datasets, train_dl ,  test_dl, val_dl , train_dataset, test_dataset, val_dataset] = get_dataset_for_spatial_realtions(parser, data_path,lang_idx = 0, direction = 1)
 #

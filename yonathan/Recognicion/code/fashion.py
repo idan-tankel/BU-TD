@@ -19,9 +19,9 @@ from training.Modules.Models import BUTDModel
 def main(train_right, train_left, ds_type=DsType.Fashionmnist, flag=Flag.CL, model_type = BUTDModel, task = (-1, 0)):
     parser = GetParser(task_idx=0, direction_idx=0, model_flag=flag, ds_type=ds_type, model_type=model_type)
     project_path = Path(__file__).parents[1]
-    results_dir = os.path.join(project_path, 'data/{}/results/model'.format(str(ds_type)))
-    data_path = os.path.join(project_path, 'data/{}/samples/(3,3)_extended_format'.format(str(ds_type)))
-    tmpdir = os.path.join(project_path, 'data/emnist/results/')
+    results_dir = os.path.join(project_path, 'Data_Creation/{}/results/model'.format(str(ds_type)))
+    data_path = os.path.join(project_path, 'Data_Creation/{}/samples/(3,3)_extended_format'.format(str(ds_type)))
+    tmpdir = os.path.join(project_path, 'Data_Creation/emnist/results/')
     now = datetime.now()
     time = now.strftime("%m.%d.%Y%H:%M:%S")
     Model_checkpoint = ModelCheckpoint(dirpath=tmpdir, monitor="val_loss_epoch", mode="min")

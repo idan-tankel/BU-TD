@@ -38,7 +38,7 @@ parser.ns = [0,3,3,3]
 parser.use_laterals_bu_td = False
 parser.use_laterals_td_bu = False
 project_path = Path(__file__).parents[2]
-project_data_path = os.path.join(project_path,'data/{}'.format('Emnist'))
+project_data_path = os.path.join(project_path,'Data_Creation/{}'.format('Emnist'))
 data_path =  os.path.join(project_data_path, 'samples/(4,4)_extended_format')
 #
 Right_dict = get_dataset_for_spatial_relations(parser, data_path, lang_idx = 0, direction_tuple= (1, 0))
@@ -83,7 +83,7 @@ path_loading = 'results/Model_all_right_better/ResNet_epoch20_direction=0.pt'
 
 #print(Accuracy(parser, test_dl))
 
-#TL = TextLogger(open('/home/sverkip/data/BU-TD/yonathan/Recognicion/data/emnist/results/log.txt','a'))
+#TL = TextLogger(open('/home/sverkip/Data_Creation/BU-TD/yonathan/Recognicion/Data_Creation/emnist/results/log.txt','a'))
 
 IC = InteractiveLogger()
 loggers = [WandBLogger(project_name="avalanche_EWC", run_name="train",dir='/home/sverkip/data/BU-TD/yonathan/Recognicion/data/emnist/results',path = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/emnist/results/checkpoint' ), IC]

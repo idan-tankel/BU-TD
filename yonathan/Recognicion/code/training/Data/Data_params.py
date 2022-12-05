@@ -10,7 +10,7 @@ from training.Metrics.Accuracy import multi_label_accuracy, multi_label_accuracy
 from training.Metrics.Loss import multi_label_loss_weighted, multi_label_loss
 from training.Utils import get_omniglot_dictionary, tuple_direction_to_index
 
-from data.Create_dataset_classes import DsType  # Import the data set types.
+from Data_Creation.Create_dataset_classes import DsType  # Import the Data_Creation set types.
 
 # Define the Flag Enums, and Dataset specification.
 
@@ -30,7 +30,7 @@ class GenericDataParams:
 
         Args:
             flag_at: The model flag.
-            ds_type: The data-set type flag.
+            ds_type: The Data_Creation-set type flag.
             num_x_axis: The neighbor levels in the x-axis.
             num_y_axis: The neighbor levels in the x-axis.
         """
@@ -50,7 +50,7 @@ class GenericDataParams:
         # The number of classes for each task, 47 for mnist, 10 for fashion and for Omniglot its dictionary.
         self.nclasses: dict = {i: 47 for i in range(self.ndirections)}
         self.results_dir: str = os.path.join(self.project_path,
-                                             f'data/{str(ds_type)}/results')  # The trained model directory.
+                                             f'Data_Creation/{str(ds_type)}/results')  # The trained model directory.
         self.use_bu1_loss: bool = True if flag_at is not Flag.NOFLAG \
             else False  # Whether to use the bu1 loss.
         # TODO - SHOULD BE DELETED.
@@ -107,7 +107,7 @@ class OmniglotDataset(GenericDataParams):
         self.ntasks = 51  # We have 51 tasks.
         self.use_bu1_loss = False  # As there are many classes we don't use the bu1 loss.
         self.image_size = [55, 200]  # The Omniglot image size.
-        raw_data_path = os.path.join(self.project_path, 'data/Omniglot/RAW/')  # The raw data path.
+        raw_data_path = os.path.join(self.project_path, 'Data_Creation/Omniglot/RAW/')  # The raw Data_Creation path.
         self.nclasses = get_omniglot_dictionary(self.initial_tasks,
                                                 raw_data_path)  # Computing for each language its number of characters.
 

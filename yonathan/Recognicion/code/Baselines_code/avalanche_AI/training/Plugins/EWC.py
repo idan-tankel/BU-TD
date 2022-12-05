@@ -23,7 +23,7 @@ class MyEWCPlugin(EWCPlugin):
             parser: The model parser.
             mode: The training mode.
             decay_factor:
-            keep_importance_data: Whether to keep the importance data.
+            keep_importance_data: Whether to keep the importance Data_Creation.
             prev_model: A pretrained model
             old_dataset: The old dataset.
         """

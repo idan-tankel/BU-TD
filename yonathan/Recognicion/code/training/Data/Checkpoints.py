@@ -17,7 +17,7 @@ class CheckpointSaver:
     def __init__(self, dirpath: str, store_running_statistics: bool = False):
         """
         Checkpoint saver class.
-        Saving all needed data.
+        Saving all needed Data_Creation.
         Args:
             dirpath: The path to the checkpoint.
             store_running_statistics: Whether to store the running statistics.
@@ -73,7 +73,7 @@ class CheckpointSaver:
         if self.store_running_stats:
             store_running_stats(model, task_id=task_id, direction_id=direction)
             print('Done storing running stats')
-        # All the data we want to store.
+        # All the Data_Creation we want to store.
         save_data = {'epoch': epoch, 'model_state_dict': model.state_dict(),
                      'optimizer_state_dict': optimizer.state_dict(),
                      'scheduler_state_dict': scheduler.state_dict(), 'parser': parser}

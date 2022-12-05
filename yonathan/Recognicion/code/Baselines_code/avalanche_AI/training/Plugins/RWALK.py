@@ -195,8 +195,8 @@ class RWalkPlugin(SupervisedPlugin):
         #    print(self.rwalk_lambda * ewc_loss)
             strategy.loss += self.rwalk_lambda * ewc_loss
 
-    # Compute data at (t+1) time step. If delta_t steps has passed, update
-    # also checkpoint data
+    # Compute Data_Creation at (t+1) time step. If delta_t steps has passed, update
+    # also checkpoint Data_Creation
     def after_training_iteration(self, strategy, *args, **kwargs):
         self._update_loss(strategy)
 

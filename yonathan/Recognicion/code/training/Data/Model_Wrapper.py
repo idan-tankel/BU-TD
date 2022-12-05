@@ -123,9 +123,9 @@ class ModelWrapped(LightningModule):
     def Accuracy(self, dl: DataLoader) -> float:
         """
         Args:
-            dl: The data loader we desire to test.
+            dl: The Data_Creation loader we desire to test.
 
-        Returns: The overall Accuracy over the data-set.
+        Returns: The overall Accuracy over the Data_Creation-set.
 
         """
         acc = 0.0
@@ -150,6 +150,6 @@ class ModelWrapped(LightningModule):
         """
         results_path = self.opts.results_dir  # Getting the result dir.
         model_path = os.path.join(results_path, model_path)  # The path to the model.
-        checkpoint = torch.load(model_path)  # Loading the saved data.
+        checkpoint = torch.load(model_path)  # Loading the saved Data_Creation.
         self.model.load_state_dict(checkpoint['model_state_dict'])  # Loading the saved weights.
         return checkpoint

@@ -38,7 +38,7 @@ def GetParser(task_idx: int = 0, direction_idx: int = 0, model_type: nn.Module =
                                            initial_task_for_omniglot_only=5)
     parser = argparse.ArgumentParser()
     # Flags.
-    parser.add_argument('--ds_type', default=ds_type, type=DsType, help='Flag that defines the data-set type')
+    parser.add_argument('--ds_type', default=ds_type, type=DsType, help='Flag that defines the Data_Creation-set type')
     parser.add_argument('--model_flag', default=model_flag, type=Flag, help='Flag that defines the model type')
     # Optimization arguments.
     parser.add_argument('--wd', default=0.0001, type=float, help='The weight decay of the Adam optimizer')

@@ -54,7 +54,7 @@ class SynapticIntelligencePlugin(SupervisedPlugin):
         :param device: The device to use to run the S.I. experiences.
             Defaults to "as_strategy", which means that the `device` field of
             the strategy will be used. Using a different device may lead to a
-            performance drop due to the required data transfer.
+            performance drop due to the required Data_Creation transfer.
         """
 
         super().__init__()

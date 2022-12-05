@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 
 from training.Data.Data_params import Flag, DsType
 
-sys.path.append(os.path.join(Path(__file__).parents[2], 'data'))
+sys.path.append(os.path.join(Path(__file__).parents[2], 'Data_Creation'))
 
 # Return the datasets and dataloaders.
 
@@ -18,7 +18,7 @@ def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, lang_idx:
     Getting the train,test,val(if exists) datasets.
     Args:
         opts: The model options.
-        data_fname: The data path.
+        data_fname: The Data_Creation path.
         lang_idx: The language index.
         direction_tuple: The direction tuple.
 
@@ -38,7 +38,7 @@ def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, lang_idx:
         MetaData = pickle.load(new_data_file)
 
     image_size = MetaData.parser.image_size  # Get the image size.
-    opts.inshape = (3, *image_size[1:])  # Updating the image size according to the actual data.
+    opts.inshape = (3, *image_size[1:])  # Updating the image size according to the actual Data_Creation.
     obj_per_row = MetaData.parser.num_cols  # Getting the number of chars per row.
     obj_per_col = MetaData.parser.num_rows  # Getting the number of chars per col.
     nsamples_train = MetaData.nsamples_dict['train']  # Getting the number of train samples.
@@ -59,7 +59,7 @@ def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, lang_idx:
                       direction_tuple=direction_tuple,
                       is_train=False, nexamples=nsamples_test, obj_per_row=obj_per_row, obj_per_col=obj_per_col)
     batch_size = opts.bs
-    # Creating the data-loaders.
+    # Creating the Data_Creation-loaders.
     train_dl = DataLoader(train_ds, batch_size=batch_size, num_workers=opts.workers, shuffle=True,
                           pin_memory=True)  # The Train Data-Loader.
     test_dl = DataLoader(test_ds, batch_size=batch_size, num_workers=opts.workers, shuffle=False,
