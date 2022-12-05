@@ -8,6 +8,7 @@ CE = nn.CrossEntropyLoss(reduction='none')
 
 # Here we define our loss functions.
 
+'''
 def multi_label_loss_base(samples: inputs_to_struct, outs: outs_to_struct):
     """
     The base function for multi, weighted versions.
@@ -24,7 +25,7 @@ def multi_label_loss_base(samples: inputs_to_struct, outs: outs_to_struct):
     samples.label_task = samples.label_task.long()
     loss_tasks = CE(outs.classifier, samples.label_task)  # Taking the classes torch and the label task.
     return loss_tasks  # return the task loss
-
+'''
 
 def multi_label_loss(samples: inputs_to_struct, outs: outs_to_struct):
     """
@@ -37,7 +38,7 @@ def multi_label_loss(samples: inputs_to_struct, outs: outs_to_struct):
     Returns: The mean loss over all samples in the batch.
 
     """
-    losses_task = multi_label_loss_base(samples, outs)  # Compute the loss.
+    losses_task = CE(outs.classifier, samples.label_task)  # Compute the loss.
     loss_task = losses_task.mean()  # Mean over all batch.
     return loss_task
 

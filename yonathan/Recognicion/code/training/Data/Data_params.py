@@ -10,7 +10,7 @@ from training.Metrics.Accuracy import multi_label_accuracy, multi_label_accuracy
 from training.Metrics.Loss import multi_label_loss_weighted, multi_label_loss
 from training.Utils import get_omniglot_dictionary, tuple_direction_to_index
 
-from data.utils.Create_dataset_classes import DsType  # Import the data set types.
+from data.Create_dataset_classes import DsType  # Import the data set types.
 
 # Define the Flag Enums, and Dataset specification.
 
@@ -67,7 +67,7 @@ class EmnistDataset(GenericDataParams):
 
         """
         super(EmnistDataset, self).__init__(flag_at=flag_at, ds_type=DsType.Emnist, num_x_axis=2)
-        self.image_size = [130, 160]  # The Emnist image size.
+        self.image_size = [130, 200]  # The Emnist image size.
         # The initial indexes.
         # TODO - SHOULD BE DELETED.
         initial_directions = [

@@ -22,7 +22,7 @@ def main(train_right, train_left, ds_type=DsType.Emnist, flag=Flag.CL, model_typ
     # parser.ns = [0,3,3,3]
     project_path = Path(__file__).parents[1]
     results_dir = os.path.join(project_path, 'data/{}/results/model'.format(str(ds_type)))
-    data_path = os.path.join(project_path, 'data/{}/samples/(4,4)_extended'.format(str(ds_type)))
+    data_path = os.path.join(project_path, 'data/{}/samples/(1,6)_data_set_matrix_test'.format(str(ds_type)))
     tmpdir = os.path.join(project_path, 'data/emnist/results/')
     now = datetime.now()
     time = now.strftime("%m.%d.%Y%H:%M:%S")
@@ -58,7 +58,7 @@ def main(train_right, train_left, ds_type=DsType.Emnist, flag=Flag.CL, model_typ
                                      direction_tuple=direction,
                                      task_id=0,
                                      nbatches_train=len(DataLoaders['train_dl']))
-        wrapped_model.load_model(model_path='Right_bs_10/BUTDModel_epoch56_direction=(1, 0).pt')
+        wrapped_model.load_model(model_path='model_right_(6,1)/BUTDModel_best_direction=(1, 0).pt')
       #  print(wrapped_model.Accuracy(DataLoaders['test_dl']))
         #  parser.model = model
         trainer.fit(wrapped_model, train_dataloaders=DataLoaders['train_dl'], val_dataloaders=DataLoaders['test_dl'])

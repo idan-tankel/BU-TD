@@ -9,10 +9,10 @@ import torchvision.transforms as T
 from PIL import Image
 from torch.utils.data import Dataset
 
-from data.utils.Create_dataset_classes import Sample
+from data.Create_dataset_classes import Sample
 from training.Utils import tuple_direction_to_index
 
-from data.utils.Create_dataset_classes import DsType
+from data.Create_dataset_classes import DsType
 
 # Here we define the dataset classes.
 
@@ -87,7 +87,7 @@ def struct_to_input(sample: Sample) -> tuple[torch, torch, tuple]:
 
     """
     # The label existence, telling for each entry whether the class exists or not.
-    label_existence = sample.label_existence.float()
+    label_existence = sample.label_existence
     # All characters arranged.
     label_all = sample.label_ordered
     # The coordinate we query about.
