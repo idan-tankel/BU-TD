@@ -112,10 +112,10 @@ class BasicBlockBU(nn.Module):
                                                              task_embedding=task_embedding)  # channel modulation after conv2.
             self.pixel_modulation_after_conv2 = Modulation(opts=opts, shape=shape_spatial, pixel_modulation=True,
                                                            task_embedding=task_embedding)  # pixel modulation after conv2.
-        self.conv1 = nn.Sequential(shared.conv1, opts.norm_layer(opts, nchannels),
-                                   opts.activation_fun())  # conv1 Block.
-        self.conv2 = nn.Sequential(shared.conv2, opts.norm_layer(opts, nchannels),
-                                   opts.activation_fun())  # conv2 Block.
+        self.conv_block1 = nn.Sequential(shared.conv1, opts.norm_layer(opts, nchannels),
+                                         opts.activation_fun())  # conv1 Block.
+        self.conv_block2 = nn.Sequential(shared.conv2, opts.norm_layer(opts, nchannels),
+                                         opts.activation_fun())  # conv2 Block.
         if shared.downsample is not None:
             # downsample, the skip connection from the beginning of the block if needed.
             self.downsample = nn.Sequential(shared.downsample, opts.norm_layer(opts, nchannels))
@@ -151,7 +151,7 @@ class BasicBlockBU(nn.Module):
             x = self.lat1(x, lateral1_in)  # Perform first lateral skip connection.
         laterals_out.append(x)
         inp = x  # Save the inp for the skip to the end of the block
-        x = self.conv1(x)  # Perform first Conv Block.
+        x = self.conv_block1(x)  # Perform first Conv Block.
         direction_flag, _, _ = Compose_Flag(opts=self.opts, flag=flag)  # Get the direction flag.
         if self.flag_at is Flag.CL and self.is_bu2:  # perform the first task embedding if needed.
             x = self.pixel_modulation_after_conv1(x, direction_flag)
@@ -161,7 +161,7 @@ class BasicBlockBU(nn.Module):
             x = self.lat2(x, lateral2_in)  # Perform second lateral skip connection.
 
         laterals_out.append(x)
-        x = self.conv2(x)  # Perform second Conv Block.
+        x = self.conv_block2(x)  # Perform second Conv Block.
         if self.flag_at is Flag.CL and self.is_bu2:  # Perform the second task embedding if needed.
             x = self.pixel_modulation_after_conv2(x, direction_flag)
             x = self.channel_modulation_after_conv2(x, direction_flag)
@@ -268,12 +268,14 @@ class BasicBlockTD(nn.Module):
             self.lat1 = Modulation_and_Lat(opts, in_channels)  # The first lateral connection.
             self.lat2 = Modulation_and_Lat(opts, in_channels)  # The second lateral connection.
             self.lat3 = Modulation_and_Lat(opts, out_channels)  # The third lateral connection.
-        self.conv1 = conv3x3(in_channels, in_channels)  # The first Block conserves the number of channels.
-        self.conv1_norm = opts.norm_layer(opts, in_channels)  # The batch norm layer.
-        self.relu1 = opts.activation_fun()  # The activation function.
-        self.conv2 = conv3x3up(in_channels, out_channels, size, stride > 1)  # The second Block Upsampling the input.
-        self.conv2_norm = opts.norm_layer(opts, out_channels)  # The second BN.
-        self.relu3 = opts.activation_fun()  # The third AF.
+        self.conv_block1 = nn.Sequential(conv3x3(in_channels, in_channels), opts.norm_layer(opts, in_channels), opts.activation_fun())
+     #   self.conv1 = conv3x3(in_channels, in_channels)  # The first Block conserves the number of channels.
+     #   self.conv1_norm = opts.norm_layer(opts, in_channels)  # The batch norm layer.
+     #   self.relu1 = opts.activation_fun()  # The activation function.
+        self.conv_block2 = nn.Sequential(conv3x3up(in_channels, out_channels, size, stride > 1), opts.norm_layer(opts, out_channels), opts.activation_fun())
+      #  self.conv2 = conv3x3up(in_channels, out_channels, size, stride > 1)  # The second Block Upsampling the input.
+     #   self.conv2_norm = opts.norm_layer(opts, out_channels)  # The second BN.
+     #   self.relu3 = opts.activation_fun()  # The third AF.
         out_channels = out_channels * BasicBlockTD.expansion
         if stride > 1:
             # upsample the skip connection.
@@ -304,14 +306,16 @@ class BasicBlockTD(nn.Module):
             x = self.lat1(x, lateral1_in)  # perform the first lateral connection.
         laterals_out.append(x)
         inp = x  # store the input from the skip to the end of the block.
-        x = self.conv1(x)  # Performs the first conv that preserves the input shape.
-        x = self.conv1_norm(x)  # Perform norm layer.
-        x = self.relu1(x)  # Perform the activation fun.
+        x = self.conv_block1(x) # Perform the first conv block.
+     #   x = self.conv1(x)  # Performs the first conv that preserves the input shape.
+    #    x = self.conv1_norm(x)  # Perform norm layer.
+    #    x = self.relu1(x)  # Perform the activation fun.
         if laterals_in is not None:
             x = self.lat2(x, lateral2_in)  # perform the second lateral connection.
         laterals_out.append(x)
-        x = self.conv2(x)  # Performs the second conv that Upsampling the input.
-        x = self.conv2_norm(x)  # Perform norm layer.
+        x = self.conv_block2(x)
+      #  x = self.conv2(x)  # Performs the second conv that Upsampling the input.
+      #  x = self.conv2_norm(x)  # Perform norm layer.
         if laterals_in is not None:
             x = self.lat3(x, lateral3_in)  # perform the third lateral connection.
         laterals_out.append(x)
@@ -320,7 +324,7 @@ class BasicBlockTD(nn.Module):
         else:
             identity = inp
         x = x + identity  # Performs the skip connection
-        x = self.relu3(x)
+    #    x = self.relu3(x)
         return x, laterals_out[::-1]
 
 

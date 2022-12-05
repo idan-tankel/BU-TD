@@ -339,7 +339,7 @@ def Save_code_script(storage_dir: str) -> None:
         storage_dir: The path we desire to save the code script.
     """
     code_folder_path = os.path.dirname(os.path.realpath(__file__))
-    storage_dir = os.path.join(storage_dir, 'Data_Creation')
+    storage_dir = os.path.join(storage_dir, 'data')
     if not os.path.exists(storage_dir):
         shutil.copytree(code_folder_path, storage_dir, copy_function=shutil.copy)  # Save the code script.
 

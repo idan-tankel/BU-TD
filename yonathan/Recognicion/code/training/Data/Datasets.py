@@ -22,17 +22,17 @@ class DataSetBase(Dataset):
     Supports initialization and get item methods(not used).
     """
 
-    def __init__(self, root: str, nclasses_existence: int, ndirections: int, is_train: bool,
+    def __init__(self, root: str, nclasses: int, ndirections: int, is_train: bool,
                  nexamples: Union[int, None] = None):
         """
         Args:
             root: The root to the Data_Creation.
-            nclasses_existence:
+            nclasses:
             ndirections: The number of classes.
             nexamples: The number of classes.
         """
         self.root: str = root  # The path to the Data_Creation
-        self.nclasses_existence: int = nclasses_existence  # The number of classes.
+        self.nclasses: int = nclasses  # The number of classes.
         self.ndirections: int = ndirections  # The number of directions.
         self.is_train: bool = is_train  # Is this a training set.
         self.nexamples: int = nexamples  # The number of examples.
@@ -111,7 +111,7 @@ class DatasetGuided(DataSetBase):
         """
 
         super(DatasetGuided, self).__init__(ndirections=opts.ndirections,
-                                            nclasses_existence=opts.nclasses[task_idx], root=root,
+                                            nclasses=opts.nclasses[task_idx], root=root,
                                             nexamples=nexamples, is_train=is_train)
         self.ntasks = opts.ntasks
         self.tuple_direction = direction_tuple
@@ -123,7 +123,8 @@ class DatasetGuided(DataSetBase):
         self.obj_per_row = obj_per_row  # Number of row.
         self.obj_per_col = obj_per_col  # Number of columns.
         self.task_idx = torch.tensor(task_idx)  # The task id.
-        self.edge_class = torch.tensor(self.nclasses_existence)  # The 'border' class.
+        # TODO - CHANGE TO STORE AS TENSOR.
+        self.edge_class = torch.tensor(self.nclasses)  # The 'border' class.
         # TODO - GET RID OF THIS
         self.initial_tasks = opts.initial_directions  # The initial tasks.
 
@@ -174,7 +175,7 @@ class DatasetGuided(DataSetBase):
         # Getting the direction embedding, telling which direction we solve now.
         direction_type_ohe = torch.nn.functional.one_hot(self.direction, self.ndirections)
         # Getting the character embedding, which character we query about.
-        char_type_one = torch.nn.functional.one_hot(char, self.nclasses_existence)
+        char_type_one = torch.nn.functional.one_hot(char, self.nclasses)
         # Concatenating all three flags into one flag.
         flag = torch.concat([direction_type_ohe, task_type_ohe, char_type_one], dim=0).float()
         # TODO - GET RID OF THIS.
@@ -201,7 +202,7 @@ class DatasetNonGuided(DatasetGuided):
         Returns: The label task.
         """
 
-        label_adj_all = self.nclasses_existence * torch.ones(self.nclasses_existence)
+        label_adj_all = self.nclasses * torch.ones(self.nclasses)
         for r, row in enumerate(label_all):  # Iterating over all rows.
             for c, char in enumerate(row):  # Iterating over all character in the row.
                 res = self.Compute_label_task(r=r, c=c, label_all=label_all,

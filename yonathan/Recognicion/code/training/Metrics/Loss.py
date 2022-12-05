@@ -8,25 +8,6 @@ CE = nn.CrossEntropyLoss(reduction='none')
 
 # Here we define our loss functions.
 
-'''
-def multi_label_loss_base(samples: inputs_to_struct, outs: outs_to_struct):
-    """
-    The base function for multi, weighted versions.
-    Here for all heads we, compute loss according to the model out and label task.
-    Args:
-        samples: The samples.
-        outs: The model outs.
-
-
-    Returns: The loss over all heads.
-
-    """
-    samples.label_task = samples.label_task.squeeze()
-    samples.label_task = samples.label_task.long()
-    loss_tasks = CE(outs.classifier, samples.label_task)  # Taking the classes torch and the label task.
-    return loss_tasks  # return the task loss
-'''
-
 def multi_label_loss(samples: inputs_to_struct, outs: outs_to_struct):
     """
     The average loss over all images in the batch.
@@ -38,7 +19,8 @@ def multi_label_loss(samples: inputs_to_struct, outs: outs_to_struct):
     Returns: The mean loss over all samples in the batch.
 
     """
-    losses_task = CE(outs.classifier, samples.label_task)  # Compute the loss.
+    samples.label_task = samples.label_task.squeeze() # TODO - CHECK IT.
+    losses_task = CE(outs.classifier, samples.label_task)  # Compute the CE loss without reduction.
     loss_task = losses_task.mean()  # Mean over all batch.
     return loss_task
 
@@ -53,7 +35,7 @@ def multi_label_loss_weighted(samples: inputs_to_struct, outs: outs_to_struct):
     Returns: The weighted loss over all existing characters, for not existing the loss is zero.
 
     """
-    losses_task = multi_label_loss_base(samples, outs)  # Compute the loss.
+    losses_task = CE(outs.classifier, samples.label_task)  # Compute the CE loss without reduction.
     loss_weight = samples.label_existence  # The loss weight for only existing characters.
     losses_task = losses_task * loss_weight  # Compute the loss only in the existing characters.
     loss_task = losses_task.sum() / loss_weight.sum()  # Mean the loss over all batch and characters.

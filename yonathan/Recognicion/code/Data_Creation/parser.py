@@ -20,10 +20,10 @@ def Get_parser(ds_type:DsType = DsType.Emnist , num_cols=6, num_rows=1,language_
 
     Ds_obj = UnifiedDataSetType(ds_type=ds_type, num_cols=num_cols, num_rows=num_rows,language_list = language_list)
     parser.add_argument('--path_data_raw_for_omniglot',
-                        default=os.path.join(Path(__file__).parents[3], 'Data_Creation/Omniglot/RAW/omniglot-py/Unified'), type=str,
+                        default=os.path.join(Path(__file__).parents[3], 'data/Omniglot/RAW/omniglot-py/Unified'), type=str,
                         help='The Raw Data_Creation path')
-    parser.add_argument('--store_folder', default=os.path.join(Path(__file__).parents[3],
-                         'Data_Creation/') + '{}/samples/'.format(str(ds_type)),   type=str, help='The storing path')
+    parser.add_argument('--store_folder', default=os.path.join(Path(__file__).parents[2],
+                         'data/') + '{}/samples/'.format(str(ds_type)),   type=str, help='The storing path')
     parser.add_argument('--job_chunk_size', default=1000, type=int, help='The number of samples each jobs processes')
     parser.add_argument('--folder_split', default=True, type=bool, help='Whether to split the folder into parts.')
     parser.add_argument('--folder_size', default=1000, type=int, help=' The folder size')

@@ -41,7 +41,7 @@ def GetParser(task_idx: int = 0, direction_idx: int = 0, model_type: nn.Module =
     parser.add_argument('--ds_type', default=ds_type, type=DsType, help='Flag that defines the Data_Creation-set type')
     parser.add_argument('--model_flag', default=model_flag, type=Flag, help='Flag that defines the model type')
     # Optimization arguments.
-    parser.add_argument('--wd', default=0.0001, type=float, help='The weight decay of the Adam optimizer')
+    parser.add_argument('--wd', default=0.00001, type=float, help='The weight decay of the Adam optimizer')
     parser.add_argument('--SGD', default=False, type=bool, help='Whether to use SGD or Adam optimizer')
     parser.add_argument('--initial_lr', default=0.001, type=float, help='Base lr for the SGD optimizer')
     parser.add_argument('--cycle_lr', default=True, type=bool, help='Whether to cycle the lr')

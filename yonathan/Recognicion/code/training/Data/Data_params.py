@@ -66,7 +66,7 @@ class EmnistDataset(GenericDataParams):
             flag_at: The model flag.
 
         """
-        super(EmnistDataset, self).__init__(flag_at=flag_at, ds_type=DsType.Emnist, num_x_axis=2)
+        super(EmnistDataset, self).__init__(flag_at=flag_at, ds_type=DsType.Emnist, num_x_axis=2,num_y_axis=2)
         self.image_size = [130, 200]  # The Emnist image size.
         # The initial indexes.
         # TODO - SHOULD BE DELETED.

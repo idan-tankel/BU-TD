@@ -163,7 +163,7 @@ class Omniglot_data_set(General_raw_data):
             language_images = [transform(skimage.io.imread(im_file)) for im_file in language_images]  # Make image.
             self.Images_arranged.extend(language_images)  # Add all language characters images.
         self.num_examples_per_character = 20  # 20 images per character.
-        self.nclasses = len(Images_arranged) // 20  # The number of labels.
+        self.nclasses = len(self.Images_arranged) // 20  # The number of labels.
         self.labels = sum([self.num_examples_per_character * [i] for i in range(self.nclasses)], [])
 
 
@@ -192,7 +192,7 @@ class GenericDatasetParams:
         self.nsamples_test = None  # The number of test samples.
         self.nsamples_val = None  # The number of samples for the CG test.
         self.Data_path = os.path.join(Path(__file__).parents[2],
-                                      f'Data_Creation/{str(ds_type)}/RAW')  # The path to the raw Data_Creation.
+                                      f'data/{str(ds_type)}/RAW')  # The path to the raw Data_Creation.
         # This is the rule, we define the number of samples we generate per chosen sequence.
         if num_rows == 1 or num_cols == 1:
             self.ngenerate = num_rows - 1 if num_cols == 1 else num_cols - 1
@@ -210,8 +210,8 @@ class EmnistParams(GenericDatasetParams):
             num_rows: The number of rows
         """
         super(EmnistParams, self).__init__(ds_type=ds_type, num_cols=num_cols, num_rows=num_rows)
-        self.min_scale = 1.2
-        self.max_scale = 1.5
+        self.min_scale = 1.0
+        self.max_scale = 1.1
         self.min_shift = 2.0
         self.max_shift = 0.2 * 28
         self.generalize = True

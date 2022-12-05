@@ -38,6 +38,6 @@ def main(ds_type: DsType = DsType.Emnist, language_list: Union[list, None] = Non
 if __name__ == '__main__':
     # main(ds_type=DsType.Omniglot,language_list=[27, 5, 42, 18, 33])
     main(ds_type=DsType.Emnist, num_chars_per_row=4, num_rows_in_the_image=4)
-    main(ds_type=DsType.Emnist, num_chars_per_row=6, num_rows_in_the_image=1)
+   # main(ds_type=DsType.Emnist, num_chars_per_row=6, num_rows_in_the_image=1)
 #  for i in range(50):
 #   main(ds_type=DsType.Emnist,language_list=[i])
