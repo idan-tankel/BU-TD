@@ -1,4 +1,5 @@
 import pytorch_lightning as pl
+from torch import load
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pathlib import Path
@@ -66,9 +67,14 @@ else:
 model = ModelWrapper(model=model, config=global_config)
 
 
+
 wandb_logger.watch(model=model, log='all')
 trainer = pl.Trainer(accelerator='gpu', max_epochs=200,
                      logger=wandb_logger, callbacks=[wandb_checkpoints])
+
+# load pretrained from some layer of the model
+old_model = load(f"{checkpoints_dir}/epoch=176-step=276651.ckpt")
+model.model.vit._load_from_state_dict(state_dict=old_model['state_dict'],prefix='model.vit.',strict=True,missing_keys=[],unexpected_keys=[],error_msgs=[],local_metadata={})
 
 trainer.fit(model=model, train_dataloaders=compatibility_dl,
             val_dataloaders=compatibility_dl)

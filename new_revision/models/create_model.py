@@ -34,14 +34,17 @@ class ModelWrapper(
         self.model = model
 
     def training_step(self, batch, batch_index):
-        x, y = batch['img'], batch['label_all']
+        x, y = batch['img'], batch['label_task']
         x_hat = self.model(x)
         y.squeeze_()
         y.to(device("cuda") if cuda.is_available() else device("cpu"))
         loss = nn.CrossEntropyLoss(reduction='mean')(x_hat.logits, y)
+        pred = x_hat.logits.argmax(dim=1)
         acc = 1 - (x_hat.logits.argmax(dim=1) - y).count_nonzero() / y.numel()
+        non_naive_ratio = (pred != 47).sum() / pred.numel()
         self.log('train_loss', loss, on_step=True, on_epoch=True, logger=True)
         self.log('train_acc', acc, on_step=True, on_epoch=True, logger=True)
+        self.log(name='non_naive_ratio',value=non_naive_ratio, on_step=True, on_epoch=True, logger=True)
         return loss
 
     def validation_step(self, batch, batch_index):
@@ -57,18 +60,24 @@ class ModelWrapper(
         """
         self.model.eval()
         with no_grad():
-            x, y = batch['img'], batch['label_all']
+            x, y = batch['img'], batch['label_task']
             x_hat = self.model(x)
             y.squeeze_()
             y.to(device("cuda") if cuda.is_available() else device("cpu"))
             loss = nn.CrossEntropyLoss(reduction='mean')(x_hat.logits, y)
-            acc = 1 - (x_hat.logits.argmax(dim=1) -
+            pred = x_hat.logits.argmax(dim=1)
+            acc = 1 - (pred -
                        y).count_nonzero() / y.numel()
+            # this is the distance from the naive classifier - classifing all to the most common class - edge case
+            # 47 is the enumeration of the N.A class
+            non_naive_ratio = (pred != 47).sum() / pred.numel()
             self.log('val_loss', loss, on_step=True,
                      on_epoch=True, logger=True)
             self.log('val_acc', acc, on_step=True, on_epoch=True, logger=True)
+            self.log(name='non_naive_ratio',value=non_naive_ratio, on_step=True, on_epoch=True, logger=True)
         return loss
 
     def configure_optimizers(self):
         optimizer = Adam(self.parameters(), lr=1e-3)
         return optimizer
+
