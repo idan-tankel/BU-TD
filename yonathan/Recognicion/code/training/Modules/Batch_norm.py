@@ -40,9 +40,9 @@ class BatchNorm(nn.Module):
             self.running_var_list = torch.zeros(opts.ndirections * opts.ntasks, num_channels)
             # Save the mean, variance.
             self.register_buffer("running_mean",
-                                 self.running_mean_list)  # registering to the buffer to make it part of the meta-Data_Creation.
+                                 self.running_mean_list)  # registering to the buffer to make it part of the meta-data.
             self.register_buffer("running_var",
-                                 self.running_var_list)  # registering to the buffer to make it part of the meta-Data_Creation.
+                                 self.running_var_list)  # registering to the buffer to make it part of the meta-data.
 
     def forward(self, inputs: torch) -> torch:
         """

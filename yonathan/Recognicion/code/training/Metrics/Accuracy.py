@@ -68,7 +68,7 @@ def accuracy(parser: argparse, model: nn.Module, test_data_loader: DataLoader) -
     Args:
         parser: The model options.
         model: The model.
-        test_data_loader: The test Data_Creation.
+        test_data_loader: The test data.
 
     Returns: The Accuracy over the test loadr.
 

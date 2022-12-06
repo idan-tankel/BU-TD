@@ -9,14 +9,14 @@ from multiprocessing import Pool
 
 import numpy as np
 from PIL import Image
-from Create_dataset_classes import DsType, Sample, CharInfo, DataAugmentClass, MetaData
+from Create_dataset_classes import DsType, Sample, CharInfo, DataAugmentClass, MetaData, General_raw_data
 
 
 def store_sample_disk(parser: argparse, sample: Sample, store_dir: str) -> None:
     """
     Storing the sample on the disk.
     Args:
-        parser: The Data_Creation parser.
+        parser: The dara parser.
         sample: The sample we desire to save.
         store_dir: The directory we store into.
     """
@@ -61,7 +61,7 @@ def create_image_matrix(parser: argparse, ds_type: str, sample: Sample) -> Sampl
     Creates a single sample including image, label_task, label_all, label_existence, query_index.
     Args:
         parser: The option parser.
-        ds_type: The Data_Creation set type.
+        ds_type: The data set type.
         sample: The sample containing the selected characters.
 
     Returns: A Sample to store on the disk.
@@ -77,7 +77,7 @@ def create_image_matrix(parser: argparse, ds_type: str, sample: Sample) -> Sampl
     # Making RGB.
     sample.image = sample.image * 255
     sample.image = sample.image.astype(np.uint8)
-    # Doing Data_Creation augmentation if needed.
+    # Making the data augmentation if needed.
     if is_train and augment_sample:
         # augment
         data_augment = DataAugmentClass(sample.sample_id)
@@ -97,7 +97,7 @@ def gen_samples(parser: argparse, job_id: int, range_start: int, range_stop: int
         range_stop: The range stop of the job.
         samples: The chosen samples.
         storage_dir: The storage directory
-        ds_type: The Data_Creation-set type options: 'train', 'test, 'val'.
+        ds_type: The data-set type options: 'train', 'test, 'val'.
 
     """
     num_folders = int(np.ceil((range_stop - range_start) / parser.job_chunk_size) + 1)
@@ -125,8 +125,8 @@ def gen_samples(parser: argparse, job_id: int, range_start: int, range_stop: int
 def Get_valid_pairs_for_the_combinatorial_test(parser: argparse, nclasses: int, valid_classes: np.ndarray) -> \
         tuple[np.ndarray, list[np.ndarray]]:
     """
-    Exclude part of the training Data_Creation. Test set is from the train distribution.
-    Validation is only the excluded Data_Creation (combinatorial generalization).
+    Exclude part of the training data. Test set is from the train distribution.
+    Validation is only the excluded data (combinatorial generalization).
 
     Args:
         parser: The option parser.
@@ -214,9 +214,9 @@ def Create_several_samples_per_sequence(parser: argparse, prng: random, ds_type:
     """
     Given sampled sequence of characters, generate several samples, and add to the samples list.
     Args:
-        parser: The Data_Creation parser.
+        parser: The data parser.
         prng: The random generator.
-        ds_type: The Data_Creation-set type.
+        ds_type: The data-set type.
         samples: The samples list.
         chars: The list of all information about all characters
         sample_id: The sample id.
@@ -263,19 +263,19 @@ def Get_valid_classes_for_emnist_only(data_set_type: DsType, use_only_valid_clas
 
 def Make_data_dir(parser: argparse, ds_type: DsType, language_list: list) -> tuple:
     """
-    Making the Data_Creation-dir for the samples.
+    Making the data-dir for the samples.
     Args:
-        parser: The Data_Creation parser.
-        ds_type: The Data_Creation set type.
+        parser: The data parser.
+        ds_type: The data-set type.
         language_list: The language list.
 
-    Returns: The sample path, the meta-Data_Creation path.
+    Returns: The sample path, the meta-data path.
     """
-    folder_name = '(%d,%d)_' % (parser.num_rows, parser.num_cols)  # The Data_Creation set specification.
+    folder_name = '(%d,%d)_' % (parser.num_rows, parser.num_cols)  # The data set specification.
     if ds_type is DsType.Omniglot:
         folder_name += 'data_set_matrix' + str(language_list[0])
     else:
-        folder_name += 'data_set_matrix_test_changes2'
+        folder_name += 'Test_open_files'
     Samples_dir = os.path.join(parser.store_folder, folder_name)  # The path we store into.
     if not os.path.exists(Samples_dir):  # Making the samples dir.
         os.makedirs(Samples_dir, exist_ok=True)
@@ -283,19 +283,20 @@ def Make_data_dir(parser: argparse, ds_type: DsType, language_list: list) -> tup
     return Samples_dir, Meta_data_fname
 
 
-def Generate_raw_samples(parser: argparse, raw_dataset, image_ids: set, data_set_index: int, ds_type: str,
+def Generate_raw_samples(parser: argparse, raw_dataset: General_raw_data, image_ids: set, data_set_index: int,
+                         ds_type: str,
                          cur_nsamples: int,
                          valid_pairs: np.array, valid_classes: np.array, test_chars_list: list[np.ndarray]
                          ) -> list[Sample]:
     """
-    Given the valid pairs, valid classes, we generate raw samples for each Data_Creation-set type.
+    Given the valid pairs, valid classes, we generate raw samples for each data-set type.
     Here we just choose the character sequence.
     Args:
         parser: The dataset parser.
         raw_dataset: The raw image dataset.
         image_ids: The image ids.
         data_set_index: The seed for each dataset.
-        ds_type: The Data_Creation-set type.
+        ds_type: The data-set type.
         cur_nsamples: The number of characters to generate.
         valid_pairs: The valid pairs.
         valid_classes: The valid classes/
@@ -304,7 +305,7 @@ def Generate_raw_samples(parser: argparse, raw_dataset, image_ids: set, data_set
     Returns: List of the generated samples.
 
     """
-    prng = np.random.RandomState(data_set_index)  # Random Generator depending on the Data_Creation set id.
+    prng = np.random.RandomState(data_set_index)  # Random Generator depending on the data set id.
     num_chars_per_image = parser.num_characters_per_sample  # The number of characters we need to choose.
     samples = []  # Initialize the samples list.
     num_samples_created_so_far = 0
@@ -350,14 +351,14 @@ def Save_meta_data_and_code_script(parser: argparse, ds_type: DsType, nsamples_p
     Saving the metadata and the code script.
     Args:
         parser: The dataset options.
-        ds_type: The Data_Creation set type.
+        ds_type: The data set type.
         nsamples_per_data_type_dict: The number of samples per dataset.
         language_list: The language list.
 
     """
     storage_dir, meta_data_fname = Make_data_dir(parser, ds_type, language_list)
     with open(meta_data_fname, "wb") as new_data_file:
-        # Creating a struct containing the parser and number of samples per Data_Creation set type dict.
+        # Creating a struct containing the parser and number of samples per data set type dict.
         struct = MetaData(parser,
                           nsamples_per_data_type_dict)
         pickle.dump(struct, new_data_file)  # Dump to the memory.
@@ -406,13 +407,13 @@ def Split_samples_into_jobs_and_generate(parser: argparse, samples: list[Sample]
             process.starmap(gen_samples, all_args)  # Calling the generation function in a parallel manner.
 
 
-def create_dataset(parser: argparse, raw_dataset, ds_type: DsType, language_list: list) -> dict:
+def create_dataset(parser: argparse, raw_dataset: General_raw_data, ds_type: DsType, language_list: list) -> dict:
     """
     The main function choosing sequences, then generating samples, Stores them and saves the MetaData.
     Args:
         parser: The dataset options.
         raw_dataset: The raw dataset images.
-        ds_type: All Data_Creation-set types.
+        ds_type: All data-set types.
         language_list: The language list for omniglot only.
 
     Returns: Generating samples and returning a dictionary assigning for each dataset the actual
@@ -430,11 +431,11 @@ def create_dataset(parser: argparse, raw_dataset, ds_type: DsType, language_list
     nsamples_train = parser.nsamples_train  # The number of train samples we desire to create.
     nsamples_val = parser.nsamples_val  # The number of validation samples we desire to create.
     storage_dir, _ = Make_data_dir(parser, ds_type, language_list)
-    # Get the storage dir for the Data_Creation and for the conf file.
+    # Get the storage dir for the data and for the conf file.
     ds_types = ['test', 'train']  # The dataset types.
-    nsamples_vec = [nsamples_test, nsamples_train]
+    nsamples_all_data_sets = [nsamples_test, nsamples_train]
     if generalize:  # if we want also the CG dataset we add its name to the ds_type and the number of needed samples.
-        nsamples_vec.append(nsamples_val)
+        nsamples_all_data_sets.append(nsamples_val)
         ds_types.append('val')
         # Generating valid pairs we can sample from.
         valid_pairs, CG_chars_list = Get_valid_pairs_for_the_combinatorial_test(parser, nclasses,
@@ -444,7 +445,7 @@ def create_dataset(parser: argparse, raw_dataset, ds_type: DsType, language_list
 
     num_samples_per_data_type_dict = {}
     # Iterating over all dataset types and generating raw samples for each and then generating samples.
-    for k, (ds_type, cur_nsamples) in enumerate(zip(ds_types, nsamples_vec)):
+    for k, (ds_type, cur_nsamples) in enumerate(zip(ds_types, nsamples_all_data_sets)):
         samples = Generate_raw_samples(parser, raw_dataset, image_ids, k, ds_type, cur_nsamples, valid_pairs,
                                        valid_classes,
                                        CG_chars_list)

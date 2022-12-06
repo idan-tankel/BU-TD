@@ -19,17 +19,15 @@ from training.Utils import num_params
 
 def main(train_right, train_left, ds_type=DsType.Emnist, flag=Flag.CL, model_type=BUTDModel, task=(-1, 0)):
     parser = GetParser(task_idx=0, direction_idx=0, model_flag=flag, ds_type=ds_type, model_type=model_type)
-    # parser.ns = [0,3,3,3]
     project_path = Path(__file__).parents[1]
-    results_dir = os.path.join(project_path, 'data/{}/results/model'.format(str(ds_type)))
-    data_path = os.path.join(project_path, 'data/{}/samples/(4,4)_data_set_matrix_test_changes'.format(str(ds_type)))
-    tmpdir = os.path.join(project_path, 'Data_Creation/emnist/results/')
+    data_path = os.path.join(project_path, f'data/{str(ds_type)}/samples/(4,4)_data_set_matrix_test_changes2')
+    tmpdir = os.path.join(project_path, 'data/emnist/results/')
     now = datetime.now()
     time = now.strftime("%m.%d.%Y%H:%M:%S")
     Model_checkpoint = ModelCheckpoint(dirpath=tmpdir, monitor="val_loss_epoch", mode="min")
-    Checkpoint_saver = CheckpointSaver(dirpath=results_dir + time,store_running_statistics=flag is Flag.CL)
+    Checkpoint_saver = CheckpointSaver(dirpath=parser.results_dir + time, store_running_statistics=flag is Flag.CL)
     wandb_logger = WandbLogger(project="My_first_project_5.10", job_type='train',
-                               save_dir=results_dir)
+                               save_dir=parser.results_dir)
     trainer = pl.Trainer(accelerator='gpu', max_epochs=parser.EPOCHS, logger=wandb_logger, callbacks=[Model_checkpoint],
                          reload_dataloaders_every_n_epochs=1)
 
@@ -50,18 +48,18 @@ def main(train_right, train_left, ds_type=DsType.Emnist, flag=Flag.CL, model_typ
 
     if train_left:
         direction = task  #
-       # print(num_params(model.parameters()))
-        training_flag = Training_flag(parser,train_task_embedding=True,  train_head=True)
+        # print(num_params(model.parameters()))
+        training_flag = Training_flag(parser, train_task_embedding=True, train_head=True)
         learned_params = training_flag.Get_learned_params(model, task_idx=0, direction=task)
         DataLoaders = get_dataset_for_spatial_relations(parser, data_path, lang_idx=0, direction_tuple=direction)
         wrapped_model = ModelWrapped(parser, model, learned_params, check_point=Checkpoint_saver,
                                      direction_tuple=direction,
                                      task_id=0,
                                      nbatches_train=len(DataLoaders['train_dl']))
-        wrapped_model.load_model(model_path='model_right_(6,1)/BUTDModel_best_direction=(1, 0).pt')
-      #  print(wrapped_model.Accuracy(DataLoaders['test_dl']))
+        wrapped_model.load_model(model_path='Model_right_new_version/BUTDModel_epoch68_direction=(1, 0).pt')
+        #  print(wrapped_model.Accuracy(DataLoaders['test_dl']))
         #  parser.model = model
         trainer.fit(wrapped_model, train_dataloaders=DataLoaders['train_dl'], val_dataloaders=DataLoaders['test_dl'])
 
 
-main(True, True, ds_type=DsType.Emnist, model_type=BUTDModel, flag=Flag.CL, task=(-2,0))
+main(True, True, ds_type=DsType.Emnist, model_type=BUTDModel, flag=Flag.CL, task=(-1, 0))

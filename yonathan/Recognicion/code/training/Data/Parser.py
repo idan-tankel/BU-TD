@@ -1,7 +1,7 @@
 import argparse
 import os
 from datetime import datetime
-from typing import Callable
+from typing import Callable, Union
 
 import torch
 import torch.nn as nn
@@ -14,7 +14,7 @@ from training.Modules.Model_Blocks import BasicBlockTD, BasicBlockBU, BasicBlock
 from training.Modules.Models import BUTDModel, ResNet
 
 
-def GetParser(task_idx: int = 0, direction_idx: int = 0, model_type: nn.Module = BUTDModel,
+def GetParser(task_idx: int = 0, direction_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDModel,
               model_flag: Flag = Flag.NOFLAG, ds_type: DsType = DsType.Emnist):
     """
     Args:
@@ -38,7 +38,7 @@ def GetParser(task_idx: int = 0, direction_idx: int = 0, model_type: nn.Module =
                                            initial_task_for_omniglot_only=5)
     parser = argparse.ArgumentParser()
     # Flags.
-    parser.add_argument('--ds_type', default=ds_type, type=DsType, help='Flag that defines the Data_Creation-set type')
+    parser.add_argument('--ds_type', default=ds_type, type=DsType, help='Flag that defines the data-set type')
     parser.add_argument('--model_flag', default=model_flag, type=Flag, help='Flag that defines the model type')
     # Optimization arguments.
     parser.add_argument('--wd', default=0.00001, type=float, help='The weight decay of the Adam optimizer')

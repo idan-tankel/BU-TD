@@ -39,7 +39,7 @@ def get_omniglot_dictionary(num_tasks: int, raw_data_folderpath: str) -> dict:
     Getting the omniglot dictionary, for each task the number of characters in it.
     Args:
         num_tasks: The initial tasks set.
-        raw_data_folderpath: The path to the raw Data_Creation.
+        raw_data_folderpath: The path to the raw data.
 
     Returns: A dictionary assigning for each task its number of characters.
 
@@ -112,7 +112,7 @@ def create_optimizer_and_scheduler(opts: argparse, learned_params: list, nbatche
     Args:
         opts: The model options.
         learned_params: The learned parameters.
-        nbatches_train: The number of batches in the Data_Creation-loader
+        nbatches_train: The number of batches in the data-loader
 
     Returns: Optimizer, scheduler.
 

@@ -129,19 +129,19 @@ class Modulation_and_Lat(nn.Module):
         return x
 
 class Modulation(nn.Module):  # Modulation layer.
-    def __init__(self, opts: argparse, shape: list, pixel_modulation: bool, task_embedding: list):
+    def __init__(self, opts: argparse, shape: list, column_modulation: bool, task_embedding: list):
         """
         Channel & pixel modulation layer.
         The main idea of the paper allowing continual learning without forgetting.
         Args:
             opts: The model options.
             shape: The shape to create the model according to.
-            pixel_modulation: Whether to create pixel/channel modulation.
+            column_modulation: Whether to create pixel/channel modulation.
         """
         super(Modulation, self).__init__()
         self.opts = opts # Store the model opts.
         self.modulations = nn.ParameterList()  # Module list containing modulation for all directions.
-        if pixel_modulation:
+        if column_modulation:
             size = [1, *shape]  # If pixel modulation matches the inner spatial of the input
         else:
             size = [shape, 1, 1]  # If channel modulation matches the number of channels

@@ -37,11 +37,10 @@ def Download_raw_omniglot_data(raw_data_path: str) -> dict:
         raw_data_path: The path we want to store into.
 
     """
-    # Raw_data_path = os.path.join(Path(__file__).parents[3], 'Data_Creation/Omniglot/RAW')
     if not os.path.exists(raw_data_path):
         datasets.Omniglot(download=True, root=raw_data_path, background=True)
         datasets.Omniglot(download=True, root=raw_data_path, background=False)
-        # Both Data_Creation types.
+        # Both data types.
         list_dir = ['images_background', 'images_evaluation']
         current_folder = os.path.join(raw_data_path, 'omniglot-py')
         content_list = {}

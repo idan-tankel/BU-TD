@@ -64,6 +64,9 @@ class ModelWrapped(LightningModule):
         _ , acc = self.accuracy(samples, outs)  # The Accuracy.
         self.log('train_loss', loss, on_step=True, on_epoch=True, logger=True)  # Update loss.
         self.log('train_acc', acc, on_step=True, on_epoch=True, logger=True)  # Update acc.
+     #   for param in self.learned_params:
+     #       if param.grad is None:
+     #           print(param)
         return loss  # Return the loss.
 
     def validation_step(self, batch: list[torch], batch_idx: int) -> float:
@@ -116,9 +119,9 @@ class ModelWrapped(LightningModule):
     def Accuracy(self, dl: DataLoader) -> float:
         """
         Args:
-            dl: The Data_Creation loader we desire to test.
+            dl: The data loader we desire to test.
 
-        Returns: The overall Accuracy over the Data_Creation-set.
+        Returns: The overall Accuracy over the data-set.
 
         """
         acc = 0.0
@@ -143,6 +146,6 @@ class ModelWrapped(LightningModule):
         """
         results_path = self.opts.results_dir  # Getting the result dir.
         model_path = os.path.join(results_path, model_path)  # The path to the model.
-        checkpoint = torch.load(model_path)  # Loading the saved Data_Creation.
+        checkpoint = torch.load(model_path)  # Loading the saved data.
         self.model.load_state_dict(checkpoint['model_state_dict'])  # Loading the saved weights.
         return checkpoint

@@ -16,17 +16,20 @@ import skimage.io
 import torchvision
 from torchvision import datasets
 from torchvision import transforms
-from utils import Download_raw_omniglot_data
+try:
+    from utils import Download_raw_omniglot_data
+except ModuleNotFoundError:
+    pass
 
 from typing import Union
 
 
-# Here we define all our classes like transforms, Data_Creation set type, Sample, Char.
+# Here we define all our classes like transforms, data set type, Sample, Char.
 
 
 class DsType(Enum):
     """
-    Here we define our Data_Creation set types.
+    Here we define our data set types.
     """
     Emnist = 'Emnist'
     Omniglot = 'Omniglot'
@@ -39,9 +42,9 @@ class DsType(Enum):
 class General_raw_data(Dataset):
     def __init__(self, download_dir: str):
         """
-        We created Data_Creation class to handle retrieving raw character images.
+        We created data class to handle retrieving raw character images.
         Args:
-            download_dir: The path download the raw Data_Creation into.
+            download_dir: The path download the raw data into.
         """
         self.download_dir = download_dir  # Download path.
         self.raw_images = None  # The raw images.
@@ -91,32 +94,33 @@ class Emnist_raw_data(General_raw_data):
     def __init__(self, download_dir):
         """
         Args:
-            download_dir: The path download the raw Data_Creation into.
+            download_dir: The path download the raw data into.
         """
         super().__init__(download_dir)
-        self.transform = torchvision.transforms.Compose([
+        # Rotation transform, as the emnist images come rotated and flipped.
+        self.emnist_transform = torchvision.transforms.Compose([
             lambda data_image: torchvision.transforms.functional.rotate(
                 data_image, -90),
             lambda data_image: torchvision.transforms.functional.hflip(data_image),
             torchvision.transforms.ToTensor()
         ])
-        # Train Data_Creation.
+        # Train Data.
         train_raw_dataset = datasets.EMNIST(
             download_dir,
             download=True,
             split='balanced',
             train=True,
-            transform=self.transform)
+            transform=self.emnist_transform)
 
-        # Test Data_Creation.
+        # Test Data.
         test_raw_dataset = datasets.EMNIST(
             download_dir,
             download=True,
             split='balanced',
             train=False,
-            transform=self.transform)
+            transform=self.emnist_transform)
 
-        self.nclasses = 47  # 47 classes.
+        self.nclasses = 47  # There are 47 classes.
         self.raw_images, self.labels = self.Merge_two_datasets(train_raw_dataset,
                                                                test_raw_dataset)  # Merge the two datasets.
         self.num_examples_per_character = len(self.raw_images) // 47
@@ -125,17 +129,19 @@ class Emnist_raw_data(General_raw_data):
 class FashionMnist_raw_data(General_raw_data):
     def __init__(self, download_dir: str):
         """
-        Fashionmnist raw Data_Creation.
+        Fashionmnist raw Data.
         Args:
-            download_dir: The path download the raw Data_Creation into.
+            download_dir: The path download the raw Data into.
         """
         super().__init__(download_dir)
+        # Train Data.
         train_raw_dataset = datasets.FashionMNIST(
             download_dir, train=True, download=True)
-        # Test Data_Creation.
+        # Test Data.
         test_raw_dataset = datasets.FashionMNIST(
             download_dir, train=False, download=True)
-        self.nclasses = 10
+        self.nclasses = 10 # Ten classes.
+        # Merge the data.
         self.raw_images, self.labels = self.Merge_two_datasets(train_raw_dataset, test_raw_dataset)
         self.num_examples_per_character = len(self.raw_images) // 10
 
@@ -144,17 +150,21 @@ class Omniglot_data_set(General_raw_data):
     def __init__(self, download_dir, language_list):
         """
         Args:
-            download_dir: The path download the raw Data_Creation into.
+            download_dir: The path download the raw Data into.
             language_list: The list of desired languages.
         """
         super().__init__(download_dir=download_dir)
-        self.raw_data_source = os.path.join(Path(__file__).parents[3], 'Data_Creation/Omniglot/RAW/omniglot-py/Unified')
-        new_dict = Download_raw_omniglot_data(download_dir)
+        # The raw data path.
+        self.raw_data_source = os.path.join(Path(__file__).parents[3], 'data/Omniglot/RAW/omniglot-py/Unified')
+        # Make the Omniglot dictionary.
+        Omniglot_dict = Download_raw_omniglot_data(download_dir)
+        # List of all languages, ordered by number of characters.
+        All_languages = list(Omniglot_dict)
+        # Transform to make tensors.
         transform = transforms.Compose(
             [transforms.ToTensor(), transforms.functional.invert, transforms.Resize(self.shape[1:])])
         self.Images_arranged = []
         # Iterate over all languages in language_list.
-        All_languages = list(new_dict)
         for lan_idx in language_list:
             lan = os.path.join(self.raw_data_source, All_languages[lan_idx])  # The langauge
             language_images = [os.path.join(dp, f) for dp, dn, filenames in os.walk(lan) for f in
@@ -170,14 +180,14 @@ class Omniglot_data_set(General_raw_data):
 class GenericDatasetParams:
     def __init__(self, ds_type: DsType, num_cols: int, num_rows: int):
         """
-        Here we define Generic Data_Creation set params for the transformation.
+        Here we define Generic Data set params for the transformation.
         We declare on variables, any user will need to define.
         Args:
-            ds_type: The Data_Creation-set type.
+            ds_type: The data-set type.
             num_cols: The number of columns.
             num_rows: The number of rows
         """
-        self.ds_type: DsType = ds_type  # The Data_Creation-set type.
+        self.ds_type: DsType = ds_type  # The data-set type.
         self.letter_size: int = 28  # The letter size is always 28.
         self.min_scale = None  # The minimal scale factor we apply.
         self.max_scale = None  # The maximal scale factor we apply.
@@ -192,7 +202,7 @@ class GenericDatasetParams:
         self.nsamples_test = None  # The number of test samples.
         self.nsamples_val = None  # The number of samples for the CG test.
         self.Data_path = os.path.join(Path(__file__).parents[2],
-                                      f'data/{str(ds_type)}/RAW')  # The path to the raw Data_Creation.
+                                      f'data/{str(ds_type)}/RAW')  # The path to the raw Data.
         # This is the rule, we define the number of samples we generate per chosen sequence.
         if num_rows == 1 or num_cols == 1:
             self.ngenerate = num_rows - 1 if num_cols == 1 else num_cols - 1
@@ -203,7 +213,7 @@ class GenericDatasetParams:
 class EmnistParams(GenericDatasetParams):
     def __init__(self, ds_type: DsType, num_cols: int, num_rows: int):
         """
-        Here we define the Emnist Data_Creation-set specification.
+        Here we define the Emnist data-set specification.
         Those params help the model to generalize and the output images that are understandable.
         Args:
             num_cols: The number of columns.
@@ -227,7 +237,7 @@ class EmnistParams(GenericDatasetParams):
 class FashionMnistParams(GenericDatasetParams):
     def __init__(self, ds_type, num_cols: int, num_rows: int):
         """
-        Here we define the Fashion-Mnist Data_Creation-set specification.
+        Here we define the Fashion-Mnist data-set specification.
         Those params help the model to generalize and the output images are understandable.
         Args:
             num_cols: The number of columns.
@@ -249,7 +259,7 @@ class FashionMnistParams(GenericDatasetParams):
 class OmniglotParams(GenericDatasetParams):
     def __init__(self, ds_type: DsType, num_cols: int, num_rows: int, language_list):
         """
-        Here we define the Omniglot Data_Creation-set specification.
+        Here we define the Omniglot data-set specification.
         Those params help the model to generalize and the output images are understandable.
         Args:
             num_cols: The number of columns.
@@ -272,9 +282,9 @@ class UnifiedDataSetType:
     def __init__(self, ds_type: DsType, num_cols: int, num_rows: int, language_list: Union[list, None]):
         """
         Supports all datasets.
-        Given dataset type we create the desired Data_Creation-set specification.
+        Given dataset type we create the desired data-set specification.
         Args:
-            ds_type: The Data_Creation set types.
+            ds_type: The data set types.
             num_cols: The number of cols
             num_rows: The number of rows.
         """
@@ -297,10 +307,10 @@ class CharInfo:
             sample_id: The sample id.
             sample_chars: The sampled characters list
         """
-        min_scale = parser.minscale
-        max_scale = parser.maxscale
-        min_shift = parser.minshift
-        max_shift = parser.maxshift
+        min_scale = parser.min_scale
+        max_scale = parser.max_scale
+        min_shift = parser.min_shift
+        max_shift = parser.max_shift
         self.scale = prng.rand() * (max_scale - min_scale) + min_scale
         letter_size = parser.letter_size
         new_size = int(self.scale * parser.letter_size)
@@ -319,7 +329,7 @@ class CharInfo:
         num_examples_per_character = raw_dataset.num_examples_per_character
         self.label = sample_chars[sample_id]
         self.label_id = prng.randint(0, num_examples_per_character)  # Choose a specific character image.
-        # The index in the Data_Creation-loader.
+        # The index in the data-loader.
         self.img_id = num_examples_per_character * self.label + self.label_id
         self.img, _ = raw_dataset[self.img_id]  # The character image.
         self.letter_size = letter_size
@@ -383,7 +393,7 @@ class DataAugmentClass:
 
     def __call__(self, image: np.ndarray):
         """
-        Applying the Data_Creation augmentation on the image.
+        Applying the data augmentation on the image.
         Args:
             image: The image we want to apply the transform on.
 

@@ -26,12 +26,12 @@ class DataSetBase(Dataset):
                  nexamples: Union[int, None] = None):
         """
         Args:
-            root: The root to the Data_Creation.
+            root: The root to the data.
             nclasses:
             ndirections: The number of classes.
             nexamples: The number of classes.
         """
-        self.root: str = root  # The path to the Data_Creation
+        self.root: str = root  # The path to the data.
         self.nclasses: int = nclasses  # The number of classes.
         self.ndirections: int = ndirections  # The number of directions.
         self.is_train: bool = is_train  # Is this a training set.
@@ -101,7 +101,7 @@ class DatasetGuided(DataSetBase):
         """
         Guided Dataset
         Args:
-            root: Path to the Data_Creation.
+            root: Path to the data.
             opts: The model options.
             nexamples: The number of examples.
             task_idx: The language index.
@@ -217,7 +217,7 @@ class DatasetNonGuided(DatasetGuided):
         Args:
             index: The index.
 
-        Returns: The sample Data_Creation.
+        Returns: The sample data.
 
         """
         img, label_task, flag, label_all, label_existence = super().__getitem__(index)  # The same get item.
