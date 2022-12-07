@@ -44,7 +44,7 @@ compatibility_dataset = DatasetAllDataSetTypesAll(root=rf'/home/idanta/data/6_ex
                                                   is_train=True, obj_per_row=6, obj_per_col=1, split=False,nexamples=100000)
 compatibility_dl = DataLoader(compatibility_dataset, batch_size=global_config.Training.batch_size,
                               num_workers=global_config.Training.num_workers)
-wandb_logger = WandbLogger(project="My_first_project_5.10",
+wandb_logger = WandbLogger(project="BU_TD",
                            job_type='train', log_model=True, save_dir=results_dir)
 wandb_checkpoints = ModelCheckpoint(
     dirpath=checkpoints_dir, monitor="train_loss_epoch", mode="min")

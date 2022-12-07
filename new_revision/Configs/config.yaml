@@ -51,7 +51,7 @@ Models:
   image_size: 224 # int, the size of the image to be used in the model
   num_channels: 3
   num_classes: 48 # the number of classes within the dataset TOOD
-  number_of_linear_heads: 47 # each linear head correspond to a class in the MultiHeadAttention
+  number_of_linear_heads: 6 # each linear head correspond to a class in the MultiHeadAttention
   strides: [2, 2, 1, 2]
   nfilters: [128,1000] # For CCT
   ns: [0, 1, 1, 1] # the number of blocks in 

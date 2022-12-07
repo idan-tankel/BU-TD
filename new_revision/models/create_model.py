@@ -38,9 +38,10 @@ class ModelWrapper(
         x_hat = self.model(x)
         y.squeeze_()
         y.to(device("cuda") if cuda.is_available() else device("cpu"))
-        loss = nn.CrossEntropyLoss(reduction='mean')(x_hat.logits, y)
+        label_task_by_existence = batch['label_task'].gather(index=batch['label_all'].squeeze(1),dim=1)
+        loss = nn.CrossEntropyLoss(reduction='mean')(x_hat.logits, label_task_by_existence)
         pred = x_hat.logits.argmax(dim=1)
-        acc = 1 - (x_hat.logits.argmax(dim=1) - y).count_nonzero() / y.numel()
+        acc = 1 - (x_hat.logits.argmax(dim=1) - label_task_by_existence).count_nonzero() / label_task_by_existence.numel()
         non_naive_ratio = (pred != 47).sum() / pred.numel()
         self.log('train_loss', loss, on_step=True, on_epoch=True, logger=True)
         self.log('train_acc', acc, on_step=True, on_epoch=True, logger=True)
@@ -64,10 +65,12 @@ class ModelWrapper(
             x_hat = self.model(x)
             y.squeeze_()
             y.to(device("cuda") if cuda.is_available() else device("cpu"))
-            loss = nn.CrossEntropyLoss(reduction='mean')(x_hat.logits, y)
+            z = y * batch['label_existence']
+            label_task_by_existence = batch['label_task'].gather(index=batch['label_all'].squeeze(1),dim=1)
+            loss = nn.CrossEntropyLoss(reduction='mean')(x_hat.logits, label_task_by_existence)
             pred = x_hat.logits.argmax(dim=1)
             acc = 1 - (pred -
-                       y).count_nonzero() / y.numel()
+                       label_task_by_existence).count_nonzero() / label_task_by_existence.numel()
             # this is the distance from the naive classifier - classifing all to the most common class - edge case
             # 47 is the enumeration of the N.A class
             non_naive_ratio = (pred != 47).sum() / pred.numel()
