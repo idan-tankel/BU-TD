@@ -1,0 +1,26 @@
+# .github/release.yml
+
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+    authors:
+      - yonsver
+      - tankwell
+  categories:
+    - title: Changes 🛠
+      labels:
+        - Semver-Major
+        - breaking-change
+    - title: Exciting New Features 🎉
+      labels:
+        - new-knowledge-here
+        - new-frameworks-here
+        - enhancement
+    - title: deprecated 😶
+      labels:
+        - we will not further use
+        - will be removed soon
+    - title: Other Changes
+      labels:
+        - "*"
