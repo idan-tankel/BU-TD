@@ -1286,7 +1286,7 @@ def save_model_and_md(model_fname,metadata,epoch, opts):
 
 def load_model(opts,model_latest_fname,gpu=None):
     if gpu is None:
-        checkpoint = torch.load(model_latest_fname)
+        checkpoint = torch.load(model_latest_fname, map_location=torch.device('cpu'))
     else:
         # Map model to be loaded to specified single gpu.
         loc = 'cuda:{}'.format(gpu)

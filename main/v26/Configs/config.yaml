@@ -1,0 +1,39 @@
+Visibility:
+  interactiveSession: True
+
+RunningSpecs:
+  distributed: False
+  FlagAt: NOFLAG
+  isFit: True
+
+Datasets:
+  dummyds: False
+
+Logging:
+  ENABLE_LOGGING: True
+
+Folders:
+  data_dir: "../data" # relative to (?)
+  avatars: "avatars"
+  samples: "samples"
+  conf: "conf"
+  results: "results"
+
+strings:
+  features_strings:
+    - "Avatar"
+    - "Tilt"
+    - "Background type"
+    - "Clothes type"
+    - "Glasses type"
+    - "Hair type"
+    - "Mustache type"
+
+Losses:
+  use_td_loss: False
+  use_bu1_loss: False
+  use_bu2_loss: True
+
+Models:
+  features: "all"
+  num_heads: "only_features"
