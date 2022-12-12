@@ -89,7 +89,7 @@ def get_laterals(laterals: list[torch], layer_id: int, block_id: int) -> torch:
     return layer_lats
 
 
-def num_params(params: Union[list, Iterator]) -> int:
+def num_params(params: Union[Iterator]) -> int:
     """
     Computing the number of parameters in a given list.
     Args:
@@ -128,7 +128,7 @@ def create_optimizer_and_scheduler(opts: argparse, learned_params: list, nbatche
                                                 step_size_up=nbatches_train // 2,
                                                 cycle_momentum=False)
     else:
-        scheduler = None
+        scheduler = optim.lr_scheduler.StepLR(optimizer = optimizer,step_size = nbatches_train//4,gamma=0.9)
 
     return optimizer, scheduler
 

@@ -251,7 +251,7 @@ class BasicBlockTD(nn.Module):
     # The same architecture as in BU just instead of downsample by stride factor we upsample by stride factor.
     expansion = 1
 
-    def __init__(self, opts: argparse, in_channels: int, out_channels: int, stride: int, shape: np.ndarray):
+    def __init__(self, opts: argparse, in_channels: int, out_channels: int, stride: int, shape: np.ndarray,index:int):
         """
         Args:
             opts: The model options.
@@ -262,6 +262,7 @@ class BasicBlockTD(nn.Module):
         """
         super(BasicBlockTD, self).__init__()
         self.ntasks = opts.ntasks  # The number of tasks.
+        self.index = index
         self.use_lateral = opts.use_lateral_butd  # Whether to use the laterals from TD to BU.
         size = tuple(shape[1:])  # The shape upsample to.
         if self.use_lateral:
@@ -277,6 +278,7 @@ class BasicBlockTD(nn.Module):
      #   self.conv2_norm = opts.norm_layer(opts, out_channels)  # The second BN.
         self.relu3 = opts.activation_fun()  # The third AF.
         out_channels = out_channels * BasicBlockTD.expansion
+        self.upsample = None
         if stride > 1:
             # upsample the skip connection.
             self.upsample = nn.Sequential(nn.Upsample(size=size, mode='bilinear', align_corners=False),

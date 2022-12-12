@@ -161,6 +161,7 @@ class Modulation(nn.Module):  # Modulation layer.
 
         """
         direction_id = flag_to_idx(flag)  # Compute the index of the one-hot.
+    #    print(direction_id)
         task_emb = self.modulations[direction_id]  # compute the task embedding according to the direction_idx.
         output = x * (1 - task_emb)  # perform the modulation.
         return output

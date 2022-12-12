@@ -19,7 +19,7 @@ class inputs_to_struct:
         self.image = img  # The image.
         self.label_all = label_all  # The label all.
         self.label_existence = label_existence  # The label existence.
-        self.label_task = label_task  # The label task.
+        self.label_task = label_task.squeeze()  # The label task.
         self.flag = flag  # The flag.
 
 
@@ -72,6 +72,7 @@ class Training_flag:
         learned_params = []
         if self.task_embedding:
             # Training the task embedding associate with the direction.
+            print(direction_idx)
             learned_params.extend(model.TE[direction_idx])
         if self.head_learning:
             # Train the task-head associated with the task, direction.

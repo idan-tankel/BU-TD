@@ -27,7 +27,7 @@ def Get_parser(ds_type: DsType = DsType.Emnist, num_cols=6, num_rows=1, language
     parser.add_argument('--folder_size', default=1000, type=int, help=' The folder size')
     parser.add_argument('--augment_sample', default=True, type=bool, help='Whether to augment the sample')
     parser.add_argument('--letter_size', default=Ds_obj.ds_obj.letter_size, type=int, help='The basic letter size')
-    parser.add_argument('--nthreads', default=10, type=int, help='The number of threads in each job')
+    parser.add_argument('--nthreads', default=1, type=int, help='The number of threads in each job')
     parser.add_argument('--nsamples_train', default=Ds_obj.ds_obj.nsamples_train,
                         type=int, help='The number of samples in the train set')
     parser.add_argument('--nsamples_test', default=Ds_obj.ds_obj.nsamples_test,

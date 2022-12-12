@@ -37,10 +37,17 @@ def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, lang_idx:
     with open(path_fname, "rb") as new_data_file:
         MetaData = pickle.load(new_data_file)
 
-    image_size = MetaData.parser.image_size  # Get the image size.
-    opts.inshape = (3, *image_size[1:])  # Updating the image size according to the actual data.
-    obj_per_row = MetaData.parser.num_cols  # Getting the number of chars per row.
-    obj_per_col = MetaData.parser.num_rows  # Getting the number of chars per col.
+    try:
+        image_size = MetaData.parser.image_size  # Get the image size.
+        opts.inshape = (3, *image_size[1:])  # Updating the image size according to the actual data.
+        obj_per_row = MetaData.parser.num_cols  # Getting the number of chars per row.
+        obj_per_col = MetaData.parser.num_rows  # Getting the number of chars per col.
+    except AttributeError:
+        image_size = MetaData.image_size  # Get the image size.
+        opts.inshape = (3, *image_size[1:])  # Updating the image size according to the actual data.
+        obj_per_row = MetaData.num_cols  # Getting the number of chars per row.
+        obj_per_col = MetaData.num_rows  # Getting the number of chars per col.
+
     nsamples_train = MetaData.nsamples_dict['train']  # Getting the number of train samples.
     nsamples_test = MetaData.nsamples_dict['test']  # Getting the number of test  samples.
     # if there is no validation set, then the number of samples in the validation set is 0.

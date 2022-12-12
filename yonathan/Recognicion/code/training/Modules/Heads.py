@@ -56,7 +56,7 @@ class MultiTaskHead(nn.Module):
         self.ndirections = opts.ndirections  # The number of directions.
         self.num_heads = opts.num_heads  # The number of heads.
         self.num_classes = opts.nclasses  # The number of classes for each task to create the head according to.
-        self.taskhead = nn.ModuleList()
+        self.taskhead = nn.ModuleList() # TODO - CHANGE TO LIST OF LISTS.
         # For each task, direction create its task-head according to num_classes.
         for i in range(self.ntasks):
             for j in range(self.ndirections):
@@ -76,6 +76,7 @@ class MultiTaskHead(nn.Module):
         """
         (bu2_out, flag) = inputs
         task_id = Flag_to_task(self.opts, flag)  # Get the task id.
+       # print(task_id)
         task_out = self.taskhead[task_id](bu2_out).squeeze()  # apply the appropriate task-head.
         return task_out
 

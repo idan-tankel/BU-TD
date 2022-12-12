@@ -32,6 +32,7 @@ class ModelWrapped(LightningModule):
             nbatches_train: The number of batches to train.
         """
         super().__init__()
+        self.automatic_optimization = True
         self.model: nn.Module = model  # The model.
         self.learned_params: list = learned_params  # The learned parameters.
         self.loss_fun: Callable = opts.criterion  # The loss criterion.
@@ -64,10 +65,18 @@ class ModelWrapped(LightningModule):
         _ , acc = self.accuracy(samples, outs)  # The Accuracy.
         self.log('train_loss', loss, on_step=True, on_epoch=True, logger=True)  # Update loss.
         self.log('train_acc', acc, on_step=True, on_epoch=True, logger=True)  # Update acc.
+      #  loss.backward()
+       # sum = 0.0
      #   for param in self.learned_params:
-     #       if param.grad is None:
-     #           print(param)
+       #         print(param.grad)
+     #   print(sum)
+     #   sum=0
+    #    print(self.scheduler.get_last_lr())
         return loss  # Return the loss.
+
+   # def lr_scheduler_step(self,scheduler, optimizer_idx, metric):
+       # print(scheduler.get_last_lr())
+ #       scheduler.step()
 
     def validation_step(self, batch: list[torch], batch_idx: int) -> float:
         """

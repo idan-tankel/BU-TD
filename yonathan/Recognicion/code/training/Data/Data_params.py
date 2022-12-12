@@ -50,7 +50,7 @@ class GenericDataParams:
         # The number of classes for each task, 47 for mnist, 10 for fashion and for Omniglot its dictionary.
         self.nclasses: dict = {i: 47 for i in range(self.ndirections)}
         self.results_dir: str = os.path.join(self.project_path,
-                                             f'data/{str(ds_type)}/results')  # The trained model directory.
+                                             f'data/{str(ds_type)}/results/')  # The trained model directory.
         self.use_bu1_loss: bool = True if flag_at is not Flag.NOFLAG \
             else False  # Whether to use the bu1 loss.
         # TODO - SHOULD BE DELETED.

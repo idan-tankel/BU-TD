@@ -224,12 +224,12 @@ class TDModel(nn.Module):
 
         """
         layers = nn.ModuleList()
-        for _ in range(1, num_blocks):  # Create shape preserving blocks.
-            block_inshape = self.inshapes[index - 1]
-            newblock = self.block(self.opts, inplanes, inplanes, 1, block_inshape)
+        block_inshape = self.inshapes[index - 1]
+        for i in range(num_blocks - 1):  # Create shape preserving blocks.
+            newblock = self.block(self.opts, inplanes, inplanes, 1, block_inshape,index = i)
             layers.append(newblock)
-        block_inshape = self.inshapes[index - 1]  # Compute the shape upsample to.
-        newblock = self.block(self.opts, inplanes, planes, stride, block_inshape)  # Create upsampling block.
+     #   block_inshape = self.inshapes[index - 1]  # Compute the shape upsample to.
+        newblock = self.block(self.opts, inplanes, planes, stride, block_inshape,index = num_blocks - 1)  # Create upsampling block.
         layers.append(newblock)
         return layers
 
@@ -256,7 +256,8 @@ class TDModel(nn.Module):
         for layer_id, layer in enumerate(self.alllayers):  # Iterating over all layers in the stream.
             layer_lats_out = []  # The lateral connections for the BU2 stream.
             for block_id, block in enumerate(layer):  # Iterating over all blocks in the layer.
-                reverse_cur_lat_in = get_laterals(reverse_laterals_in, layer_id + 1, block_id)[
+                block_id_rev = len(layer) - block_id - 1
+                reverse_cur_lat_in = get_laterals(reverse_laterals_in, layer_id + 1, block_id_rev)[
                                      ::-1]  # Inverting the laterals to match the desired shape.
                 # Compute the block output using x, and the lateral connections.
                 x, block_lats_out = block(x, reverse_cur_lat_in)
