@@ -1,4 +1,4 @@
-# Zero Forgetting - continual learning
+# BU-TD
 ## Official code for the paper [Image interpretation by iterative bottom-up top-down processing](https://arxiv.org/abs/2105.05592)
 [![arXiv](https://img.shields.io/badge/arXiv-2108.00946-b31b1b.svg)](https://arxiv.org/abs/2105.05592)
 
@@ -19,6 +19,12 @@ Requirements are in requirements.txt and can also be installed by:
 For image augmentation also install:
 
 `conda install imgaug py-opencv`
+
+you can also use the environment available here
+
+`conda install -f environment.yml`
+
+on the project root dir
 
 ## Persons details
 ![persons](/figures/persons.png)
@@ -60,6 +66,18 @@ A folder with all the learned models and a log file will be created under the `d
 
 ## Extracting scene structures
 Code will be added soon.
+
+## Training with pytorch lightning trainer
+
+*see also *
+
+we have added this trainer here
+
+`python new_revision/trainer.py`
+
+## Config files for experiments
+
+In order to keep all your experiments centered, there is an option to load custom config file 
 
 ## Paper
 If you find our work useful in your research or publication, please cite our work:
