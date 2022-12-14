@@ -27,9 +27,14 @@ class Config:
             Training: the Training options, including epochs, batch size, larning rate, etc.
     """
 
-    def __init__(self):
-        path = "config.yaml"
-        full_path = os.path.join(os.path.dirname(__file__), path)
+    def __init__(self,experiment_filename="config.yaml"):
+        """
+        __init__ Constructs the config object from the config.yaml file. The default file is config.yaml
+
+        Args:
+            experiment_filename (str, optional): the path to the config file. This config file must have the same scheme as the original config.yaml file. Defaults to "config.yaml".
+        """        
+        full_path = os.path.join(os.path.dirname(__file__), experiment_filename)
         with open(full_path, 'r') as stream:
             self.__config = yaml.safe_load(stream)
         self.Visibility = Visibility(self.__config['Visibility'])

@@ -21,7 +21,7 @@ Logging:
 
 Folders:
   data_dir: "../data" # relative to (?)
-  avatars: "avatars"
+  avatars: "avatars" # what is this?
   samples: "samples"
   conf: "conf"
   results: "results"
@@ -56,7 +56,7 @@ Models:
   nfilters: [128,1000] # For CCT
   ns: [0, 1, 1, 1] # the number of blocks in 
   ks: [7, 3, 3, 3] # kernel size 
-  num_attention_heads: 2 # the number of attention heads in the MultiHeadAttention
+  num_attention_heads: 2 # (`int`) the number of attention heads in the MultiHeadAttention
   ntaskhead_fc: 1 # get out only 1 task!
   use_lateral_tdbu: True  # ('bool') use lateral connections in the TDBU
   use_lateral_butd: True # ('bool') use lateral connections in the TDBU
@@ -66,8 +66,7 @@ Models:
   norm_layer: BatchNorm # (`nn.Module`) one of the supported normalization layers
   # Notice! this option affected also from training / dataset requirements
   ntasks: 6 # (`int`) the number of tasks to train on. Will determine the number of heads in the model
-  pretrained_model_name:    # (`str`) the url to the pretrained model in huggingface.co
-  
+  pretrained_model_name:   # (`str`) the url to the pretrained model in huggingface.co
 
 
 # Some other model params are initialized in the function `init_model_options` under `v26.functions.inits.py`
@@ -75,20 +74,20 @@ Models:
 
 
 Training:
-  batch_size: !!int 10 # batch size (int)
+  batch_size: 10 # batch size (int)
   num_workers: 48
   epochs: 200
   momentum: 0.9 # (`float`) Momentum of the Adam optimizer
   wd: 0.001 #(`float`) The weight decay of the Adam optimizer
-  lr: 1e-2 # (`float`)the initial learning rate # TODO support in also multiplication
+  lr: 1e-3 # (`float`)the initial learning rate # TODO support in also multiplication
   max_lr: 0.002  # (`float`) the maximum learning rate
   distributed: False # whether to use distributed data within training - accross some GPUs using DistributedSampler of torch
   cycle_lr: True # (`bool`) whether to cycle the learning rate
-  base_lr: 0.0005 # (`float`) the base learning rate for the cyclic_adam_optimizer, if used
+  base_lr: 0.0001 # (`float`) the base learning rate for the cyclic_adam_optimizer, if used
   optimizer: Adam  # (`str`) the optimizer to use. ['Adam','SGD']
   # checkpoints and saving options
-  load_existing_path: True # (`bool`) whether to load an existing model from the path specified in `path_loading`. Default to false
-  path_loading: "/home/idanta/data/emnist/checkpoints/epoch=192-step=1930000.ckpt" # (`str`) the path to load an existing model, pretrained (should be a .pt file)
+  load_existing_path: False # (`bool`) whether to load an existing model from the path specified in `path_loading`. Default to false
+  path_loading: "/home/idanta/data/emnist/checkpoints/epoch=172-step=1730000.ckpt" # (`str`) the path to load an existing model, pretrained (should be a .pt file)
   # furthermore, the path should contain model with the same structure, since this is a checkpoint
   save_model: True # (`bool`) whether to save the model
   epoch_save_idx: accuracy # (`str`) the metric to use for saving the model

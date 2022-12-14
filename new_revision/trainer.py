@@ -22,8 +22,7 @@ os.makedirs(data_dir, exist_ok=True)
 checkpoints_dir = rf"{git_root.parent}/data/emnist/checkpoints"
 os.makedirs(results_dir, exist_ok=True)
 
-global_config = Config()
-
+global_config = Config(experiment_filename="config.yaml")
 transform = transforms.Compose(
     [transforms.ToTensor(), transforms.Resize((224, 224))])
 # train_ds = datasets.Food101(
@@ -61,7 +60,8 @@ else:
             hidden_size=768,
             num_hidden_layers=4,
             num_classes=global_config.Models.num_classes,
-            qkv_bias=True
+            qkv_bias=True,
+            num_attention_heads=global_config.Models.num_attention_heads
         )
     )
 model = ModelWrapper(model=model, config=global_config)
@@ -69,12 +69,21 @@ model = ModelWrapper(model=model, config=global_config)
 
 
 wandb_logger.watch(model=model, log='all')
-trainer = pl.Trainer(accelerator='gpu', max_epochs=200,
+trainer = pl.Trainer(accelerator='gpu', max_epochs=300,
                      logger=wandb_logger, callbacks=[wandb_checkpoints])
 
 # load pretrained from some layer of the model
 old_model = load(f"{checkpoints_dir}/epoch=176-step=276651.ckpt")
 model.model.vit._load_from_state_dict(state_dict=old_model['state_dict'],prefix='model.vit.',strict=True,missing_keys=[],unexpected_keys=[],error_msgs=[],local_metadata={})
 
-trainer.fit(model=model, train_dataloaders=compatibility_dl,
-            val_dataloaders=compatibility_dl)
+# if the training has a previous checkpoint (differs from loading only model weights - this is also training params and epoch)
+kwargs = {
+        "model": model, 
+        "train_dataloaders": compatibility_dl,
+        "val_dataloaders": compatibility_dl,
+    }
+
+if global_config.Training.load_existing_path:
+    kwargs.update({"ckpt_path": global_config.Training.path_loading})
+
+trainer.fit(**kwargs)
