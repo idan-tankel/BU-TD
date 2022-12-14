@@ -76,7 +76,7 @@ trainer = pl.Trainer(accelerator='gpu', max_epochs=global_config.Training.epochs
 # load pretrained from some layer of the model
 old_model = load(f"{checkpoints_dir}/epoch=176-step=276651.ckpt")
 model.model.vit._load_from_state_dict(state_dict=old_model['state_dict'],prefix='model.vit.',strict=True,missing_keys=[],unexpected_keys=[],error_msgs=[],local_metadata={})
-trainer_ckpt = (if global_config.Training.load_existing_path global_config.Training.path_loading else None)
+trainer_ckpt = global_config.Training.path_loading if global_config.Training.load_existing_path  else None
 
 # if the training has a previous checkpoint (differs from loading only model weights - this is also training params and epoch)
 trainer.fit(model=model, train_dataloaders=compatibility_dl,
