@@ -1,3 +1,4 @@
+import copy
 import sys
 from torch.utils.data import Dataset
 from training.Utils import preprocess
@@ -30,7 +31,7 @@ class MyEWCPlugin(EWCPlugin):
         super().__init__(ewc_lambda=parser.EWC_lambda, mode=mode, decay_factor=decay_factor,
                          keep_importance_data=keep_importance_data)
         self.old_dataset = old_dataset
-        self.prev_model = prev_model
+        self.prev_model = copy.deepcopy(prev_model)
         self.parser = parser
         self.num_exp = 0
         self.inputs_to_struct = parser.inputs_to_struct

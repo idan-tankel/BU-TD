@@ -20,7 +20,7 @@ from training.Utils import num_params
 def main(train_right, train_left, ds_type=DsType.Emnist, flag=Flag.CL, model_type=BUTDModel, task=(-1, 0)):
     parser = GetParser(task_idx=0, direction_idx=0, model_flag=flag, ds_type=ds_type, model_type=model_type)
     project_path = Path(__file__).parents[1]
-    data_path = os.path.join(project_path, f'data/{str(ds_type)}/samples/(2,6)_Test_open_files')
+    data_path = os.path.join(project_path, f'data/{str(ds_type)}/samples/(4,4)_data_set_matrix_test_changes2')
     tmpdir = os.path.join(project_path, 'data/emnist/results/')
     now = datetime.now()
     time = now.strftime("%m.%d.%Y%H:%M:%S")
@@ -34,7 +34,7 @@ def main(train_right, train_left, ds_type=DsType.Emnist, flag=Flag.CL, model_typ
     model = create_model(parser)
     if train_right:
         training_flag = Training_flag(parser, train_all_model=True)
-        direction = (-2, 0)
+        direction = (0,1)
         # learned_params = list(model.parameters())
         learned_params = training_flag.Get_learned_params(model, task_idx=0, direction=direction)
         DataLoaders = get_dataset_for_spatial_relations(parser, data_path, lang_idx=0, direction_tuple=direction)
@@ -57,10 +57,10 @@ def main(train_right, train_left, ds_type=DsType.Emnist, flag=Flag.CL, model_typ
                                      direction_tuple=direction,
                                      task_id=0,
                                      nbatches_train=len(DataLoaders['train_dl']))
-        wrapped_model.load_model(model_path='right_(6,2)/BUTDModel_epoch73_direction=(-1, 0).pt')
+        wrapped_model.load_model(model_path='12.12.202214:55:02/BUTDModel_epoch23_direction=(0, 1).pt')
         #  print(wrapped_model.Accuracy(DataLoaders['test_dl']))
         #  parser.model = model
         trainer.fit(wrapped_model, train_dataloaders=DataLoaders['train_dl'], val_dataloaders=DataLoaders['test_dl'])
 
 
-main(False, True, ds_type=DsType.Emnist, model_type=BUTDModel, flag=Flag.CL, task=(2,0))
+main(False, True, ds_type=DsType.Emnist, model_type=BUTDModel, flag=Flag.CL, task=(0,-1))

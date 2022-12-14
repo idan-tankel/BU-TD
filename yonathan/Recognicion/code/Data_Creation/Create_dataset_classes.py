@@ -163,7 +163,7 @@ class Omniglot_data_set(General_raw_data):
         # Transform to make tensors.
         transform = transforms.Compose(
             [transforms.ToTensor(), transforms.functional.invert, transforms.Resize(self.shape[1:])])
-        self.Images_arranged = []
+        self.raw_images = []
         # Iterate over all languages in language_list.
         for lan_idx in language_list:
             lan = os.path.join(self.raw_data_source, All_languages[lan_idx])  # The langauge
@@ -171,10 +171,10 @@ class Omniglot_data_set(General_raw_data):
                                filenames]  # All character images.
             language_images.sort()  # Sort to be ordered.
             language_images = [transform(skimage.io.imread(im_file)) for im_file in language_images]  # Make image.
-            self.Images_arranged.extend(language_images)  # Add all language characters images.
+            self.raw_images.extend(language_images)  # Add all language characters images.
         self.num_examples_per_character = 20  # 20 images per character.
-        self.nclasses = len(self.Images_arranged) // 20  # The number of labels.
-        self.labels = sum([self.num_examples_per_character * [i] for i in range(self.nclasses)], [])
+        self.nclasses = len(self.raw_images) // 20  # The number of labels.
+        self.labels = sum([self.num_examples_per_character * [i] for i in range(self.nclasses)], []) # Merge into one list.
 
 
 class GenericDatasetParams:
@@ -228,9 +228,9 @@ class EmnistParams(GenericDatasetParams):
         self.create_CG_test = True
         self.image_size = [130, 200]
         self.ngenerate = 5
-        self.nsamples_train = 20000
-        self.nsamples_test = 2000
-        self.nsamples_val = 2000
+        self.nsamples_train = 200
+        self.nsamples_test = 200
+        self.nsamples_val = 200
         self.raw_data_set = Emnist_raw_data(self.Data_path)
 
 

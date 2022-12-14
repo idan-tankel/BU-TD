@@ -72,7 +72,7 @@ class Training_flag:
         learned_params = []
         if self.task_embedding:
             # Training the task embedding associate with the direction.
-            print(direction_idx)
+         #   print(direction_idx)
             learned_params.extend(model.TE[direction_idx])
         if self.head_learning:
             # Train the task-head associated with the task, direction.

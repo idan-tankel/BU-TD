@@ -107,9 +107,10 @@ class OmniglotDataset(GenericDataParams):
         self.ntasks = 51  # We have 51 tasks.
         self.use_bu1_loss = False  # As there are many classes we don't use the bu1 loss.
         self.image_size = [55, 200]  # The Omniglot image size.
-        raw_data_path = os.path.join(self.project_path, 'data/Omniglot/RAW/')  # The raw data path.
+        raw_data_path = os.path.join(self.project_path, 'data/Omniglot/RAW/omniglot-py/Unified')  # The raw data path.
         self.nclasses = get_omniglot_dictionary(self.initial_tasks,
                                                 raw_data_path)  # Computing for each language its number of characters.
+        self.ndirections = 5
 
 
 class AllDataSetOptions:

@@ -123,7 +123,6 @@ class DatasetGuided(DataSetBase):
         self.obj_per_row = obj_per_row  # Number of row.
         self.obj_per_col = obj_per_col  # Number of columns.
         self.task_idx = torch.tensor(task_idx)  # The task id.
-        # TODO - CHANGE TO STORE AS TENSOR.
         self.edge_class = torch.tensor(self.nclasses)  # The 'border' class.
         # TODO - GET RID OF THIS
         self.initial_tasks = opts.initial_directions  # The initial tasks.

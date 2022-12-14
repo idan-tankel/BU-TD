@@ -60,8 +60,8 @@ class MultiTaskHead(nn.Module):
         # For each task, direction create its task-head according to num_classes.
         for i in range(self.ntasks):
             for j in range(self.ndirections):
-                num_heads = self.num_heads[j]
-                layer = HeadSingleTask(opts, self.num_classes[i], num_heads)  # create a taskhead.
+               # num_heads = self.num_heads[j]
+                layer = HeadSingleTask(opts, self.num_classes[i], 1)  # create a taskhead.
                 self.taskhead.append(layer)
                 if transfer_learning_params is not None:
                     transfer_learning_params[i][j].extend(layer.parameters())  # Storing the taskhead params.

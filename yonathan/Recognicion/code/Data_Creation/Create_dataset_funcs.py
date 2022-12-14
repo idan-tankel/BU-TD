@@ -318,9 +318,10 @@ def Generate_raw_samples(parser: argparse, raw_dataset: General_raw_data, image_
             # Otherwise we choose from all the valid classes, without replacement the desired number of characters.
             sample_chars = prng.choice(valid_classes, num_chars_per_image, replace=False)
         image_id_hash = str(sample_chars)
-        # To ensure we have each sequence at most one we check whether it's in the image_ids.
-        #  if image_id_hash in image_ids:
-        #     continue
+        # To ensure we have each sequence in train/test at most one we check whether it's in the image_ids.
+        # For validation, we know the samples are disjoint as we build it like that.
+        if image_id_hash in image_ids and ds_type != "val":
+             continue
         image_ids.add(image_id_hash)
         chars = []  # The chosen characters.
         for sample_id in range(num_chars_per_image):
@@ -432,12 +433,12 @@ def create_dataset(parser: argparse, raw_dataset: General_raw_data, ds_type: DsT
     nsamples_val = parser.nsamples_val  # The number of validation samples we desire to create.
     storage_dir, _ = Make_data_dir(parser, ds_type, language_list)
     # Get the storage dir for the data and for the conf file.
-    ds_types = ['test', 'train']  # The dataset types.
-    nsamples_all_data_sets = [nsamples_test, nsamples_train]
+    data_set_types = ['test', 'train']  # The dataset types.
+    nsamples_per_data_sets = [nsamples_test, nsamples_train]
     if generalize:  # if we want also the CG dataset we add its name to the ds_type and the number of needed samples.
-        nsamples_all_data_sets.append(nsamples_val)
-        ds_types.append('val')
-        # Generating valid pairs we can sample from.
+        nsamples_per_data_sets.append(nsamples_val)
+        data_set_types.append('val')
+        # Generating valid pairs we can sample from and the CG sequences.
         valid_pairs, CG_chars_list = Get_valid_pairs_for_the_combinatorial_test(parser, nclasses,
                                                                                 valid_classes)
     else:
@@ -445,7 +446,7 @@ def create_dataset(parser: argparse, raw_dataset: General_raw_data, ds_type: DsT
 
     num_samples_per_data_type_dict = {}
     # Iterating over all dataset types and generating raw samples for each and then generating samples.
-    for k, (ds_type, cur_nsamples) in enumerate(zip(ds_types, nsamples_all_data_sets)):
+    for k, (ds_type, cur_nsamples) in enumerate(zip(data_set_types, nsamples_per_data_sets)):
         samples = Generate_raw_samples(parser, raw_dataset, image_ids, k, ds_type, cur_nsamples, valid_pairs,
                                        valid_classes,
                                        CG_chars_list)

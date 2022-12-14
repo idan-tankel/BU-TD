@@ -33,6 +33,7 @@ class CheckpointSaver:
         # Copy the code script.
         if not os.path.exists(os.path.join(code_path)):
             shutil.copytree(Path(__file__).parents[2], os.path.join(self.dirpath, 'code'))
+        print("Code script saved")
 
     def update_optimum(self, new_optimum: float) -> None:
         """

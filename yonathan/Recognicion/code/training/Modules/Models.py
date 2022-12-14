@@ -206,7 +206,7 @@ class TDModel(nn.Module):
         if self.use_lateral:
             self.bot_lat = Modulation_and_Lat(opts, opts.nfilters[0])
         # Copy the argument embedding.
-        if opts.ds_type is DsType.Omniglot and self.model_flag is Flag.CL:
+        if opts.ds_type is DsType.Omniglot and opts.model_flag is Flag.CL:
             for j in range(self.ntasks):
                 self.argument_embedding[j].extend(self.InitialTaskEmbedding.top_td_arg_emb[j].parameters())
         init_module_weights(self.modules())  # Initialize the weights.
@@ -411,3 +411,8 @@ class ResNet(nn.Module):
 
     def update_task_set(self, task):
         self.trained_tasks.add(task)
+
+    def get_specific_head(self, task_id, direction_id):
+         learned_params = []
+         learned_params.extend(self.feature.parameters())
+         learned_params.extend(self.TL[task_id][direction_id])

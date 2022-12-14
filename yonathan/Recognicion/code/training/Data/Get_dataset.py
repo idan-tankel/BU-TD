@@ -36,7 +36,7 @@ def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, lang_idx:
     # Opening the conf file and retrieve number of samples, img shape, number of objects per image.
     with open(path_fname, "rb") as new_data_file:
         MetaData = pickle.load(new_data_file)
-
+    # TODO - GET RID OF THIS, THIS IS AN INTEGRATION SOLUTION ONLY.
     try:
         image_size = MetaData.parser.image_size  # Get the image size.
         opts.inshape = (3, *image_size[1:])  # Updating the image size according to the actual data.

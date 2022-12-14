@@ -110,7 +110,7 @@ class MyEWC(MySupervisedTemplate):
             plugins: Optional[List[SupervisedPlugin]] = None,
             evaluator=default_evaluator,
             eval_every=-1,
-            prev_model= None,
+            prev_model = None,
             **base_kwargs
     ):
         """
@@ -250,7 +250,6 @@ class MyMAS(MySupervisedTemplate):
             eval_every=eval_every,
             **base_kwargs
         )
-
 
 class MyRWALK(MySupervisedTemplate):
     def __init__(

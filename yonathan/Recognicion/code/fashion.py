@@ -28,7 +28,7 @@ def main(train_right, train_left, ds_type=DsType.Fashionmnist, flag=Flag.CL, mod
     Checkpoint_saver = CheckpointSaver(dirpath=results_dir + time, store_running_statistics=flag is Flag.CL)
     wandb_logger = WandbLogger(project="My_first_project_5.10", job_type='train',
                                save_dir=results_dir)
-    trainer = pl.Trainer(accelerator='gpu', max_epochs=60, logger=wandb_logger, callbacks=[Model_checkpoint],
+    trainer = pl.Trainer(accelerator='gpu', max_epochs=parser.EPOCHS, logger=wandb_logger, callbacks=[Model_checkpoint],
                          reload_dataloaders_every_n_epochs=1)
 
     model = create_model(parser)
@@ -58,8 +58,8 @@ def main(train_right, train_left, ds_type=DsType.Fashionmnist, flag=Flag.CL, mod
                                      task_id=0,
                                      nbatches_train=len(DataLoaders['train_dl']))
         wrapped_model.load_model(model_path='Model_(1,0)_new_ver/BUTDModel_epoch49_direction=(1, 0).pt')
-        print(wrapped_model.Accuracy(DataLoaders['test_dl']))
+   #     print(wrapped_model.Accuracy(DataLoaders['test_dl']))
         parser.model = model
         trainer.fit(wrapped_model, train_dataloaders=DataLoaders['train_dl'], val_dataloaders=DataLoaders['test_dl'])
 
-main(False, True, ds_type=DsType.Fashionmnist, model_type=BUTDModel, flag=Flag.CL, task = (-1,0))
+main(False, True, ds_type=DsType.Fashionmnist, model_type=BUTDModel, flag=Flag.CL, task = (-1,1))

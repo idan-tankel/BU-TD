@@ -14,5 +14,5 @@ class RegType(Enum):
     def __str__(self):
         return self.value
 
-    def class_to_reg(self, parser):
+    def class_to_reg_factor(self, parser):
         return getattr(parser, self.__str__()+'_lambda')
