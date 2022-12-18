@@ -67,6 +67,7 @@ Models:
   # Notice! this option affected also from training / dataset requirements
   ntasks: 6 # (`int`) the number of tasks to train on. Will determine the number of heads in the model
   pretrained_model_name:    # (`str`) the url to the pretrained model in huggingface.co
+  #  another option to use 
   
 
 

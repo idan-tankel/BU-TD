@@ -86,7 +86,7 @@ Training:
   base_lr: 0.0001 # (`float`) the base learning rate for the cyclic_adam_optimizer, if used
   optimizer: Adam  # (`str`) the optimizer to use. ['Adam','SGD']
   # checkpoints and saving options
-  load_existing_path: False # (`bool`) whether to load an existing model from the path specified in `path_loading`. Default to false
+  load_existing_path: True # (`bool`) whether to load an existing model from the path specified in `path_loading`. Default to false
   path_loading: "/home/idanta/data/emnist/checkpoints/epoch=192-step=1930000.ckpt" # (`str`) the path to load an existing model, pretrained (should be a .pt file)
   # furthermore, the path should contain model with the same structure, since this is a checkpoint
   save_model: True # (`bool`) whether to save the model

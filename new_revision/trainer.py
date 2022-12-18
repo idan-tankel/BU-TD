@@ -22,7 +22,7 @@ os.makedirs(data_dir, exist_ok=True)
 checkpoints_dir = rf"{git_root.parent}/data/emnist/checkpoints"
 os.makedirs(results_dir, exist_ok=True)
 
-global_config = Config(experiment_filename="config.yaml")
+global_config = Config(experiment_filename="larger_vit.yaml")
 transform = transforms.Compose(
     [transforms.ToTensor(), transforms.Resize((224, 224))])
 # train_ds = datasets.Food101(
@@ -66,18 +66,20 @@ else:
     )
 model = ModelWrapper(model=model, config=global_config)
 
+if "local" in str(global_config.Models.pretrained_model_name):
+    old_model = load(f"{checkpoints_dir}/{global_config.Models.pretrained_model_name}")
+    # load only the vit part from the model
+    model.model.vit._load_from_state_dict(state_dict=old_model['state_dict'],prefix='model.vit.',strict=True,missing_keys=[],unexpected_keys=[],error_msgs=[],local_metadata={})
 
 
 wandb_logger.watch(model=model, log='all')
-
 trainer = pl.Trainer(accelerator='gpu', max_epochs=global_config.Training.epochs,
                      logger=wandb_logger, callbacks=[wandb_checkpoints])
 
 # load pretrained from some layer of the model
-old_model = load(f"{checkpoints_dir}/epoch=176-step=276651.ckpt")
-model.model.vit._load_from_state_dict(state_dict=old_model['state_dict'],prefix='model.vit.',strict=True,missing_keys=[],unexpected_keys=[],error_msgs=[],local_metadata={})
 trainer_ckpt = global_config.Training.path_loading if global_config.Training.load_existing_path  else None
-
+if global_config.Training.load_existing_path:
+    model.load_state_dict(load(global_config.Training.path_loading)["state_dict"])
 # if the training has a previous checkpoint (differs from loading only model weights - this is also training params and epoch)
 trainer.fit(model=model, train_dataloaders=compatibility_dl,
             val_dataloaders=compatibility_dl,ckpt_path=trainer_ckpt)
