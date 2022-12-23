@@ -45,13 +45,13 @@ def get_omniglot_dictionary(num_tasks: int, raw_data_folderpath: str) -> dict:
 
     """
     nclasses = create_dict(raw_data_folderpath, offset=1)  # Receiving for each task the number of characters in it.
-  #  nclasses[0] = sum(
-  #      nclasses[51-task-2] for task in range(num_tasks))  # receiving number of characters in the initial tasks.
+    #  nclasses[0] = sum(
+    #      nclasses[51-task-2] for task in range(num_tasks))  # receiving number of characters in the initial tasks.
     nclasses = {k: v for k, v in sorted(nclasses.items(), key=lambda item: item[1])}
     nclasses_New = {}
     for i, key in enumerate(nclasses.keys()):
         nclasses_New[i] = nclasses[key]
-    nclasses_New[50] = sum(nclasses_New[50-task-2] for task in range(num_tasks))
+    nclasses_New[50] = sum(nclasses_New[50 - task - 2] for task in range(num_tasks))
     return nclasses_New
 
 
@@ -101,8 +101,8 @@ def num_params(params: Union[Iterator]) -> int:
     num_param = 0
     for param in params:
         # For each parameter in the model we multiply all its shape dimensions.
-        shape = torch.tensor(param.shape) # Make a tensor.
-        num_param = num_param + torch.prod(shape) # Add to the sum.
+        shape = torch.tensor(param.shape)  # Make a tensor.
+        num_param = num_param + torch.prod(shape)  # Add to the sum.
     return num_param
 
 
@@ -128,7 +128,7 @@ def create_optimizer_and_scheduler(opts: argparse, learned_params: list, nbatche
                                                 step_size_up=nbatches_train // 2,
                                                 cycle_momentum=False)
     else:
-        scheduler = optim.lr_scheduler.StepLR(optimizer = optimizer,step_size = nbatches_train//4,gamma=0.9)
+        scheduler = optim.lr_scheduler.StepLR(optimizer=optimizer, step_size=nbatches_train // 4, gamma=0.9)
 
     return optimizer, scheduler
 

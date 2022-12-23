@@ -6,8 +6,10 @@ import torch
 from avalanche.training.plugins import LwFPlugin
 from typing import Union
 import torch.nn as nn
-from training.Utils import tuple_direction_to_index
+
 from avalanche.training.templates.supervised import SupervisedTemplate
+from training.Data.Structs import inputs_to_struct
+from Baselines_code.baselines_utils import construct_flag
 
 class MyLwFPlugin(LwFPlugin):
     """
@@ -25,28 +27,23 @@ class MyLwFPlugin(LwFPlugin):
         """
 
         super().__init__()
-        self.parser= parser
-        self.lamda = parser.LWF_lambda
-        self.temperature =parser.temperature_LWF
-        self.num_exps = 0
-        self.inputs_to_struct = parser.inputs_to_struct
+        self.parser = parser # The parser.
+        self.lamda = parser.LWF_lambda # The LWF lambda.
+        self.temperature =parser.temperature_LWF # The temperature.
+        self.num_exps = 0 # No exps trained before.
+        self.inputs_to_struct = parser.inputs_to_struct # The inputs to struct.
         if prev_model is not None:
-             self.prev_model = copy.deepcopy(prev_model)
+             self.prev_model = copy.deepcopy(prev_model) # Copy the previous model.
              self.num_exps = 1
+
              for i, task in enumerate(prev_model.trained_tasks):
-                self.prev_tasks = {i : task }
+                flag = construct_flag(*task)
+                self.prev_tasks = {i : (task,flag) } # Copy old tasks.
+
 
     #TODO - IT WORKS FOR RESNET ONLY, FOR BU-TD WE NEED TO CONSIDER SOLUTIONS.
-    def construct_flag(self,flag, task_id, direction_id):
-        B = flag.shape[0]
-        direction_dir, _ = tuple_direction_to_index(self.parser.num_x_axis, self.parser.num_y_axis, direction_id, self.parser.ndirections, task_id)
-        task_id = torch.tensor(task_id)
-        New_task_flag = torch.nn.functional.one_hot(task_id, self.parser.ntasks)
-        New_direction_flag = torch.nn.functional.one_hot(direction_dir, self.parser.ndirections)
-        New_flag = torch.concat([New_direction_flag, New_task_flag], dim=0).float()
-        return New_flag.expand(B,-1)
 
-    def _distillation_loss(self, cur_out:torch, prev_out:torch, x:list[torch])->float:
+    def _distillation_loss(self, cur_out:torch, prev_out:torch, x:inputs_to_struct)->float:
         """
         Compute distillation loss between output of the current model and
         output of the previous (saved) model.
@@ -66,6 +63,16 @@ class MyLwFPlugin(LwFPlugin):
         dist_loss = - cur_out_softmax * prev_out_softmax # Compute the loss.
         dist_loss = dist_loss * loss_weight # Count only existing characters.
         dist_loss = dist_loss.sum() / loss_weight.size(0) # Average the loss
+        #
+      #  cur_out = torch.transpose(cur_out.classifier, 2, 1)  # Get in the order of [B,CHAR,class].
+       # prev_out = torch.transpose(prev_out.classifier, 2, 1)  # Get in the order of [B,CHAR,class].
+        cur_out_softmax = torch.log_softmax(cur_out / self.temperature, dim=1)  # Compute the log-probabilities.
+        prev_out_softmax = torch.softmax(prev_out / self.temperature, dim=1)  # Compute the probabilities.
+        dist_loss2 = - cur_out_softmax * prev_out_softmax  # Compute the loss.
+        dist_loss2 = dist_loss2 * loss_weight  # Count only existing characters.
+        dist_loss2 = dist_loss2.sum() / loss_weight.size(0)  # Average the loss
+        #
+
         return dist_loss
 
     def penalty(self, model:nn.Module, x:list[torch], alpha:float)->float:
@@ -88,12 +95,13 @@ class MyLwFPlugin(LwFPlugin):
             # TODO - TOMORROW BUILD THIS FUNCTION.
          #   New_flag = construct_flag(input_struct.flag, old_task)
             # compute kd only for previous heads.
-            for task_id, direction_id in self.prev_tasks.values():
-                New_flag = self.construct_flag(x.flag, task_id, direction_id)
+            old_flag = x.flag
+            for _, New_flag in self.prev_tasks.values():
                 x.flag = New_flag
                 y_prev =  self.prev_model.forward_and_out_to_struct(x)
                 y_curr =  model.forward_and_out_to_struct(x)
                 dist_loss += self._distillation_loss(y_curr, y_prev, x)
+            x.flag = old_flag # return to original.
             return alpha * dist_loss
 
     def before_backward(self, strategy:SupervisedTemplate, **kwargs):

@@ -27,7 +27,7 @@ def store_sample_disk(parser: argparse, sample: Sample, store_dir: str) -> None:
         samples_dir = os.path.join(store_dir,
                                    '%d' % (i // parser.folder_size))  # The inner path, based on the sample id.
         if not os.path.exists(samples_dir):  # Make the path to the sample.
-            os.makedirs(samples_dir, exist_ok=True)
+            os.makedirs(samples_dir)
     img = sample.image  # The image.
     img_fname = os.path.join(samples_dir, '%d_img.jpg' % i)  # The image directory.
     c = Image.fromarray(img.transpose(1, 2, 0))  # Convert to Image format.
@@ -278,7 +278,7 @@ def Make_data_dir(parser: argparse, ds_type: DsType, language_list: list) -> tup
         folder_name += 'Test_open_files'
     Samples_dir = os.path.join(parser.store_folder, folder_name)  # The path we store into.
     if not os.path.exists(Samples_dir):  # Making the samples dir.
-        os.makedirs(Samples_dir, exist_ok=True)
+        os.makedirs(Samples_dir)
     Meta_data_fname = os.path.join(Samples_dir, 'MetaData')  # Make the metadata dir.
     return Samples_dir, Meta_data_fname
 
@@ -321,7 +321,7 @@ def Generate_raw_samples(parser: argparse, raw_dataset: General_raw_data, image_
         # To ensure we have each sequence in train/test at most one we check whether it's in the image_ids.
         # For validation, we know the samples are disjoint as we build it like that.
         if image_id_hash in image_ids and ds_type != "val":
-             continue
+            continue
         image_ids.add(image_id_hash)
         chars = []  # The chosen characters.
         for sample_id in range(num_chars_per_image):
@@ -343,7 +343,7 @@ def Save_code_script(storage_dir: str) -> None:
     code_folder_path = os.path.dirname(os.path.realpath(__file__))
     storage_dir = os.path.join(storage_dir, 'data')
     if not os.path.exists(storage_dir):
-        shutil.copytree(code_folder_path, storage_dir, copy_function=shutil.copy)  # Save the code script.
+        shutil.copytree(code_folder_path, storage_dir)  # Save the code script.
 
 
 def Save_meta_data_and_code_script(parser: argparse, ds_type: DsType, nsamples_per_data_type_dict: dict,
@@ -410,7 +410,7 @@ def Split_samples_into_jobs_and_generate(parser: argparse, samples: list[Sample]
 
 def create_dataset(parser: argparse, raw_dataset: General_raw_data, ds_type: DsType, language_list: list) -> dict:
     """
-    The main function choosing sequences, then generating samples, Stores them and saves the MetaData.
+    The main_fashion function choosing sequences, then generating samples, Stores them and saves the MetaData.
     Args:
         parser: The dataset options.
         raw_dataset: The raw dataset images.

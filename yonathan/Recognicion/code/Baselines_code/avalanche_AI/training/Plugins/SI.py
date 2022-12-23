@@ -272,7 +272,7 @@ class SynapticIntelligencePlugin(SupervisedPlugin):
         device,
         lambd=0.0,
     ):
-        params = model.feature.named_parameters()
+        params = model.feature_extractor.named_parameters()
 
         loss = None
         for name, param in params:

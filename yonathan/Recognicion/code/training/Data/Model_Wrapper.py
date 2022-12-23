@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from training.Data.Checkpoints import CheckpointSaver
 from training.Utils import create_optimizer_and_scheduler, preprocess
 
-from typing import Callable, Optional, Any
+from typing import Callable
 
 
 # Define the model wrapper class.
@@ -62,21 +62,10 @@ class ModelWrapped(LightningModule):
         samples = self.opts.inputs_to_struct(batch)  # Compute the sample struct.
         outs = model.forward_and_out_to_struct(samples)  # Compute the model output.
         loss = self.loss_fun(self.opts, samples, outs)  # Compute the loss.
-        _ , acc = self.accuracy(samples, outs)  # The Accuracy.
-        self.log('train_loss', loss, on_step=True, on_epoch=True, logger=True)  # Update loss.
-        self.log('train_acc', acc, on_step=True, on_epoch=True, logger=True)  # Update acc.
-      #  loss.backward()
-       # sum = 0.0
-     #   for param in self.learned_params:
-       #         print(param.grad)
-     #   print(sum)
-     #   sum=0
-    #    print(self.scheduler.get_last_lr())
+        _, acc = self.accuracy(samples, outs)  # The Accuracy.
+        self.log('train_loss', loss, on_step=True, on_epoch=True)  # Update loss.
+        self.log('train_acc', acc, on_step=True, on_epoch=True)  # Update acc.
         return loss  # Return the loss.
-
-   # def lr_scheduler_step(self,scheduler, optimizer_idx, metric):
-       # print(scheduler.get_last_lr())
- #       scheduler.step()
 
     def validation_step(self, batch: list[torch], batch_idx: int) -> float:
         """
@@ -96,8 +85,8 @@ class ModelWrapped(LightningModule):
             outs = self.model.forward_and_out_to_struct(samples)  # Forward and make a struct.
             loss = self.loss_fun(self.opts, samples, outs)  # Compute the loss.
             _, acc = self.accuracy(samples, outs)  # Compute the Accuracy.
-            self.log('val_loss', loss, on_step=True, on_epoch=True, logger=True)  # Update the loss.
-            self.log('val_acc', acc, on_step=True, on_epoch=True, logger=True)  # Update the acc.
+            self.log('val_loss', loss, on_step=True, on_epoch=True)  # Update the loss.
+            self.log('val_acc', acc, on_step=True, on_epoch=True)  # Update the acc.
         return acc  # Return the Accuracy.
 
     def configure_optimizers(self) -> tuple[optim, optim.lr_scheduler]:
@@ -141,7 +130,7 @@ class ModelWrapped(LightningModule):
             outs = self.model.forward_and_out_to_struct(samples)  # Forward and making a struct.
             _, acc_batch = self.accuracy(samples, outs)  # Compute the Accuracy.
             acc += acc_batch  # Add to the Accuracy
-        acc = acc / len(dl)  # Normalize to [0,1].
+        acc /= len(dl)  # Normalize to [0,1].
         return acc
 
     def load_model(self, model_path: str) -> dict:

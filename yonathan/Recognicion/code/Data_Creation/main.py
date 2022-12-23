@@ -8,7 +8,7 @@ from parser import Get_parser
 def main(ds_type: DsType = DsType.Emnist, language_list: Union[list, None] = None, num_chars_per_row: int = 6,
          num_rows_in_the_image: int = 1) -> None:
     """
-    The main function calling 'create_dataset'.
+    The main_fashion function calling 'create_dataset'.
     Args:
         ds_type: The dataset option e.g. emnist, Fashiomnist.
         language_list: The language list.
@@ -30,8 +30,8 @@ def main(ds_type: DsType = DsType.Emnist, language_list: Union[list, None] = Non
 
 
 if __name__ == '__main__':
-    # main(ds_type=DsType.Omniglot,language_list=[27, 5, 42, 18, 33])
-    main(ds_type=DsType.Emnist, num_chars_per_row=6, num_rows_in_the_image=1,language_list=[49])
-# main(ds_type=DsType.Emnist, num_chars_per_row=6, num_rows_in_the_image=1)
-#  for i in range(50):
-#   main(ds_type=DsType.Emnist,language_list=[i])
+    # main_fashion(ds_type=DsType.Omniglot,language_list=[27, 5, 42, 18, 33])
+    main(ds_type=DsType.Emnist, num_chars_per_row=4, num_rows_in_the_image=4)
+# main_fashion(ds_type=DsType.Emnist, num_chars_per_row=6, num_rows_in_the_image=1)
+ # for i in [43, 24]:
+ #  main_fashion(ds_type=DsType.Omniglot,language_list=[i])

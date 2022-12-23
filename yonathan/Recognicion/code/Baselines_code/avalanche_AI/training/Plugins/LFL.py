@@ -6,6 +6,7 @@ import torch
 from avalanche.training.plugins import LFLPlugin
 from typing import Union
 import torch.nn as nn
+
 sys.path.append(r'/')
 
 
@@ -30,10 +31,10 @@ class MyLFLPlugin(LFLPlugin):
         """
         super().__init__(lambda_e=lambda_e)
         if prev_model is not None:
-            self.prev_model = copy.deepcopy(prev_model)
-            freeze_everything(self.prev_model)
+            self.prev_model = copy.deepcopy(prev_model)  # Copy the original model.
+            freeze_everything(self.prev_model)  # Freeze old model.
 
-    def _euclidean_loss(self, features: torch, prev_features: torch) -> float:
+    def _euclidean_loss(self, features: torch, prev_features: torch) -> torch.float:
         """
         Compute euclidean loss.
         Args:
@@ -45,7 +46,7 @@ class MyLFLPlugin(LFLPlugin):
         """
         return torch.nn.functional.mse_loss(features, prev_features)
 
-    def compute_features(self, model: nn.Module, x: list[torch]):
+    def compute_features(self, model: nn.Module, x: list[torch]) -> tuple[torch, torch]:
         """
         Compute features from prev model and current model
         Args:
@@ -57,11 +58,11 @@ class MyLFLPlugin(LFLPlugin):
         """
         model.eval()
         self.prev_model.eval()
-        features = model.forward_and_out_to_struct(x).features
-        prev_features = self.prev_model.forward_and_out_to_struct(x).features
+        features = model.forward_and_out_to_struct(x).features  # New features.
+        prev_features = self.prev_model.forward_and_out_to_struct(x).features  # Old features.
         return features, prev_features
 
-    def penalty(self, x: list[torch], model: nn.Module, lambda_e: float):
+    def penalty(self, x: list[torch], model: nn.Module, lambda_e: float) -> torch.float:
         """
         Compute weighted euclidean loss
         Args:
@@ -75,7 +76,9 @@ class MyLFLPlugin(LFLPlugin):
         if self.prev_model is None or lambda_e == 0.0:
             return 0.0
         else:
+            # The previous, current features.
             features, prev_features = self.compute_features(model, x)
+            # Compute distance.
             dist_loss = self._euclidean_loss(features, prev_features)
             return lambda_e * dist_loss
 
@@ -100,11 +103,11 @@ class MyLFLPlugin(LFLPlugin):
 
         """
         print("Freeze the new model!")
-        self.prev_model = copy.deepcopy(strategy.model)
-        freeze_everything(self.prev_model)
+        self.prev_model = copy.deepcopy(strategy.model)  # Copy the new version of the model.
+        freeze_everything(self.prev_model)  # Freeze the model.
 
     def before_training(self, strategy: SupervisedTemplate, **kwargs):
         """
-        Pass it as original LFL requires the model to be of some structure.
+        Pass it as original LFL requires the model to be of having 'compute feature' method.
         """
         pass

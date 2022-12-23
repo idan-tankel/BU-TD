@@ -6,6 +6,7 @@ def compute_pred(batch, model):
     pred = pred.argmax(dim=1)
     return pred
 
+
 def Create_new_flag(parser, batch, pred, direction):
     bs = pred.size(0)
     task_type_ohe = torch.nn.functional.one_hot(torch.zeros(bs), 1)
@@ -17,17 +18,18 @@ def Create_new_flag(parser, batch, pred, direction):
     flag = torch.concat([direction_type_ohe, task_type_ohe, char_type_one], dim=0).float()
     return flag
 
-def compose_tasks(parser, batch,model,directions):
+
+def compose_tasks(parser, batch, model, directions):
     preds = []
     pred = None
     for direction in directions:
-        new_flag = Create_new_flag(parser, batch, pred,direction)
+        new_flag = Create_new_flag(parser, batch, pred, direction)
         batch.flag = new_flag
         pred = compute_pred(model, batch)
         preds.append(pred)
         for i in range(pred.size(0)):
             if pred[i] == 47:
-             pred[i] = 0
+                pred[i] = 0
 
     for i in range(pred.size(0)):
         for prediction in preds:
@@ -35,4 +37,3 @@ def compose_tasks(parser, batch,model,directions):
                 pred[i] = 47
                 break
     return pred
-

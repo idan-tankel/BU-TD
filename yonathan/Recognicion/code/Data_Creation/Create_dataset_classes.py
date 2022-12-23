@@ -2,7 +2,6 @@ import random
 from enum import Enum
 
 import skimage
-import skimage.transform as transforms
 import torch
 from torch.utils.data import Dataset
 from imgaug import augmenters as iaa
@@ -16,6 +15,7 @@ import skimage.io
 import torchvision
 from torchvision import datasets
 from torchvision import transforms
+
 try:
     from utils import Download_raw_omniglot_data
 except ModuleNotFoundError:
@@ -140,7 +140,7 @@ class FashionMnist_raw_data(General_raw_data):
         # Test Data.
         test_raw_dataset = datasets.FashionMNIST(
             download_dir, train=False, download=True)
-        self.nclasses = 10 # Ten classes.
+        self.nclasses = 10  # Ten classes.
         # Merge the data.
         self.raw_images, self.labels = self.Merge_two_datasets(train_raw_dataset, test_raw_dataset)
         self.num_examples_per_character = len(self.raw_images) // 10
@@ -174,7 +174,8 @@ class Omniglot_data_set(General_raw_data):
             self.raw_images.extend(language_images)  # Add all language characters images.
         self.num_examples_per_character = 20  # 20 images per character.
         self.nclasses = len(self.raw_images) // 20  # The number of labels.
-        self.labels = sum([self.num_examples_per_character * [i] for i in range(self.nclasses)], []) # Merge into one list.
+        self.labels = sum([self.num_examples_per_character * [i] for i in range(self.nclasses)], [])  # Merge into one
+        # list.
 
 
 class GenericDatasetParams:
@@ -228,9 +229,9 @@ class EmnistParams(GenericDatasetParams):
         self.create_CG_test = True
         self.image_size = [130, 200]
         self.ngenerate = 5
-        self.nsamples_train = 200
-        self.nsamples_test = 200
-        self.nsamples_val = 200
+        self.nsamples_train = 20000
+        self.nsamples_test = 2000
+        self.nsamples_val = 2000
         self.raw_data_set = Emnist_raw_data(self.Data_path)
 
 

@@ -12,7 +12,26 @@ from training.Utils import get_omniglot_dictionary, tuple_direction_to_index
 
 from Data_Creation.Create_dataset_classes import DsType  # Import the Data_Creation set types.
 
-# Define the Flag Enums, and Dataset specification.
+
+# Define the Flag Enums, and Dataset specification and baseline methods.
+
+class RegType(Enum):
+    """
+    The possible baselines.
+    """
+    EWC = 'EWC'
+    LWF = 'LWF'
+    LFL = 'LFL'
+    MAS = 'MAS'
+    RWALK = 'RWALK'
+    SI = 'SI'
+
+    def __str__(self):
+        return self.value
+
+    def class_to_reg_factor(self, parser):
+        return getattr(parser, self.__str__() + '_lambda')
+
 
 class Flag(Enum):
     """
@@ -46,7 +65,7 @@ class GenericDataParams:
         self.num_x_axis: int = num_x_axis  # Number of directions we want to generalize to in the x-axis.
         self.num_y_axis: int = num_y_axis  # Number of directions we want to generalize to in the y-axis.
         self.ndirections: int = (2 * self.num_x_axis + 1) * (
-                    2 * self.num_y_axis + 1)  # The number of directions we query about.
+                2 * self.num_y_axis + 1)  # The number of directions we query about.
         # The number of classes for each task, 47 for mnist, 10 for fashion and for Omniglot its dictionary.
         self.nclasses: dict = {i: 47 for i in range(self.ndirections)}
         self.results_dir: str = os.path.join(self.project_path,
@@ -66,7 +85,7 @@ class EmnistDataset(GenericDataParams):
             flag_at: The model flag.
 
         """
-        super(EmnistDataset, self).__init__(flag_at=flag_at, ds_type=DsType.Emnist, num_x_axis=2,num_y_axis=2)
+        super(EmnistDataset, self).__init__(flag_at=flag_at, ds_type=DsType.Emnist, num_x_axis=2, num_y_axis=2)
         self.image_size = [130, 200]  # The Emnist image size.
         # The initial indexes.
         # TODO - SHOULD BE DELETED.

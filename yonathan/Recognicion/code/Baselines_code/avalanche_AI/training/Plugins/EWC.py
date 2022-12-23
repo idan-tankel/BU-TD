@@ -17,35 +17,34 @@ sys.path.append(r'/')
 
 
 class MyEWCPlugin(EWCPlugin):
-    def __init__(self, parser: argparse, mode="separate", decay_factor=None, keep_importance_data=False,
+    def __init__(self, parser: argparse, mode="separate", keep_importance_data=False,
                  prev_model=None, old_dataset=None):
         """
         Args:
             parser: The model parser.
             mode: The training mode.
-            decay_factor:
             keep_importance_data: Whether to keep the importance Data_Creation.
             prev_model: A pretrained model
             old_dataset: The old dataset.
         """
-        super().__init__(ewc_lambda=parser.EWC_lambda, mode=mode, decay_factor=decay_factor,
+        super().__init__(ewc_lambda=parser.EWC_lambda, mode=mode,
                          keep_importance_data=keep_importance_data)
-        self.old_dataset = old_dataset
-        self.prev_model = copy.deepcopy(prev_model)
-        self.parser = parser
-        self.num_exp = 0
-        self.inputs_to_struct = parser.inputs_to_struct
-        self.outs_to_struct = parser.outs_to_struct
+        self.old_dataset = old_dataset  # The old data-set for computing the coefficients.
+        self.prev_model = copy.deepcopy(prev_model)  # The previous model.
+        self.parser = parser  # The model opts.
+        self.num_exp = 0  # The number of exp trained so far.
+        self.inputs_to_struct = parser.inputs_to_struct  # The inputs to struct method.
+        self.outs_to_struct = parser.outs_to_struct  # The outputs to struct method
         # Supporting pretrained model.
         if prev_model is not None and old_dataset is not None:
             # Update importance and old params to begin with EWC training.
-            print("Computing Importances")
+            print('Computing Importances')
             importances = self.compute_importances(prev_model, parser.criterion, parser.optimizer, old_dataset,
                                                    parser.device, parser.train_mb_size)
             self.update_importances(importances, 0)  # The first task.
-            print("Done computing Importances")
-            self.saved_params[0] = dict(copy_params_dict(prev_model.feature))  # Change to the excluded params.
-            self.num_exp = 1
+            print('Done computing Importances')
+            self.saved_params[0] = dict(copy_params_dict(prev_model.feature_extractor))  # Copy the old parameters.
+            self.num_exp = 1  #
 
     def compute_importances(self, model: nn.Module, criterion: Callable, optimizer: optimizer, dataset: Dataset,
                             device: str, batch_size: int) -> dict:
@@ -62,8 +61,8 @@ class MyEWCPlugin(EWCPlugin):
         Returns: The importance coefficients.
 
         """
-        model.eval()
-        importances = zerolike_params_dict(model.feature)  # Make empty coefficients.
+        model.eval()  # Move to evaluation mode.
+        importances = zerolike_params_dict(model.feature_extractor)  # Make empty coefficients.
         dataloader = DataLoader(dataset, batch_size=batch_size)  # The dataloader.
         for i, batch in enumerate(dataloader):  # Iterating over the dataloader.
             x = preprocess(batch[:-1], device)  # Omit the ids and move to the device.
@@ -73,15 +72,17 @@ class MyEWCPlugin(EWCPlugin):
             out = self.outs_to_struct(out)  # Make a struct.
             loss = criterion(self.parser, x, out)  # Compute the loss.
             loss.backward()  # Compute grads.
-            for (k1, p), (k2, imp) in zip(model.feature.named_parameters(),
+            for (k1, p), (k2, imp) in zip(model.feature_extractor.named_parameters(),
                                           importances):  # Iterating over the feature weights.
                 assert k1 == k2
                 if p.grad is not None:
+                    # Adding the grad**2.
                     imp += p.grad.data.clone().pow(2)
 
         # average over mini batch length
         for _, imp in importances:
             imp /= float(len(dataloader))
+        # Make dictionary.
         importances = dict(importances)
         return importances
 
@@ -103,7 +104,8 @@ class MyEWCPlugin(EWCPlugin):
         )
         # Update importance.
         self.update_importances(importances, exp_counter)
-        self.saved_params[exp_counter] = copy_params_dict(strategy.model.feature)
+        # Update the new 'old' weights.
+        self.saved_params[exp_counter] = copy_params_dict(strategy.model.feature_extractor)
         # clear previous parameter values
         if exp_counter > 0 and (not self.keep_importance_data):
             del self.saved_params[exp_counter - 1]
@@ -120,12 +122,12 @@ class MyEWCPlugin(EWCPlugin):
             return
         penalty = torch.tensor(0).float().to(strategy.device)
 
-        Cur_params = dict(strategy.model.feature.named_parameters())
+        Cur_params = dict(strategy.model.feature_extractor.named_parameters())
         for name in self.importances[0].keys():
             saved_param = self.saved_params[0][name]  # previous weight.
             imp = self.importances[0][name]  # Current weight.
             cur_param = Cur_params[name]
             # Add the difference to the loss.
             penalty += (imp * (cur_param - saved_param).pow(2)).sum()
-
+        # Update the new loss.
         strategy.loss += self.ewc_lambda * penalty

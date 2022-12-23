@@ -1,45 +1,33 @@
-from avalanche.training.plugins import (
-    SupervisedPlugin,
-    EvaluationPlugin
-)
-#TODO - CHANGE NAMES.
+from avalanche.training.plugins import SupervisedPlugin, EvaluationPlugin
 from Baselines_code.avalanche_AI.training.Plugins.EWC import MyEWCPlugin
 from Baselines_code.avalanche_AI.training.Plugins.LWF import MyLwFPlugin
 from Baselines_code.avalanche_AI.training.Plugins.MAS import MyMASPlugin
 from Baselines_code.avalanche_AI.training.Plugins.LFL import MyLFLPlugin
 from Baselines_code.avalanche_AI.training.Plugins.SI import SynapticIntelligencePlugin as SIPlugin
-from training.Data.Data_params import Flag
 from Baselines_code.avalanche_AI.training.Plugins.RWALK import RWalkPlugin
 import argparse
-import sys
-import os
-from typing import Optional, Sequence, List, Union
+from typing import Optional, Sequence, List
 from avalanche.training.plugins.evaluation import default_evaluator
 from avalanche.training.templates.supervised import SupervisedTemplate
-from torch.nn import Module, CrossEntropyLoss
-from torch.optim import Optimizer
 from avalanche.training.plugins import LRSchedulerPlugin
-from pathlib import Path
-from training.Metrics.Accuracy import multi_label_accuracy_weighted, multi_label_accuracy, accuracy
 
 
 class MySupervisedTemplate(SupervisedTemplate):
-    def __init__(self, parser: argparse, checkpoint=None, logger=None,
+    def __init__(self, parser: argparse, checkpoint=None, task=[0, (1, 0)], logger=None,
                  plugins: Optional[Sequence["SupervisedPlugin"]] = None, evaluator=default_evaluator,
                  eval_every: int = -1):
         """
         Args:
             parser: The parser.
             checkpoint: The checkpoint.
-            device: The device.
+            task: The task.
             logger: The logger.
             plugins: Possible plugins.
             evaluator: The evaluator.
             eval_every: Interval evaluation.
-            **base_kwargs: Optional args
         """
-        self.task_id = 0
-        self.direction_id = 0
+        self.task_id = task[0]
+        self.direction_id = task[1]
         self.parser = parser  # The parser.
         self.logger = logger  # The logger.
         self.checkpoint = checkpoint  # The Checkpoint
@@ -68,13 +56,12 @@ class MySupervisedTemplate(SupervisedTemplate):
         Current mini-batch input.
         Omit the ids and make a struct.
         """
-
         return self.parser.inputs_to_struct(self.mbatch[:-1])
 
     def criterion(self):
         """
         Loss function.
-        Make output struct.
+        Make output to struct.
         """
         out = self.parser.outs_to_struct(self.mb_output)
         return self._criterion(self.parser, self.mb_x, out)
@@ -83,22 +70,44 @@ class MySupervisedTemplate(SupervisedTemplate):
         """Evaluation loop over the current `self.dataloader`."""
         super().eval_epoch(**kwargs)
         Metrics = self.evaluator.get_last_metrics()
-      #  print(Metrics.keys())
-        if Metrics == {}:
-            acc = 0.0
-        else:
-            for key in Metrics.keys():
-                if 'Top1_Acc_Exp/eval_phase/test_stream' in key:
-                 acc = Metrics[key]
-                 print("The Accuracy is: {}".format(acc))
-        # TODO -Get the task, direction from somewhere.
-        self.checkpoint(self.model, self.clock.train_exp_epochs, acc, self.optimizer, self.parser.scheduler, self.parser,0 , 2)  # Updating checkpoint.
-     #   print(self.evaluator.get_all_metrics())
+        acc = 0.0
+        for key in Metrics.keys():
+            if 'Top1_Acc_Exp/eval_phase/test_stream' in key:
+                acc = Metrics[key]
+                print("The Accuracy is: {}".format(acc))
 
-    def update_task(self, task_id: int, direction_id: int):
+        self.checkpoint(self.model, self.clock.train_exp_epochs, acc, self.optimizer, self.parser.scheduler,
+                        self.parser, self.task_id, self.direction_id)  # Updating checkpoint.
+
+    def update_task(self, task_id: int, direction_id: int)->None:
+        """
+        Updates the task, direction id.
+        Args:
+            task_id: The task id.
+            direction_id: The direction id.
+
+
+        """
         self.task_id = task_id
         self.direction_id = direction_id
 
+class Naive(MySupervisedTemplate):
+    # Naive strategy, without any regularization.
+    def __init__(
+            self,
+            parser: argparse,
+            plugins: Optional[List[SupervisedPlugin]] = [],
+            evaluator=default_evaluator,
+            eval_every=-1,
+            **base_kwargs
+    ):
+        super().__init__(
+            parser,
+            plugins=plugins,
+            evaluator=evaluator,
+            eval_every=eval_every,
+            **base_kwargs
+        )
 
 class MyEWC(MySupervisedTemplate):
     def __init__(
@@ -110,7 +119,7 @@ class MyEWC(MySupervisedTemplate):
             plugins: Optional[List[SupervisedPlugin]] = None,
             evaluator=default_evaluator,
             eval_every=-1,
-            prev_model = None,
+            prev_model=None,
             **base_kwargs
     ):
         """
@@ -151,7 +160,7 @@ class LWF(MySupervisedTemplate):
             plugins: Optional[List[SupervisedPlugin]] = None,
             evaluator: EvaluationPlugin = default_evaluator,
             eval_every: int = -1,
-            prev_model = None,
+            prev_model=None,
             **base_kwargs
     ):
         """
@@ -191,7 +200,7 @@ class LFL(MySupervisedTemplate):
             plugins: Optional[List[SupervisedPlugin]] = None,
             evaluator: EvaluationPlugin = default_evaluator,
             eval_every: int = -1,
-            prev_model = None,
+            prev_model=None,
             **base_kwargs
     ):
         """
@@ -225,8 +234,8 @@ class MyMAS(MySupervisedTemplate):
     This strategy does not use task identities.
     """
 
-    def __init__(self, parser: argparse, device: str = 'cuda', plugins: Optional[List[SupervisedPlugin]] = None,
-                 evaluator: EvaluationPlugin = default_evaluator, eval_every: int = -1, prev_mode = None, **base_kwargs):
+    def __init__(self, parser: argparse, plugins: Optional[List[SupervisedPlugin]] = None,
+                 evaluator: EvaluationPlugin = default_evaluator, eval_every: int = -1, prev_mode=None, **base_kwargs):
         """
        Args:
           parser: The parser.
@@ -251,11 +260,11 @@ class MyMAS(MySupervisedTemplate):
             **base_kwargs
         )
 
+
 class MyRWALK(MySupervisedTemplate):
     def __init__(
             self,
             parser: argparse,
-            device: str = 'cuda',
             plugins: Optional[List[SupervisedPlugin]] = None,
             evaluator: EvaluationPlugin = default_evaluator,
             eval_every: int = -1,
@@ -276,7 +285,7 @@ class MyRWALK(MySupervisedTemplate):
         else:
             plugins.append(RWalk)
 
-        super().__init__(
+        super(MySupervisedTemplate).__init__(
             parser,
             plugins=plugins,
             evaluator=evaluator,
@@ -284,9 +293,10 @@ class MyRWALK(MySupervisedTemplate):
             **base_kwargs
         )
 
+
 class SI(MySupervisedTemplate):
-    def __init__(self, parser: argparse, device: str = 'cuda', plugins: Optional[List[SupervisedPlugin]] = None,
-                 evaluator: EvaluationPlugin = default_evaluator, eval_every: int = -1, exc = None, **base_kwargs):
+    def __init__(self, parser: argparse, plugins: Optional[List[SupervisedPlugin]] = None,
+                 evaluator: EvaluationPlugin = default_evaluator, eval_every: int = -1, **base_kwargs):
         """
        Args:
           parser: The parser.
@@ -297,7 +307,7 @@ class SI(MySupervisedTemplate):
           **base_kwargs:
        """
 
-        SIP = SIPlugin(parser.si_lambda,excluded_parameters = None)
+        SIP = SIPlugin(parser.si_lambda, excluded_parameters=None)
         if plugins is None:
             plugins = [SIP]
         else:
@@ -310,3 +320,11 @@ class SI(MySupervisedTemplate):
             eval_every=eval_every,
             **base_kwargs
         )
+
+__all__ = [
+    "LFL",
+    "LWF",
+    "MyMAS",
+    "MyEWC",
+    "Naive"
+]

@@ -6,6 +6,7 @@ from training.Data.Structs import inputs_to_struct, outs_to_struct
 
 CE = nn.CrossEntropyLoss(reduction='none')
 
+
 # Here we define our loss functions.
 
 def multi_label_loss(samples: inputs_to_struct, outs: outs_to_struct):
@@ -19,7 +20,7 @@ def multi_label_loss(samples: inputs_to_struct, outs: outs_to_struct):
     Returns: The mean loss over all samples in the batch.
 
     """
-    samples.label_task = samples.label_task.squeeze() # TODO - CHECK IT.
+    samples.label_task = samples.label_task.squeeze()  # TODO - CHECK IT.
     losses_task = CE(outs.classifier, samples.label_task)  # Compute the CE loss without reduction.
     loss_task = losses_task.mean()  # Mean over all batch.
     return loss_task

@@ -56,12 +56,12 @@ class MultiTaskHead(nn.Module):
         self.ndirections = opts.ndirections  # The number of directions.
         self.num_heads = opts.num_heads  # The number of heads.
         self.num_classes = opts.nclasses  # The number of classes for each task to create the head according to.
-        self.taskhead = nn.ModuleList() # TODO - CHANGE TO LIST OF LISTS.
+        self.taskhead = nn.ModuleList()  # TODO - CHANGE TO LIST OF LISTS.
         # For each task, direction create its task-head according to num_classes.
         for i in range(self.ntasks):
             for j in range(self.ndirections):
-               # num_heads = self.num_heads[j]
-                layer = HeadSingleTask(opts, self.num_classes[i], 1)  # create a taskhead.
+                # num_heads = self.num_heads[j]
+                layer = HeadSingleTask(opts, self.num_classes[i])  # create a taskhead.
                 self.taskhead.append(layer)
                 if transfer_learning_params is not None:
                     transfer_learning_params[i][j].extend(layer.parameters())  # Storing the taskhead params.
@@ -76,7 +76,6 @@ class MultiTaskHead(nn.Module):
         """
         (bu2_out, flag) = inputs
         task_id = Flag_to_task(self.opts, flag)  # Get the task id.
-       # print(task_id)
         task_out = self.taskhead[task_id](bu2_out).squeeze()  # apply the appropriate task-head.
         return task_out
 
@@ -102,6 +101,5 @@ class OccurrenceHead(nn.Module):
         Returns: The binary classification input.
 
         """
-        #   x = inputs.squeeze()
         x = self.occurrence_transform(inputs)  # Apply the transform for the BU1 loss.
         return x

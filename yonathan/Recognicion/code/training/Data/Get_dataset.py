@@ -10,6 +10,7 @@ from training.Data.Data_params import Flag, DsType
 
 sys.path.append(os.path.join(Path(__file__).parents[2], 'Data_Creation'))
 
+
 # Return the datasets and dataloaders.
 
 def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, lang_idx: int,
@@ -39,12 +40,12 @@ def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, lang_idx:
     # TODO - GET RID OF THIS, THIS IS AN INTEGRATION SOLUTION ONLY.
     try:
         image_size = MetaData.parser.image_size  # Get the image size.
-        opts.inshape = (3, *image_size[1:])  # Updating the image size according to the actual data.
+        opts.inshape = (3, *image_size)  # Updating the image size according to the actual data.
         obj_per_row = MetaData.parser.num_cols  # Getting the number of chars per row.
         obj_per_col = MetaData.parser.num_rows  # Getting the number of chars per col.
     except AttributeError:
         image_size = MetaData.image_size  # Get the image size.
-        opts.inshape = (3, *image_size[1:])  # Updating the image size according to the actual data.
+        opts.inshape = (3, *image_size)  # Updating the image size according to the actual data.
         obj_per_row = MetaData.num_cols  # Getting the number of chars per row.
         obj_per_col = MetaData.num_rows  # Getting the number of chars per col.
 

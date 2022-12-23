@@ -2,6 +2,7 @@ import argparse
 
 import torch
 import torch.nn as nn
+
 from torch.utils.data import DataLoader
 
 from training.Data.Structs import inputs_to_struct, outs_to_struct
@@ -24,7 +25,7 @@ def multi_label_accuracy_base(samples: inputs_to_struct, outs: outs_to_struct) -
     """
     predictions = torch.argmax(outs.classifier, dim=1)  # Find the prediction for each queried character.
     label_task = samples.label_task  # The label task.
-    task_accuracy = (predictions == label_task).float()  # Compute the number of matches.
+    task_accuracy = torch.eq(predictions, label_task).float()  # Compute the number of matches.
     return predictions, task_accuracy  # return the predictions and the accuracy.
 
 

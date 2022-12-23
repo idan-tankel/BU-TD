@@ -14,6 +14,10 @@ from training.Modules.Batch_norm import store_running_stats
 # Supports initialization and updates.
 
 class CheckpointSaver:
+    """
+    Checkpoint class.
+    Supports saving models.
+    """
     def __init__(self, dirpath: str, store_running_statistics: bool = False):
         """
         Checkpoint saver class.
@@ -32,7 +36,7 @@ class CheckpointSaver:
         code_path = os.path.join(dirpath, 'code')
         # Copy the code script.
         if not os.path.exists(os.path.join(code_path)):
-            shutil.copytree(Path(__file__).parents[2], os.path.join(self.dirpath, 'code'))
+            shutil.copytree(str(Path(__file__).parents[2]), os.path.join(self.dirpath, 'code'))
         print("Code script saved")
 
     def update_optimum(self, new_optimum: float) -> None:
@@ -86,3 +90,4 @@ class CheckpointSaver:
             torch.save(save_data, model_path_curr)
             self.update_optimum(current_test_accuracy)
 
+        print(f"Current accuracy {current_test_accuracy}")

@@ -1,6 +1,7 @@
 import argparse
-import itertools
-from typing import Iterator, Union
+
+
+from typing import Iterator
 
 import numpy as np
 import torch
@@ -32,6 +33,7 @@ class BUStreamShared(nn.Module):
         self.conv1 = Depthwise_separable_conv(Model_inshape[0], opts.nfilters[0], kernel_size=7, stride=opts.strides[0],
                                               padding=3,
                                               bias=False)  # The first conv layer as in ResNet.
+
         # The first shape after Conv1.
         inshape = np.array([opts.nfilters[0], np.int(np.ceil(Model_inshape[1] / opts.strides[0])),
                             np.int(np.ceil(Model_inshape[2] / opts.strides[0]))])
@@ -107,7 +109,7 @@ class BUStream(nn.Module):
         self.use_lateral = opts.use_lateral_tdbu  # Whether to use the TD -> BU2 laterals.
         self.is_bu2 = is_bu2  # Save whether we are on the BU2 stream.
         self.InitialBlock = BUInitialBlock(opts, shared,
-                                           is_bu2=is_bu2)  # The initial block, getting the image as an input.
+                                           is_bu2=is_bu2,task_embedding = self.task_embedding)  # The initial block, getting the image as an input.
         self.alllayers = nn.ModuleList()
         # For each shared layer we create associate BU layer.
         for layer_idx, shared_layer in enumerate(shared.alllayers):
@@ -147,7 +149,7 @@ class BUStream(nn.Module):
         # The input is the image, the flag and the lateral connections from the previous stream(if exist).
         x, flags, laterals_in = inputs
         laterals_out = []  # The laterals for the second stream.
-        x = self.InitialBlock(x, laterals_in)  # Compute the initial block in ResNet.
+        x = self.InitialBlock(x,flags, laterals_in)  # Compute the initial block in ResNet.
         laterals_out.append([x])
         for layer_id, layer in enumerate(self.alllayers):
             layer_lats_out = []  # The lateral connections for the next stream.
@@ -206,7 +208,7 @@ class TDModel(nn.Module):
         if self.use_lateral:
             self.bot_lat = Modulation_and_Lat(opts, opts.nfilters[0])
         # Copy the argument embedding.
-        if opts.ds_type is DsType.Omniglot and opts.model_flag is Flag.CL:
+        if opts.model_flag is Flag.CL:
             for j in range(self.ntasks):
                 self.argument_embedding[j].extend(self.InitialTaskEmbedding.top_td_arg_emb[j].parameters())
         init_module_weights(self.modules())  # Initialize the weights.
@@ -226,10 +228,11 @@ class TDModel(nn.Module):
         layers = nn.ModuleList()
         block_inshape = self.inshapes[index - 1]
         for i in range(num_blocks - 1):  # Create shape preserving blocks.
-            newblock = self.block(self.opts, inplanes, inplanes, 1, block_inshape,index = i)
+            newblock = self.block(self.opts, inplanes, inplanes, 1, block_inshape, index=i)
             layers.append(newblock)
-     #   block_inshape = self.inshapes[index - 1]  # Compute the shape upsample to.
-        newblock = self.block(self.opts, inplanes, planes, stride, block_inshape,index = num_blocks - 1)  # Create upsampling block.
+        #   block_inshape = self.inshapes[index - 1]  # Compute the shape upsample to.
+        newblock = self.block(self.opts, inplanes, planes, stride, block_inshape,
+                              index=num_blocks - 1)  # Create upsampling block.
         layers.append(newblock)
         return layers
 
@@ -275,7 +278,7 @@ class TDModel(nn.Module):
 class BUTDModel(nn.Module):
     def __init__(self, opts: argparse):
         """
-        The main model.
+        The main_fashion model.
         The full BU-TD model with possible embedding for continual learning.
         If shared is True, BU1 and BU2 have the same conv layers, otherwise independent layers.
         Args:
@@ -310,6 +313,7 @@ class BUTDModel(nn.Module):
             # Store the argument embedding.
             if opts.ds_type is DsType.Omniglot:
                 self.argument_embedding = self.tdmodel.argument_embedding
+        self.trained_tasks = list()
 
     def forward(self, samples: inputs_to_struct) -> list[torch]:
         """
@@ -363,6 +367,9 @@ class BUTDModel(nn.Module):
         outs = self.forward(inputs)  # Forward.
         return self.opts.outs_to_struct(outs)  # Make the output, a struct.
 
+    def update_task_set(self, task):
+        self.trained_tasks.append(task)
+
 
 class ResNet(nn.Module):
     """
@@ -379,10 +386,11 @@ class ResNet(nn.Module):
         self.opts = opts  # The model opts.
         self.ntasks = opts.ntasks  # The number of tasks.
         self.ndirections = opts.ndirections  # The number of directions.
-        self.feature = BUModel(opts, use_task_embedding=False)  # Create the backbone without the task embedding.
+        self.feature_extractor = BUModel(opts,
+                                         use_task_embedding=False)  # Create the backbone without the task embedding.
         self.TL = [[[] for _ in range(opts.ndirections)] for _ in range(opts.ntasks)]  # Store the read-out parameters.
         self.classifier = MultiTaskHead(opts, self.TL)  # The classifier head.
-        self.trained_tasks: set[int, tuple[int, int]] = set()
+        self.trained_tasks: list[int, tuple[int, int]] = list()
 
     def forward(self, samples: inputs_to_struct):
         """
@@ -394,7 +402,7 @@ class ResNet(nn.Module):
 
         """
         flags = samples.flag  # The flag.
-        bu_out = self.compute_features(samples)  # Compute the features.
+        bu_out, _ = self.feature_extractor([samples.image, samples.flag, None])  # Compute the features.
         task_out = self.classifier((bu_out, flags))  # The classifier.
         return [None, None, bu_out, task_out]
 
@@ -410,9 +418,13 @@ class ResNet(nn.Module):
         return self.opts.outs_to_struct(outs)  # Making the struct.
 
     def update_task_set(self, task):
-        self.trained_tasks.add(task)
+        self.trained_tasks.append(task)
 
-    def get_specific_head(self, task_id, direction_id):
-         learned_params = []
-         learned_params.extend(self.feature.parameters())
-         learned_params.extend(self.TL[task_id][direction_id])
+    def get_specific_head(self, task_id, direction_tuple):
+        learned_params = []
+        learned_params.extend(self.feature_extractor.parameters())
+        direction_id, _ = tuple_direction_to_index(self.opts.num_x_axis, self.opts.num_y_axis,
+                                                   direction=direction_tuple, ndirections=self.opts.ndirections,
+                                                   task_id=task_id)
+        learned_params.extend(self.TL[task_id][direction_id])
+        return learned_params

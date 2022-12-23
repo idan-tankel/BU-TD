@@ -107,11 +107,11 @@ class Modulation_and_Lat(nn.Module):
         self.side = nn.Parameter(
             torch.Tensor(*shape))  # creates the learnable parameter of shape [nchannels,1,1] according to nchannels.
         self.norm_and_relu = nn.Sequential(opts.norm_layer(opts, filters), opts.activation_fun())
-      #  self.norm = opts.norm_layer(opts, filters)  # batch norm after the channel-modulation of the lateral.
-     #   self.relu1 = opts.activation_fun()  # activation_fun after the batch_norm layer
+        #  self.norm = opts.norm_layer(opts, filters)  # batch norm after the channel-modulation of the lateral.
+        #   self.relu1 = opts.activation_fun()  # activation_fun after the batch_norm layer
         self.relu = opts.activation_fun()  # activation_fun after the skip connection
 
-    def forward(self, x:torch, lateral:torch) -> torch:
+    def forward(self, x: torch, lateral: torch) -> torch:
         """
         Args:
             x: The model input.
@@ -121,34 +121,35 @@ class Modulation_and_Lat(nn.Module):
 
         """
         side_val = lateral * self.side  # channel-modulation(CM)
-      #  side_val = self.norm(side_val)  # Batch_norm after the CM
-       # side_val = self.relu1(side_val)  # Activation_fun after the batch_norm
+        #  side_val = self.norm(side_val)  # Batch_norm after the CM
+        # side_val = self.relu1(side_val)  # Activation_fun after the batch_norm
         side_val = self.norm_and_relu(side_val)
         x = x + side_val  # The lateral skip connection
         x = self.relu(x)  # Activation_fun after the skip connection
         return x
 
+
 class Modulation(nn.Module):  # Modulation layer.
     def __init__(self, opts: argparse, shape: list, column_modulation: bool, task_embedding: list):
         """
         Channel & pixel modulation layer.
-        The main idea of the paper allowing continual learning without forgetting.
+        The main_fashion idea of the paper allowing continual learning without forgetting.
         Args:
             opts: The model options.
             shape: The shape to create the model according to.
             column_modulation: Whether to create pixel/channel modulation.
         """
         super(Modulation, self).__init__()
-        self.opts = opts # Store the model opts.
+        self.opts = opts  # Store the model opts.
         self.modulations = nn.ParameterList()  # Module list containing modulation for all directions.
         if column_modulation:
             size = [1, *shape]  # If pixel modulation matches the inner spatial of the input
         else:
             size = [shape, 1, 1]  # If channel modulation matches the number of channels
         for i in range(opts.ndirections):  # allocating for every direction its task embedding
-            layer = nn.Parameter(torch.Tensor(*size)) # The task embedding.
-            task_embedding[i].append(layer) # Add to the learnable parameters.
-            self.modulations.append(layer) # Add to the modulation list.
+            layer = nn.Parameter(torch.Tensor(*size))  # The task embedding.
+            task_embedding[i].append(layer)  # Add to the learnable parameters.
+            self.modulations.append(layer)  # Add to the modulation list.
 
     def forward(self, x: torch, flag: torch) -> torch:
         """
@@ -161,7 +162,7 @@ class Modulation(nn.Module):  # Modulation layer.
 
         """
         direction_id = flag_to_idx(flag)  # Compute the index of the one-hot.
-    #    print(direction_id)
+        #    print(direction_id)
         task_emb = self.modulations[direction_id]  # compute the task embedding according to the direction_idx.
         output = x * (1 - task_emb)  # perform the modulation.
         return output

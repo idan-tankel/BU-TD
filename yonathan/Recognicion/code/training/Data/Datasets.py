@@ -14,6 +14,7 @@ from training.Utils import tuple_direction_to_index
 
 from Data_Creation.Create_dataset_classes import DsType
 
+
 # Here we define the dataset classes.
 
 class DataSetBase(Dataset):
@@ -126,6 +127,7 @@ class DatasetGuided(DataSetBase):
         self.edge_class = torch.tensor(self.nclasses)  # The 'border' class.
         # TODO - GET RID OF THIS
         self.initial_tasks = opts.initial_directions  # The initial tasks.
+        self.flatten = False
 
     def Compute_label_task(self, r: int, c: int, label_all: np.ndarray, direction: tuple) -> torch:
         """
@@ -167,6 +169,8 @@ class DatasetGuided(DataSetBase):
         # Converting the sample into input.
         label_existence, label_all, query_coord = struct_to_input(sample)
         r, c = query_coord  # Getting the place we query about.
+        if self.flatten:
+            r = 0
         char = label_all[r][c]  # Get the character we query about.
         # Getting the task embedding, telling which task we are solving now.
         # For emnist,fashion this is always 0 but for Omniglot it tells which language we use.
@@ -201,12 +205,12 @@ class DatasetNonGuided(DatasetGuided):
         Returns: The label task.
         """
 
-        label_adj_all = self.nclasses * torch.ones(self.nclasses)
+        label_adj_all = self.nclasses * torch.ones(self.nclasses, dtype=int)
         for r, row in enumerate(label_all):  # Iterating over all rows.
             for c, char in enumerate(row):  # Iterating over all character in the row.
                 res = self.Compute_label_task(r=r, c=c, label_all=label_all,
                                               direction=self.tuple_direction)  # Compute the label task.
-                label_adj_all[char] = res
+                label_adj_all[char] = res  # assign to the character.
 
         return label_adj_all
 
@@ -222,4 +226,6 @@ class DatasetNonGuided(DatasetGuided):
         img, label_task, flag, label_all, label_existence = super().__getitem__(index)  # The same get item.
         # Change the label task to return all adjacent characters.
         label_task = self.Get_label_task_all(label_all=label_all)
+        #   print(label_all)
+        # print(label_task)
         return img, label_task, flag, label_all, label_existence

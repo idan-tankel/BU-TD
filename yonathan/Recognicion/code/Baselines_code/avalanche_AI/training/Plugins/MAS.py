@@ -66,7 +66,7 @@ class MyMASPlugin(MASPlugin):
     def _get_importance(self, model: nn.Module, dataset: Dataset, train_mb_size: int, device: Union['cuda', 'cpu']):
 
         # Initialize importance matrix
-        importance = dict(zerolike_params_dict(model.feature))
+        importance = dict(zerolike_params_dict(model.feature_extractor))
         # Do forward and backward pass to accumulate L2-loss gradients
         model.train()
         dataloader = DataLoader(dataset, batch_size=train_mb_size, )
@@ -84,7 +84,7 @@ class MyMASPlugin(MASPlugin):
             loss = torch.norm(out, p="fro", dim=1).mean()
             loss.backward()
             # Accumulate importance
-            for name, param in model.feature.named_parameters():
+            for name, param in model.feature_extractor.named_parameters():
                 if param.requires_grad:
                     if param.grad is not None:
                         importance[name] += param.grad.abs()
@@ -110,7 +110,7 @@ class MyMASPlugin(MASPlugin):
             raise ValueError("Loss is not available")
 
         # Apply penalty term
-        for name, param in strategy.model.feature.named_parameters():
+        for name, param in strategy.model.feature_extractor.named_parameters():
             if name in self.importance.keys():
                 loss_reg += torch.sum(self.importance[name] * (param - self.params[name]).pow(2))
 
