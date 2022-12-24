@@ -102,7 +102,7 @@ def num_params(params: Union[Iterator]) -> int:
     for param in params:
         # For each parameter in the model we multiply all its shape dimensions.
         shape = torch.tensor(param.shape)  # Make a tensor.
-        num_param = num_param + torch.prod(shape)  # Add to the sum.
+        num_param += torch.prod(shape)  # Add to the sum.
     return num_param
 
 

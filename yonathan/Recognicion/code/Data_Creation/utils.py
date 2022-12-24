@@ -38,7 +38,7 @@ def Download_raw_omniglot_data(raw_data_path: str) -> dict:
 
     """
     if not os.path.exists(raw_data_path):
-        datasets.Omniglot(download=True, root=raw_data_path, background=True)
+        datasets.Omniglot(download=True, root=raw_data_path)
         datasets.Omniglot(download=True, root=raw_data_path, background=False)
         # Both data types.
         list_dir = ['images_background', 'images_evaluation']

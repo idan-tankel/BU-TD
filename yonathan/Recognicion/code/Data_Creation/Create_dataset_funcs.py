@@ -75,7 +75,7 @@ def create_image_matrix(parser: argparse, ds_type: str, sample: Sample) -> Sampl
     if sample.image.shape[0] == 1:  # If gray-scale.
         sample.image = np.concatenate((sample.image, sample.image, sample.image), axis=0)
     # Making RGB.
-    sample.image = sample.image * 255
+    sample.image *= 255
     sample.image = sample.image.astype(np.uint8)
     # Making the data augmentation if needed.
     if is_train and augment_sample:
@@ -101,7 +101,7 @@ def gen_samples(parser: argparse, job_id: int, range_start: int, range_stop: int
 
     """
     num_folders = int(np.ceil((range_stop - range_start) / parser.job_chunk_size) + 1)
-    ranges = np.linspace(range_start, range_stop, num=num_folders, dtype=int, endpoint=True)
+    ranges = np.linspace(range_start, range_stop, num=num_folders, dtype=int)
     cur_samples_dir = os.path.join(storage_dir, ds_type)  # Making the path.
     num_samples_created_so_far = 0
     if not os.path.exists(cur_samples_dir):  # creating the train/test/val paths if needed.
@@ -378,13 +378,13 @@ def Split_samples_into_jobs_and_generate(parser: argparse, samples: list[Sample]
         ds_type: The dataset type.
 
     """
-    num_jobs = parser.nthreads  # The number of threads.
+    num_jobs = parser.num_threads  # The number of threads.
     job_chunk_size = parser.job_chunk_size  # The number of samples per job.
     num_samples = len(samples)  # The number of samples
     # each 'job' processes several chunks. Each chunk is of 'storage_batch_size' samples.
     cur_num_jobs = min(num_jobs, np.ceil(num_samples / job_chunk_size).astype(int))  # The needed number of jobs.
     use_multiprocess = num_jobs > 1  # Whether to use multiprocessing.
-    ranges = np.linspace(0, num_samples, cur_num_jobs + 1, endpoint=True).astype(int)  # Split the range into jobs.
+    ranges = np.linspace(0, num_samples, cur_num_jobs + 1).astype(int)  # Split the range into jobs.
     # in case there are fewer ranges than jobs
     ranges = np.unique(ranges)
     all_args = []
@@ -410,7 +410,7 @@ def Split_samples_into_jobs_and_generate(parser: argparse, samples: list[Sample]
 
 def create_dataset(parser: argparse, raw_dataset: General_raw_data, ds_type: DsType, language_list: list) -> dict:
     """
-    The main_fashion function choosing sequences, then generating samples, Stores them and saves the MetaData.
+    The main function choosing sequences, then generating samples, Stores them and saves the MetaData.
     Args:
         parser: The dataset options.
         raw_dataset: The raw dataset images.

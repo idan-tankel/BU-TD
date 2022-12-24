@@ -10,13 +10,17 @@ from training.Utils import tuple_direction_to_index
 # Batch Norm class.
 
 class BatchNorm(nn.Module):
+    """
+    Creates batch_norm class.
+    As continual learning overrides the running statistics, we created a class saving the running stats
+    for each direction, task.
+    We support storing and loading running stats of the model to dynamically evaluate the learning of the task.
+    For each task, direction stores its mean,var as continual learning overrides those variables.
+    """
+
     def __init__(self, opts: argparse, num_channels: int, dims: int = 2):
         """
-        Creates batch_norm class.
-        As continual learning overrides the running statistics, we created a class saving the running stats
-        for each direction, task.
-        We support storing and loading running stats of the model to dynamically evaluate the learning of the task.
-        For each task, direction stores its mean,var as continual learning overrides those variables.
+
         Args:
             opts: The model options
             num_channels: num channels to apply batch_norm on.

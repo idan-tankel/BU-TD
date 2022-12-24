@@ -128,7 +128,7 @@ def GetParser(task_idx: int = 0, direction_idx: int = 0, model_type: Union[BUTDM
     parser.add_argument('--si_lambda', default=1e1, type=float, help='The SI strength')
     parser.add_argument('--si_eps', default=0.0000001, type=float, help='The SI strength')
     # LFL
-    parser.add_argument('--LFL_lambda', default=1.0, type=float, help='The LFL strength')
+    parser.add_argument('--LFL_lambda', default=0.25, type=float, help='The LFL strength')
     # LWF
     parser.add_argument('--LWF_lambda', default=0.1, type=float, help='The LWF strength')
     parser.add_argument('--temperature_LWF', default=4.0, type=float, help='The LWF temperature')

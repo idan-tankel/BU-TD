@@ -16,8 +16,11 @@ from training.Utils import get_laterals
 # Here we define the Basic BU, TD, BU shared blocks.
 
 class BasicBlockBUShared(nn.Module):
-    # Basic block of the shared part between BU1, BU2, contain only the conv layers.
-    # Highly Based on the ResNet pytorch's implementation.
+    """
+    Basic block of the shared part between BU1, BU2, contain only the conv layers.
+    Highly Based on the ResNet pytorch's implementation.
+    """
+
     expansion = 1
 
     def __init__(self, opts: argparse, in_channels: int, out_channels: int, stride: int):
@@ -46,9 +49,13 @@ class BasicBlockBUShared(nn.Module):
 
 
 class BUInitialBlock(nn.Module):
+    """
+    Initial Block getting the image as an input.
+    """
+
     def __init__(self, opts: argparse, shared: nn.Module, is_bu2: bool = False, task_embedding=None):
         """
-        Basic BU block.
+
         Receiving the shared conv layers and initializes other parameters specifically.
         Args:
             opts: The model options.
@@ -104,7 +111,10 @@ class BUInitialBlock(nn.Module):
 
 
 class BasicBlockBU(nn.Module):
-    # Basic block of the BU1, BU2 streams.
+    """
+    Basic block of the BU1, BU2 streams.
+    """
+
     def __init__(self, opts: argparse, shared: nn.Module, block_inshapes: torch, is_bu2: bool,
                  task_embedding: Union[list, None] = None) -> None:
         """
@@ -271,8 +281,11 @@ class InitialEmbeddingBlock(nn.Module):
 
 
 class BasicBlockTD(nn.Module):
-    # Basic block of the TD stream.
-    # The same architecture as in BU just instead of downsample by stride factor we upsample by stride factor.
+    """
+    Basic block of the TD stream.
+    The same architecture as in BU just instead of downsample by stride factor we upsample by stride factor.
+    """
+
     expansion = 1
 
     def __init__(self, opts: argparse, in_channels: int, out_channels: int, stride: int, shape: np.ndarray, index: int):
@@ -298,7 +311,7 @@ class BasicBlockTD(nn.Module):
         self.conv_block2 = nn.Sequential(conv3x3up(in_channels, out_channels, size, stride > 1),
                                          opts.norm_layer(opts, out_channels))
         self.relu3 = opts.activation_fun()  # The third AF.
-        out_channels = out_channels * BasicBlockTD.expansion
+        out_channels *= BasicBlockTD.expansion
         self.upsample = None
         if stride > 1:
             # upsample the skip connection.

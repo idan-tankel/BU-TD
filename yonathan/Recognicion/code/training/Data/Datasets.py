@@ -97,10 +97,15 @@ def struct_to_input(sample: Sample) -> tuple[torch, torch, tuple]:
 
 
 class DatasetGuided(DataSetBase):
+    """
+    Guided Dataset.
+    The guided dataset, returning query with argument.
+    """
+
     def __init__(self, root: str, opts: argparse, nexamples: int, task_idx: int = 0, direction_tuple: tuple = (1, 0),
                  is_train=True, obj_per_row=6, obj_per_col=1):
         """
-        Guided Dataset
+
         Args:
             root: Path to the data.
             opts: The model options.
@@ -195,6 +200,11 @@ class DatasetGuided(DataSetBase):
 
 
 class DatasetNonGuided(DatasetGuided):
+    """
+    Non-Guided Dataset.
+    Returning for each character its adjacent character.
+    """
+
     # In this dataset, we return for each character its adjacent character according to the direction to all characters.
     def Get_label_task_all(self, label_all: torch) -> torch:
         """

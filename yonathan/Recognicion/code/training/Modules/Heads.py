@@ -11,9 +11,12 @@ from training.Utils import Flag_to_task
 # Here we define the task-head modules.
 
 class HeadSingleTask(nn.Module):
-    # Task head for single task.
-    # Allocate tasks according to the desired output size.
-    # if model flag is NOFLAG we allocate subhead for each character.
+    """
+    Task head for single task.
+    Allocate tasks according to the desired output size.
+    if model flag is NOFLAG we allocate subhead for each character.
+    """
+
     def __init__(self, opts: argparse, nclasses: int, num_heads=1) -> None:
         """
         Args:
@@ -43,6 +46,10 @@ class HeadSingleTask(nn.Module):
 
 
 class MultiTaskHead(nn.Module):
+    """
+    # Create task-head per task, direction.
+    """
+
     def __init__(self, opts: argparse, transfer_learning_params: Union[list, None] = None):
         """
         Multi head task-head allocating for each task and direction a single task head.
@@ -81,6 +88,9 @@ class MultiTaskHead(nn.Module):
 
 
 class OccurrenceHead(nn.Module):
+    """
+    Occurrence head, transforming the BU1 feature to binary classification over all classes.
+    """
 
     def __init__(self, opts: argparse):
         """

@@ -18,6 +18,7 @@ class CheckpointSaver:
     Checkpoint class.
     Supports saving models.
     """
+
     def __init__(self, dirpath: str, store_running_statistics: bool = False):
         """
         Checkpoint saver class.

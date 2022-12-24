@@ -96,7 +96,7 @@ def main(flag=Flag.CL):
   #  print("The Accuracy on the initial task was: {}".format(acc_old) )
 
    # print("The Accuracy on the initial task now is: {}".format(acc_new))
-    print("As all rows No forgetting!")
+    print("As all rows the same there is No forgetting!")
 
 main()
 

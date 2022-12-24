@@ -1,6 +1,5 @@
 import argparse
 
-
 from typing import Iterator
 
 import numpy as np
@@ -19,7 +18,10 @@ from training.Utils import get_laterals, tuple_direction_to_index
 # It includes BUTDModel, BUModel and Pure ResNet.
 
 class BUStreamShared(nn.Module):
-    # Here we define the shared part between BU1, BU2.
+    """
+    Here we define the shared layers between BU1, BU2.
+    """
+
     def __init__(self, opts: argparse):
         """
         The Shared stream between BU1, BU2, contain only conv layers.
@@ -70,7 +72,10 @@ class BUStreamShared(nn.Module):
 
 
 class BUModel(nn.Module):
-    # Equivalent to Pure ResNet.
+    """
+    Equivalent to Pure ResNet.
+    """
+
     def __init__(self, opts: argparse, use_task_embedding: bool = False):
         """
         Args:
@@ -93,6 +98,9 @@ class BUModel(nn.Module):
 
 
 class BUStream(nn.Module):
+    """
+    The BU stream model.
+    """
 
     def __init__(self, opts: argparse, shared: nn.Module, is_bu2: bool = False):
         """
@@ -108,8 +116,9 @@ class BUStream(nn.Module):
         self.inshapes = shared.inshapes  # The output shape of all layers.
         self.use_lateral = opts.use_lateral_tdbu  # Whether to use the TD -> BU2 laterals.
         self.is_bu2 = is_bu2  # Save whether we are on the BU2 stream.
+        # The initial block, getting the image as an input.
         self.InitialBlock = BUInitialBlock(opts, shared,
-                                           is_bu2=is_bu2,task_embedding = self.task_embedding)  # The initial block, getting the image as an input.
+                                           is_bu2=is_bu2, task_embedding=self.task_embedding)
         self.alllayers = nn.ModuleList()
         # For each shared layer we create associate BU layer.
         for layer_idx, shared_layer in enumerate(shared.alllayers):
@@ -149,7 +158,7 @@ class BUStream(nn.Module):
         # The input is the image, the flag and the lateral connections from the previous stream(if exist).
         x, flags, laterals_in = inputs
         laterals_out = []  # The laterals for the second stream.
-        x = self.InitialBlock(x,flags, laterals_in)  # Compute the initial block in ResNet.
+        x = self.InitialBlock(x, flags, laterals_in)  # Compute the initial block in ResNet.
         laterals_out.append([x])
         for layer_id, layer in enumerate(self.alllayers):
             layer_lats_out = []  # The lateral connections for the next stream.
@@ -170,6 +179,11 @@ class BUStream(nn.Module):
 
 
 class TDModel(nn.Module):
+    """
+    TD model.
+    Getting the argument and lateral connections as an input.
+    """
+
     def __init__(self, opts: argparse, bu_inshapes: list):
         """
         Args:
@@ -276,10 +290,14 @@ class TDModel(nn.Module):
 
 
 class BUTDModel(nn.Module):
+    """
+    The main model.
+    The full BU-TD model with possible embedding for continual learning.
+    """
+
     def __init__(self, opts: argparse):
         """
-        The main_fashion model.
-        The full BU-TD model with possible embedding for continual learning.
+
         If shared is True, BU1 and BU2 have the same conv layers, otherwise independent layers.
         Args:
             opts: Model options.
@@ -296,7 +314,7 @@ class BUTDModel(nn.Module):
         bu_shared = BUStreamShared(opts)  # The shared part between BU1, BU2.
         shapes = bu_shared.inshapes  # The model output layers shape.
         #   self.bu_inshapes = bu_shared.inshapes
-        self.bumodel1 = BUStream(opts, bu_shared, is_bu2=False)  # The BU1 stream, with no task embedding.
+        self.bumodel1 = BUStream(opts, bu_shared)  # The BU1 stream, with no task embedding.
         self.tdmodel = TDModel(opts, shapes)  # The TD stream.
         # If shared is true, the shared part is the same, otherwise we create another shared part.
         if opts.shared:
@@ -367,7 +385,14 @@ class BUTDModel(nn.Module):
         outs = self.forward(inputs)  # Forward.
         return self.opts.outs_to_struct(outs)  # Make the output, a struct.
 
-    def update_task_set(self, task):
+    def update_task_list(self, task: tuple) -> None:
+        """
+        Update the tasks list.
+        Args:
+            task: The task.
+
+        """
+
         self.trained_tasks.append(task)
 
 
@@ -386,11 +411,10 @@ class ResNet(nn.Module):
         self.opts = opts  # The model opts.
         self.ntasks = opts.ntasks  # The number of tasks.
         self.ndirections = opts.ndirections  # The number of directions.
-        self.feature_extractor = BUModel(opts,
-                                         use_task_embedding=False)  # Create the backbone without the task embedding.
+        self.feature_extractor = BUModel(opts)  # Create the backbone without the task embedding.
         self.TL = [[[] for _ in range(opts.ndirections)] for _ in range(opts.ntasks)]  # Store the read-out parameters.
         self.classifier = MultiTaskHead(opts, self.TL)  # The classifier head.
-        self.trained_tasks: list[int, tuple[int, int]] = list()
+        self.trained_tasks: list = list()
 
     def forward(self, samples: inputs_to_struct):
         """
@@ -417,10 +441,26 @@ class ResNet(nn.Module):
         outs = self.forward(samples)  # The model output.
         return self.opts.outs_to_struct(outs)  # Making the struct.
 
-    def update_task_set(self, task):
+    def update_task_list(self, task: tuple) -> None:
+        """
+        Update the tasks list.
+        Args:
+            task: The task.
+
+        """
+
         self.trained_tasks.append(task)
 
-    def get_specific_head(self, task_id, direction_tuple):
+    def get_specific_head(self, task_id: int, direction_tuple: tuple[int, int]) -> list[nn.Parameter]:
+        """
+        Get the specific head and the feature parameters.
+        Args:
+            task_id: The task id.
+            direction_tuple: The direction tuple
+
+        Returns: The learned parameters.
+
+        """
         learned_params = []
         learned_params.extend(self.feature_extractor.parameters())
         direction_id, _ = tuple_direction_to_index(self.opts.num_x_axis, self.opts.num_y_axis,

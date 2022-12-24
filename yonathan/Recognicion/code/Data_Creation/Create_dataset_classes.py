@@ -40,9 +40,14 @@ class DsType(Enum):
 
 
 class General_raw_data(Dataset):
+    """
+    We created data class to handle retrieving raw character images.
+    Support initialization, merging(for Omniglot) and getitem.
+    """
+
     def __init__(self, download_dir: str):
         """
-        We created data class to handle retrieving raw character images.
+
         Args:
             download_dir: The path download the raw data into.
         """
@@ -91,6 +96,10 @@ class General_raw_data(Dataset):
 
 
 class Emnist_raw_data(General_raw_data):
+    """
+    The Emnist data-set.
+    """
+
     def __init__(self, download_dir):
         """
         Args:
@@ -127,6 +136,10 @@ class Emnist_raw_data(General_raw_data):
 
 
 class FashionMnist_raw_data(General_raw_data):
+    """
+    The Fashionmnist data-set.
+    """
+
     def __init__(self, download_dir: str):
         """
         Fashionmnist raw Data.
@@ -136,7 +149,7 @@ class FashionMnist_raw_data(General_raw_data):
         super().__init__(download_dir)
         # Train Data.
         train_raw_dataset = datasets.FashionMNIST(
-            download_dir, train=True, download=True)
+            download_dir, download=True)
         # Test Data.
         test_raw_dataset = datasets.FashionMNIST(
             download_dir, train=False, download=True)
@@ -147,6 +160,10 @@ class FashionMnist_raw_data(General_raw_data):
 
 
 class Omniglot_data_set(General_raw_data):
+    """
+    The Omniglot data-set.
+    """
+
     def __init__(self, download_dir, language_list):
         """
         Args:
@@ -179,6 +196,11 @@ class Omniglot_data_set(General_raw_data):
 
 
 class GenericDatasetParams:
+    """
+    The Generic data-set parameters clas.
+    Supports needed things for creating like desired classes, transformations parameters.
+    """
+
     def __init__(self, ds_type: DsType, num_cols: int, num_rows: int):
         """
         Here we define Generic Data set params for the transformation.
@@ -212,6 +234,10 @@ class GenericDatasetParams:
 
 
 class EmnistParams(GenericDatasetParams):
+    """
+    The Emnist specific parameters.
+    """
+
     def __init__(self, ds_type: DsType, num_cols: int, num_rows: int):
         """
         Here we define the Emnist data-set specification.
@@ -236,6 +262,10 @@ class EmnistParams(GenericDatasetParams):
 
 
 class FashionMnistParams(GenericDatasetParams):
+    """
+    The Fashinmnist specification parameters.
+    """
+
     def __init__(self, ds_type, num_cols: int, num_rows: int):
         """
         Here we define the Fashion-Mnist data-set specification.
@@ -258,10 +288,12 @@ class FashionMnistParams(GenericDatasetParams):
 
 
 class OmniglotParams(GenericDatasetParams):
+    """
+    Here we define the Omniglot data-set specification.
+    """
+
     def __init__(self, ds_type: DsType, num_cols: int, num_rows: int, language_list):
         """
-        Here we define the Omniglot data-set specification.
-        Those params help the model to generalize and the output images are understandable.
         Args:
             num_cols: The number of columns.
             num_rows: The number of rows
@@ -280,6 +312,10 @@ class OmniglotParams(GenericDatasetParams):
 
 
 class UnifiedDataSetType:
+    """
+    This class contains all data-set objects, according to the data-set type.
+    """
+
     def __init__(self, ds_type: DsType, num_cols: int, num_rows: int, language_list: Union[list, None]):
         """
         Supports all datasets.
@@ -300,6 +336,11 @@ class UnifiedDataSetType:
 
 
 class CharInfo:
+    """
+    The character information class.
+    contains the image, scale, shift, coordinates.
+    """
+
     def __init__(self, parser: argparse, raw_dataset, prng: random, sample_id: int, sample_chars: list):
         """
         Args:
@@ -349,10 +390,14 @@ class CharInfo:
 
 
 class Sample:
+    """
+    Class containing all characters information including the Characters themselves, the sampled sequence,
+    the query part id.
+    """
+
     def __init__(self, parser, query_part_id: int, adj_type: int, chars: list[CharInfo], sample_id: int):
         """
-        Class containing all characters information including the Characters themselves, the sampled sequence,
-        the query part id.
+
         Args:
             parser: The parser.
             query_part_id: The index we query about.
@@ -410,9 +455,13 @@ class DataAugmentClass:
 
 # TODO - CHANGE THE CLASS.
 class MetaData:
+    """
+     Saves the parser, and the number of samples per dataset.
+    """
+
     def __init__(self, parser: argparse, nsamples_per_data_type_dict: dict):
         """
-        Saves the parser, and the number of samples per dataset.
+
         Args:
             parser: The parser.
             nsamples_per_data_type_dict: The nsamples dictionary.

@@ -9,7 +9,10 @@ from training.Utils import tuple_direction_to_index
 # Here we define used structs including input to struct, out to struct, and training flag.
 
 class inputs_to_struct:
-    # class receiving list of input tensors and makes to a class.
+    """
+    Class receiving list of input tensors and makes to a class.
+    """
+
     def __init__(self, inputs: tuple[torch]):
         """
         Args:
@@ -24,6 +27,10 @@ class inputs_to_struct:
 
 
 class outs_to_struct:
+    """
+    Struct transforming the model output list to struct.
+    """
+
     def __init__(self, outs: list[torch]):
         """
         Struct transforming the model output list to struct.
@@ -38,12 +45,15 @@ class outs_to_struct:
 
 
 class Training_flag:
+    """
+    For continual learning, we freeze some layers.
+    For that, we have created a class containing which layer groups we want to train.
+    """
+
     def __init__(self, parser: argparse, train_all_model: bool = False, train_arg: bool = False,
                  train_task_embedding: bool = False,
                  train_head: bool = False):
         """
-        For continual learning, we freeze some layers.
-        For that, we have created a class containing which layer groups we want to train.
         Args:
             train_all_model: Whether to train all model.
             train_arg: Whether to train arg.

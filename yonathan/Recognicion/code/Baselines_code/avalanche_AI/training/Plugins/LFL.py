@@ -44,6 +44,7 @@ class MyLFLPlugin(LFLPlugin):
         Returns: The MSE loss.
 
         """
+        # The MSE loss.
         return torch.nn.functional.mse_loss(features, prev_features)
 
     def compute_features(self, model: nn.Module, x: list[torch]) -> tuple[torch, torch]:
@@ -56,8 +57,8 @@ class MyLFLPlugin(LFLPlugin):
         Returns: The old, new features.
 
         """
-        model.eval()
-        self.prev_model.eval()
+        model.eval() # Move to eval mode.
+        self.prev_model.eval() # Move to eval model.
         features = model.forward_and_out_to_struct(x).features  # New features.
         prev_features = self.prev_model.forward_and_out_to_struct(x).features  # Old features.
         return features, prev_features
@@ -78,7 +79,7 @@ class MyLFLPlugin(LFLPlugin):
         else:
             # The previous, current features.
             features, prev_features = self.compute_features(model, x)
-            # Compute distance.
+            # Compute distance loss.
             dist_loss = self._euclidean_loss(features, prev_features)
             return lambda_e * dist_loss
 
@@ -88,7 +89,9 @@ class MyLFLPlugin(LFLPlugin):
         Args:
             strategy: The LFL strategy.
         """
+        # Compute the penalty.
         penalty = self.penalty(strategy.mb_x, strategy.model, self.lambda_e)
+        # Add to the loss.
         strategy.loss += penalty
 
     def after_training_exp(self, strategy: SupervisedTemplate, **kwargs) -> None:
@@ -98,8 +101,6 @@ class MyLFLPlugin(LFLPlugin):
         Args:
             strategy: The strategy.
             **kwargs: Optional args
-
-        Returns:
 
         """
         print("Freeze the new model!")

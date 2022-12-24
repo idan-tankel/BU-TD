@@ -4,8 +4,22 @@ from pathlib import Path
 
 from Create_dataset_classes import UnifiedDataSetType, DsType
 
+from typing import Union
 
-def Get_parser(ds_type: DsType = DsType.Emnist, num_cols=6, num_rows=1, language_list=[0]):
+
+def Get_parser(ds_type: DsType = DsType.Emnist, num_cols: int = 6, num_rows: int = 1,
+               language_list: Union[None, list] = None):
+    """
+    Returns parser containing all needed parameters for data creation.
+    Args:
+        ds_type: The data-set type.
+        num_cols: The number of columns.
+        num_rows: The number of rows.
+        language_list: The languages list needed for Omniglot.
+
+    Returns:
+
+    """
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--num_cols', default=num_cols, type=int,
@@ -27,7 +41,7 @@ def Get_parser(ds_type: DsType = DsType.Emnist, num_cols=6, num_rows=1, language
     parser.add_argument('--folder_size', default=1000, type=int, help=' The folder size')
     parser.add_argument('--augment_sample', default=True, type=bool, help='Whether to augment the sample')
     parser.add_argument('--letter_size', default=Ds_obj.ds_obj.letter_size, type=int, help='The basic letter size')
-    parser.add_argument('--nthreads', default=1, type=int, help='The number of threads in each job')
+    parser.add_argument('--num_threads', default=1, type=int, help='The number of threads in each job')
     parser.add_argument('--nsamples_train', default=Ds_obj.ds_obj.nsamples_train,
                         type=int, help='The number of samples in the train set')
     parser.add_argument('--nsamples_test', default=Ds_obj.ds_obj.nsamples_test,

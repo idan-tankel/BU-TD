@@ -26,7 +26,7 @@ from baselines_utils import load_model
 from typing import Union
 
 def train_baseline(parser: argparse, checkpoint: CheckpointSaver, reg_type: RegType, scenario: dataset_benchmark,
-                   old_dataset_dict: dict, old_tasks: tuple, new_task: list, Baseline_folder) -> None:
+                   old_dataset_dict: dict, old_tasks: tuple, new_task: list, Baseline_folder,new_data:dict) -> None:
     """
     Args:
         parser: The parser.
@@ -45,7 +45,7 @@ def train_baseline(parser: argparse, checkpoint: CheckpointSaver, reg_type: RegT
     parser.model = model
     parser.model.trained_tasks.append(old_tasks)
     parser.prev_data = old_dataset_dict['train_ds']
-    load_model(model,model_path='naive/Model_right/ResNet_epoch40_direction=(1, 0).pt',results_path=Baseline_folder)
+    load_model(model,model_path='naive/Model_right/ResNet_epoch40_direction=(1, 0).pt', results_path=Baseline_folder)
   #  print(accuracy(parser, model, old_dataset_dict['test_dl']))
     learned_params = model.parameters() # model.get_specific_head(new_task[0], new_task[1])  # Train only the desired params.
     parser.optimizer, parser.scheduler = create_optimizer_and_scheduler(parser, learned_params, nbatches_train=len(
@@ -131,6 +131,6 @@ def main(reg_type: Union[RegType,None], ds_type: DsType):
     scenario = dataset_benchmark([new_data['train_ds']], [new_data['test_ds']])
     # Train the baselines.
     train_baseline(parser=parser, checkpoint=checkpoint, reg_type=reg_type, scenario=scenario,
-                   old_dataset_dict=old_data, old_tasks=(0, (1, 0)), new_task=[0, (0,1)],Baseline_folder = results_path)
+                   old_dataset_dict=old_data, old_tasks=(0, (1, 0)), new_task=[0, (0,1)],Baseline_folder = results_path,new_data = new_data)
 
 main(reg_type=RegType.LFL, ds_type= DsType.Emnist)

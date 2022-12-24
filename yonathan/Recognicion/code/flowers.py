@@ -1,6 +1,5 @@
 import torchvision.datasets as datasets
 
-flowers = datasets.Flowers102(root='/home/sverkip/data/raw', download=False)
-birds = datasets
-print(flowers[0])
+flowers = datasets.Food101(root='/home/sverkip/data/raw', download=True)
+
 print(len(flowers))

@@ -9,7 +9,10 @@ from training.Utils import flag_to_idx
 # Here we define all module building blocks heritages from nn.Module.
 
 class Depthwise_separable_conv(nn.Module):
-    # More saving version of Conv.
+    """
+    More efficient version of Conv.
+    """
+
     def __init__(self, channels_in: int, channels_out: int, kernel_size: int, stride: int = 1, padding: int = 1,
                  bias: bool = False):
         """
@@ -54,7 +57,7 @@ def conv3x3(in_channels: int, out_channels: int, stride: int = 1, bias=False) ->
 
     """
 
-    return Depthwise_separable_conv(in_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=bias)
+    return Depthwise_separable_conv(in_channels, out_channels, kernel_size=3, stride=stride, bias=bias)
 
 
 def conv3x3up(in_channels: int, out_channels: int, size: tuple, upsample=False) -> nn.Module:
@@ -92,9 +95,11 @@ def conv1x1(in_channels: int, out_channels: int, stride: int = 1, bias=False) ->
 
 
 class Modulation_and_Lat(nn.Module):
-    # performs the lateral connection BU1 -> TD or TD -> BU2.
-    # Applies channel modulation, BN, ReLU on the lateral connection.
-    # Then perform the lateral connection to the input and then more relu is applied.
+    """
+    performs the lateral connection BU1 -> TD or TD -> BU2.
+    Applies channel modulation, BN, ReLU on the lateral connection.
+    Then perform the lateral connection to the input and then more relu is applied.
+    """
 
     def __init__(self, opts: argparse, filters: int):
         """
@@ -129,11 +134,16 @@ class Modulation_and_Lat(nn.Module):
         return x
 
 
-class Modulation(nn.Module):  # Modulation layer.
+class Modulation(nn.Module):
+    """
+    Modulation layer.
+    Create Channel or Column modulation layer.
+    The main idea of the paper allowing continual learning without forgetting.
+    """
+
     def __init__(self, opts: argparse, shape: list, column_modulation: bool, task_embedding: list):
         """
-        Channel & pixel modulation layer.
-        The main_fashion idea of the paper allowing continual learning without forgetting.
+
         Args:
             opts: The model options.
             shape: The shape to create the model according to.

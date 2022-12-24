@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Callable
 from typing import Union
 
+import argparse
 import numpy as np
 
 from training.Metrics.Accuracy import multi_label_accuracy, multi_label_accuracy_weighted
@@ -29,7 +30,15 @@ class RegType(Enum):
     def __str__(self):
         return self.value
 
-    def class_to_reg_factor(self, parser):
+    def class_to_reg_factor(self, parser: argparse) -> float:
+        """
+        Given the parser, get the associated regularization factor.
+        Args:
+            parser: The model opts.
+
+        Returns: The regularization factor
+
+        """
         return getattr(parser, self.__str__() + '_lambda')
 
 
@@ -43,10 +52,12 @@ class Flag(Enum):
 
 
 class GenericDataParams:
+    """
+    Generic Dataset parameters Specification convenient for all datasets.
+    """
+
     def __init__(self, flag_at: Flag, ds_type: DsType, num_x_axis: int = 1, num_y_axis: int = 1):
         """
-        Generic Dataset parameters Specification convenient for all datasets.
-
         Args:
             flag_at: The model flag.
             ds_type: The data-set type flag.
@@ -78,9 +89,12 @@ class GenericDataParams:
 
 
 class EmnistDataset(GenericDataParams):
+    """
+    The Emnist dataset specification.
+    """
+
     def __init__(self, flag_at: Flag):
         """
-        Emnist Dataset.
         Args:
             flag_at: The model flag.
 
@@ -99,6 +113,10 @@ class EmnistDataset(GenericDataParams):
 
 
 class FashionmnistDataset(GenericDataParams):
+    """
+    The Fashionmnist dataset specification.
+    """
+
     def __init__(self, flag_at: Flag):
         """
         Fashionmnist dataset.
@@ -113,6 +131,10 @@ class FashionmnistDataset(GenericDataParams):
 
 
 class OmniglotDataset(GenericDataParams):
+    """
+    The Omniglot specification.
+    """
+
     def __init__(self, initial_tasks: int, flag_at: Flag):
         """
         Omniglot dataset.
@@ -133,6 +155,10 @@ class OmniglotDataset(GenericDataParams):
 
 
 class AllDataSetOptions:
+    """
+    Class saving for the desired data-set its data object.
+    """
+
     def __init__(self, ds_type: DsType, flag_at: Flag,
                  initial_task_for_omniglot_only: Union[int, None] = None):
         """

@@ -18,6 +18,10 @@ from typing import Callable
 # Support training and load_model.
 
 class ModelWrapped(LightningModule):
+    """
+    The Model wrapper class, support initialization, training, testing.
+    """
+
     def __init__(self, opts: argparse, model: nn.Module, learned_params: list, check_point: CheckpointSaver,
                  direction_tuple: tuple[int, int], task_id: int, nbatches_train: int):
         """
