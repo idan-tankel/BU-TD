@@ -112,8 +112,9 @@ def struct_to_input(sample: object) -> tuple:
 
 
 class DatasetAllDataSetTypes(DataSetBase):
-    def __init__(self, root: str, opts: Union[argparse.ArgumentParser, Config], arg_and_head_index: int = 0, direction: int = 0, is_train=True, nexamples: int = None, obj_per_row=6,
-                 obj_per_col=1, split: bool = True):
+    def __init__(self, root: str, opts: Union[argparse.ArgumentParser, Config], arg_and_head_index: int = 0, direction: int = 0,
+                 is_train=True, nexamples: int = None, obj_per_row=6,
+                 obj_per_col=1, split: bool = True, transforms=None):
         """
         Omniglot data-set.
         Args:
@@ -125,10 +126,11 @@ class DatasetAllDataSetTypes(DataSetBase):
             obj_per_row: Number of objects per row.
             obj_per_col: Number of columns per row.
             split: Whether to split the dataset.
+            transforms: The transforms to apply after loading the data to tensor.
         """
 
         super(DatasetAllDataSetTypes, self).__init__(
-            root=root, nclasses_existence=47,nexamples=nexamples, ndirections=4, split=split, is_train=is_train)
+            root=root, nclasses_existence=47, nexamples=nexamples, ndirections=4, split=split, is_train=is_train)
         if not isinstance(opts, argparse.ArgumentParser):
             git_repo = git.Repo(__file__, search_parent_directories=True)
             git_root = git_repo.working_dir
@@ -143,6 +145,11 @@ class DatasetAllDataSetTypes(DataSetBase):
         self.obj_per_row = obj_per_row
         self.obj_per_col = obj_per_col
         self.task_idx = torch.tensor(arg_and_head_index)
+        if transforms is not None:
+            transforms = [T.ToTensor()] + transforms
+        else:
+            transforms = [T.ToTensor()]
+        self.transform = T.Compose(transforms=transforms)
 
     def __getitem__(self, index):
         """
@@ -160,7 +167,7 @@ class DatasetAllDataSetTypes(DataSetBase):
         fname = os.path.join(root, '%d_img.jpg' % index)
         # Opening the image and converting to Tensor
         img = Image.open(fname).convert('RGB')
-        img = T.ToTensor()(img)
+        img = self.transform(img)
         # TODO: all those functions have changed in the beta branch to save all the images as tensors already in the Create dataset phase
         img = 255 * img  # converting to RGB
         # Get raw sample.

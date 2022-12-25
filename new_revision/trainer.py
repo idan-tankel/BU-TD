@@ -19,28 +19,14 @@ results_dir = rf"{git_root.parent}/data/emnist/results"
 os.makedirs(results_dir, exist_ok=True)
 data_dir = Path(rf"{git_root.parent}/data")
 os.makedirs(data_dir, exist_ok=True)
-checkpoints_dir = rf"{git_root.parent}/data/emnist/checkpoints"
+checkpoints_dir = rf"{git_root.parent}/data/emnist/checkpoints/good"
 os.makedirs(results_dir, exist_ok=True)
 
-global_config = Config(experiment_filename="larger_vit.yaml")
-transform = transforms.Compose(
-    [transforms.ToTensor(), transforms.Resize((224, 224))])
-# train_ds = datasets.Food101(
-#     download=True, root=data_dir, split="train", transform=transform)
-# val_ds = datasets.Food101(
-#     download=True, root=data_dir, split="test", transform=transform)
-# test_ds = datasets.EMNIST(download=True, root=data_dir,
-#                           split='balanced', train=False, transform=transform)
-
-# train_dl = DataLoader(train_ds, batch_size=global_config.Training.batch_size,
-#                       shuffle=True, num_workers=global_config.Training.num_workers)
-# test_dl = DataLoader(test_ds, batch_size=global_config.Training.batch_size,
-#                      shuffle=False, num_workers=global_config.Training.num_workers)
-# test_dl = DataLoader(val_ds, batch_size=global_config.Training.batch_size,
-#                      shuffle=False, num_workers=global_config.Training.num_workers)
+global_config = Config(experiment_filename="imageNet21k_pretrained.yaml")
+transform = [transforms.Resize((384, 384))]
 
 compatibility_dataset = DatasetAllDataSetTypesAll(root=rf'/home/idanta/data/6_extended_testing/train/', opts=global_config,  direction=1,
-                                                  is_train=True, obj_per_row=6, obj_per_col=1, split=False,nexamples=100000)
+                                                  is_train=True, obj_per_row=6, obj_per_col=1, split=False,nexamples=100000,transforms=transform)
 compatibility_dl = DataLoader(compatibility_dataset, batch_size=global_config.Training.batch_size,
                               num_workers=global_config.Training.num_workers)
 wandb_logger = WandbLogger(project="BU_TD",
@@ -49,32 +35,32 @@ wandb_checkpoints = ModelCheckpoint(
     dirpath=checkpoints_dir, monitor="train_loss_epoch", mode="min")
 
 
-if global_config.Models.pretrained_model_name is not None:
-    model = ViTForImageClassification.from_pretrained(
+if global_config.Models.pretrained_model_name is not None and "local" not in str(global_config.Models.pretrained_model_name):
+        model = ViTForImageClassification.from_pretrained(
         global_config.Models.pretrained_model_name)
-# else create the model according to the config params
+    # else create the model according to the config params
+# local config is none - load empty model
 else:
     model = ViTForImageClassification(
         ViTConfig(
             image_size=global_config.Models.image_size,
             hidden_size=768,
-            num_hidden_layers=4,
+            num_hidden_layers=global_config.Models.depth,
             num_classes=global_config.Models.num_classes,
-            qkv_bias=True,
+            qkv_bias=False,
             num_attention_heads=global_config.Models.num_attention_heads
         )
     )
 model = ModelWrapper(model=model, config=global_config)
-
-if "local" in str(global_config.Models.pretrained_model_name):
-    old_model = load(f"{checkpoints_dir}/{global_config.Models.pretrained_model_name}")
+if "local" in str(global_config.Models.pretrained_model_name): #load from huggingface
+    old_model = load(f"{checkpoints_dir}/{global_config.Models.pretrained_model_name.split('/')[-1]}")
     # load only the vit part from the model
     model.model.vit._load_from_state_dict(state_dict=old_model['state_dict'],prefix='model.vit.',strict=True,missing_keys=[],unexpected_keys=[],error_msgs=[],local_metadata={})
 
 
+
 wandb_logger.watch(model=model, log='all')
-trainer = pl.Trainer(accelerator='gpu', max_epochs=global_config.Training.epochs,
-                     logger=wandb_logger, callbacks=[wandb_checkpoints])
+trainer = pl.Trainer(accelerator='gpu', max_epochs=global_config.Training.epochs,logger=wandb_logger, callbacks=[wandb_checkpoints])
 
 # load pretrained from some layer of the model
 trainer_ckpt = global_config.Training.path_loading if global_config.Training.load_existing_path  else None

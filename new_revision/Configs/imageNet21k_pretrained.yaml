@@ -67,7 +67,7 @@ Models:
   norm_layer: BatchNorm # (`nn.Module`) one of the supported normalization layers
   # Notice! this option affected also from training / dataset requirements
   ntasks: 6 # (`int`) the number of tasks to train on. Will determine the number of heads in the model
-  pretrained_model_name:    # (`str`) the url to the pretrained model in huggingface.co
+  pretrained_model_name: "google/vit-base-patch16-384"   # (`str`) the url to the pretrained model in huggingface.co
   #  another option to use 
   
 
@@ -89,7 +89,7 @@ Training:
   base_lr: 0.0005 # (`float`) the base learning rate for the cyclic_adam_optimizer, if used
   optimizer: Adam  # (`str`) the optimizer to use. ['Adam','SGD']
   # checkpoints and saving options
-  load_existing_path: True # (`bool`) whether to load an existing model from the path specified in `path_loading`. Default to false
+  load_existing_path: False # (`bool`) whether to load an existing model from the path specified in `path_loading`. Default to false
   path_loading: "/home/idanta/data/emnist/checkpoints/epoch=192-step=1930000.ckpt" # (`str`) the path to load an existing model, pretrained (should be a .pt file)
   # furthermore, the path should contain model with the same structure, since this is a checkpoint
   save_model: True # (`bool`) whether to save the model

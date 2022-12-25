@@ -82,5 +82,7 @@ class ModelWrapper(
 
     def configure_optimizers(self):
         optimizer = Adam(self.parameters(), lr=1e-3)
-        return optimizer
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min')
+        monitor = 'val_loss'
+        return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": monitor}
 

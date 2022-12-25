@@ -52,6 +52,7 @@ Models:
   num_channels: 3
   num_classes: 48 # the number of classes within the dataset TOOD
   number_of_linear_heads: 6 # each linear head correspond to a class in the MultiHeadAttention
+  depth: 4
   strides: [2, 2, 1, 2]
   nfilters: [128,1000] # For CCT
   ns: [0, 1, 1, 1] # the number of blocks in 
