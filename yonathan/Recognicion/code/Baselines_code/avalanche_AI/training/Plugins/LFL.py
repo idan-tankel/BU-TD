@@ -57,8 +57,8 @@ class MyLFLPlugin(LFLPlugin):
         Returns: The old, new features.
 
         """
-        model.eval() # Move to eval mode.
-        self.prev_model.eval() # Move to eval model.
+        model.eval()  # Move to eval mode.
+        self.prev_model.eval()  # Move to eval model.
         features = model.forward_and_out_to_struct(x).features  # New features.
         prev_features = self.prev_model.forward_and_out_to_struct(x).features  # Old features.
         return features, prev_features

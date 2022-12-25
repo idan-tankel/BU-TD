@@ -65,7 +65,7 @@ def GetParser(task_idx: int = 0, direction_idx: int = 0, model_type: Union[BUTDM
                         help='Whether to use the lateral connection from BU1 to TD')
     parser.add_argument('--use_lateral_tdbu', default=True, type=bool,
                         help='Whether to use the lateral connection from TD to BU2')
-    parser.add_argument('--use_additional_emb', default=True, type=bool,
+    parser.add_argument('--use_additional_emb', default=False, type=bool,
                         help='Whether to use additional embedding')
     parser.add_argument('--nfilters', default=[64, 96, 128, 256], type=list, help='The ResNet filters')
     parser.add_argument('--strides', default=[2, 2, 1, 2], type=list, help='The ResNet strides')
@@ -130,8 +130,8 @@ def GetParser(task_idx: int = 0, direction_idx: int = 0, model_type: Union[BUTDM
     # LFL
     parser.add_argument('--LFL_lambda', default=0.25, type=float, help='The LFL strength')
     # LWF
-    parser.add_argument('--LWF_lambda', default=0.1, type=float, help='The LWF strength')
-    parser.add_argument('--temperature_LWF', default=4.0, type=float, help='The LWF temperature')
+    parser.add_argument('--LWF_lambda', default=2.0, type=float, help='The LWF strength')
+    parser.add_argument('--temperature_LWF', default=2.0, type=float, help='The LWF temperature')
     # MAS
     parser.add_argument('--mas_alpha', default=0.5, type=float, help='The MAS continual importance weight')
     parser.add_argument('--MAS_lambda', default=mas_lambdas[0], type=float, help='The MAS strength')

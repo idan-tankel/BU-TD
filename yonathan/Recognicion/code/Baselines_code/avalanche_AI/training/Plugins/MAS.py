@@ -33,55 +33,58 @@ class MyMASPlugin(MASPlugin):
     https://github.com/mmasana/FACIL/blob/master/src/approach/mas.py
     """
 
-    def __init__(self, parser: argparse, prev_model: Union[nn.Module, None] = None):
+    def __init__(self, parser: argparse, prev_model: Union[nn.Module, None] = None,
+                 prev_data: Union[Dataset, None] = None):
         """
         Args:
             parser: The parser options.
             prev_model: The previous model.
+            prev_data: The previous data.
         """
 
         # Init super class
         super().__init__()
 
-        # Regularization Parameters
-        self.batch_size = parser.bs
-        self.device = parser.device
-        self.parser = parser
-        self._lambda = parser.MAS_lambda
-        self.alpha = parser.mas_alpha
+        # Regularization Parameters and Importances parameters.
+        self.batch_size, self.device, self.parser, self._lambda, self.alpha = parser.bs, parser.device, parser, \
+            parser.MAS_lambda, parser.mas_alpha
         # Model parameters
-        self.params: Union[Dict, None] = None
-        self.importance: Union[Dict, None] = None
-        self.num_exp = 0
-        self.inputs_to_struct = parser.inputs_to_struct
+        self.params: Union[Dict, None] = None  # The parameters we want to regularize.
+        self.importance: Union[Dict, None] = None  # The parameters importances.
+        self.num_exp = 0  # No experiences trained so far.
+        self.inputs_to_struct = parser.inputs_to_struct  # Input to struct.
+        # If we have previous model we save it and compute its importances.
         if prev_model is not None:
-            self.prev_model = copy.deepcopy(prev_model)
-            self.prev_data = parser.prev_data
+            self.prev_model = copy.deepcopy(prev_model)  # Previous model.
             print("Computing Importances")
-            self.importance = self._get_importance(self.prev_model, self.prev_data, self.batch_size, parser.device)
+            # Compute the importances.
+            self.importance = self._get_importance(self.prev_model, prev_data, self.batch_size, parser.device)
             print("Done computing Importances")
+            # The parameters we want to regularize are only the backbone parameters.
             self.params = self.params = dict(copy_params_dict(self.prev_model.feature))
+            # Update the number of trained experiences.
             self.num_exp = 1
 
     def _get_importance(self, model: nn.Module, dataset: Dataset, train_mb_size: int, device: Union['cuda', 'cpu']):
 
-        # Initialize importance matrix
+        # Initialize importance matrix for the features only.
         importance = dict(zerolike_params_dict(model.feature_extractor))
         # Do forward and backward pass to accumulate L2-loss gradients
         model.train()
-        dataloader = DataLoader(dataset, batch_size=train_mb_size, )
+        dataloader = DataLoader(dataset, batch_size=train_mb_size)
         # Progress bar
         for _, batch in enumerate(dataloader):
             # Get batch
             # Move batch to device
             batch = preprocess(batch[:-1], device)
+            # Move to struct.
             batch = self.inputs_to_struct(batch)
             # Forward pass
             model.zero_grad()
             # Forward pass
             out = model.forward_and_out_to_struct(batch).classifier
             # Average L2-Norm of the output
-            loss = torch.norm(out, p="fro", dim=1).mean()
+            loss = torch.norm(out, dim=1).mean()
             loss.backward()
             # Accumulate importance
             for name, param in model.feature_extractor.named_parameters():
@@ -93,7 +96,16 @@ class MyMASPlugin(MASPlugin):
         importance = {name: importance[name] / len(dataloader) for name in importance.keys()}
         return importance
 
-    def before_backward(self, strategy: SupervisedTemplate, **kwargs):
+    def before_backward(self, strategy: SupervisedTemplate, **kwargs) -> None:
+        """
+        Add the MAS loss to the classification loss.
+        Args:
+            strategy: The strategy.
+            **kwargs:
+
+        Returns:
+
+        """
         # Check if the task is not the first
         exp_counter = strategy.clock.train_exp_counter + self.num_exp
         if exp_counter == 0:
@@ -109,7 +121,7 @@ class MyMASPlugin(MASPlugin):
         if not strategy.loss:
             raise ValueError("Loss is not available")
 
-        # Apply penalty term
+        # Apply penalty term for each parameter.
         for name, param in strategy.model.feature_extractor.named_parameters():
             if name in self.importance.keys():
                 loss_reg += torch.sum(self.importance[name] * (param - self.params[name]).pow(2))
@@ -117,9 +129,16 @@ class MyMASPlugin(MASPlugin):
         # Update loss
         strategy.loss += self._lambda * loss_reg
 
-    def before_training(self, strategy: SupervisedTemplate, **kwargs):
-        # Parameters before the first task starts
+    def before_training(self, strategy: SupervisedTemplate, **kwargs) -> None:
+        """
+        Before training initialize the parameters, importances.
+        Args:
+            strategy: The strategy.
+            **kwargs:
 
+        """
+        # Parameters before the first task starts
+        # If no tasks trained so far.
         if self.num_exp == 0:
             if not self.params:
                 self.params = dict(copy_params_dict(strategy.model))
@@ -128,10 +147,16 @@ class MyMASPlugin(MASPlugin):
             if not self.importance:
                 self.importance = dict(zerolike_params_dict(strategy.model))
 
-    def after_training_exp(self, strategy, **kwargs):
+    def after_training_exp(self, strategy: SupervisedTemplate, **kwargs) -> None:
+        """
+        Update the Importances after the experience is finished.
+        Args:
+            strategy: The strategy.
+            **kwargs:
+
+        """
         print("update")
         self.params = dict(copy_params_dict(strategy.model))
-
         # Check if previous importance is available
         if not self.importance:
             raise ValueError("Importance is not available")

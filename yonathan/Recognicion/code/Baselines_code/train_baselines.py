@@ -1,7 +1,6 @@
 import sys
 import os
 from pathlib import Path
-
 sys.path.append(os.path.join('r', Path(__file__).parents[1]))
 from training.Data.Checkpoints import CheckpointSaver
 from training.Data.Data_params import RegType
@@ -25,8 +24,9 @@ from training.Data.Data_params import Flag
 from baselines_utils import load_model
 from typing import Union
 
+
 def train_baseline(parser: argparse, checkpoint: CheckpointSaver, reg_type: RegType, scenario: dataset_benchmark,
-                   old_dataset_dict: dict, old_tasks: tuple, new_task: list, Baseline_folder,new_data:dict) -> None:
+                   old_dataset_dict: dict, old_tasks: tuple, new_task: list, Baseline_folder, new_data: dict) -> None:
     """
     Args:
         parser: The parser.
@@ -36,6 +36,8 @@ def train_baseline(parser: argparse, checkpoint: CheckpointSaver, reg_type: RegT
         old_dataset_dict: The old data dictionary.
         old_tasks: The old tasks.
         new_task: The new tasks.
+        Baseline_folder: The Baseline models folder.
+        new_data: The new data.
 
     """
     update_parser(parser=parser, attr='ns', new_value=[0, 3, 3, 3])  # Make the ResNet to be as large as BU-TD model.
@@ -45,9 +47,9 @@ def train_baseline(parser: argparse, checkpoint: CheckpointSaver, reg_type: RegT
     parser.model = model
     parser.model.trained_tasks.append(old_tasks)
     parser.prev_data = old_dataset_dict['train_ds']
-    load_model(model,model_path='naive/Model_right/ResNet_epoch40_direction=(1, 0).pt', results_path=Baseline_folder)
-  #  print(accuracy(parser, model, old_dataset_dict['test_dl']))
-    learned_params = model.parameters() # model.get_specific_head(new_task[0], new_task[1])  # Train only the desired params.
+    load_model(model, model_path='naive/Model_right/ResNet_epoch40_direction=(1, 0).pt', results_path=Baseline_folder)
+    #  print(accuracy(parser, model, old_dataset_dict['test_dl']))
+    learned_params = model.parameters()  # model.get_specific_head(new_task[0], new_task[1])  # Train only the desired params.
     parser.optimizer, parser.scheduler = create_optimizer_and_scheduler(parser, learned_params, nbatches_train=len(
         old_dataset_dict['train_dl']))
     loggers = [WandBLogger(project_name="avalanche_EWC", run_name="train",
@@ -80,7 +82,7 @@ def train_baseline(parser: argparse, checkpoint: CheckpointSaver, reg_type: RegT
         head_params = [key for (key, _) in parser.model.named_parameters() if 'head' in key]
         strategy = SI(parser, checkpoint=checkpoint, device='cuda', evaluator=evaluator, eval_every=1, exc=head_params)
     else:
-        strategy = Naive(parser, checkpoint=checkpoint,  evaluator=evaluator, eval_every=1)
+        strategy = Naive(parser, checkpoint=checkpoint, evaluator=evaluator, eval_every=1)
 
     for idx, (exp_train, exp_test) in enumerate(zip(scenario.train_stream, scenario.test_stream)):
         strategy.optimizer.zero_grad(set_to_none=True)  # Make the taskhead of previous task static.
@@ -89,7 +91,7 @@ def train_baseline(parser: argparse, checkpoint: CheckpointSaver, reg_type: RegT
         strategy.eval(exp_test)
 
 
-def main(reg_type: Union[RegType,None], ds_type: DsType):
+def main(reg_type: Union[RegType, None], ds_type: DsType):
     """
     Args:
         reg_type: The regularization type.
@@ -99,7 +101,7 @@ def main(reg_type: Union[RegType,None], ds_type: DsType):
 
     """
     # The parser: NO-FLAG mode, ResNet model.
-    parser = GetParser(direction_idx=0, model_type=ResNet, model_flag=Flag.NOFLAG, ds_type=ds_type)
+    parser = GetParser(model_type=ResNet, ds_type=ds_type)
     # Path to the project.
     project_path = Path(__file__).parents[2]
     # Path to the data-set.
@@ -114,23 +116,26 @@ def main(reg_type: Union[RegType,None], ds_type: DsType):
     # Path to the results.
     results_path = os.path.join(Data_specific_path, 'Baselines')
     # Path to the regularization type results.
- #   Baseline_folder = os.path.join(results_path, str(reg_type))
+    #   Baseline_folder = os.path.join(results_path, str(reg_type))
     # The model folder.
     try:
-        Model_folder = os.path.join(results_path, f"{str(reg_type)}/lambda=" + str(reg_type.class_to_reg_factor(parser)))
+        Model_folder = os.path.join(results_path,
+                                    f"{str(reg_type)}/lambda=" + str(reg_type.class_to_reg_factor(parser)))
     except AttributeError:
-        Model_folder = os.path.join(results_path, "naive/Model_right" )
+        Model_folder = os.path.join(results_path, "naive/Model_right")
     # The checkpoint path.
     checkpoint = CheckpointSaver(Model_folder)
 
     # The first task is right and then other tasks.
     old_data = get_dataset_for_spatial_relations(parser, Images_path, 0, (1, 0))
     # The new tasks.
-    new_data = get_dataset_for_spatial_relations(parser, Images_path, 0, (0,1))
+    new_data = get_dataset_for_spatial_relations(parser, Images_path, 0, (0, 1))
     # The scenario.
     scenario = dataset_benchmark([new_data['train_ds']], [new_data['test_ds']])
     # Train the baselines.
     train_baseline(parser=parser, checkpoint=checkpoint, reg_type=reg_type, scenario=scenario,
-                   old_dataset_dict=old_data, old_tasks=(0, (1, 0)), new_task=[0, (0,1)],Baseline_folder = results_path,new_data = new_data)
+                   old_dataset_dict=old_data, old_tasks=(0, (1, 0)), new_task=[0, (0, 1)], Baseline_folder=results_path,
+                   new_data=new_data)
 
-main(reg_type=RegType.LFL, ds_type= DsType.Emnist)
+
+main(reg_type=RegType.LWF, ds_type=DsType.Emnist)

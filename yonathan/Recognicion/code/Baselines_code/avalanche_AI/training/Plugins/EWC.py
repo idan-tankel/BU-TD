@@ -17,29 +17,34 @@ sys.path.append(r'/')
 
 
 class MyEWCPlugin(EWCPlugin):
+    """
+    EWC plugin.
+    Stores for each parameter its importance.
+    """
+
     def __init__(self, parser: argparse, mode="separate", keep_importance_data=False,
-                 prev_model=None, old_dataset=None):
+                 prev_model=None, prev_data=None):
         """
         Args:
             parser: The model parser.
             mode: The training mode.
             keep_importance_data: Whether to keep the importance Data_Creation.
             prev_model: A pretrained model
-            old_dataset: The old dataset.
+            prev_data: The old dataset.
         """
         super().__init__(ewc_lambda=parser.EWC_lambda, mode=mode,
                          keep_importance_data=keep_importance_data)
-        self.old_dataset = old_dataset  # The old data-set for computing the coefficients.
+        self.old_dataset = prev_data  # The old data-set for computing the coefficients.
         self.prev_model = copy.deepcopy(prev_model)  # The previous model.
         self.parser = parser  # The model opts.
         self.num_exp = 0  # The number of exp trained so far.
         self.inputs_to_struct = parser.inputs_to_struct  # The inputs to struct method.
         self.outs_to_struct = parser.outs_to_struct  # The outputs to struct method
         # Supporting pretrained model.
-        if prev_model is not None and old_dataset is not None:
+        if prev_model is not None and prev_data is not None:
             # Update importance and old params to begin with EWC training.
             print('Computing Importances')
-            importances = self.compute_importances(prev_model, parser.criterion, parser.optimizer, old_dataset,
+            importances = self.compute_importances(prev_model, parser.criterion, parser.optimizer, prev_data,
                                                    parser.device, parser.train_mb_size)
             self.update_importances(importances, 0)  # The first task.
             print('Done computing Importances')

@@ -13,7 +13,7 @@ from training.Utils import create_optimizer_and_scheduler, preprocess
 
 from typing import Callable
 
-
+from training.Modules.Batch_norm import store_running_stats
 # Define the model wrapper class.
 # Support training and load_model.
 
@@ -92,6 +92,12 @@ class ModelWrapped(LightningModule):
             self.log('val_loss', loss, on_step=True, on_epoch=True)  # Update the loss.
             self.log('val_acc', acc, on_step=True, on_epoch=True)  # Update the acc.
         return acc  # Return the Accuracy.
+
+    def training_epoch_end(self) -> None:
+        if self.store_running_stats:
+            store_running_stats(self.model, task_id=self.task_id, direction_id=self.direction)
+            print('Done storing running stats')
+
 
     def configure_optimizers(self) -> tuple[optim, optim.lr_scheduler]:
         """

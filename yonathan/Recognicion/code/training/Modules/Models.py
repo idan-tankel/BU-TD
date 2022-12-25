@@ -307,7 +307,7 @@ class BUTDModel(nn.Module):
         self.model_flag = opts.model_flag  # The model type
         self.use_bu1_loss = opts.use_bu1_loss  # Whether to use the Occurrence loss.
         self.use_lateral_butd = opts.use_lateral_butd  # Whether to use the BU1 -> TD laterals.
-        self.use_lateral_tdbu = opts.use_lateral_tdbu  # Whether to use the TD -> BU2 laterals.
+        self.use_lateral_tdbu = opts.use_lateral_tdbu and opts.model_flag is not Flag.NOFLAG # Whether to use the TD -> BU2 laterals.
         # If we use, we create occurrence head.
         if self.use_bu1_loss:
             self.occhead = OccurrenceHead(opts)  # TODO - CHANGE TO OCCURRENCE_HEAD
@@ -315,7 +315,8 @@ class BUTDModel(nn.Module):
         shapes = bu_shared.inshapes  # The model output layers shape.
         #   self.bu_inshapes = bu_shared.inshapes
         self.bumodel1 = BUStream(opts, bu_shared)  # The BU1 stream, with no task embedding.
-        self.tdmodel = TDModel(opts, shapes)  # The TD stream.
+        if self.model_flag is not Flag.NOFLAG:
+            self.tdmodel = TDModel(opts, shapes)  # The TD stream.
         # If shared is true, the shared part is the same, otherwise we create another shared part.
         if opts.shared:
             bu_shared2 = bu_shared  # Use existing.
@@ -358,8 +359,9 @@ class BUTDModel(nn.Module):
         else:
             td_model_inputs += [None]
         # The input to the TD stream is the bu_out, flags, the lateral connections.
-        td_outs = self.tdmodel(td_model_inputs)
-        _, td_laterals_out = td_outs
+        if self.model_flag is not Flag.NOFLAG:
+            td_outs = self.tdmodel(td_model_inputs)
+            _, td_laterals_out = td_outs
         bu2_model_inputs = [images, flags]
         if self.use_lateral_tdbu:
             bu2_model_inputs += [td_laterals_out]

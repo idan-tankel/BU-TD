@@ -37,6 +37,7 @@ class DataSetBase(Dataset):
         self.ndirections: int = ndirections  # The number of directions.
         self.is_train: bool = is_train  # Is this a training set.
         self.nexamples: int = nexamples  # The number of examples.
+      #  self.nexamples = 100
         self.targets = [0 for _ in range(self.nexamples)]  # Used only for Avalanche_AI.
         self.split_size: int = 1000  # The split size we created the dataset according to.
 

@@ -13,8 +13,12 @@ from avalanche.training.plugins import LRSchedulerPlugin
 
 
 class MySupervisedTemplate(SupervisedTemplate):
+    """
+    The basic Strategy, every strategy inherits from.
+    """
+
     def __init__(self, parser: argparse, checkpoint=None, task=[0, (1, 0)], logger=None,
-                 plugins: Optional[Sequence["SupervisedPlugin"]] = None, evaluator=default_evaluator,
+                 plugins: Optional[Sequence["SupervisedPlugin"]] = [], evaluator=default_evaluator,
                  eval_every: int = -1):
         """
         Args:
@@ -79,7 +83,7 @@ class MySupervisedTemplate(SupervisedTemplate):
         self.checkpoint(self.model, self.clock.train_exp_epochs, acc, self.optimizer, self.parser.scheduler,
                         self.parser, self.task_id, self.direction_id)  # Updating checkpoint.
 
-    def update_task(self, task_id: int, direction_id: int)->None:
+    def update_task(self, task_id: int, direction_id: int) -> None:
         """
         Updates the task, direction id.
         Args:
@@ -91,8 +95,13 @@ class MySupervisedTemplate(SupervisedTemplate):
         self.task_id = task_id
         self.direction_id = direction_id
 
+
 class Naive(MySupervisedTemplate):
-    # Naive strategy, without any regularization.
+    """
+    Naive strategy, without any regularization.
+    Used for training the initial task.
+    """
+
     def __init__(
             self,
             parser: argparse,
@@ -109,12 +118,16 @@ class Naive(MySupervisedTemplate):
             **base_kwargs
         )
 
+
 class MyEWC(MySupervisedTemplate):
+    """
+    EWC strategy.
+    """
+
     def __init__(
             self,
             parser: argparse,
             mode: str = "separate",
-            decay_factor: Optional[float] = None,
             keep_importance_data: bool = False,
             plugins: Optional[List[SupervisedPlugin]] = None,
             evaluator=default_evaluator,
@@ -134,7 +147,8 @@ class MyEWC(MySupervisedTemplate):
             eval_every: The evaluation interval.
             **base_kwargs: Optional args.
         """
-        ewc = MyEWCPlugin(parser, mode, decay_factor, keep_importance_data, prev_model, parser.old_dataset)
+        ewc = MyEWCPlugin(parser=parser, mode=mode, keep_importance_data=keep_importance_data, prev_model=prev_model,
+                          prev_data=parser.old_dataset)
         if plugins is None:
             plugins = [ewc]
         else:
@@ -261,6 +275,7 @@ class MyMAS(MySupervisedTemplate):
         )
 
 
+''''
 class MyRWALK(MySupervisedTemplate):
     def __init__(
             self,
@@ -320,6 +335,8 @@ class SI(MySupervisedTemplate):
             eval_every=eval_every,
             **base_kwargs
         )
+
+'''
 
 __all__ = [
     "LFL",

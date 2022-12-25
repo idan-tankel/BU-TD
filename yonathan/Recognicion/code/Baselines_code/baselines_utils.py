@@ -4,11 +4,14 @@ from training.Utils import tuple_direction_to_index
 import argparse
 import torch.nn as nn
 
-def load_model(model:nn.Module,results_path:str, model_path: str) -> dict:
+
+def load_model(model: nn.Module, results_path: str, model_path: str) -> dict:
     """
     Loads and returns the model checkpoint as a dictionary.
     Args:
         model_path: The path to the model.
+        results_path: The path to results dir.
+        model: The path to the model.
 
     Returns: The loaded checkpoint.
 
@@ -18,19 +21,21 @@ def load_model(model:nn.Module,results_path:str, model_path: str) -> dict:
     model.load_state_dict(checkpoint['model_state_dict'])  # Loading the saved weights.
     return checkpoint
 
-def construct_flag(parser:argparse, task_id:int, direction_id:int):
+
+def construct_flag(parser: argparse, task_id: int, direction_tuple: tuple):
     """
     Args:
         parser: The model opts.
-        flag: The flag.
         task_id: The task id.
-        direction_id: The direction id.
+        direction_tuple: The direction id.
 
     Returns: The new tasks, with the new task and direction.
 
     """
     # From the direction tuple to single number.
-    direction_dir, _ = tuple_direction_to_index(parser.num_x_axis, parser.num_y_axis, direction_id, parser.ndirections, task_id)
+    direction_dir, _ = tuple_direction_to_index(parser.num_x_axis, parser.num_y_axis, direction_tuple,
+                                                parser.ndirections,
+                                                task_id)
     task_id = torch.tensor(task_id)
     # The new task vector.
     New_task_flag = torch.nn.functional.one_hot(task_id, parser.ntasks)
@@ -39,4 +44,4 @@ def construct_flag(parser:argparse, task_id:int, direction_id:int):
     # Concat into one flag.
     New_flag = torch.concat([New_direction_flag, New_task_flag], dim=0).float()
     # Expand into one flag.
-    return New_flag
+    return New_flag.unsqueeze(dim=0)

@@ -1,9 +1,11 @@
 import os
-from datetime import datetime
+
 from pathlib import Path
 
+import torch
+
 import pytorch_lightning as pl
-from pytorch_lightning.callbacks import ModelCheckpoint
+
 from pytorch_lightning.loggers import WandbLogger
 
 from training.Data.Checkpoints import CheckpointSaver
@@ -15,10 +17,18 @@ from training.Data.Structs import Training_flag
 from training.Modules.Create_Models import create_model
 from training.Modules.Models import BUTDModel, ResNet
 from training.Utils import num_params
+from training.Modules.Batch_norm import BatchNormAllTasks
 
 
 def main(train_right, train_left, ds_type=DsType.Emnist, flag=Flag.CL, model_type=BUTDModel, task=(-1, 0)):
     parser = GetParser(model_flag=flag, ds_type=ds_type, model_type=model_type)
+
+    norm = BatchNormAllTasks(opts=parser, num_features=256)
+    norm.eval()
+    inputs = torch.zeros([10, 256, 100, 100])
+    flag = torch.zeros(10, 25)
+    print(norm(inputs, flag).shape)
+
     project_path = Path(__file__).parents[1]
     data_path = os.path.join(project_path, f'data/{str(ds_type)}/samples/(4,4)_image_matrix')
     Checkpoint_saver = CheckpointSaver(dirpath=parser.results_dir + f'Model{task}_train_all_rows_larger_emb{parser.wd}',
@@ -51,7 +61,7 @@ def main(train_right, train_left, ds_type=DsType.Emnist, flag=Flag.CL, model_typ
                                      direction_tuple=direction,
                                      task_id=0,
                                      nbatches_train=len(DataLoaders['train_dl']))
-        wrapped_model.load_model(model_path='Right_larger_emb/BUTDModel_epoch30_direction=(1, 0).pt')
+     #   wrapped_model.load_model(model_path='Right_larger_emb/BUTDModel_epoch30_direction=(1, 0).pt')
         #   print(wrapped_model.Accuracy(DataLoaders['test_dl']))
         trainer.fit(wrapped_model, train_dataloaders=DataLoaders['train_dl'], val_dataloaders=DataLoaders['test_dl'])
 
