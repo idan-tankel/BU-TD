@@ -2,6 +2,7 @@ import argparse
 from typing import Union
 
 import torch
+from torch import Tensor
 import torch.nn as nn
 
 from training.Data.Data_params import Flag
@@ -32,7 +33,7 @@ class HeadSingleTask(nn.Module):
         infilters = opts.nfilters[-1]  # The input size from the end of the BU2 stream.
         self.layers = nn.ModuleList([nn.Linear(infilters, nclasses + 1) for _ in range(num_heads)])
 
-    def forward(self, inputs: torch) -> torch:
+    def forward(self, inputs: Tensor) -> Tensor:
         """
         Args:
             inputs: The output from the model.
@@ -68,12 +69,12 @@ class MultiTaskHead(nn.Module):
         for i in range(self.ntasks):
             for j in range(self.ndirections):
                 # num_heads = self.num_heads[j]
-                layer = HeadSingleTask(opts, self.num_classes[i])  # create a taskhead.
+                layer = HeadSingleTask(opts, self.num_classes[j], self.num_heads[j])  # create a taskhead.
                 self.taskhead.append(layer)
                 if transfer_learning_params is not None:
                     transfer_learning_params[i][j].extend(layer.parameters())  # Storing the taskhead params.
 
-    def forward(self, inputs: torch) -> torch:
+    def forward(self, inputs: Tensor) -> Tensor:
         """
         Args:
             inputs: The output from BU2, and the flag.
@@ -83,7 +84,7 @@ class MultiTaskHead(nn.Module):
         """
         (bu2_out, flag) = inputs
         # In train mode we train only one head.
-        if self.training:
+        if self.training or True:
             task_id = Flag_to_task(self.opts, flag)  # Get the task id.
             task_out = self.taskhead[task_id](bu2_out).squeeze()  # apply the appropriate task-head.
         # Otherwise, we test all heads and choose the desired by the direction flag.
@@ -92,6 +93,8 @@ class MultiTaskHead(nn.Module):
             for layer in self.taskhead:  # For each task head we compute the output.
                 outputs.append(layer(bu2_out))
             direction_flag = flag[:, :self.ndirections]
+            print(outputs[0].shape)
+
             outputs = torch.stack(outputs, dim=-1).squeeze()
             if len(outputs.shape) == 3:
                 direction_flag = direction_flag.unsqueeze(dim=1)
@@ -99,7 +102,7 @@ class MultiTaskHead(nn.Module):
                 direction_flag = direction_flag.unsqueeze(dim=1)
                 direction_flag = direction_flag.unsqueeze(dim=1)
             outputs = outputs * direction_flag  # Multiply by the direction flag mask.
-            task_out = outputs.sum(dim=-1)   # Sum to have single prediction per task.
+            task_out = outputs.sum(dim=-1)  # Sum to have single prediction per task.
 
         return task_out
 

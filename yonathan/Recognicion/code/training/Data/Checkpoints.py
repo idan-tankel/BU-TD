@@ -50,7 +50,7 @@ class CheckpointSaver:
         self.optimum = new_optimum
 
     def __call__(self, model: nn.Module, epoch: int, current_test_accuracy: float, optimizer: torch.optim,
-                 scheduler: torch.optim.lr_scheduler, parser: argparse, task_id: int, direction: tuple) -> None:
+                 scheduler: torch.optim.lr_scheduler, parser: argparse, task_id: int, direction: list[tuple]) -> None:
         """
         Saves the state.
         Args:
@@ -77,7 +77,7 @@ class CheckpointSaver:
         better_than_optimum = current_test_accuracy > self.optimum  # Compute whether we passed the optimum so far.
         # If we want to store the running statistics, we save them.
         if self.store_running_stats:
-            store_running_stats(model, task_id=task_id, direction_id=direction)
+            store_running_stats(model, task_id=task_id, direction_id=direction[0])
             print('Done storing running stats')
         # All the data we want to store.
         save_data = {'epoch': epoch, 'model_state_dict': model.state_dict(),

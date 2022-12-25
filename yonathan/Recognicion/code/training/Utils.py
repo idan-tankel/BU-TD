@@ -3,6 +3,7 @@ import os
 from typing import Union, Iterator
 
 import torch
+from torch import Tensor
 import torch.optim as optim
 
 
@@ -55,7 +56,7 @@ def get_omniglot_dictionary(num_tasks: int, raw_data_folderpath: str) -> dict:
     return nclasses_New
 
 
-def flag_to_idx(flag: torch) -> int:
+def flag_to_idx(flag: Tensor) -> int:
     """
     From Flag get the id in which the flag is non-zero.
     Args:
@@ -68,7 +69,7 @@ def flag_to_idx(flag: torch) -> int:
     return task
 
 
-def get_laterals(laterals: list[torch], layer_id: int, block_id: int) -> torch:
+def get_laterals(laterals: list[Tensor], layer_id: int, block_id: int) -> Union[Tensor, None]:
     """
     Returns the lateral connections associated with the block in the layer.
     Args:
@@ -133,7 +134,7 @@ def create_optimizer_and_scheduler(opts: argparse, learned_params: list, nbatche
     return optimizer, scheduler
 
 
-def preprocess(inputs: list[torch], device: str) -> list[torch]:
+def preprocess(inputs: list[Tensor], device: str) -> list[Tensor]:
     """
     Move list of tensors to the device.
     Args:
@@ -148,7 +149,7 @@ def preprocess(inputs: list[torch], device: str) -> list[torch]:
 
 
 def tuple_direction_to_index(num_x_axis: int, num_y_axis: int, direction: tuple, ndirections: int, task_id: int) -> \
-        tuple[torch, torch]:
+        tuple[Tensor, Tensor]:
     """
     Compute given direction tuple and task index the direction index and task index.
     Args:
@@ -168,7 +169,7 @@ def tuple_direction_to_index(num_x_axis: int, num_y_axis: int, direction: tuple,
     return direction_dir, index_dir
 
 
-def Compose_Flag(opts: argparse, flag: torch) -> tuple[torch, torch, torch]:
+def Compose_Flag(opts: argparse, flag: Tensor) -> tuple[Tensor, Tensor, Tensor]:
     """
     Compose the flag into three flags.
     Args:
@@ -184,7 +185,7 @@ def Compose_Flag(opts: argparse, flag: torch) -> tuple[torch, torch, torch]:
     return direction_flag, task_flag, arg_flag
 
 
-def Flag_to_task(opts: argparse, flag: torch) -> int:
+def Flag_to_task(opts: argparse, flag: Tensor) -> int:
     """
     Composes the flag and returns the task id.
     Args:

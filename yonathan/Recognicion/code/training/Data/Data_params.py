@@ -103,6 +103,7 @@ class EmnistDataset(GenericDataParams):
         self.image_size = [130, 200]  # The Emnist image size.
         # The initial indexes.
         # TODO - SHOULD BE DELETED.
+        self.initial_directions = [(1, 0), (-1, 0)]
         initial_directions = [
             tuple_direction_to_index(self.num_x_axis, self.num_y_axis, direction, ndirections=self.ndirections,
                                      task_id=0)[0]

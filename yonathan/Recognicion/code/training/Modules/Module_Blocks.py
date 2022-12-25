@@ -113,7 +113,7 @@ class Modulation_and_Lat(nn.Module):
             torch.Tensor(*shape))  # creates the learnable parameter of shape [nchannels,1,1] according to nchannels.
         self.norm_and_relu = nn.Sequential(opts.norm_layer(opts, filters), opts.activation_fun())
         #  self.norm = opts.norm_layer(opts, filters)  # batch norm after the channel-modulation of the lateral.
-        #   self.relu1 = opts.activation_fun()  # activation_fun after the batch_norm layer
+        #   self.relu1 = opts.activation_fun()  # activation_fun after the batch_norm_with_statistics_per_sample layer
         self.relu = opts.activation_fun()  # activation_fun after the skip connection
 
     def forward(self, x: torch, lateral: torch) -> torch:
@@ -127,7 +127,7 @@ class Modulation_and_Lat(nn.Module):
         """
         side_val = lateral * self.side  # channel-modulation(CM)
         #  side_val = self.norm(side_val)  # Batch_norm after the CM
-        # side_val = self.relu1(side_val)  # Activation_fun after the batch_norm
+        # side_val = self.relu1(side_val)  # Activation_fun after the batch_norm_with_statistics_per_sample
         side_val = self.norm_and_relu(side_val)
         x = x + side_val  # The lateral skip connection
         x = self.relu(x)  # Activation_fun after the skip connection

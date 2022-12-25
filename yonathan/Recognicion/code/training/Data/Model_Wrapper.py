@@ -3,6 +3,7 @@ import os
 import os.path
 
 import torch
+from torch import Tensor
 import torch.nn as nn
 import torch.optim as optim
 from pytorch_lightning import LightningModule
@@ -14,6 +15,8 @@ from training.Utils import create_optimizer_and_scheduler, preprocess
 from typing import Callable
 
 from training.Modules.Batch_norm import store_running_stats
+
+
 # Define the model wrapper class.
 # Support training and load_model.
 
@@ -23,7 +26,7 @@ class ModelWrapped(LightningModule):
     """
 
     def __init__(self, opts: argparse, model: nn.Module, learned_params: list, check_point: CheckpointSaver,
-                 direction_tuple: tuple[int, int], task_id: int, nbatches_train: int):
+                 direction_tuple: list[tuple[int, int]], task_id: int, nbatches_train: int):
         """
         This is the model wrapper for pytorch lightning training.
         Args:
@@ -45,13 +48,13 @@ class ModelWrapped(LightningModule):
         self.opts: argparse = opts  # The model options.
         self.check_point: CheckpointSaver = check_point  # The checkpoint saver.
         self.nbatches_train: int = nbatches_train  # The number of train batches.
-        self.direction: tuple[int, int] = direction_tuple  # The direction id.
+        self.direction: list[tuple[int, int]] = direction_tuple  # The direction id.
         self.task_id: int = task_id  # The task id.
         # Define the optimizer, scheduler.
         self.optimizer, self.scheduler = create_optimizer_and_scheduler(self.opts, self.learned_params,
                                                                         self.nbatches_train)
 
-    def training_step(self, batch: list[torch], batch_idx: int) -> float:
+    def training_step(self, batch: list[Tensor], batch_idx: int) -> float:
         """
         Training step.
         Args:
@@ -71,7 +74,7 @@ class ModelWrapped(LightningModule):
         self.log('train_acc', acc, on_step=True, on_epoch=True)  # Update acc.
         return loss  # Return the loss.
 
-    def validation_step(self, batch: list[torch], batch_idx: int) -> float:
+    def validation_step(self, batch: list[Tensor], batch_idx: int) -> float:
         """
         Make the validation step.
         Args:
@@ -93,11 +96,11 @@ class ModelWrapped(LightningModule):
             self.log('val_acc', acc, on_step=True, on_epoch=True)  # Update the acc.
         return acc  # Return the Accuracy.
 
-    def training_epoch_end(self) -> None:
-        if self.store_running_stats:
-            store_running_stats(self.model, task_id=self.task_id, direction_id=self.direction)
-            print('Done storing running stats')
-
+    # def training
+    #  def training_epoch_end(self,outputs) -> None:
+    #     if self.store_running_stats:
+    #         store_running_stats(self.model, task_id=self.task_id, direction_id=self.direction)
+    #          print('Done storing running stats')
 
     def configure_optimizers(self) -> tuple[optim, optim.lr_scheduler]:
         """

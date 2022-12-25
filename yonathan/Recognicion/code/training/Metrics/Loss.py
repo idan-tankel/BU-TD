@@ -23,6 +23,7 @@ def multi_label_loss(samples: inputs_to_struct, outs: outs_to_struct):
     samples.label_task = samples.label_task.squeeze()  # TODO - CHECK IT.
     losses_task = CE(outs.classifier, samples.label_task)  # Compute the CE loss without reduction.
     loss_task = losses_task.mean()  # Mean over all batch.
+    #  print(loss_task)
     return loss_task
 
 

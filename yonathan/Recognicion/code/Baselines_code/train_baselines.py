@@ -15,8 +15,7 @@ from avalanche.training.plugins.evaluation import EvaluationPlugin
 from avalanche.benchmarks.generators import dataset_benchmark
 
 from avalanche_AI.training.Plugins.Evaluation import accuracy_metrics
-from avalanche_AI.training.supervised.strategy_wrappers import MyEWC as ewc, LFL, LWF, MyMAS as mas, MyRWALK as rwalk, \
-    SI, Naive
+from avalanche_AI.training.supervised.strategy_wrappers import MyEWC as ewc, LFL, LWF, MyMAS as mas, Naive
 from training.Metrics.Accuracy import accuracy
 from Data_Creation.Create_dataset_classes import DsType
 import argparse
@@ -48,7 +47,8 @@ def train_baseline(parser: argparse, checkpoint: CheckpointSaver, reg_type: RegT
     parser.model.trained_tasks.append(old_tasks)
     parser.prev_data = old_dataset_dict['train_ds']
     load_model(model, model_path='naive/Model_right/ResNet_epoch40_direction=(1, 0).pt', results_path=Baseline_folder)
-    #  print(accuracy(parser, model, old_dataset_dict['test_dl']))
+  #  load_model(model, model_path='LWF/lambda=0.1/ResNet_epoch20_direction=(1, 0).pt', results_path=Baseline_folder)
+   # print(accuracy(parser, model, old_dataset_dict['test_dl']))
     learned_params = model.parameters()  # model.get_specific_head(new_task[0], new_task[1])  # Train only the desired params.
     parser.optimizer, parser.scheduler = create_optimizer_and_scheduler(parser, learned_params, nbatches_train=len(
         old_dataset_dict['train_dl']))
@@ -127,9 +127,9 @@ def main(reg_type: Union[RegType, None], ds_type: DsType):
     checkpoint = CheckpointSaver(Model_folder)
 
     # The first task is right and then other tasks.
-    old_data = get_dataset_for_spatial_relations(parser, Images_path, 0, (1, 0))
+    old_data = get_dataset_for_spatial_relations(parser, Images_path, 0, [(1, 0)])
     # The new tasks.
-    new_data = get_dataset_for_spatial_relations(parser, Images_path, 0, (0, 1))
+    new_data = get_dataset_for_spatial_relations(parser, Images_path, 0, [(0, 1)])
     # The scenario.
     scenario = dataset_benchmark([new_data['train_ds']], [new_data['test_ds']])
     # Train the baselines.

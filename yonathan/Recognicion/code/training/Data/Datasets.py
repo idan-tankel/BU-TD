@@ -3,16 +3,14 @@ import os
 import pickle
 from typing import Union
 
-import numpy as np
 import torch
+from torch import Tensor
 import torchvision.transforms as T
 from PIL import Image
 from torch.utils.data import Dataset
 
 from Data_Creation.Create_dataset_classes import Sample
 from training.Utils import tuple_direction_to_index
-
-from Data_Creation.Create_dataset_classes import DsType
 
 
 # Here we define the dataset classes.
@@ -37,7 +35,7 @@ class DataSetBase(Dataset):
         self.ndirections: int = ndirections  # The number of directions.
         self.is_train: bool = is_train  # Is this a training set.
         self.nexamples: int = nexamples  # The number of examples.
-      #  self.nexamples = 100
+        #  self.nexamples = 100
         self.targets = [0 for _ in range(self.nexamples)]  # Used only for Avalanche_AI.
         self.split_size: int = 1000  # The split size we created the dataset according to.
 
@@ -79,7 +77,7 @@ class DataSetBase(Dataset):
         return self.nexamples
 
 
-def struct_to_input(sample: Sample) -> tuple[torch, torch, tuple]:
+def struct_to_input(sample: Sample) -> tuple[Tensor, Tensor, Tensor]:
     """
     Returning the sample attributed.
     Args:
@@ -103,7 +101,8 @@ class DatasetGuided(DataSetBase):
     The guided dataset, returning query with argument.
     """
 
-    def __init__(self, root: str, opts: argparse, nexamples: int, task_idx: int = 0, direction_tuple: tuple = (1, 0),
+    def __init__(self, root: str, opts: argparse, nexamples: int, task_idx: int = 0,
+                 direction_tuple: list[tuple] = [(1, 0)],
                  is_train=True, obj_per_row=6, obj_per_col=1):
         """
 
@@ -125,37 +124,40 @@ class DatasetGuided(DataSetBase):
         # The direction index(not tuple).
         self.ds_type = opts.ds_type
         self.direction, _ = tuple_direction_to_index(num_x_axis=opts.num_x_axis, num_y_axis=opts.num_y_axis,
-                                                     direction=direction_tuple,
+                                                     direction=direction_tuple[0],
                                                      ndirections=opts.ndirections, task_id=task_idx)
         self.obj_per_row = obj_per_row  # Number of row.
         self.obj_per_col = obj_per_col  # Number of columns.
         self.task_idx = torch.tensor(task_idx)  # The task id.
         self.edge_class = torch.tensor(self.nclasses)  # The 'border' class.
         # TODO - GET RID OF THIS
-        self.initial_tasks = opts.initial_directions  # The initial tasks.
         self.flatten = False
 
-    def Compute_label_task(self, r: int, c: int, label_all: np.ndarray, direction: tuple) -> torch:
+    def Compute_label_task(self, r: int, c: int, label_all: Tensor, direction_list: list[tuple]) -> Tensor:
         """
         Args:
             r: The row index.
             c: The column index.
             label_all: The label_all
-            direction: The direction.
+            direction_list: The direction.
 
         Returns: The label task.
 
         """
-        direction_x, direction_y = direction
-        # If the target not in the Border.
-        if 0 <= r + direction_y <= self.obj_per_col - 1 and 0 <= c + direction_x <= self.obj_per_row - 1:
-            label_task = label_all[r + direction_y, c + direction_x]
-        # Otherwise the target is 'border'.
-        else:
-            label_task = self.edge_class
-        return label_task
+        labels_task = []
+        for direction in direction_list:
+            direction_x, direction_y = direction
+            # If the target not in the Border.
+            if 0 <= r + direction_y <= self.obj_per_col - 1 and 0 <= c + direction_x <= self.obj_per_row - 1:
+                label_task = label_all[r + direction_y, c + direction_x]
+            # Otherwise the target is 'border'.
+            else:
+                label_task = self.edge_class
+            labels_task.append(label_task)
+        labels_task = torch.tensor(labels_task)
+        return labels_task
 
-    def __getitem__(self, index: int) -> tuple[torch]:
+    def __getitem__(self, index: int) -> tuple[Tensor]:
         """
         Args:
             index: sample index.
@@ -189,14 +191,7 @@ class DatasetGuided(DataSetBase):
         flag = torch.concat([direction_type_ohe, task_type_ohe, char_type_one], dim=0).float()
         # TODO - GET RID OF THIS.
         # If the task is part of the initial tasks, we solve all initial tasks together.
-        if self.ds_type is not DsType.Omniglot and self.tuple_direction in self.initial_tasks:
-            label_tasks = []
-            for task in self.initial_tasks:  # Iterating over all tasks and get their label task.
-                label_task = self.Compute_label_task(r=r, c=c, label_all=label_all, direction=task)
-                label_tasks.append(label_task)
-            label_task = torch.tensor(label_tasks)
-        else:  # Return  a unique label task.
-            label_task = self.Compute_label_task(r=r, c=c, label_all=label_all, direction=self.tuple_direction)
+        label_task = self.Compute_label_task(r=r, c=c, label_all=label_all, direction_list=self.tuple_direction)
         return img, label_task, flag, label_all, label_existence
 
 
@@ -207,7 +202,7 @@ class DatasetNonGuided(DatasetGuided):
     """
 
     # In this dataset, we return for each character its adjacent character according to the direction to all characters.
-    def Get_label_task_all(self, label_all: torch) -> torch:
+    def Get_label_task_all(self, label_all: Tensor) -> Tensor:
         """
         Compute for each character its neighbor, if exists in the sample.
         Args:
@@ -220,12 +215,12 @@ class DatasetNonGuided(DatasetGuided):
         for r, row in enumerate(label_all):  # Iterating over all rows.
             for c, char in enumerate(row):  # Iterating over all character in the row.
                 res = self.Compute_label_task(r=r, c=c, label_all=label_all,
-                                              direction=self.tuple_direction)  # Compute the label task.
+                                              direction_list=self.tuple_direction)  # Compute the label task.
                 label_adj_all[char] = res  # assign to the character.
 
         return label_adj_all
 
-    def __getitem__(self, index: int) -> tuple[torch]:
+    def __getitem__(self, index: int) -> tuple[Tensor, Tensor, Tensor, Tensor, Tensor]:
         """
         Getting the sample with the 'return all' label task.
         Args:

@@ -69,4 +69,4 @@ def main_fashion(train_original: bool, train_new: bool, ds_type: DsType = DsType
         trainer.fit(wrapped_model, train_dataloaders=DataLoaders['train_dl'], val_dataloaders=DataLoaders['test_dl'])
 
 
-main_fashion(False, True, task=(-1, 1))
+main_fashion(True, True, task=(-1, 1))

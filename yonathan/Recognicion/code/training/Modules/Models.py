@@ -33,8 +33,7 @@ class BUStreamShared(nn.Module):
         self.block = opts.bu_shared_block_type  # The block type.
         Model_inshape = np.array(opts.inshape)  # The image resolution.
         self.conv1 = Depthwise_separable_conv(Model_inshape[0], opts.nfilters[0], kernel_size=7, stride=opts.strides[0],
-                                              padding=3,
-                                              bias=False)  # The first conv layer as in ResNet.
+                                              padding=3)  # The first conv layer as in ResNet.
 
         # The first shape after Conv1.
         inshape = np.array([opts.nfilters[0], np.int(np.ceil(Model_inshape[1] / opts.strides[0])),
@@ -307,7 +306,8 @@ class BUTDModel(nn.Module):
         self.model_flag = opts.model_flag  # The model type
         self.use_bu1_loss = opts.use_bu1_loss  # Whether to use the Occurrence loss.
         self.use_lateral_butd = opts.use_lateral_butd  # Whether to use the BU1 -> TD laterals.
-        self.use_lateral_tdbu = opts.use_lateral_tdbu and opts.model_flag is not Flag.NOFLAG # Whether to use the TD -> BU2 laterals.
+        # Whether to use the TD -> BU2 laterals.
+        self.use_lateral_tdbu = opts.use_lateral_tdbu and opts.model_flag is not Flag.NOFLAG
         # If we use, we create occurrence head.
         if self.use_bu1_loss:
             self.occhead = OccurrenceHead(opts)  # TODO - CHANGE TO OCCURRENCE_HEAD

@@ -3,6 +3,7 @@ from typing import Iterator, Union
 
 import numpy as np
 import torch
+from torch import Tensor
 import torch.nn as nn
 
 from training.Data.Data_params import Flag
@@ -87,7 +88,7 @@ class BUInitialBlock(nn.Module):
         self.conv1 = nn.Sequential(shared.conv1, norm_layer(opts, opts.nfilters[0]),
                                    activation_fun())  # The initial block downsample from RGB.
 
-    def forward(self, x: torch, flags: torch, laterals_in: Union[list, None]) -> torch:
+    def forward(self, x: Tensor, flags: Tensor, laterals_in: Union[list, None]) -> Tensor:
         """
         Args:
             x: The images.
@@ -316,10 +317,10 @@ class BasicBlockTD(nn.Module):
         if stride > 1:
             # upsample the skip connection.
             self.upsample = nn.Sequential(nn.Upsample(size=size, mode='bilinear', align_corners=False),
-                                          conv1x1(in_channels, out_channels, stride=1),
+                                          conv1x1(in_channels, out_channels),
                                           opts.norm_layer(opts, out_channels))
         elif in_channels != out_channels:
-            self.upsample = nn.Sequential(conv1x1(in_channels, out_channels, stride=1),
+            self.upsample = nn.Sequential(conv1x1(in_channels, out_channels),
                                           opts.norm_layer(opts, out_channels))
 
     def forward(self, x: torch, laterals_in: torch) -> tuple[torch, list[torch]]:

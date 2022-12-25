@@ -32,11 +32,11 @@ def main(train_right, train_left, ds_type=DsType.Emnist, flag=Flag.CL, model_typ
         training_flag = Training_flag(parser, train_all_model=True)
         direction = (1, 0)
         # learned_params = list(model.parameters())
-        learned_params = training_flag.Get_learned_params(model, task_idx=50, direction=direction)
-        DataLoaders = get_dataset_for_spatial_relations(parser, data_path, lang_idx=50, direction_tuple=direction)
+        learned_params = training_flag.Get_learned_params(model, task_idx=lang_id, direction=direction)
+        DataLoaders = get_dataset_for_spatial_relations(parser, data_path, lang_idx=lang_id, direction_tuple=direction)
         wrapped_model = ModelWrapped(parser, model, learned_params, check_point=Checkpoint_saver,
                                      direction_tuple=direction,
-                                     task_id=50,
+                                     task_id=lang_id,
                                      nbatches_train=len(DataLoaders['train_dl']))
         #   wrapped_model.load_model(model_path='Right_long/BUTDModel_epoch71_direction=(1, 0).pt')
         # print(wrapped_model.Accuracy(DataLoaders['test_dl']))
@@ -61,4 +61,4 @@ def main(train_right, train_left, ds_type=DsType.Emnist, flag=Flag.CL, model_typ
         trainer.fit(wrapped_model, train_dataloaders=DataLoaders['train_dl'], val_dataloaders=DataLoaders['test_dl'])
 
 
-main(False, True, ds_type=DsType.Omniglot, model_type=BUTDModel, flag=Flag.CL, lang_id=17, direction=(1, 0))
+main(True, True, ds_type=DsType.Omniglot, model_type=BUTDModel, flag=Flag.CL, lang_id=17, direction=(1, 0))

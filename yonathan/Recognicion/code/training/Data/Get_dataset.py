@@ -14,7 +14,7 @@ sys.path.append(os.path.join(Path(__file__).parents[2], 'Data_Creation'))
 # Return the datasets and dataloaders.
 
 def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, lang_idx: int,
-                                      direction_tuple: tuple[int, int]) -> dict:
+                                      direction_tuple: list[tuple[int, int]]) -> dict:
     """
     Getting the train,test,val(if exists) datasets.
     Args:
@@ -61,7 +61,7 @@ def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, lang_idx:
     # Create train dataset.
     train_ds = dataset(root=os.path.join(data_fname, 'train'), opts=opts, task_idx=task_idx,
                        direction_tuple=direction_tuple,
-                       is_train=True, nexamples=nsamples_train, obj_per_row=obj_per_row, obj_per_col=obj_per_col)
+                       nexamples=nsamples_train, obj_per_row=obj_per_row, obj_per_col=obj_per_col)
     # Create the test dataset.
     test_ds = dataset(root=os.path.join(data_fname, 'test'), opts=opts, task_idx=task_idx,
                       direction_tuple=direction_tuple,
