@@ -249,18 +249,19 @@ class MyMAS(MySupervisedTemplate):
     """
 
     def __init__(self, parser: argparse, plugins: Optional[List[SupervisedPlugin]] = None,
-                 evaluator: EvaluationPlugin = default_evaluator, eval_every: int = -1, prev_mode=None, **base_kwargs):
+                 evaluator: EvaluationPlugin = default_evaluator, eval_every: int = -1, prev_model=None, prev_data=None,
+                 **base_kwargs):
         """
        Args:
           parser: The parser.
           plugins: Optional plugins.
           evaluator: The evaluator.
           eval_every: Evaluation interval.
-          prev_model
+          prev_model: The previous model.
           **base_kwargs:
        """
 
-        MAS = MyMASPlugin(parser, prev_mode)
+        MAS = MyMASPlugin(parser, prev_model, prev_data)
         if plugins is None:
             plugins = [MAS]
         else:

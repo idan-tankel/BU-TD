@@ -61,7 +61,7 @@ class MyMASPlugin(MASPlugin):
             self.importance = self._get_importance(self.prev_model, prev_data, self.batch_size, parser.device)
             print("Done computing Importances")
             # The parameters we want to regularize are only the backbone parameters.
-            self.params = self.params = dict(copy_params_dict(self.prev_model.feature))
+            self.params = self.params = dict(copy_params_dict(self.prev_model.feature_extractor))
             # Update the number of trained experiences.
             self.num_exp = 1
 
@@ -76,7 +76,7 @@ class MyMASPlugin(MASPlugin):
         for _, batch in enumerate(dataloader):
             # Get batch
             # Move batch to device
-            batch = preprocess(batch[:-1], device)
+            batch = preprocess(batch, device)
             # Move to struct.
             batch = self.inputs_to_struct(batch)
             # Forward pass

@@ -34,7 +34,7 @@ def main(train_right, train_left, ds_type=DsType.Emnist, flag=Flag.CL, model_typ
 
     project_path = Path(__file__).parents[1]
     data_path = os.path.join(project_path, f'data/{str(ds_type)}/samples/(4,4)_image_matrix')
-    Checkpoint_saver = CheckpointSaver(dirpath=parser.results_dir + f'Model{task}_train_all_rows_larger_emb{parser.wd}',
+    Checkpoint_saver = CheckpointSaver(dirpath=parser.results_dir + f'Model_right_lareger',
                                        store_running_statistics=flag is Flag.CL)
     wandb_logger = WandbLogger(project="My_first_project_5.10", job_type='train',
                                save_dir=parser.results_dir)
@@ -42,7 +42,7 @@ def main(train_right, train_left, ds_type=DsType.Emnist, flag=Flag.CL, model_typ
     model = create_model(parser)
     if train_right:
         training_flag = Training_flag(parser, train_all_model=True)
-        direction = [(1, 0), (-1, 0)]
+        direction = parser.initial_directions
         learned_params = training_flag.Get_learned_params(model, task_idx=0, direction=direction[0])
         DataLoaders = get_dataset_for_spatial_relations(parser, data_path, lang_idx=0, direction_tuple=direction)
         wrapped_model = ModelWrapped(parser, model, learned_params, check_point=Checkpoint_saver,

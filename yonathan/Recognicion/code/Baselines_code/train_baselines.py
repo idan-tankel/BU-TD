@@ -47,8 +47,9 @@ def train_baseline(parser: argparse, checkpoint: CheckpointSaver, reg_type: RegT
     parser.model.trained_tasks.append(old_tasks)
     parser.prev_data = old_dataset_dict['train_ds']
     load_model(model, model_path='naive/Model_right/ResNet_epoch40_direction=(1, 0).pt', results_path=Baseline_folder)
-  #  load_model(model, model_path='LWF/lambda=0.1/ResNet_epoch20_direction=(1, 0).pt', results_path=Baseline_folder)
-   # print(accuracy(parser, model, old_dataset_dict['test_dl']))
+  #  load_model(model, model_path='LWF/lambda=0.05/ResNet_epoch21_direction=(1, 0).pt', results_path=Baseline_folder)
+  #  print(accuracy(parser, model, new_data['test_dl']))
+  #  print(accuracy(parser, model, old_dataset_dict['test_dl']))
     learned_params = model.parameters()  # model.get_specific_head(new_task[0], new_task[1])  # Train only the desired params.
     parser.optimizer, parser.scheduler = create_optimizer_and_scheduler(parser, learned_params, nbatches_train=len(
         old_dataset_dict['train_dl']))
@@ -71,8 +72,8 @@ def train_baseline(parser: argparse, checkpoint: CheckpointSaver, reg_type: RegT
         strategy = LFL(parser, checkpoint=checkpoint, evaluator=evaluator, eval_every=1, prev_model=parser.model)
 
     elif reg_type is RegType.MAS:
-        strategy = mas(parser, checkpoint=checkpoint, device='cuda', evaluator=evaluator, eval_every=1,
-                       prev_model=parser.model)
+        strategy = mas(parser, checkpoint=checkpoint, evaluator=evaluator, eval_every=1,
+                       prev_model=parser.model, prev_data = old_dataset_dict['train_ds'])
 
     elif reg_type is RegType.RWALK:
         strategy = rwalk(parser, checkpoint=checkpoint, device='cuda', evaluator=evaluator, train_epochs=1,
@@ -138,4 +139,4 @@ def main(reg_type: Union[RegType, None], ds_type: DsType):
                    new_data=new_data)
 
 
-main(reg_type=RegType.LWF, ds_type=DsType.Emnist)
+main(reg_type=RegType.MAS, ds_type=DsType.Emnist)
