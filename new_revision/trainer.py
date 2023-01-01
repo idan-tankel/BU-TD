@@ -12,7 +12,10 @@ from Configs.Config import Config
 from types import SimpleNamespace
 from create_dataset.datasets import DatasetAllDataSetTypesAll
 import git
+import argparse
 import os
+parser = argparse.ArgumentParser(description="conf file path to run net")
+parser.add_argument('-f', '--file') 
 git_repo = git.Repo(os.getcwd(), search_parent_directories=True)
 git_root = Path(git_repo.working_dir)
 results_dir = rf"{git_root.parent}/data/emnist/results"
@@ -21,8 +24,13 @@ data_dir = Path(rf"{git_root.parent}/data")
 os.makedirs(data_dir, exist_ok=True)
 checkpoints_dir = rf"{git_root.parent}/data/emnist/checkpoints/good"
 os.makedirs(results_dir, exist_ok=True)
+args = parser.parse_args()
+try:
+    file = args.config
+except AttributeError:
+    file =  "small_vit.yaml"
 
-global_config = Config(experiment_filename="imageNet21k_pretrained.yaml")
+global_config = Config(experiment_filename=file)
 transform = [transforms.Resize((384, 384))]
 
 compatibility_dataset = DatasetAllDataSetTypesAll(root=rf'/home/idanta/data/6_extended_testing/train/', opts=global_config,  direction=1,
