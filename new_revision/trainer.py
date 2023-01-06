@@ -30,9 +30,13 @@ try:
 except AttributeError:
     file =  "small_vit.yaml"
 
+####################### get global config ######################
 global_config = Config(experiment_filename=file)
-transform = [transforms.Resize((384, 384))]
+# transform = [transforms.ToTensor()]
 
+
+####################### Dataset loading ########################
+transform= None
 compatibility_dataset = DatasetAllDataSetTypesAll(root=rf'/home/idanta/data/6_extended_testing/train/', opts=global_config,  direction=1,
                                                   is_train=True, obj_per_row=6, obj_per_col=1, split=False,nexamples=100000,transforms=transform)
 compatibility_dl = DataLoader(compatibility_dataset, batch_size=global_config.Training.batch_size,
@@ -43,6 +47,8 @@ wandb_checkpoints = ModelCheckpoint(
     dirpath=checkpoints_dir, monitor="train_loss_epoch", mode="min")
 
 
+
+####################### Model building #########################
 if global_config.Models.pretrained_model_name is not None and "local" not in str(global_config.Models.pretrained_model_name):
         model = ViTForImageClassification.from_pretrained(
         global_config.Models.pretrained_model_name)
@@ -66,7 +72,7 @@ if "local" in str(global_config.Models.pretrained_model_name): #load from huggin
     model.model.vit._load_from_state_dict(state_dict=old_model['state_dict'],prefix='model.vit.',strict=True,missing_keys=[],unexpected_keys=[],error_msgs=[],local_metadata={})
 
 
-
+#################### Training ###############################
 wandb_logger.watch(model=model, log='all')
 trainer = pl.Trainer(accelerator='gpu', max_epochs=global_config.Training.epochs,logger=wandb_logger, callbacks=[wandb_checkpoints])
 

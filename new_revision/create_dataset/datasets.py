@@ -134,7 +134,7 @@ class DatasetAllDataSetTypes(DataSetBase):
         if not isinstance(opts, argparse.ArgumentParser):
             git_repo = git.Repo(__file__, search_parent_directories=True)
             git_root = git_repo.working_dir
-            full_path = f"{git_root}/new_revision/Configs/create_config.yaml"
+            full_path = f"{git_root}/new_revision/create_dataset/create_config.yaml"
             with open(full_path, 'r') as stream:
                 config_as_dict = yaml.safe_load(stream)
                 opts = SimpleNamespace(**config_as_dict)
