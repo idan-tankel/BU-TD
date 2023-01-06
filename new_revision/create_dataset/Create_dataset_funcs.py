@@ -6,7 +6,6 @@ import random
 import shutil
 import sys
 from multiprocessing import Pool
-
 import numpy as np
 import skimage
 import skimage.transform as transforms
@@ -105,7 +104,7 @@ def Generate_raw_examples(parser: ArgumentParser, image_ids: list, k: int, ds_ty
     return examples
 
 
-def gen_sample(parser: ArgumentParser, sample_id: int, ds_type: str, dataloader: DataSet, example: ExampleClass) -> Sample:
+def gen_sample(parser: SimpleNamespace, sample_id: int, ds_type: str, dataloader: DataSet, example: ExampleClass) -> Sample:
     """
     Creates a single sample including image, label_task, label_all, label_existence, query_index.
     Args:
@@ -156,7 +155,7 @@ def gen_sample(parser: ArgumentParser, sample_id: int, ds_type: str, dataloader:
     return sample  # Returning the sample we are going to store.
 
 
-def gen_samples(parser: ArgumentParser, dataloader: DataSet, job_id: int, range_start: int, range_stop: int, examples: list, storage_dir: str, ds_type: str) -> None:
+def gen_samples(parser: SimpleNamespace, dataloader: DataSet, job_id: int, range_start: int, range_stop: int, examples: list, storage_dir: str, ds_type: str) -> None:
     """
     Generates and stored samples, by calling to create_sample and store_sample_disk.
     Args:
@@ -538,7 +537,7 @@ def Make_data_dir(parser: ArgumentParser, ds_type, language_list: list) -> tuple
     return base_samples_dir, Meta_data_fname
 
 
-def create_samples(parser: ArgumentParser, ds_type, raw_data_set: DataSet, language_list) -> dict:
+def create_samples(parser: SimpleNamespace, ds_type, raw_data_set: DataSet, language_list) -> dict:
     """
     Args:
         parser: The dataset options.
@@ -551,7 +550,7 @@ def create_samples(parser: ArgumentParser, ds_type, raw_data_set: DataSet, langu
     """
 
     nclasses = raw_data_set.nclasses  # The number of classes in the dataset.
-    parser.letter_size = raw_data_set.letter_size
+    raw_data_set.letter_size
     # TODO this is a bug!
     # The valid classes, relevant for mnist.
     valid_classes = Get_valid_classes_for_emnist_only(
@@ -579,7 +578,7 @@ def create_samples(parser: ArgumentParser, ds_type, raw_data_set: DataSet, langu
 
     num_samples_per_data_type_dict = {}
     # Iterating over all dataset types and generating raw examples for each and then generating samples.
-    for k, (ds_type, cur_nexamples) in enumerate(zip(ds_types, nexamples_vec)):
+prob    for k, (ds_type, cur_nexamples) in enumerate(zip(ds_types, nexamples_vec)):
 
         examples = Generate_raw_examples(
             parser, image_ids, k, ds_type, cur_nexamples, valid_pairs, valid_classes, CG_chars_list, raw_data_set)
