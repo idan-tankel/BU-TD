@@ -134,6 +134,9 @@ class Datasets:
     def __init__(self, config: dict):
         # self.dataset = DsType[config['dataset']]
         self.dummyds = config['dummyds']
+        self.dataset_local_folder_name =  config["dataset_local_folder_name"]
+        self.obj_per_row = config["obj_per_row"]
+        self.obj_per_column = config["obj_per_column"]
 
 
 class Logging:

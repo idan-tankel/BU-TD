@@ -8,12 +8,17 @@ RunningSpecs:
   backbone: CCT # (currently Supported BU_Attention, CCT) the backbone to use. Defined as (`supp.Dataset_and_model_type_specifications.backbone`)
   flag_size:
   isFit: True
-  processed_data: '1_extended' # The name of the model result directory
+  processed_data: '1_extended' # The name of the model data directory
   
 
 Datasets:
   dataset: Emnist # (supp.Dataset_and_model_type_specifications.DsType) the name of the dataset to use. Supported: 'Emnist,FashionMnist,Omniglot,Cifar10,Cifar100'
   dummyds: False
+  dataset_local_folder_name: "1_extended"
+  obj_per_row: 1
+  obj_per_column: 1
+  nexamples: # total size of dataset to use
+  
 
 Logging:
   ENABLE_LOGGING: True
@@ -48,10 +53,10 @@ Models:
   features: "all"
   num_heads: "only_features"
   inshape: [3, 32, 32] # `[int,int,int]` the spahe of the incoming data. The inshape being a list rather than a tuple is simpler, since a YAML formatter would treat the tuple as a string, and accessing the elements of the tuple would just concat the string '('.
-  image_size: 224 # int, the size of the image to be used in the model
+  image_size: 32 # int, the size of the image to be used in the model
   num_channels: 3
   num_classes: 48 # the number of classes within the dataset TOOD
-  number_of_linear_heads: 6 # each linear head correspond to a class in the MultiHeadAttention
+  number_of_linear_heads: 3 # each linear head correspond to a class in the MultiHeadAttention
   depth: 3
   strides: [2, 2, 1, 2]
   nfilters: [128,1000] # For CCT

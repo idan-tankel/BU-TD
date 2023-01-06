@@ -37,8 +37,10 @@ global_config = Config(experiment_filename=file)
 
 ####################### Dataset loading ########################
 transform= None
-compatibility_dataset = DatasetAllDataSetTypesAll(root=rf'/home/idanta/data/6_extended_testing/train/', opts=global_config,  direction=1,
-                                                  is_train=True, obj_per_row=6, obj_per_col=1, split=False,nexamples=100000,transforms=transform)
+compatibility_dataset = DatasetAllDataSetTypesAll(root=rf'/home/idanta/data/{global_config.RunningSpecs.processed_data}/train/', opts=global_config,  direction=1,
+                                                  is_train=True, obj_per_row=global_config.Datasets.obj_per_row, obj_per_col=global_config.Datasets.obj_per_column, split=False,nexamples=100000,transforms=transform)
+# TODO change this to the new dataset registry, based on detectron2 ideas
+
 compatibility_dl = DataLoader(compatibility_dataset, batch_size=global_config.Training.batch_size,
                               num_workers=global_config.Training.num_workers)
 wandb_logger = WandbLogger(project="BU_TD",

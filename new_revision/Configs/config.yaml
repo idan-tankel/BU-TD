@@ -8,12 +8,13 @@ RunningSpecs:
   backbone: CCT # (currently Supported BU_Attention, CCT) the backbone to use. Defined as (`supp.Dataset_and_model_type_specifications.backbone`)
   flag_size:
   isFit: True
-  processed_data: '6_extended' # The name of the model result directory
+  processed_data: '6_extended' # The name of the model data directory
   
 
 Datasets:
   dataset: Emnist # (supp.Dataset_and_model_type_specifications.DsType) the name of the dataset to use. Supported: 'Emnist,FashionMnist,Omniglot,Cifar10,Cifar100'
   dummyds: False
+  dataset_store_folder_name:
 
 Logging:
   ENABLE_LOGGING: True
