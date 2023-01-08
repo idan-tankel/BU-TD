@@ -84,7 +84,6 @@ def create_image_matrix(parser: argparse, ds_type: str, sample: Sample) -> Sampl
         sample.image = data_augment(sample.image)
     return sample
 
-
 def gen_samples(parser: argparse, job_id: int, range_start: int, range_stop: int,
                 samples: list[Sample],
                 storage_dir: str, ds_type: str) -> None:
@@ -320,9 +319,9 @@ def Generate_raw_samples(parser: argparse, raw_dataset: General_raw_data, image_
         image_id_hash = str(sample_chars)
         # To ensure we have each sequence in train/test at most one we check whether it's in the image_ids.
         # For validation, we know the samples are disjoint as we build it like that.
-        if image_id_hash in image_ids and ds_type != "val":
-            continue
-        image_ids.add(image_id_hash)
+        if image_id_hash in image_ids and ds_type != "val" and parser.ds_type is not DsType.Avatar:
+            continue    
+        image_ids.add(image_id_hash) 
         chars = []  # The chosen characters.
         for sample_id in range(num_chars_per_image):
             char = CharInfo(parser, raw_dataset, prng, sample_id, sample_chars)  # Create raw sample.

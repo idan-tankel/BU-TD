@@ -5,16 +5,16 @@ import torch.nn as nn
 from training.Modules.Models import ResNet, BUTDModel
 
 
-def create_model(parser: argparse) -> nn.Module:
+def create_model(opts: argparse) -> nn.Module:
     """
     Create and return a model according to the options.
     Args:
-        parser: The parser.
+        opts: The model opts.
 
     Returns: A model.
 
     """
-    if parser.model_type is BUTDModel:
-        return BUTDModel(parser).cuda()
+    if opts.model_type is BUTDModel:
+        return BUTDModel(opts=opts).cuda()
     else:
-        return ResNet(parser).cuda()
+        return ResNet(opts=opts).cuda()

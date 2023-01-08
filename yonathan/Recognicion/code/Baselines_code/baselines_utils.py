@@ -1,3 +1,4 @@
+import copy
 import os
 import torch
 from training.Utils import tuple_direction_to_index
@@ -45,3 +46,7 @@ def construct_flag(parser: argparse, task_id: int, direction_tuple: tuple):
     New_flag = torch.concat([New_direction_flag, New_task_flag], dim=0).float()
     # Expand into one flag.
     return New_flag.unsqueeze(dim=0)
+
+
+def set_model(model, state_dict):
+    model.load_state_dict(copy.deepcopy(state_dict))

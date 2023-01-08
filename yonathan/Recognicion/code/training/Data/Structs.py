@@ -18,12 +18,12 @@ class inputs_to_struct:
         Args:
             inputs: The tensor list.
         """
-        img, label_task, flag, label_all, label_existence = inputs
+        img, label_task, flag, label_all, label_existence,*rest = inputs
         self.image = img  # The image.
         self.label_all = label_all  # The label all.
         self.label_existence = label_existence  # The label existence.
         self.label_task = label_task.squeeze()  # The label task.
-        self.flag = flag  # The flag.
+        self.flags = flag  # The flag.
 
 
 class outs_to_struct:
@@ -50,11 +50,12 @@ class Training_flag:
     For that, we have created a class containing which layer groups we want to train.
     """
 
-    def __init__(self, parser: argparse, train_all_model: bool = False, train_arg: bool = False,
+    def __init__(self, opts: argparse, train_all_model: bool = False, train_arg: bool = False,
                  train_task_embedding: bool = False,
                  train_head: bool = False):
         """
         Args:
+            opts: The model options.
             train_all_model: Whether to train all model.
             train_arg: Whether to train arg.
             train_task_embedding: Whether to train the task embedding.
@@ -64,7 +65,7 @@ class Training_flag:
         self.train_arg = train_arg
         self.task_embedding = train_task_embedding
         self.head_learning = train_head
-        self.parser = parser
+        self.opts = opts
 
     def Get_learned_params(self, model: nn.Module, task_idx: int, direction: tuple[int, int]):
         """
@@ -77,9 +78,15 @@ class Training_flag:
         Returns: The desired parameters.
         """
 
-        direction_idx, idx = tuple_direction_to_index(self.parser.num_x_axis, self.parser.num_y_axis, direction,
-                                                      self.parser.ndirections, task_idx)
+        direction_idx, idx = tuple_direction_to_index(num_x_axis=self.opts.num_x_axis, num_y_axis=self.opts.num_y_axis,
+                                                      direction=direction,
+                                                      ndirections=self.opts.ndirections, task_id=task_idx)
         learned_params = []
+        if self.train_all_model:
+            # Train all model.
+            learned_params = list(model.parameters())
+            return learned_params
+
         if self.task_embedding:
             # Training the task embedding associate with the direction.
             learned_params.extend(model.TE[direction_idx])
@@ -90,7 +97,4 @@ class Training_flag:
             # Train the argument embedding associated with the task.
             learned_params.extend(model.tdmodel.argument_embedding[task_idx])
 
-        if self.train_all_model:
-            # Train all model.
-            learned_params = list(model.parameters())
         return learned_params

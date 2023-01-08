@@ -30,8 +30,13 @@ def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, lang_idx:
     if opts.model_flag is Flag.NOFLAG:
         from training.Data.Datasets import DatasetNonGuided as dataset
     # Import 'guided' dataset.
-    else:
-        from training.Data.Datasets import DatasetGuided as dataset
+    elif opts.model_flag is Flag.CL:
+        from training.Data.Datasets import DatasetGuidedSingleTask as dataset
+    elif opts.model_flag is Flag.TD:
+        from training.Data.Datasets import DatasetGuidedInterleaved as dataset
+
+    if opts.ds_type is DsType.Avatar:
+        from training.Data.Datasets import DatasetAvatar as dataset
 
     path_fname = os.path.join(data_fname, 'MetaData')
     # Opening the conf file and retrieve number of samples, img shape, number of objects per image.
@@ -68,9 +73,9 @@ def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, lang_idx:
                       is_train=False, nexamples=nsamples_test, obj_per_row=obj_per_row, obj_per_col=obj_per_col)
     batch_size = opts.bs
     # Creating the data-loaders.
-    train_dl = DataLoader(train_ds, batch_size=batch_size, num_workers=opts.workers, shuffle=True,
+    train_dl = DataLoader(dataset=train_ds, batch_size=batch_size, num_workers=opts.workers, shuffle=True,
                           pin_memory=True)  # The Train Data-Loader.
-    test_dl = DataLoader(test_ds, batch_size=batch_size, num_workers=opts.workers, shuffle=False,
+    test_dl = DataLoader(dataset=test_ds, batch_size=batch_size, num_workers=opts.workers, shuffle=False,
                          pin_memory=True)  # The Test Data-Loader.
     val_dl = None
     val_ds = None
@@ -80,7 +85,8 @@ def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, lang_idx:
         val_ds = dataset(root=os.path.join(data_fname, 'val'), opts=opts, task_idx=task_idx,
                          direction_tuple=direction_tuple,
                          is_train=False, nexamples=nsamples_test, obj_per_row=obj_per_row, obj_per_col=obj_per_col)
-        val_dl = DataLoader(val_ds, batch_size=batch_size, num_workers=opts.workers, shuffle=False, pin_memory=True)
+        val_dl = DataLoader(dataset=val_ds, batch_size=batch_size, num_workers=opts.workers, shuffle=False,
+                            pin_memory=True)
 
     # Store all datasets and dataloaders in a dictionary.
     Data_loader_dict['train_ds'] = train_ds

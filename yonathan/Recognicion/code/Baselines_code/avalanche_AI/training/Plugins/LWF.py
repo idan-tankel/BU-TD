@@ -82,13 +82,13 @@ class MyLwFPlugin(LwFPlugin):
             return 0.0
         else:
             dist_loss = 0
-            old_flag = x.flag  # Store the old flag.
+            old_flag = x.flags  # Store the old flag.
             for _, New_flag in self.prev_tasks.values():
-                x.flag = New_flag  # Set the new flag to activate the appropriate task-head.
+                x.flags = New_flag  # Set the new flag to activate the appropriate task-head.
                 y_prev = self.prev_model.forward_and_out_to_struct(x)  # The previous distribution.
                 y_curr = model.forward_and_out_to_struct(x)  # The current distribution.
                 dist_loss += self._distillation_loss(y_curr, y_prev, x)  # The KL div loss.
-            x.flag = old_flag  # return to the original flag.
+            x.flags = old_flag  # return to the original flag.
             return alpha * dist_loss
 
     def before_backward(self, strategy: SupervisedTemplate, **kwargs) -> None:

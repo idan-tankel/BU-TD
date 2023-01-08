@@ -21,6 +21,8 @@ from training.Data.Data_params import Flag
 from training.Metrics.Accuracy import multi_label_accuracy_weighted, multi_label_accuracy
 from avalanche.evaluation.metrics.accuracy import Accuracy
 
+from Baselines_code.avalanche_AI.training.supervised.strategy_wrappers import SupervisedTemplate
+
 import argparse
 
 
@@ -55,9 +57,9 @@ class Accuracy_fun(Accuracy):
 
         """
         if isinstance(task_labels, int):
-            # The predicted classes disterbution.
+            # The predicted 'classes' distribution.
             predicted_y_struct = self.out_to_struct(predicted_y)
-            # The prediction, and accuracy.
+            # The prediction and accuracy.
             preds, task_accuracy = self.accuracy_fun(gt, predicted_y_struct)
             # Update the task accuracy.
             self._mean_accuracy[task_labels].update(task_accuracy, preds.shape[0])
@@ -101,11 +103,13 @@ class Accuracy_fun(Accuracy):
         else:
             self._mean_accuracy[task_label].reset()
 
+
 class MyGenericPluginMetric(GenericPluginMetric[float]):
     """
     Base class for all accuracies plugin metrics.
     """
-    def __init__(self, parser:argparse, reset_at:str, emit_at:str, mode:str):
+
+    def __init__(self, parser: argparse, reset_at: str, emit_at: str, mode: str):
         """
         Args:
             parser: The parser.
@@ -120,21 +124,43 @@ class MyGenericPluginMetric(GenericPluginMetric[float]):
             self._accuracy, reset_at=reset_at, emit_at=emit_at, mode=mode
         )
 
-    def reset(self, strategy=None) -> None:
-        # Reseting the plugin.
+    def reset(self, strategy: Union[SupervisedTemplate, None] = None) -> None:
+        """
+        Reset the plugin.
+        Args:
+            strategy: The strategy.
+
+        """
+        # Reset the plugin.
         if self._reset_at == "stream" or strategy is None:
             self._metric.reset()
         else:
             self._metric.reset(phase_and_task(strategy)[1])
 
-    def result(self, strategy=None) -> float:
+    def result(self, strategy: Union[SupervisedTemplate, None] = None) -> float:
+        """
+        Return the result of the plugin.
+        Args:
+            strategy: The strategy.
+
+        Returns:
+
+        """
         # return the result.
         if self._emit_at == "stream" or strategy is None:
             return self._metric.result()
         else:
             return self._metric.result(phase_and_task(strategy)[1])
 
-    def update(self, strategy):
+    def update(self, strategy: SupervisedTemplate) -> None:
+        """
+        Update the plugin.
+        Args:
+            strategy: The strategy.
+
+        Returns:
+
+        """
         # Update the accuracy plugin.
 
         # Task labels defined for each experience.
@@ -150,6 +176,7 @@ class MyGenericPluginMetric(GenericPluginMetric[float]):
             task_labels = task_labels[0]
         self._accuracy.update(strategy.mb_output, strategy.mb_x, task_labels)
 
+
 class MinibatchAccuracy(MyGenericPluginMetric):
     """
     The minibatch plugin Accuracy metric.
@@ -162,7 +189,8 @@ class MinibatchAccuracy(MyGenericPluginMetric):
     If a more coarse-grained logging is needed, consider using
     class:`EpochAccuracy` instead.
     """
-    def __init__(self, parser:argparse):
+
+    def __init__(self, parser: argparse):
         """
         Creates an instance of the MinibatchAccuracy metric.
         """
@@ -170,6 +198,7 @@ class MinibatchAccuracy(MyGenericPluginMetric):
 
     def __str__(self):
         return "Top1_Acc_MB"
+
 
 class EpochAccuracy(MyGenericPluginMetric):
     """
@@ -181,7 +210,7 @@ class EpochAccuracy(MyGenericPluginMetric):
     the overall number of patterns encountered in that epoch.
     """
 
-    def __init__(self, parser:argparse):
+    def __init__(self, parser: argparse):
         """
         Creates an instance of the EpochAccuracy metric.
         """
@@ -190,6 +219,7 @@ class EpochAccuracy(MyGenericPluginMetric):
 
     def __str__(self):
         return "Top1_Acc_Epoch"
+
 
 class RunningEpochAccuracy(MyGenericPluginMetric):
     """
@@ -201,16 +231,18 @@ class RunningEpochAccuracy(MyGenericPluginMetric):
     seen so far in the current epoch.
     The metric resets its state after each training epoch.
     """
-    def __init__(self, parser:argparse):
+
+    def __init__(self, parser: argparse):
         """
         Creates an instance of the RunningEpochAccuracy metric.
         Args:
             parser: The model opts.
         """
-        super(RunningEpochAccuracy, self).__init__(parser = parser, reset_at="epoch", emit_at="iteration", mode="train")
+        super(RunningEpochAccuracy, self).__init__(parser=parser, reset_at="epoch", emit_at="iteration", mode="train")
 
     def __str__(self):
         return "Top1_RunningAcc_Epoch"
+
 
 class ExperienceAccuracy(MyGenericPluginMetric):
     """
@@ -218,16 +250,19 @@ class ExperienceAccuracy(MyGenericPluginMetric):
     the average Accuracy over all patterns seen in that experience.
     This metric only works at eval time.
     """
-    def __init__(self, parser:argparse):
+
+    def __init__(self, parser: argparse):
         """
         Creates an instance of ExperienceAccuracy metric
         Args:
            parser: The model opts.
         """
-        super(ExperienceAccuracy, self).__init__(parser=parser, reset_at="experience", emit_at="experience", mode="eval")
+        super(ExperienceAccuracy, self).__init__(parser=parser, reset_at="experience", emit_at="experience",
+                                                 mode="eval")
 
     def __str__(self):
         return "Top1_Acc_Exp"
+
 
 class StreamAccuracy(MyGenericPluginMetric):
     """
@@ -236,25 +271,25 @@ class StreamAccuracy(MyGenericPluginMetric):
     This metric only works at eval time.
     """
 
-    def __init__(self, parser:argparse):
+    def __init__(self, parser: argparse):
         """
         Creates an instance of StreamAccuracy metric.
         Args:
            parser: The model opts.
         """
-        super(StreamAccuracy, self).__init__(parser = parser, reset_at="stream", emit_at="stream", mode="eval")
+        super(StreamAccuracy, self).__init__(parser=parser, reset_at="stream", emit_at="stream", mode="eval")
 
     def __str__(self):
         return "Top1_Acc_Stream"
 
+
 def accuracy_metrics(
-        parser:argparse,
-        minibatch:bool=False,
-        epoch:bool=False,
-        epoch_running:bool=False,
-        experience:bool=False,
-        stream:bool=False,
-        trained_experience:bool=False,
+        parser: argparse,
+        minibatch: bool = False,
+        epoch: bool = False,
+        epoch_running: bool = False,
+        experience: bool = False,
+        stream: bool = False
 
 ) -> List[PluginMetric]:
     """
@@ -266,8 +301,8 @@ def accuracy_metrics(
         epoch: If True, will return a metric able to log the epoch Accuracy at training time.
         epoch_running:  If True, will return a metric able to log the running epoch Accuracy at training time.
         experience: If True, will return a metric able to log the Accuracy on each evaluation experience.
-        stream: If True, will return a metric able to log the Accuracy averaged over the entire evaluation stream of experiences.
-        trained_experience: If True, will return a metric able to log the average evaluation Accuracy only for experiences that the model has been trained on
+        stream: If True, will return a metric able to log the Accuracy averaged over the entire evaluation stream
+        of experiences.
 
     Returns: A list of plugin metrics.
 

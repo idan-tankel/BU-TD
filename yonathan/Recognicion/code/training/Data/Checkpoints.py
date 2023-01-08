@@ -7,8 +7,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from training.Modules.Batch_norm import store_running_stats
-
 
 # The Checkpoint class.
 # Supports initialization and updates.
@@ -19,7 +17,7 @@ class CheckpointSaver:
     Supports saving models.
     """
 
-    def __init__(self, dirpath: str, store_running_statistics: bool = False):
+    def __init__(self, dirpath: str):
         """
         Checkpoint saver class.
         Saving all needed data.
@@ -30,7 +28,6 @@ class CheckpointSaver:
         """
         self.dirpath = dirpath
         self.optimum = -np.Inf  # initialize with minus infinity.
-        self.store_running_stats = store_running_statistics
         # Create the path we save into.
         if not os.path.exists(dirpath):
             os.makedirs(dirpath)
@@ -50,7 +47,7 @@ class CheckpointSaver:
         self.optimum = new_optimum
 
     def __call__(self, model: nn.Module, epoch: int, current_test_accuracy: float, optimizer: torch.optim,
-                 scheduler: torch.optim.lr_scheduler, parser: argparse, task_id: int, direction: list[tuple]) -> None:
+                 scheduler: torch.optim.lr_scheduler, opts: argparse, task_id: int, direction: list[tuple]) -> None:
         """
         Saves the state.
         Args:
@@ -59,7 +56,7 @@ class CheckpointSaver:
             current_test_accuracy: The current test Accuracy.
             optimizer: The optimizer.
             scheduler: The scheduler.
-            parser: The parser.
+            opts: The model options.
             task_id: The task id.
             direction: The direction id.
 
@@ -75,18 +72,16 @@ class CheckpointSaver:
                                          model.__class__.__name__ + f'_latest_direction={direction}.pt')
 
         better_than_optimum = current_test_accuracy > self.optimum  # Compute whether we passed the optimum so far.
-        # If we want to store the running statistics, we save them.
-        if self.store_running_stats:
-            store_running_stats(model, task_id=task_id, direction_id=direction[0])
-            print('Done storing running stats')
         # All the data we want to store.
         save_data = {'epoch': epoch, 'model_state_dict': model.state_dict(),
                      'optimizer_state_dict': optimizer.state_dict(),
-                     'scheduler_state_dict': scheduler.state_dict(), 'parser': parser}
+                     'scheduler_state_dict': scheduler.state_dict(), 'parser': opts}
         torch.save(save_data, model_path_latest)  # Save the current model in model latest path.
+        if epoch % 10 == 0:
+            torch.save(save_data, model_path_curr)
         # If we passed the optimum we save in model_id and in model_best.
         if better_than_optimum:
-            print('New optimum: {}, better than {}'.format(current_test_accuracy, self.optimum))
+            print(f'New optimum: {current_test_accuracy}, better than {self.optimum}')
             torch.save(save_data, model_path_best)
             torch.save(save_data, model_path_curr)
             self.update_optimum(current_test_accuracy)

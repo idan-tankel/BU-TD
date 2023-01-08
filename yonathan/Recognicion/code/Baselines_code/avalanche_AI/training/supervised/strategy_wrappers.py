@@ -3,14 +3,14 @@ from Baselines_code.avalanche_AI.training.Plugins.EWC import MyEWCPlugin
 from Baselines_code.avalanche_AI.training.Plugins.LWF import MyLwFPlugin
 from Baselines_code.avalanche_AI.training.Plugins.MAS import MyMASPlugin
 from Baselines_code.avalanche_AI.training.Plugins.LFL import MyLFLPlugin
-from Baselines_code.avalanche_AI.training.Plugins.SI import SynapticIntelligencePlugin as SIPlugin
-from Baselines_code.avalanche_AI.training.Plugins.RWALK import RWalkPlugin
 import argparse
 from typing import Optional, Sequence, List
 from avalanche.training.plugins.evaluation import default_evaluator
 from avalanche.training.templates.supervised import SupervisedTemplate
 from avalanche.training.plugins import LRSchedulerPlugin
-
+from Baselines_code.avalanche_AI.training.Plugins.IMM_Mean import MyIMM_Mean_Plugin as IMM_Mean
+from Baselines_code.avalanche_AI.training.Plugins.IMM_Mode import MyIMM_Mode_Plugin as IMM_Mode
+from Baselines_code.avalanche_AI.training.Plugins.SI import SI
 
 class MySupervisedTemplate(SupervisedTemplate):
     """
@@ -148,7 +148,7 @@ class MyEWC(MySupervisedTemplate):
             **base_kwargs: Optional args.
         """
         ewc = MyEWCPlugin(parser=parser, mode=mode, keep_importance_data=keep_importance_data, prev_model=prev_model,
-                          prev_data=parser.old_dataset)
+                          prev_data=parser.prev_data)
         if plugins is None:
             plugins = [ewc]
         else:
@@ -275,59 +275,25 @@ class MyMAS(MySupervisedTemplate):
             **base_kwargs
         )
 
-
-''''
-class MyRWALK(MySupervisedTemplate):
-    def __init__(
-            self,
-            parser: argparse,
-            plugins: Optional[List[SupervisedPlugin]] = None,
-            evaluator: EvaluationPlugin = default_evaluator,
-            eval_every: int = -1,
-            **base_kwargs
-    ):
-        """
-        Args:
-          parser: The parser.
-          plugins: Optional plugins.
-          evaluator: The evaluator.
-          eval_every: Evaluation interval.
-          **base_kwargs:
-       """
-
-        RWalk = RWalkPlugin(parser)
-        if plugins is None:
-            plugins = [RWalk]
-        else:
-            plugins.append(RWalk)
-
-        super(MySupervisedTemplate).__init__(
-            parser,
-            plugins=plugins,
-            evaluator=evaluator,
-            eval_every=eval_every,
-            **base_kwargs
-        )
-
-
-class SI(MySupervisedTemplate):
+class MyIMM_Mean(MySupervisedTemplate):
     def __init__(self, parser: argparse, plugins: Optional[List[SupervisedPlugin]] = None,
-                 evaluator: EvaluationPlugin = default_evaluator, eval_every: int = -1, **base_kwargs):
+                 evaluator: EvaluationPlugin = default_evaluator, eval_every: int = -1, prev_model=None, prev_data=None,
+                 **base_kwargs):
         """
        Args:
           parser: The parser.
           plugins: Optional plugins.
           evaluator: The evaluator.
           eval_every: Evaluation interval.
-          prev_model
+          prev_model: The previous model.
           **base_kwargs:
        """
 
-        SIP = SIPlugin(parser.si_lambda, excluded_parameters=None)
+        IMM = IMM_Mean(parser, prev_model)
         if plugins is None:
-            plugins = [SIP]
+            plugins = [IMM]
         else:
-            plugins.append(SIP)
+            plugins.append(IMM)
 
         super().__init__(
             parser,
@@ -337,7 +303,61 @@ class SI(MySupervisedTemplate):
             **base_kwargs
         )
 
-'''
+class MySI(MySupervisedTemplate):
+    def __init__(self, parser: argparse, plugins: Optional[List[SupervisedPlugin]] = None,
+                 evaluator: EvaluationPlugin = default_evaluator, eval_every: int = -1, prev_model=None, prev_data=None,
+                 **base_kwargs):
+        """
+       Args:
+          parser: The parser.
+          plugins: Optional plugins.
+          evaluator: The evaluator.
+          eval_every: Evaluation interval.
+          prev_model: The previous model.
+          **base_kwargs:
+       """
+
+        Si = SI(parser, prev_model)
+        if plugins is None:
+            plugins = [Si]
+        else:
+            plugins.append(Si)
+
+        super().__init__(
+            parser,
+            plugins=plugins,
+            evaluator=evaluator,
+            eval_every=eval_every,
+            **base_kwargs
+        )
+
+class MyIMM_Mode(MySupervisedTemplate):
+    def __init__(self, parser: argparse, plugins: Optional[List[SupervisedPlugin]] = None,
+                 evaluator: EvaluationPlugin = default_evaluator, eval_every: int = -1, prev_model=None, prev_data=None,
+                 **base_kwargs):
+        """
+       Args:
+          parser: The parser.
+          plugins: Optional plugins.
+          evaluator: The evaluator.
+          eval_every: Evaluation interval.
+          prev_model: The previous model.
+          **base_kwargs:
+       """
+
+        IMM = IMM_Mode(parser, prev_model,prev_data)
+        if plugins is None:
+            plugins = [IMM]
+        else:
+            plugins.append(IMM)
+
+        super().__init__(
+            parser,
+            plugins=plugins,
+            evaluator=evaluator,
+            eval_every=eval_every,
+            **base_kwargs
+        )
 
 __all__ = [
     "LFL",

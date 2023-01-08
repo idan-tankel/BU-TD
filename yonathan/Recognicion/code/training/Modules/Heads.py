@@ -31,7 +31,8 @@ class HeadSingleTask(nn.Module):
             else num_heads  # If The model flag is NOFLAG we allocate for each character a head o.w. according to the
         # nclasses.
         infilters = opts.nfilters[-1]  # The input size from the end of the BU2 stream.
-        self.layers = nn.ModuleList([nn.Linear(infilters, nclasses + 1) for _ in range(num_heads)])
+        self.layers = nn.ModuleList(
+            [nn.Linear(in_features=infilters, out_features=nclasses + 1) for _ in range(num_heads)])
 
     def forward(self, inputs: Tensor) -> Tensor:
         """
@@ -43,7 +44,7 @@ class HeadSingleTask(nn.Module):
         """
         x = inputs.squeeze()  # Squeeze the input.
         outs = [layer(x) for layer in self.layers]  # Compute all task-head outputs for all layers.
-        return torch.stack(outs, dim=-1)  # stacks all tensor into one tensor
+        return torch.stack(tensors=outs, dim=-1)  # stacks all tensor into one tensor
 
 
 class MultiTaskHead(nn.Module):
@@ -69,7 +70,8 @@ class MultiTaskHead(nn.Module):
         for i in range(self.ntasks):
             for j in range(self.ndirections):
                 # num_heads = self.num_heads[j]
-                layer = HeadSingleTask(opts, self.num_classes[j], self.num_heads[j])  # create a taskhead.
+                layer = HeadSingleTask(opts=opts, nclasses=self.num_classes[i],
+                                       num_heads=self.num_heads[j])  # create a taskhead.
                 self.taskhead.append(layer)
                 if transfer_learning_params is not None:
                     transfer_learning_params[i][j].extend(layer.parameters())  # Storing the taskhead params.
@@ -85,7 +87,7 @@ class MultiTaskHead(nn.Module):
         (bu2_out, flag) = inputs
         # In train mode we train only one head.
         if self.training or True:
-            task_id = Flag_to_task(self.opts, flag)  # Get the task id.
+            task_id = Flag_to_task(opts=self.opts, flags=flag)  # Get the task id.
             task_out = self.taskhead[task_id](bu2_out).squeeze()  # apply the appropriate task-head.
         # Otherwise, we test all heads and choose the desired by the direction flag.
         else:
@@ -121,15 +123,15 @@ class OccurrenceHead(nn.Module):
         super(OccurrenceHead, self).__init__()
         filters = opts.nclasses[0]  # The number of binary classifiers needed to recognize all characters.
         infilters = opts.nfilters[-1]  # Output shape from the end of the BU1 stream.
-        self.occurrence_transform = nn.Linear(infilters, filters)  # The linear transformation.
+        self.occurrence_transform = nn.Linear(in_features=infilters, out_features=filters)  # The linear transformation.
 
-    def forward(self, inputs: torch) -> torch:
+    def forward(self, bu_out: Tensor) -> Tensor:
         """
         Args:
-            inputs: The BU1 output.
+            bu_out: The BU1 output.
 
         Returns: The binary classification input.
 
         """
-        x = self.occurrence_transform(inputs)  # Apply the transform for the BU1 loss.
+        x = self.occurrence_transform(input=bu_out)  # Apply the transform for the BU1 loss.
         return x

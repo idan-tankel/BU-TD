@@ -6,6 +6,8 @@ import torch
 from torch import Tensor
 import torch.optim as optim
 
+from Data_Creation.Create_dataset_classes import Sample
+
 
 def folder_size(path: str) -> int:
     """
@@ -45,7 +47,8 @@ def get_omniglot_dictionary(num_tasks: int, raw_data_folderpath: str) -> dict:
     Returns: A dictionary assigning for each task its number of characters.
 
     """
-    nclasses = create_dict(raw_data_folderpath, offset=1)  # Receiving for each task the number of characters in it.
+    nclasses = create_dict(path=raw_data_folderpath,
+                           offset=1)  # Receiving for each task the number of characters in it.
     #  nclasses[0] = sum(
     #      nclasses[51-task-2] for task in range(num_tasks))  # receiving number of characters in the initial tasks.
     nclasses = {k: v for k, v in sorted(nclasses.items(), key=lambda item: item[1])}
@@ -56,20 +59,20 @@ def get_omniglot_dictionary(num_tasks: int, raw_data_folderpath: str) -> dict:
     return nclasses_New
 
 
-def flag_to_idx(flag: Tensor) -> int:
+def flag_to_idx(flags: Tensor) -> int:
     """
     From Flag get the id in which the flag is non-zero.
     Args:
-        flag: The One hot flag.
+        flags: The One hot flag.
 
     Returns: The id in which the flag is non-zero.
 
     """
-    task = torch.argmax(flag, dim=1)[0]  # Finds the non-zero entry in the one-hot vector
+    task = torch.argmax(flags, dim=1)[0]  # Finds the non-zero entry in the one-hot vector
     return task
 
 
-def get_laterals(laterals: list[Tensor], layer_id: int, block_id: int) -> Union[Tensor, None]:
+def get_laterals(laterals: list[Tensor], layer_id: int, block_id: int = 0) -> Union[Tensor, None]:
     """
     Returns the lateral connections associated with the block in the layer.
     Args:
@@ -107,29 +110,29 @@ def num_params(params: Union[Iterator]) -> int:
     return num_param
 
 
-def create_optimizer_and_scheduler(opts: argparse, learned_params: list, nbatches_train: int) -> tuple:
+def create_optimizer_and_scheduler(opts: argparse, learned_params: list, nbatches: int) -> tuple:
     """
     Create optimizer and a scheduler according to opts.
     Args:
         opts: The model options.
         learned_params: The learned parameters.
-        nbatches_train: The number of batches in the data-loader
+        nbatches: The number of batches in the data-loader
 
     Returns: Optimizer, scheduler.
 
     """
 
     if opts.SGD:
-        optimizer = optim.SGD(learned_params, lr=opts.initial_lr, momentum=opts.momentum, weight_decay=opts.wd)
+        optimizer = optim.SGD(params=learned_params, lr=opts.initial_lr, momentum=opts.momentum, weight_decay=opts.wd)
     else:
-        optimizer = optim.Adam(learned_params, lr=opts.base_lr, weight_decay=opts.wd)
+        optimizer = optim.Adam(params=learned_params, lr=opts.base_lr, weight_decay=opts.wd)
 
     if opts.cycle_lr:
-        scheduler = optim.lr_scheduler.CyclicLR(optimizer, base_lr=opts.base_lr, max_lr=opts.max_lr,
-                                                step_size_up=nbatches_train // 2,
+        scheduler = optim.lr_scheduler.CyclicLR(optimizer=optimizer, base_lr=opts.base_lr, max_lr=opts.max_lr,
+                                                step_size_up=nbatches // 2,
                                                 cycle_momentum=False)
     else:
-        scheduler = optim.lr_scheduler.StepLR(optimizer=optimizer, step_size=nbatches_train // 4, gamma=0.9)
+        scheduler = optim.lr_scheduler.StepLR(optimizer=optimizer, step_size=nbatches, gamma=0.9)
 
     return optimizer, scheduler
 
@@ -169,34 +172,69 @@ def tuple_direction_to_index(num_x_axis: int, num_y_axis: int, direction: tuple,
     return direction_dir, index_dir
 
 
-def Compose_Flag(opts: argparse, flag: Tensor) -> tuple[Tensor, Tensor, Tensor]:
+def Compose_Flag(opts: argparse, flags: Tensor) -> tuple[Tensor, Tensor, Tensor]:
     """
     Compose the flag into three flags.
     Args:
         opts: The model opts.
-        flag: The flag we desire to compose.
+        flags: The flag we desire to compose.
 
     Returns: The direction,task, arg flags.
 
     """
-    direction_flag = flag[:, :opts.ndirections]  # The direction vector.
-    task_flag = flag[:, opts.ndirections:opts.ndirections + opts.ntasks]  # The task vector.
-    arg_flag = flag[:, opts.ndirections + opts.ntasks:]  # The argument vector.
+    direction_flag = flags[:, :opts.ndirections]  # The direction vector.
+    task_flag = flags[:, opts.ndirections:opts.ndirections + opts.ntasks]  # The task vector.
+    arg_flag = flags[:, opts.ndirections + opts.ntasks:]  # The argument vector.
     return direction_flag, task_flag, arg_flag
 
 
-def Flag_to_task(opts: argparse, flag: Tensor) -> int:
+def Flag_to_task(opts: argparse, flags: Tensor) -> int:
     """
     Composes the flag and returns the task id.
     Args:
         opts: The model opts.
-        flag: The flag
+        flags: The flag
 
     Returns: The task index.
 
     """
-    direction_flag, task_flag, _ = Compose_Flag(opts=opts, flag=flag)
-    direction_id = flag_to_idx(direction_flag)  # The direction id.
-    task_id = flag_to_idx(task_flag)  # The task id.
+    direction_flag, task_flag, _ = Compose_Flag(opts=opts, flags=flags)
+    direction_id = flag_to_idx(flags=direction_flag)  # The direction id.
+    task_id = flag_to_idx(flags=task_flag)  # The task id.
     idx = direction_id + opts.ndirections * task_id  # The task.
     return idx
+
+
+def struct_to_input(sample: Sample) -> tuple[Tensor, Tensor, Tensor]:
+    """
+    Returning the sample attributed.
+    Args:
+        sample: Sample to return its attributes.
+
+    Returns: The sample's attributes: label_existence, label_all ,flag, query coordinate.
+
+    """
+    # The label existence, telling for each entry whether the class exists or not.
+    label_existence = sample.label_existence
+    # All characters arranged.
+    label_all = sample.label_ordered
+    # The coordinate we query about.
+    query_coord = sample.query_coord
+    return label_existence, label_all, query_coord
+
+
+def load_model(model, results_dir, model_path: str) -> dict:
+    """
+    Loads and returns the model checkpoint as a dictionary.
+    Args:
+        model: The model we want to load into.
+        model_path: The path to the model.
+        results_dir: Trained model dir.
+
+    Returns: The loaded checkpoint.
+
+    """
+    model_path = os.path.join(results_dir, model_path)  # The path to the model.
+    checkpoint = torch.load(model_path)  # Loading the saved data.
+    model.load_state_dict(checkpoint['model_state_dict'])  # Loading the saved weights.
+    return checkpoint

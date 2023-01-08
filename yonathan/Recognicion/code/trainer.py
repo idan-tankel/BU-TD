@@ -83,9 +83,9 @@ def main(flag=Flag.CL):
             Sub_task = All_tasks[task_idx]
             load_running_stats(model, 0, Sub_task)  # Loading the saved running statistics.
             load_running_stats(Old_models[task_idx], 0, Sub_task)  # Loading the saved running statistics.
-            acc_old = accuracy(parser=parser,model=Old_models[task_idx],test_data_loader=DataLoaders['test_dl'])
+            acc_old = accuracy(opts=parser, model=Old_models[task_idx], test_data_loader=DataLoaders['test_dl'])
             Acc_old.append(acc_old.item())
-            acc_new = accuracy(parser=parser, model=model, test_data_loader=DataLoaders['test_dl'])
+            acc_new = accuracy(opts=parser, model=model, test_data_loader=DataLoaders['test_dl'])
             Acc_new.append(acc_new.item())
     for idx, task in enumerate(All_tasks):
         old = Acc_old[idx]

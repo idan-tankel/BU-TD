@@ -21,11 +21,11 @@ from training.Utils import num_params
 import torch.nn.modules as Module
 
 
-def main(train_right, train_left, ds_type:DsType=DsType.Emnist, flag:Flag=Flag.CL, model_type:Module=BUTDModel, task:list=[(-1, 0)],epoch = 0):
+def main(train_right, train_left, ds_type:DsType=DsType.Avatar, flag:Flag=Flag.CL, model_type:Module=BUTDModel, task:list=[(-1, 0)],epoch = 0):
     parser = GetParser(model_flag=flag, ds_type=ds_type, model_type=model_type)
     project_path = Path(__file__).parents[1]
-    data_path = os.path.join(project_path, f'data/{str(ds_type)}/samples/(4,4)_image_matrix')
-    Checkpoint_saver = CheckpointSaver(dirpath=parser.results_dir + f'Model_use_reset_{str(task[0])}_wd_{str(parser.wd)}_base_lr_{parser.base_lr}_max_lr_{parser.max_lr}_epoch_{epoch}_option_bs_{parser.bs}')
+    data_path = os.path.join(project_path, f'data/{str(ds_type)}/samples/(2,2)_Test_open_files')
+    Checkpoint_saver = CheckpointSaver(dirpath=parser.results_dir + f'Model_non_reset_{str(task[0])}_wd_{str(parser.wd)}_base_lr_{parser.base_lr}_max_lr_{parser.max_lr}_epoch_{epoch}_option_bs_{parser.bs}')
     wandb_logger = WandbLogger(project="My_first_project_5.10", save_dir=parser.results_dir)
     trainer = pl.Trainer(max_epochs=parser.EPOCHS, logger=wandb_logger, accelerator = 'gpu')
     model = create_model(parser)
@@ -35,9 +35,21 @@ def main(train_right, train_left, ds_type:DsType=DsType.Emnist, flag:Flag=Flag.C
         learned_params = training_flag.Get_learned_params(model, task_idx=0, direction=direction[0])
         DataLoaders = get_dataset_for_spatial_relations(parser, data_path, lang_idx=0, direction_tuple=direction)
         wrapped_model = ModelWrapped(parser, model, learned_params, check_point=Checkpoint_saver,
+                                     train_ds=DataLoaders['train_ds'],
                                      direction_tuple=direction,
                                      task_id=0,
                                      nbatches_train=len(DataLoaders['train_dl']))
+        '''
+        labels = [0 for _ in range(3)]
+        for inputs in DataLoaders['train_dl']:
+            for j in range(3):
+             label_task = inputs[1]
+             labels[j] += (label_task == j).sum()
+
+        print(labels)
+        '''
+
+
      #   check = wrapped_model.load_model(
      #       model_path='Model_(1, 0)_1e-05_test_again/BUTDModel_epoch50_direction=[(1, 0), (-1, 0)].pt')
      #   print(wrapped_model.Accuracy(DataLoaders['test_dl']))
@@ -69,4 +81,4 @@ def main(train_right, train_left, ds_type:DsType=DsType.Emnist, flag:Flag=Flag.C
         trainer.fit(wrapped_model, train_dataloaders=DataLoaders['train_dl'], val_dataloaders=DataLoaders['test_dl'])
 
 
-main(False, True, task=[(-1,0)],epoch=60)
+main(True, True, task=[(-1,0)],epoch=60)

@@ -16,6 +16,8 @@ import torchvision
 from torchvision import datasets
 from torchvision import transforms
 
+import pickle
+
 try:
     from utils import Download_raw_omniglot_data
 except ModuleNotFoundError:
@@ -34,6 +36,7 @@ class DsType(Enum):
     Emnist = 'Emnist'
     Omniglot = 'Omniglot'
     Fashionmnist = 'Fashionmnist'
+    Avatar = 'Avatars'
 
     def __str__(self):
         return self.value
@@ -194,6 +197,33 @@ class Omniglot_data_set(General_raw_data):
         self.labels = sum([self.num_examples_per_character * [i] for i in range(self.nclasses)], [])  # Merge into one
         # list.
 
+def load_raw_data(raw_data_fname):
+    # load each Person's raw data from which we'll generate samples
+    # each person has an image, mask and a label of its feature values.
+    # Each label is ['Avatar ID', 'Tilt', 'Background type', 'Clothes type', 'Glasses type' ,'Hair type', 'Mustache type']
+    new_data_file = open(raw_data_fname, "rb")
+    images, masks, labels, npersons = pickle.load(new_data_file)
+  #  total_bins = 4
+  #  PERSON_SIZE = 112
+  #  IMAGE_SIZE = [PERSON_SIZE * 2, PERSON_SIZE * total_bins]
+    images_raw = images
+   # masks_raw = masks
+    labels_raw = labels
+    return images_raw, labels_raw, npersons
+
+raw_data_fname = '/home/sverkip/data/BU-TD/yonathan/Recognicion/data/Avatars/avatars_6_raw.pkl'
+
+class Avatars(General_raw_data):
+    def __init__(self, download_dir):
+        """
+        Args:
+            download_dir: The path download the raw Data into.
+            language_list: The list of desired languages.
+        """
+        super().__init__(download_dir=download_dir)
+        self.raw_images, self.labels, self.nclasses = load_raw_data(raw_data_fname)
+        self.raw_images = self.raw_images.transpose(0, 3, 1, 2)
+        self.num_examples_per_character = len(self.raw_images) // self.nclasses
 
 class GenericDatasetParams:
     """
@@ -310,6 +340,26 @@ class OmniglotParams(GenericDatasetParams):
         self.nsamples_val = 2000
         self.raw_data_set = Omniglot_data_set(download_dir=self.Data_path, language_list=language_list)
 
+class AvatarParams(GenericDatasetParams):
+    def __init__(self, ds_type: DsType, num_cols: int, num_rows: int):
+        """
+        Args:
+            num_cols: The number of columns.
+            num_rows: The number of rows
+        """
+        super(AvatarParams, self).__init__(ds_type=ds_type, num_cols=num_cols, num_rows=num_rows)
+        self.min_scale = 0.75
+        self.max_scale = 1.0
+        self.min_shift = 5
+        self.max_shift = 10
+        self.generalize = False
+        self.image_size = [250, 250]
+        self.ngenerate = 4
+        self.nsamples_train = 4000
+        self.nsamples_test = 2000
+        self.nsamples_val = 2000
+        self.raw_data_set = Avatars(download_dir=self.Data_path)
+        self.letter_size = 100 
 
 class UnifiedDataSetType:
     """
@@ -333,6 +383,8 @@ class UnifiedDataSetType:
         if ds_type is DsType.Omniglot:
             self.ds_obj = OmniglotParams(ds_type=ds_type, num_cols=num_cols, num_rows=num_rows,
                                          language_list=language_list)
+        if ds_type is DsType.Avatar:
+            self.ds_obj = AvatarParams(ds_type=ds_type,num_cols=num_cols, num_rows=num_rows)
 
 
 class CharInfo:
@@ -373,7 +425,8 @@ class CharInfo:
         self.label_id = prng.randint(0, num_examples_per_character)  # Choose a specific character image.
         # The index in the data-loader.
         self.img_id = num_examples_per_character * self.label + self.label_id
-        self.img, _ = raw_dataset[self.img_id]  # The character image.
+        self.img, self.feature_label = raw_dataset[self.img_id]  # The character image.
+        
         self.letter_size = letter_size
         self.location_x = stx
         self.nclasses = raw_dataset.nclasses
@@ -410,9 +463,12 @@ class Sample:
         self.chars = chars  # All character objects.
         self.query_coord = np.unravel_index(query_part_id,
                                             [parser.num_rows, parser.num_cols])  # Getting the place we query about.
-
-        self.image = np.zeros((1, *parser.image_size),
+        if parser.ds_type is not DsType.Avatar:
+           self.image = np.zeros((1, *parser.image_size),
                               dtype=np.float32)  # Initialize with zeros, will be updated in create_image_matrix.
+        else:
+            self.image = np.ones((1, *parser.image_size),
+                                  dtype=np.float32)  # Initialize with zeros, will be updated in create_image_matrix.
         self.label_existence = Get_label_existence(chars, chars[0].nclasses)  # The label existence.
         self.label_ordered = Get_label_ordered(chars)  # The label ordered.
         self.sample_id = sample_id  # The sample id.
@@ -497,11 +553,11 @@ def Get_label_ordered(chars: list[CharInfo]) -> torch:
     row = list()
     label_ordered = []  # All the rows.
     for char in chars:  # Iterate for each character in the image.
-        character = char.label
+        character = char.feature_label
         row.append(character)  # All the characters in the row.
         if char.edge_to_the_right:  # The row ended, so we add it to the rows list.
             label_ordered.append(row)
             row = list()
 
-    label_ordered = torch.tensor(label_ordered)
+    label_ordered = torch.tensor(np.array(label_ordered))
     return label_ordered

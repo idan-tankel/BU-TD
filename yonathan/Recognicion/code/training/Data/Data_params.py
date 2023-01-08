@@ -26,20 +26,23 @@ class RegType(Enum):
     MAS = 'MAS'
     RWALK = 'RWALK'
     SI = 'SI'
+    IMM_Mode = 'IMM_Mode'
+    IMM_Mean = 'IMM_Mean'
+
 
     def __str__(self):
         return self.value
 
-    def class_to_reg_factor(self, parser: argparse) -> float:
+    def class_to_reg_factor(self, opts: argparse) -> float:
         """
-        Given the parser, get the associated regularization factor.
+        Given the model options, get the associated regularization factor.
         Args:
-            parser: The model opts.
+            opts: The model opts.
 
         Returns: The regularization factor
 
         """
-        return getattr(parser, self.__str__() + '_lambda')
+        return getattr(opts, self.__str__() + '_lambda')
 
 
 class Flag(Enum):
@@ -81,9 +84,10 @@ class GenericDataParams:
         self.nclasses: dict = {i: 47 for i in range(self.ndirections)}
         self.results_dir: str = os.path.join(self.project_path,
                                              f'data/{str(ds_type)}/results/')  # The trained model directory.
+        self.baselines_dir: str = os.path.join(self.project_path,
+                                               f'data/{str(ds_type)}/Baselines/')
         self.use_bu1_loss: bool = True if flag_at is not Flag.NOFLAG \
             else False  # Whether to use the bu1 loss.
-        # TODO - SHOULD BE DELETED.
         self.num_heads: list = [1 for _ in range(self.ndirections)]
         self.image_size: np.array = None  # The image size, will be defined later.
 
@@ -102,10 +106,10 @@ class EmnistDataset(GenericDataParams):
         super(EmnistDataset, self).__init__(flag_at=flag_at, ds_type=DsType.Emnist, num_x_axis=2, num_y_axis=2)
         self.image_size = [130, 200]  # The Emnist image size.
         # The initial indexes.
-        # TODO - SHOULD BE DELETED.
         self.initial_directions = [(1, 0)]
         initial_directions = [
-            tuple_direction_to_index(self.num_x_axis, self.num_y_axis, direction, ndirections=self.ndirections,
+            tuple_direction_to_index(num_x_axis=self.num_x_axis, num_y_axis=self.num_y_axis, direction=direction,
+                                     ndirections=self.ndirections,
                                      task_id=0)[0]
             for direction in self.initial_directions]
         # The number of heads.
@@ -125,11 +129,18 @@ class FashionmnistDataset(GenericDataParams):
         Args:
             flag_at: The model flag.
         """
-        super(FashionmnistDataset, self).__init__(flag_at, ds_type=DsType.Fashionmnist)
+        super(FashionmnistDataset, self).__init__(flag_at=flag_at, ds_type=DsType.Fashionmnist)
         self.nclasses = {i: 10 for i in
                          range(self.ndirections)}  # The same as Emnist, just we have just 10 classes in the dataset.
         self.image_size = [112, 130]  # The FashionMnist image size.
 
+class Avatar(GenericDataParams):
+    def __init__(self,flag_at:Flag):
+        super(Avatar, self).__init__(flag_at=flag_at,ds_type=DsType.Avatar)
+        self.nclasses = {i: 8 for i in
+                         range(self.ndirections)}  # The same as Emnist, just we have just 10 classes in the dataset.
+        self.image_size = [250, 250]  # The FashionMnist image size.
+        self.use_bu1_loss = False
 
 class OmniglotDataset(GenericDataParams):
     """
@@ -143,7 +154,7 @@ class OmniglotDataset(GenericDataParams):
             flag_at: The model flag.
 
         """
-        super(OmniglotDataset, self).__init__(flag_at, ds_type=DsType.Omniglot,
+        super(OmniglotDataset, self).__init__(flag_at=flag_at, ds_type=DsType.Omniglot,
                                               num_y_axis=0)  # No Up/Down relations, just Right/Left.
         self.initial_tasks = initial_tasks  # The number of languages we want to use.
         self.ntasks = 51  # We have 51 tasks.
@@ -153,6 +164,8 @@ class OmniglotDataset(GenericDataParams):
         self.nclasses = get_omniglot_dictionary(self.initial_tasks,
                                                 raw_data_path)  # Computing for each language its number of characters.
         self.ndirections = 5
+        self.num_heads = [1 for _ in range(self.ndirections)]
+        self.ndirections = 1
 
 
 class AllDataSetOptions:
@@ -178,3 +191,6 @@ class AllDataSetOptions:
         if ds_type is DsType.Omniglot:
             self.data_obj = OmniglotDataset(flag_at=flag_at,
                                             initial_tasks=initial_task_for_omniglot_only)  # Omniglot.
+
+        if ds_type is DsType.Avatar:
+            self.data_obj = Avatar(flag_at = flag_at)

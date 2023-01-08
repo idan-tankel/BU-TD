@@ -20,10 +20,9 @@ def multi_label_loss(samples: inputs_to_struct, outs: outs_to_struct):
     Returns: The mean loss over all samples in the batch.
 
     """
-    samples.label_task = samples.label_task.squeeze()  # TODO - CHECK IT.
-    losses_task = CE(outs.classifier, samples.label_task)  # Compute the CE loss without reduction.
+    samples.label_task = samples.label_task.squeeze()
+    losses_task = CE(input=outs.classifier, target=samples.label_task)  # Compute the CE loss without reduction.
     loss_task = losses_task.mean()  # Mean over all batch.
-    #  print(loss_task)
     return loss_task
 
 
@@ -37,7 +36,7 @@ def multi_label_loss_weighted(samples: inputs_to_struct, outs: outs_to_struct):
     Returns: The weighted loss over all existing characters, for not existing the loss is zero.
 
     """
-    losses_task = CE(outs.classifier, samples.label_task)  # Compute the CE loss without reduction.
+    losses_task = CE(input=outs.classifier, target=samples.label_task)  # Compute the CE loss without reduction.
     loss_weight = samples.label_existence  # The loss weight for only existing characters.
     losses_task = losses_task * loss_weight  # Compute the loss only in the existing characters.
     loss_task = losses_task.sum() / loss_weight.sum()  # Mean the loss over all batch and characters.
@@ -57,11 +56,10 @@ def UnifiedCriterion(opts: argparse, samples: inputs_to_struct, outs: outs_to_st
     """
     loss = 0.0  # The general loss.
     if opts.use_bu1_loss:  # If we use BU1 loss.
-        loss_occ = opts.bu1_loss(outs.occurrence_out,
-                                 samples.label_existence)  # compute the binary existence classification loss
+        loss_occ = opts.bu1_loss(input=outs.occurrence_out,
+                                 target=samples.label_existence)  # compute the binary existence classification loss
         loss += loss_occ  # Add the occurrence loss.
 
-    loss_task = opts.bu2_loss(samples, outs)  # Compute the BU2 loss.
+    loss_task = opts.bu2_loss(samples=samples, outs=outs)  # Compute the BU2 loss.
     loss += loss_task
-
     return loss
