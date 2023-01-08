@@ -18,7 +18,7 @@ class inputs_to_struct:
         Args:
             inputs: The tensor list.
         """
-        img, label_task, flag, label_all, label_existence,*rest = inputs
+        img, label_task, flag, label_all, label_existence, *rest = inputs
         self.image = img  # The image.
         self.label_all = label_all  # The label all.
         self.label_existence = label_existence  # The label existence.

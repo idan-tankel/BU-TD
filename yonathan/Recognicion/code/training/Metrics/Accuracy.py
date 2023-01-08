@@ -81,7 +81,7 @@ def accuracy(opts: argparse, model: nn.Module, test_data_loader: DataLoader) -> 
         inputs = preprocess(inputs=inputs, device='cuda')  # Move to the cuda.
         samples = opts.inputs_to_struct(inputs=inputs)  # Make it a struct.
         outs = model(samples)  # Compute the output.
-        outs = opts.outs_to_struct(outs = outs)  # From output to struct.
+        outs = opts.outs_to_struct(outs=outs)  # From output to struct.
         (_, task_accuracy_batch) = opts.task_accuracy(samples=samples, outs=outs)  # Compute the Accuracy on the batch.
         num_correct_preds += task_accuracy_batch  # Sum all accuracies on the batches.
     return num_correct_preds / len(test_data_loader)  # Compute the mean.

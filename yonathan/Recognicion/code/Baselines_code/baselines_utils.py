@@ -49,4 +49,7 @@ def construct_flag(parser: argparse, task_id: int, direction_tuple: tuple):
 
 
 def set_model(model, state_dict):
+    """
+    Set model state by state dict.
+    """
     model.load_state_dict(copy.deepcopy(state_dict))

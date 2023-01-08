@@ -12,6 +12,7 @@ from Baselines_code.avalanche_AI.training.Plugins.IMM_Mean import MyIMM_Mean_Plu
 from Baselines_code.avalanche_AI.training.Plugins.IMM_Mode import MyIMM_Mode_Plugin as IMM_Mode
 from Baselines_code.avalanche_AI.training.Plugins.SI import SI
 
+
 class MySupervisedTemplate(SupervisedTemplate):
     """
     The basic Strategy, every strategy inherits from.
@@ -275,9 +276,14 @@ class MyMAS(MySupervisedTemplate):
             **base_kwargs
         )
 
+
 class MyIMM_Mean(MySupervisedTemplate):
+    """
+    IMM Mode plugin.
+    """
+
     def __init__(self, parser: argparse, plugins: Optional[List[SupervisedPlugin]] = None,
-                 evaluator: EvaluationPlugin = default_evaluator, eval_every: int = -1, prev_model=None, prev_data=None,
+                 evaluator: EvaluationPlugin = default_evaluator, eval_every: int = -1, prev_model=None,
                  **base_kwargs):
         """
        Args:
@@ -303,9 +309,13 @@ class MyIMM_Mean(MySupervisedTemplate):
             **base_kwargs
         )
 
+
 class MySI(MySupervisedTemplate):
+    """
+    My SI Strategy.
+    """
     def __init__(self, parser: argparse, plugins: Optional[List[SupervisedPlugin]] = None,
-                 evaluator: EvaluationPlugin = default_evaluator, eval_every: int = -1, prev_model=None, prev_data=None,
+                 evaluator: EvaluationPlugin = default_evaluator, eval_every: int = -1, prev_model=None,
                  **base_kwargs):
         """
        Args:
@@ -331,7 +341,12 @@ class MySI(MySupervisedTemplate):
             **base_kwargs
         )
 
+
 class MyIMM_Mode(MySupervisedTemplate):
+    """
+    IMM Mode plugin.
+    """
+
     def __init__(self, parser: argparse, plugins: Optional[List[SupervisedPlugin]] = None,
                  evaluator: EvaluationPlugin = default_evaluator, eval_every: int = -1, prev_model=None, prev_data=None,
                  **base_kwargs):
@@ -345,7 +360,7 @@ class MyIMM_Mode(MySupervisedTemplate):
           **base_kwargs:
        """
 
-        IMM = IMM_Mode(parser, prev_model,prev_data)
+        IMM = IMM_Mode(parser, prev_model, prev_data)
         if plugins is None:
             plugins = [IMM]
         else:
@@ -358,6 +373,7 @@ class MyIMM_Mode(MySupervisedTemplate):
             eval_every=eval_every,
             **base_kwargs
         )
+
 
 __all__ = [
     "LFL",

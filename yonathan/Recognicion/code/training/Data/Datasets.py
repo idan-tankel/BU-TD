@@ -36,7 +36,7 @@ class DataSetBase(Dataset):
         self.nexamples: int = nexamples  # The number of examples.
         self.obj_per_row: int = obj_per_row  # The number of rows.
         self.obj_per_col: int = obj_per_col  # The number of columns.
-      #  self.nexamples = 100
+        #  self.nexamples = 100
         self.targets = [0 for _ in range(self.nexamples)]  # Used only for Avalanche_AI.
         self.split_size: int = 1000  # The split size we created the dataset according to.
 
@@ -144,9 +144,9 @@ class DatasetGuidedSingleTask(DataSetBase):
         """
 
         super(DatasetGuidedSingleTask, self).__init__(ndirections=opts.ndirections,
-                                            nclasses=opts.nclasses[task_idx], root=root,
-                                            nexamples=nexamples, is_train=is_train,
-                                            obj_per_col=obj_per_col, obj_per_row=obj_per_row)
+                                                      nclasses=opts.nclasses[task_idx], root=root,
+                                                      nexamples=nexamples, is_train=is_train,
+                                                      obj_per_col=obj_per_col, obj_per_row=obj_per_row)
         self.ntasks = opts.ntasks
         self.tuple_direction = direction_tuple
         # The direction index(not tuple).
@@ -229,6 +229,7 @@ class DatasetGuidedInterleaved(DataSetBase):
         label_task = self.Compute_label_task(r=r, c=c, label_all=label_all, direction_list=[sample_direction])
         return img, label_task, flag, label_all, label_existence
 
+
 class DatasetAvatar(DataSetBase):
     """
     Guided Dataset.
@@ -285,17 +286,18 @@ class DatasetAvatar(DataSetBase):
         direction_type_ohe = torch.nn.functional.one_hot(self.direction, self.ndirections)
         # Getting the character embedding, which character we query about.
         # Concatenating all three flags into one flag.
-     #   print(sample.query_part_id)
-      #  print(label_all.shape)
-        label_all = label_all.view([-1,7])
-        query = sample.query_part_id 
-       # label_existence = torch.concat([label_existence, torch.zeros(2,)],dim=1)
+        #   print(sample.query_part_id)
+        #  print(label_all.shape)
+        label_all = label_all.view([-1, 7])
+        query = sample.query_part_id
+        # label_existence = torch.concat([label_existence, torch.zeros(2,)],dim=1)
         char_type_one = torch.nn.functional.one_hot(label_all[query][0], 8)
         flag = torch.concat([direction_type_ohe, task_type_ohe, char_type_one], dim=0).float()
         # If the task is part of the initial tasks, we solve all initial tasks together.
         label_task = label_all[query, -3]
-      #  print(label_task)
+        #  print(label_task)
         return img, label_task, flag, label_all, label_existence
+
 
 class DatasetNonGuided(DatasetGuidedSingleTask):
     """

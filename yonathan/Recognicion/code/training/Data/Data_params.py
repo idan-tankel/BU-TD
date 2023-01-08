@@ -29,7 +29,6 @@ class RegType(Enum):
     IMM_Mode = 'IMM_Mode'
     IMM_Mean = 'IMM_Mean'
 
-
     def __str__(self):
         return self.value
 
@@ -134,9 +133,10 @@ class FashionmnistDataset(GenericDataParams):
                          range(self.ndirections)}  # The same as Emnist, just we have just 10 classes in the dataset.
         self.image_size = [112, 130]  # The FashionMnist image size.
 
+
 class Avatar(GenericDataParams):
-    def __init__(self,flag_at:Flag):
-        super(Avatar, self).__init__(flag_at=flag_at,ds_type=DsType.Avatar)
+    def __init__(self, flag_at: Flag):
+        super(Avatar, self).__init__(flag_at=flag_at, ds_type=DsType.Avatar)
         self.nclasses = {i: 8 for i in
                          range(self.ndirections)}  # The same as Emnist, just we have just 10 classes in the dataset.
         self.image_size = [250, 250]  # The FashionMnist image size.
@@ -193,4 +193,4 @@ class AllDataSetOptions:
                                             initial_tasks=initial_task_for_omniglot_only)  # Omniglot.
 
         if ds_type is DsType.Avatar:
-            self.data_obj = Avatar(flag_at = flag_at)
+            self.data_obj = Avatar(flag_at=flag_at)

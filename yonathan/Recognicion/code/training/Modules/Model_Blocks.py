@@ -93,7 +93,7 @@ class BUInitialBlock(nn.Module):
         x = self.conv1[0](x)  # Compute conv1.
         x = self.conv1[1](x, flags)
         x = self.conv1[2](x)
-        lateral_in = get_laterals(laterals=laterals_in, layer_id=0, block_id=0)  # The initial lateral connection.
+        lateral_in = get_laterals(laterals=laterals_in, layer_id=0)  # The initial lateral connection.
         if lateral_in is not None:
             x = self.bot_lat(x=x, flags=flags, lateral=lateral_in)  # Apply the skip connection.
         return x
@@ -284,7 +284,8 @@ class BasicBlockTD(nn.Module):
 
     expansion = 1
 
-    def __init__(self, opts: argparse, in_channels: int, out_channels: int, stride: int, block_inshape: np.ndarray, index: int):
+    def __init__(self, opts: argparse, in_channels: int, out_channels: int, stride: int, block_inshape: np.ndarray,
+                 index: int):
         """
         Args:
             opts: The model options.

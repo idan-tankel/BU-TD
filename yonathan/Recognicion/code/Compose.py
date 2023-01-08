@@ -19,7 +19,7 @@ import numpy as np
 from training.Utils import preprocess, tuple_direction_to_index, load_model
 
 class CompositiveModel(nn.Module):
-    def __init__(self, opts:argparse, model:nn):
+    def __init__(self, opts:argparse, model:nn.Module):
         super(CompositiveModel, self).__init__()
         self.opts = opts
         self.model = model
