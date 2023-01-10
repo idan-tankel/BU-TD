@@ -1,20 +1,23 @@
-import sys
-import copy
 import argparse
-import torch
-from avalanche.training.plugins import LwFPlugin
+import copy
+import sys
 from typing import Union
+
+import torch
 import torch.nn as nn
-from avalanche.training.templates.supervised import SupervisedTemplate
-from training.Data.Structs import inputs_to_struct, outs_to_struct
+from avalanche.training.plugins import LwFPlugin
+from avalanche.training.templates.supervised import SupervisedTemplate as Regularization_strategy
+from torch import Tensor
+
 from Baselines_code.baselines_utils import construct_flag
+from training.Data.Structs import inputs_to_struct, outs_to_struct
 
 sys.path.append(r'/')
 
 KLoss = torch.nn.KLDivLoss(reduction='none')
 
 
-class MyLwFPlugin(LwFPlugin):
+class LwF(LwFPlugin):
     """
     Learning without Forgetting plugin.
     LwF uses distillation to regularize the current loss with soft targets
@@ -23,29 +26,30 @@ class MyLwFPlugin(LwFPlugin):
     When used with multi-headed models, all heads are distilled.
     """
 
-    def __init__(self, parser: argparse, prev_model: Union[nn.Module, None] = None):
+    def __init__(self, opts: argparse, prev_model: Union[nn.Module, None] = None):
         """
         Args:
-            parser: The model parser.
+            opts: The model parser.
             prev_model: The prev_model if exists.
         """
 
         super().__init__()
-        self.parser = parser  # The parser.
-        self.lamda = parser.LWF_lambda  # The LWF lambda.
-        self.temperature = parser.temperature_LWF  # The temperature.
+        self.parser = opts  # The parser.
+        self.lamda = opts.LWF_lambda  # The LWF lambda.
+        self.temperature = opts.temperature_LWF  # The temperature.
         self.num_exps = 0  # No exps trained before.
-        self.inputs_to_struct = parser.inputs_to_struct  # The inputs to struct.
+        self.inputs_to_struct = opts.inputs_to_struct  # The inputs to struct.
         if prev_model is not None:
             self.prev_model = copy.deepcopy(prev_model)  # Copy the previous model.
             self.num_exps = 1  # Number of trained experiences is set to 1.
             # Creating the desired flags for each trained task.
             for i, task in enumerate(prev_model.trained_tasks):
                 (task_id, direction_id) = task  # The task ,direction id.
-                flag = construct_flag(parser, task_id, direction_id)  # Construct the flag.
+                flag = construct_flag(opts, task_id, direction_id)  # Construct the flag.
                 self.prev_tasks = {i: ((task_id, direction_id), flag)}  # Construct the dictionary.
 
-    def _distillation_loss(self, cur_out: outs_to_struct, prev_out: outs_to_struct, x: inputs_to_struct) -> torch.float:
+    def _distillation_loss(self, cur_out: outs_to_struct, prev_out: outs_to_struct,
+                           x: inputs_to_struct) -> Tensor.float:
         """
         Compute distillation loss between output of the current model and
         output of the previous (saved) model.
@@ -66,13 +70,12 @@ class MyLwFPlugin(LwFPlugin):
         dist_loss = (dist_loss * loss_weight).sum() / loss_weight.size(0)  # Count only existing characters.
         return dist_loss
 
-    def penalty(self, model: nn.Module, x: inputs_to_struct, alpha: float) -> torch.float:
+    def penalty(self, model: nn.Module, x: inputs_to_struct) -> Tensor.float:
         """
         Compute weighted distillation loss.
         Args:
             model: The model.
             x: The input.
-            alpha: The regularization factor.
 
         Returns: The penalty.
 
@@ -89,9 +92,9 @@ class MyLwFPlugin(LwFPlugin):
                 y_curr = model.forward_and_out_to_struct(x)  # The current distribution.
                 dist_loss += self._distillation_loss(y_curr, y_prev, x)  # The KL div loss.
             x.flags = old_flag  # return to the original flag.
-            return alpha * dist_loss
+            return self.lamda * dist_loss
 
-    def before_backward(self, strategy: SupervisedTemplate, **kwargs) -> None:
+    def before_backward(self, strategy: Regularization_strategy, **kwargs) -> None:
         """
         Summing all losses together.
         Args:
@@ -100,10 +103,10 @@ class MyLwFPlugin(LwFPlugin):
 
         """
         # Compute the LWF penalty.
-        penalty = self.penalty(strategy.model, strategy.mb_x, self.lamda)
+        penalty = self.penalty(strategy.model, strategy.mb_x)
         strategy.loss += penalty  # Add the penalty.
 
-    def after_training_exp(self, strategy: SupervisedTemplate, **kwargs) -> None:
+    def after_training_exp(self, strategy: Regularization_strategy, **kwargs) -> None:
         """
         Save a copy of the model after each experience.
         Args:
@@ -111,7 +114,6 @@ class MyLwFPlugin(LwFPlugin):
             **kwargs:
 
         """
-
         print("Copy the model ")
         # Copy the current model.
         self.prev_model = copy.deepcopy(strategy.model)

@@ -9,21 +9,20 @@
 # Website: www.continualai.org                                                 #
 ################################################################################
 
+import argparse
 from collections import defaultdict
 from typing import List, Union, Dict
 
 import torch
-from avalanche.evaluation import Metric, PluginMetric, GenericPluginMetric
+from avalanche.evaluation import PluginMetric, GenericPluginMetric
 from avalanche.evaluation.metric_utils import phase_and_task
+from avalanche.evaluation.metrics.accuracy import Accuracy
 from avalanche.evaluation.metrics.mean import Mean
+from avalanche.training.templates.supervised import SupervisedTemplate
 from torch import Tensor
+
 from training.Data.Data_params import Flag
 from training.Metrics.Accuracy import multi_label_accuracy_weighted, multi_label_accuracy
-from avalanche.evaluation.metrics.accuracy import Accuracy
-
-from Baselines_code.avalanche_AI.training.supervised.strategy_wrappers import SupervisedTemplate
-
-import argparse
 
 
 class Accuracy_fun(Accuracy):

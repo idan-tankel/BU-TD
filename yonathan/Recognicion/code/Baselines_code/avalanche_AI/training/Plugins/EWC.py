@@ -1,97 +1,63 @@
+import argparse
 import copy
 import sys
-from torch.utils.data import Dataset
-from training.Utils import preprocess
-from torch.utils.data import DataLoader
+from typing import Union
+
 import torch
-from avalanche.models.utils import avalanche_forward
-from avalanche.training.utils import copy_params_dict, zerolike_params_dict
-from avalanche.training.plugins import EWCPlugin
-import argparse
 import torch.nn as nn
-from typing import Callable
-from torch.optim import optimizer
-from avalanche.training.templates.supervised import SupervisedTemplate
+from avalanche.training.plugins import EWCPlugin
+from avalanche.training.templates.supervised import SupervisedTemplate as Regularization_strategy
+from avalanche.training.utils import copy_params_dict
+from torch.utils.data import DataLoader, Dataset
+
+from Baselines_code.baselines_utils import compute_quadratic_loss, compute_fisher_information_matrix
 
 sys.path.append(r'/')
 
 
-class MyEWCPlugin(EWCPlugin):
+class EWC(EWCPlugin):
     """
     EWC plugin.
     Stores for each parameter its importance.
     """
 
-    def __init__(self, parser: argparse, mode="separate", keep_importance_data=False,
-                 prev_model=None, prev_data=None):
+    def __init__(self, parser: argparse, prev_model: Union[None, nn.Module] = None,
+                 old_dataset: Union[None, Dataset] = None, load_from=None):
         """
         Args:
             parser: The model parser.
-            mode: The training mode.
-            keep_importance_data: Whether to keep the importance Data_Creation.
             prev_model: A pretrained model
-            prev_data: The old dataset.
+            old_dataset: The old dataset.
         """
-        super().__init__(ewc_lambda=parser.EWC_lambda, mode=mode,
-                         keep_importance_data=keep_importance_data)
-        self.old_dataset = prev_data  # The old data-set for computing the coefficients.
+        super().__init__(ewc_lambda=parser.EWC_lambda)
+        self.old_dataset = old_dataset  # The old data-set for computing the coefficients.
         self.prev_model = copy.deepcopy(prev_model)  # The previous model.
         self.parser = parser  # The model opts.
         self.num_exp = 0  # The number of exp trained so far.
         self.inputs_to_struct = parser.inputs_to_struct  # The inputs to struct method.
         self.outs_to_struct = parser.outs_to_struct  # The outputs to struct method
         # Supporting pretrained model.
-        if prev_model is not None and prev_data is not None:
+        if prev_model is not None and old_dataset is not None and self.ewc_lambda != 0.0:
             # Update importance and old params to begin with EWC training.
             print('Computing Importances')
-            importances = self.compute_importances(prev_model, parser.criterion, parser.optimizer, prev_data,
-                                                   parser.device, parser.train_mb_size)
-            self.update_importances(importances, 0)  # The first task.
-            print('Done computing Importances')
+            dataloader = DataLoader(old_dataset, batch_size=self.parser.bs)  # The dataloader.
+            if load_from is not None:
+                model_meta_data = torch.load(load_from)
+                try:
+                    self.importances = model_meta_data['EWC_importances']
+                    print("Loaded existing importances")
+                except KeyError:
+                    self.importances = compute_fisher_information_matrix(self.parser, prev_model, parser.criterion,
+                                                                         dataloader,
+                                                                         parser.device)
+                    model_meta_data['EWC_importances'] = self.importances
+                    torch.save(model_meta_data, load_from)
+                    print("Computed EWC importances once for all!")
+         #   print('Done computing Importances')
             self.saved_params[0] = dict(copy_params_dict(prev_model.feature_extractor))  # Copy the old parameters.
             self.num_exp = 1  #
 
-    def compute_importances(self, model: nn.Module, criterion: Callable, optimizer: optimizer, dataset: Dataset,
-                            device: str, batch_size: int) -> dict:
-        """
-        Compute EWC importance matrix for each parameter
-        Args:
-            model: The model we compute its coefficients.
-            criterion: The loss criterion.
-            optimizer: The optimizer.
-            dataset: The dataset.
-            device: The device.
-            batch_size: The batch size.
-
-        Returns: The importance coefficients.
-
-        """
-        model.eval()  # Move to evaluation mode.
-        importances = zerolike_params_dict(model.feature_extractor)  # Make empty coefficients.
-        dataloader = DataLoader(dataset, batch_size=batch_size)  # The dataloader.
-        for i, batch in enumerate(dataloader):  # Iterating over the dataloader.
-            x = preprocess(batch, device)  # Omit the ids and move to the device.
-            x = self.inputs_to_struct(x)  # Make a struct.
-            model.zero_grad()  # Reset grads.
-            out = avalanche_forward(model, x, task_labels=None)  # Compute output.
-            out = self.outs_to_struct(out)  # Make a struct.
-            loss = criterion(self.parser, x, out)  # Compute the loss.
-            loss.backward()  # Compute grads.
-            for (k1, p), (k2, imp) in zip(model.feature_extractor.named_parameters(),
-                                          importances):  # Iterating over the feature weights.
-                assert k1 == k2
-                if p.grad is not None:
-                    # Adding the grad**2.
-                    imp += p.grad.data.clone().pow(2)
-
-        # average over mini batch length
-        for _, imp in importances:
-            imp /= float(len(dataloader))
-        # Make dictionary.
-        importances = dict(importances)
-        return importances
-
-    def after_training_exp(self, strategy: SupervisedTemplate) -> None:
+    def after_training_exp(self, strategy: Regularization_strategy, **kwargs) -> None:
         """
         Compute importance of parameters after each experience.
         Args:
@@ -99,23 +65,22 @@ class MyEWCPlugin(EWCPlugin):
 
         """
         exp_counter = strategy.clock.train_exp_counter + self.num_exp
-        importances = self.compute_importances(
-            strategy.model,
-            strategy._criterion,
-            strategy.optimizer,
-            strategy.experience.dataset,
-            strategy.device,
-            strategy.train_mb_size,
+        dataloader = DataLoader(strategy.experience.dataset, batch_size=self.parser.bs)  # The dataloader.
+        self.importances = compute_fisher_information_matrix(
+            parser=self.parser,
+            model=strategy.model,
+            criterion=strategy._criterion,
+            dataloader=dataloader,
+            device=strategy.device,
         )
         # Update importance.
-        self.update_importances(importances, exp_counter)
         # Update the new 'old' weights.
         self.saved_params[exp_counter] = copy_params_dict(strategy.model.feature_extractor)
         # clear previous parameter values
         if exp_counter > 0 and (not self.keep_importance_data):
             del self.saved_params[exp_counter - 1]
 
-    def before_backward(self, strategy: SupervisedTemplate) -> None:
+    def before_backward(self, strategy: Regularization_strategy, **kwargs) -> None:
         """
         Compute EWC penalty and add it to the loss.
         Args:
@@ -125,15 +90,10 @@ class MyEWCPlugin(EWCPlugin):
         exp_counter = strategy.clock.train_exp_counter + self.num_exp
         if exp_counter == 0 or self.ewc_lambda == 0.0:
             return
-        penalty = torch.tensor(0).float().to(strategy.device)
 
-        Cur_params = dict(strategy.model.feature_extractor.named_parameters())
-        for name in self.importances[0].keys():
-            saved_param = self.saved_params[0][name]  # previous weight.
-            imp = self.importances[0][name]  # Current weight.
-            cur_param = Cur_params[name]
-            # Add the difference to the loss.
-            penalty += (imp * (cur_param - saved_param).pow(2)).sum()
-        # Update the new loss.
-      #  print(self.ewc_lambda * penalty)
-        strategy.loss += self.ewc_lambda * penalty
+        penalty = compute_quadratic_loss(strategy.model, self.prev_model, importance=self.importances,
+                                         device=strategy.device)
+        # print(penalty)
+        loss = strategy.loss
+        convex_loss = self.ewc_lambda * penalty + (1 - self.ewc_lambda) * loss
+        strategy.loss = convex_loss

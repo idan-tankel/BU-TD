@@ -1,50 +1,84 @@
-from avalanche.training.plugins import SupervisedPlugin, EvaluationPlugin
-from Baselines_code.avalanche_AI.training.Plugins.EWC import MyEWCPlugin
-from Baselines_code.avalanche_AI.training.Plugins.LWF import MyLwFPlugin
-from Baselines_code.avalanche_AI.training.Plugins.MAS import MyMASPlugin
-from Baselines_code.avalanche_AI.training.Plugins.LFL import MyLFLPlugin
 import argparse
-from typing import Optional, Sequence, List
-from avalanche.training.plugins.evaluation import default_evaluator
-from avalanche.training.templates.supervised import SupervisedTemplate
+import os.path
+from pathlib import Path
+
+import torch.nn as nn
+import torch.optim as optim
+from avalanche.evaluation.metrics import loss_metrics
+from avalanche.logging import WandBLogger, InteractiveLogger
 from avalanche.training.plugins import LRSchedulerPlugin
-from Baselines_code.avalanche_AI.training.Plugins.IMM_Mean import MyIMM_Mean_Plugin as IMM_Mean
-from Baselines_code.avalanche_AI.training.Plugins.IMM_Mode import MyIMM_Mode_Plugin as IMM_Mode
+from avalanche.training.plugins import SupervisedPlugin
+from avalanche.training.plugins.evaluation import EvaluationPlugin
+from avalanche.training.templates.supervised import SupervisedTemplate
+from torch.utils.data import DataLoader
+
+from Baselines_code.avalanche_AI.training.Plugins.EWC import EWC
+from Baselines_code.avalanche_AI.training.Plugins.Evaluation import accuracy_metrics
+from Baselines_code.avalanche_AI.training.Plugins.IMM_Mean import IMM_Mean as IMM_Mean
+from Baselines_code.avalanche_AI.training.Plugins.IMM_Mode import MyIMM_Mode as IMM_Mode
+from Baselines_code.avalanche_AI.training.Plugins.LFL import LFL
+from Baselines_code.avalanche_AI.training.Plugins.LWF import LwF
+from Baselines_code.avalanche_AI.training.Plugins.MAS import MAS
 from Baselines_code.avalanche_AI.training.Plugins.SI import SI
+from training.Data.Checkpoints import CheckpointSaver
+from training.Data.Data_params import RegType
+from training.Utils import create_optimizer_and_scheduler
 
 
-class MySupervisedTemplate(SupervisedTemplate):
+class Regularization_strategy(SupervisedTemplate):
     """
     The basic Strategy, every strategy inherits from.
     """
 
-    def __init__(self, parser: argparse, checkpoint=None, task=[0, (1, 0)], logger=None,
-                 plugins: Optional[Sequence["SupervisedPlugin"]] = [], evaluator=default_evaluator,
-                 eval_every: int = -1):
+    def __init__(self, parser: argparse, task=[0, (1, 0)], logger=None,
+                 eval_every: int = -1, prev_model = None, prev_data=None, model_path=None):
         """
         Args:
             parser: The parser.
             checkpoint: The checkpoint.
             task: The task.
             logger: The logger.
-            plugins: Possible plugins.
-            evaluator: The evaluator.
             eval_every: Interval evaluation.
         """
         self.task_id = task[0]
         self.direction_id = task[1]
         self.parser = parser  # The parser.
         self.logger = logger  # The logger.
-        self.checkpoint = checkpoint  # The Checkpoint
         self.inputs_to_struct = parser.inputs_to_struct
         self.outs_to_struct = parser.outs_to_struct
-        self.scheduler = LRSchedulerPlugin(parser.scheduler, reset_scheduler=False, reset_lr=False,
-                                           step_granularity='iteration')  # Every iteration updatable scheduler.
-        plugins.append(self.scheduler)  # Add the scheduler to the Plugins.
+        self.reg_type = parser.reg_type
+        self.load_from = model_path
+        self.scheduler = None
+        plugins = []
+        Project_path = Path(__file__).parents[5]
+        #
+      #  project_path = Path(__file__).parents[2]
+        # Path to the data-set.
+        Data_specific_path = os.path.join(Project_path, 'data/{}'.format(str(parser.ds_type)))
+        # Path to the results.
+        results_path = os.path.join(Data_specific_path, f'Baselines/')
+        # Path to the regularization type results.
+        Model_folder = os.path.join(results_path,
+                                    f"{str(parser.reg_type)}SGD/Task_{task}/lambda"
+                                    f"={str(parser.reg_type.class_to_reg_factor(parser))}")
+        self.Model_folder = Model_folder
+        self.checkpoint = CheckpointSaver(Model_folder) # The Checkpoint.
+        #
+        log_path = os.path.join(Project_path, f'data/Baselines/{str(self.reg_type)}/logging')
+        Checkpoint_path = os.path.join(Project_path,
+                                       f'fata/Baselines/{str(self.reg_type)}/checkpoints/Task_{task[0]}_{task[1]}')
+        loggers = [WandBLogger(project_name=f"avalanche_{str(self.reg_type)}", run_name="train", dir=log_path,
+                               path=Checkpoint_path), InteractiveLogger()]
+        evaluator = EvaluationPlugin(accuracy_metrics(parser, minibatch=True, epoch=True, experience=True, stream=True),
+                                     loss_metrics(minibatch=True, epoch=True, experience=True, stream=True),
+                                     loggers=loggers)
+
+        if self.reg_type is not RegType.Naive:
+            plugins.append(self.Get_regularization_plugin(prev_model, prev_data))
 
         super().__init__(
             model=parser.model,
-            optimizer=parser.optimizer,
+            optimizer=optim.Adam(parser.model.parameters()),
             criterion=parser.criterion,
             train_mb_size=parser.train_mb_size,
             train_epochs=parser.train_epochs,
@@ -54,6 +88,18 @@ class MySupervisedTemplate(SupervisedTemplate):
             evaluator=evaluator,
             eval_every=eval_every
         )
+
+    def make_optimizer(self, **kwargs):
+        """
+        We already pass the optimizer in the initialization.
+        """
+        (new_task, len) = kwargs['kargs']
+        learned_params = self.model.get_specific_head(new_task[0], new_task[1])  # Train only the desired params.
+        self.optimizer, self.scheduler= create_optimizer_and_scheduler(self.parser, learned_params, nbatches = len //
+                                                                                                      self.parser.bs)
+        scheduler = LRSchedulerPlugin(self.scheduler, reset_scheduler=False, reset_lr=False,
+                                           step_granularity='iteration')  # Every iteration updatable scheduler.
+        self.plugins.append(scheduler)  # Add the scheduler to the Plugins.
 
     @property
     def mb_x(self):
@@ -74,15 +120,17 @@ class MySupervisedTemplate(SupervisedTemplate):
     def eval_epoch(self, **kwargs):
         """Evaluation loop over the current `self.dataloader`."""
         super().eval_epoch(**kwargs)
-        Metrics = self.evaluator.get_last_metrics()
-        acc = 0.0
-        for key in Metrics.keys():
-            if 'Top1_Acc_Exp/eval_phase/test_stream' in key:
-                acc = Metrics[key]
-                print("The Accuracy is: {}".format(acc))
+        if self.clock.train_iterations > 0:
+            Metrics = self.evaluator.get_last_metrics()
+            Metrics = dict(filter(lambda key: key[0].startswith('Top1_Acc_Exp/eval_phase/test_stream'), Metrics.items()))
+            try:
+                acc = list(Metrics.items())[-1][-1]
+                print(f"The Accuracy is: {acc}")
+            except IndexError:
+                acc = 0.0
 
-        self.checkpoint(self.model, self.clock.train_exp_epochs, acc, self.optimizer, self.parser.scheduler,
-                        self.parser, self.task_id, self.direction_id)  # Updating checkpoint.
+            self.checkpoint(self.model, self.clock.train_exp_epochs, acc, self.optimizer, self.scheduler,
+                            self.parser, self.task_id, self.direction_id)  # Updating checkpoint.
 
     def update_task(self, task_id: int, direction_id: int) -> None:
         """
@@ -91,294 +139,42 @@ class MySupervisedTemplate(SupervisedTemplate):
             task_id: The task id.
             direction_id: The direction id.
 
-
         """
         self.task_id = task_id
         self.direction_id = direction_id
 
-
-class Naive(MySupervisedTemplate):
-    """
-    Naive strategy, without any regularization.
-    Used for training the initial task.
-    """
-
-    def __init__(
-            self,
-            parser: argparse,
-            plugins: Optional[List[SupervisedPlugin]] = [],
-            evaluator=default_evaluator,
-            eval_every=-1,
-            **base_kwargs
-    ):
-        super().__init__(
-            parser,
-            plugins=plugins,
-            evaluator=evaluator,
-            eval_every=eval_every,
-            **base_kwargs
-        )
-
-
-class MyEWC(MySupervisedTemplate):
-    """
-    EWC strategy.
-    """
-
-    def __init__(
-            self,
-            parser: argparse,
-            mode: str = "separate",
-            keep_importance_data: bool = False,
-            plugins: Optional[List[SupervisedPlugin]] = None,
-            evaluator=default_evaluator,
-            eval_every=-1,
-            prev_model=None,
-            **base_kwargs
-    ):
+    def Get_regularization_plugin(self, prev_model: nn.Module, prev_data: dict[DataLoader]) -> SupervisedPlugin:
         """
+        Returns the desired regularization plugin.
         Args:
-            parser: The parser.
-            mode: The EWC mode 'online' or 'separate'.
-            decay_factor: The decay factor.
-            keep_importance_data:
-            device: The device.
-            plugins: The optional plugins.
-            evaluator: The evaluator.
-            eval_every: The evaluation interval.
-            **base_kwargs: Optional args.
+            prev_model: The previous model.
+            prev_data: The previous data.
+
+        Returns: Regularization plugin.
+
         """
-        ewc = MyEWCPlugin(parser=parser, mode=mode, keep_importance_data=keep_importance_data, prev_model=prev_model,
-                          prev_data=parser.prev_data)
-        if plugins is None:
-            plugins = [ewc]
+        if self.reg_type is RegType.EWC:
+            return EWC(parser=self.parser, prev_model=prev_model, old_dataset=prev_data['train_ds'],
+                       load_from=self.load_from)
+        if self.reg_type is RegType.LFL:
+            return LFL(self.parser, prev_model)
+        if self.reg_type is RegType.LWF:
+            return LwF(self.parser, prev_model)
+        if self.reg_type is RegType.MAS:
+            return MAS(parser=self.parser, prev_model=prev_model, prev_data=prev_data['train_ds'],
+                       load_from=self.load_from)
+        if self.reg_type is RegType.IMM_Mean:
+            return IMM_Mean(parser=self.parser, prev_model=prev_model)
+        if self.reg_type is RegType.IMM_Mode:
+            return IMM_Mode(parser=self.parser, prev_model=prev_model, old_dataset=prev_data['train_ds'],
+                            load_from=self.load_from)
+        if self.reg_type is RegType.SI:
+            return SI(parser=self.parser, prev_model=prev_model)
+
         else:
-            plugins.append(ewc)
-
-        super().__init__(
-            parser,
-            plugins=plugins,
-            evaluator=evaluator,
-            eval_every=eval_every,
-            **base_kwargs
-        )
-
-
-class LWF(MySupervisedTemplate):
-    """
-    Learning without forgetting.
-    """
-
-    def __init__(
-            self,
-            parser: argparse,
-            plugins: Optional[List[SupervisedPlugin]] = None,
-            evaluator: EvaluationPlugin = default_evaluator,
-            eval_every: int = -1,
-            prev_model=None,
-            **base_kwargs
-    ):
-        """
-        Args:
-           parser: The parser.
-           plugins: The optional plugins.
-           evaluator: The evaluator.
-           eval_every: The interval evaluation.
-           **base_kwargs: Optional args.
-        """
-        lwf = MyLwFPlugin(parser, prev_model=prev_model)
-        if plugins is None:
-            plugins = [lwf]
-        else:
-            plugins.append(lwf)
-
-        super().__init__(
-            parser,
-            plugins=plugins,
-            evaluator=evaluator,
-            eval_every=eval_every,
-            **base_kwargs
-        )
-
-
-class LFL(MySupervisedTemplate):
-    """Less Forgetful Learning strategy.
-
-    See LFL plugin for details.
-    Refer Paper: https://arxiv.org/pdf/1607.00122.pdf
-    This strategy does not use task identities.
-    """
-
-    def __init__(
-            self,
-            parser: argparse,
-            plugins: Optional[List[SupervisedPlugin]] = None,
-            evaluator: EvaluationPlugin = default_evaluator,
-            eval_every: int = -1,
-            prev_model=None,
-            **base_kwargs
-    ):
-        """
-        Args:
-           parser: The parser.
-           plugins: Optional plugins.
-           evaluator: The evaluator.
-           eval_every: Evaluation interval.
-           **base_kwargs:
-        """
-        lfl = MyLFLPlugin(parser.LFL_lambda, prev_model)
-        if plugins is None:
-            plugins = [lfl]
-        else:
-            plugins.append(lfl)
-
-        super().__init__(
-            parser,
-            plugins=plugins,
-            evaluator=evaluator,
-            eval_every=eval_every,
-            **base_kwargs
-        )
-
-
-class MyMAS(MySupervisedTemplate):
-    """Less Forgetful Learning strategy.
-
-    See LFL plugin for details.
-    Refer Paper: https://arxiv.org/pdf/1607.00122.pdf
-    This strategy does not use task identities.
-    """
-
-    def __init__(self, parser: argparse, plugins: Optional[List[SupervisedPlugin]] = None,
-                 evaluator: EvaluationPlugin = default_evaluator, eval_every: int = -1, prev_model=None, prev_data=None,
-                 **base_kwargs):
-        """
-       Args:
-          parser: The parser.
-          plugins: Optional plugins.
-          evaluator: The evaluator.
-          eval_every: Evaluation interval.
-          prev_model: The previous model.
-          **base_kwargs:
-       """
-
-        MAS = MyMASPlugin(parser, prev_model, prev_data)
-        if plugins is None:
-            plugins = [MAS]
-        else:
-            plugins.append(MAS)
-
-        super().__init__(
-            parser,
-            plugins=plugins,
-            evaluator=evaluator,
-            eval_every=eval_every,
-            **base_kwargs
-        )
-
-
-class MyIMM_Mean(MySupervisedTemplate):
-    """
-    IMM Mode plugin.
-    """
-
-    def __init__(self, parser: argparse, plugins: Optional[List[SupervisedPlugin]] = None,
-                 evaluator: EvaluationPlugin = default_evaluator, eval_every: int = -1, prev_model=None,
-                 **base_kwargs):
-        """
-       Args:
-          parser: The parser.
-          plugins: Optional plugins.
-          evaluator: The evaluator.
-          eval_every: Evaluation interval.
-          prev_model: The previous model.
-          **base_kwargs:
-       """
-
-        IMM = IMM_Mean(parser, prev_model)
-        if plugins is None:
-            plugins = [IMM]
-        else:
-            plugins.append(IMM)
-
-        super().__init__(
-            parser,
-            plugins=plugins,
-            evaluator=evaluator,
-            eval_every=eval_every,
-            **base_kwargs
-        )
-
-
-class MySI(MySupervisedTemplate):
-    """
-    My SI Strategy.
-    """
-    def __init__(self, parser: argparse, plugins: Optional[List[SupervisedPlugin]] = None,
-                 evaluator: EvaluationPlugin = default_evaluator, eval_every: int = -1, prev_model=None,
-                 **base_kwargs):
-        """
-       Args:
-          parser: The parser.
-          plugins: Optional plugins.
-          evaluator: The evaluator.
-          eval_every: Evaluation interval.
-          prev_model: The previous model.
-          **base_kwargs:
-       """
-
-        Si = SI(parser, prev_model)
-        if plugins is None:
-            plugins = [Si]
-        else:
-            plugins.append(Si)
-
-        super().__init__(
-            parser,
-            plugins=plugins,
-            evaluator=evaluator,
-            eval_every=eval_every,
-            **base_kwargs
-        )
-
-
-class MyIMM_Mode(MySupervisedTemplate):
-    """
-    IMM Mode plugin.
-    """
-
-    def __init__(self, parser: argparse, plugins: Optional[List[SupervisedPlugin]] = None,
-                 evaluator: EvaluationPlugin = default_evaluator, eval_every: int = -1, prev_model=None, prev_data=None,
-                 **base_kwargs):
-        """
-       Args:
-          parser: The parser.
-          plugins: Optional plugins.
-          evaluator: The evaluator.
-          eval_every: Evaluation interval.
-          prev_model: The previous model.
-          **base_kwargs:
-       """
-
-        IMM = IMM_Mode(parser, prev_model, prev_data)
-        if plugins is None:
-            plugins = [IMM]
-        else:
-            plugins.append(IMM)
-
-        super().__init__(
-            parser,
-            plugins=plugins,
-            evaluator=evaluator,
-            eval_every=eval_every,
-            **base_kwargs
-        )
+            raise NotImplementedError
 
 
 __all__ = [
-    "LFL",
-    "LWF",
-    "MyMAS",
-    "MyEWC",
-    "Naive"
+    "Regularization_strategy"
 ]

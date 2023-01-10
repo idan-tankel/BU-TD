@@ -83,7 +83,7 @@ class CompositiveModel(nn.Module):
     def final_prediction(self, preds):
         all_preds = torch.stack(preds,dim = -1)
         mask = (all_preds == self.edge_class).sum(dim=-1) > 0
-        pred = preds[-1] *( ~ mask) + self.edge_class * mask
+        pred = preds[-1] * ( ~ mask) + self.edge_class * mask
         return pred
 
 ds_type = DsType.Fashionmnist

@@ -1,16 +1,21 @@
-import sys
+import argparse
 import copy
-from avalanche.training.templates.supervised import SupervisedTemplate
-from avalanche.training.utils import freeze_everything
-import torch
-from avalanche.training.plugins import LFLPlugin
+import sys
 from typing import Union
+
+import torch
 import torch.nn as nn
+from avalanche.training.plugins import LFLPlugin
+from avalanche.training.templates.supervised import SupervisedTemplate as Regularization_strategy
+from avalanche.training.utils import freeze_everything
+from torch import Tensor
 
 sys.path.append(r'/')
 
 
-class MyLFLPlugin(LFLPlugin):
+# Code credit from Avalanche-AI
+
+class LFL(LFLPlugin):
     """Less-Forgetful Learning (LFL) Plugin.
     LFL satisfies two properties to mitigate catastrophic forgetting.
     1) To keep the decision boundaries unchanged
@@ -22,19 +27,20 @@ class MyLFLPlugin(LFLPlugin):
     This plugin does not use task identities.
     """
 
-    def __init__(self, lambda_e: float, prev_model: Union[nn.Module, None] = None):
+    def __init__(self, opts: argparse, prev_model: Union[nn.Module, None] = None):
         """
         Create LFL plugin, if prev_model is not None, we copy its parameters.
         Args:
-            lambda_e: The regularization factor.
+            opts: The model options.
             prev_model: The prev model.
         """
-        super().__init__(lambda_e=lambda_e)
+        self.parser = opts
+        super().__init__(lambda_e=opts.LFL_lambda)
         if prev_model is not None:
             self.prev_model = copy.deepcopy(prev_model)  # Copy the original model.
             freeze_everything(self.prev_model)  # Freeze old model.
 
-    def _euclidean_loss(self, features: torch, prev_features: torch) -> torch.float:
+    def _euclidean_loss(self, features: Tensor, prev_features: Tensor) -> Tensor.float:
         """
         Compute euclidean loss.
         Args:
@@ -47,7 +53,7 @@ class MyLFLPlugin(LFLPlugin):
         # The MSE loss.
         return torch.nn.functional.mse_loss(features, prev_features)
 
-    def compute_features(self, model: nn.Module, x: list[torch]) -> tuple[torch, torch]:
+    def compute_features(self, model: nn.Module, x: list[Tensor]) -> tuple[Tensor, Tensor]:
         """
         Compute features from prev model and current model
         Args:
@@ -63,38 +69,37 @@ class MyLFLPlugin(LFLPlugin):
         prev_features = self.prev_model.forward_and_out_to_struct(x).features  # Old features.
         return features, prev_features
 
-    def penalty(self, x: list[torch], model: nn.Module, lambda_e: float) -> torch.float:
+    def penalty(self, x: list[Tensor], model: nn.Module) -> torch.float:
         """
         Compute weighted euclidean loss
         Args:
             x: The input to the model.
             model: The current model.
-            lambda_e: The regulation factor.
 
         Returns: The weighted MSE loss.
 
         """
-        if self.prev_model is None or lambda_e == 0.0:
+        if self.prev_model is None or self.lambda_e == 0.0:
             return 0.0
         else:
             # The previous, current features.
             features, prev_features = self.compute_features(model, x)
             # Compute distance loss.
             dist_loss = self._euclidean_loss(features, prev_features)
-            return lambda_e * dist_loss
+            return self.lambda_e * dist_loss
 
-    def before_backward(self, strategy: SupervisedTemplate, **kwargs) -> None:
+    def before_backward(self, strategy: Regularization_strategy, **kwargs) -> None:
         """
         Add euclidean loss between prev and current features as penalty
         Args:
             strategy: The LFL strategy.
         """
         # Compute the penalty.
-        penalty = self.penalty(strategy.mb_x, strategy.model, self.lambda_e)
+        penalty = self.penalty(strategy.mb_x, strategy.model)
         # Add to the loss.
         strategy.loss += penalty
 
-    def after_training_exp(self, strategy: SupervisedTemplate, **kwargs) -> None:
+    def after_training_exp(self, strategy: Regularization_strategy, **kwargs) -> None:
         """
         Save a copy of the model after each experience
         and freeze the prev model and freeze the last layer of current model
@@ -107,7 +112,7 @@ class MyLFLPlugin(LFLPlugin):
         self.prev_model = copy.deepcopy(strategy.model)  # Copy the new version of the model.
         freeze_everything(self.prev_model)  # Freeze the model.
 
-    def before_training(self, strategy: SupervisedTemplate, **kwargs):
+    def before_training(self, strategy: Regularization_strategy, **kwargs):
         """
         Pass it as original LFL requires the model to be of having 'compute feature' method.
         """

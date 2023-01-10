@@ -8,7 +8,7 @@ import torch.nn as nn
 
 from Data_Creation.Create_dataset_classes import DsType  # Import the Data_Creation set types.
 
-from training.Data.Data_params import Flag, AllDataSetOptions
+from training.Data.Data_params import Flag, AllDataSetOptions, RegType
 from training.Data.Structs import inputs_to_struct, outs_to_struct
 from training.Metrics.Loss import UnifiedCriterion
 from training.Modules.Batch_norm import BatchNorm
@@ -17,7 +17,7 @@ from training.Modules.Models import BUTDModel, ResNet
 
 
 def GetParser(task_idx: int = 0, direction_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDModel,
-              model_flag: Flag = Flag.NOFLAG, ds_type: DsType = DsType.Emnist):
+              model_flag: Flag = Flag.NOFLAG, ds_type: DsType = DsType.Emnist, reg_type = RegType.LFL ):
     """
     Args:
         task_idx: The task index.
@@ -40,23 +40,24 @@ def GetParser(task_idx: int = 0, direction_idx: int = 0, model_type: Union[BUTDM
                                            initial_task_for_omniglot_only=5)
     opts = argparse.ArgumentParser()
     # Flags.
-    opts.add_argument('--ds_type', default=ds_type, type=DsType, help='Flag that defines the data-set type')
-    opts.add_argument('--model_flag', default=model_flag, type=Flag, help='Flag that defines the model type')
+    opts.add_argument('--reg_type', default=reg_type ,type=RegType, help = 'The regularization type.')
+    opts.add_argument('--ds_type', default=ds_type, type=DsType, help='Flag that defines the data-set type.')
+    opts.add_argument('--model_flag', default=model_flag, type=Flag, help='Flag that defines the model type.')
     # Optimization arguments.
-    opts.add_argument('--wd', default=0.00001, type=float, help='The weight decay of the Adam optimizer')
-    opts.add_argument('--SGD', default=False, type=bool, help='Whether to use SGD or Adam optimizer')
-    opts.add_argument('--initial_lr', default=0.0001, type=float, help='Base lr for the SGD optimizer')
-    opts.add_argument('--cycle_lr', default=True, type=bool, help='Whether to cycle the lr')
-    opts.add_argument('--base_lr', default=0.0002, type=float, help='Base lr of the cyclic scheduler')
+    opts.add_argument('--wd', default=0.00001, type=float, help='The weight decay of the Adam optimizer.')
+    opts.add_argument('--SGD', default=False, type=bool, help='Whether to use SGD or Adam optimizer.')
+    opts.add_argument('--initial_lr', default=0.0001, type=float, help='Base lr for the SGD optimizer.')
+    opts.add_argument('--cycle_lr', default=True, type=bool, help='Whether to cycle the lr.')
+    opts.add_argument('--base_lr', default=0.0002, type=float, help='Base lr of the cyclic scheduler.')
     opts.add_argument('--max_lr', default=0.002, type=float,
-                      help='Max lr of the cyclic scheduler before the lr returns to the base_lr')
-    opts.add_argument('--momentum', default=0.9, type=float, help='Momentum of the optimizer')
-    opts.add_argument('--bs', default=10, type=int, help='The training batch size')
-    opts.add_argument('--EPOCHS', default=100, type=int, help='Number of epochs in the training')
+                      help='Max lr of the cyclic scheduler before the lr returns to the base_lr.')
+    opts.add_argument('--momentum', default=0.9, type=float, help='Momentum of the optimizer.')
+    opts.add_argument('--bs', default=10, type=int, help='The training batch size.')
+    opts.add_argument('--EPOCHS', default=100, type=int, help='Number of epochs in the training.')
     # Model architecture arguments.
-    opts.add_argument('--model_type', default=model_type, type=DsType, help='The model type BUTD or ResNet')
-    opts.add_argument('--td_block_type', default=BasicBlockTD, type=nn.Module, help='Basic TD block')
-    opts.add_argument('--bu_block_type', default=BasicBlockBU, type=nn.Module, help='Basic BU block')
+    opts.add_argument('--model_type', default=model_type, type=DsType, help='The model type BUTD or ResNet.')
+    opts.add_argument('--td_block_type', default=BasicBlockTD, type=nn.Module, help='Basic TD block.')
+    opts.add_argument('--bu_block_type', default=BasicBlockBU, type=nn.Module, help='Basic BU block.')
     opts.add_argument('--bu_shared_block_type', default=BasicBlockBUShared, type=nn.Module,
                       help='Basic shared BU block')
     opts.add_argument('--activation_fun', default=nn.ReLU, type=nn.Module, help='The non linear activation function')
@@ -121,34 +122,36 @@ def GetParser(task_idx: int = 0, direction_idx: int = 0, model_type: Union[BUTDM
     ########################################
     lambda_rwalk = [20.0, 30.0, 40.0, 50.0, 10.0, 5.0, 2.5]
     # EWC
-    opts.add_argument('--EWC_lambda', default=1e20, type=float, help='The ewc strength')
+    opts.add_argument('--EWC_lambda', default=0.99, type=float, help='The ewc strength')
     # SI
     opts.add_argument('--si_lambda', default=1e1, type=float, help='The SI strength')
     opts.add_argument('--si_eps', default=0.0000001, type=float, help='The SI strength')
     # LFL
     opts.add_argument('--LFL_lambda', default=0.70, type=float, help='The LFL strength')
     # LWF
-    opts.add_argument('--LWF_lambda', default=0.07, type=float, help='The LWF strength')
+    opts.add_argument('--LWF_lambda', default=40000000, type=float, help='The LWF strength')
     opts.add_argument('--temperature_LWF', default=2.0, type=float, help='The LWF temperature')
     # MAS
     opts.add_argument('--mas_alpha', default=0.5, type=float, help='The MAS continual importance weight')
-    opts.add_argument('--MAS_lambda', default=16000 * 4.50, type=float, help='The MAS strength')
+    opts.add_argument('--MAS_lambda', default=16000 * 5.1, type=float, help='The MAS strength')
     # RWALK
     opts.add_argument('--rwalk_lambda', default=lambda_rwalk[-1], type=float, help='The rwalk strength')
     opts.add_argument('--rwalk_alpha', default=0.9, type=float, help='The rwalk continual importance weight')
     opts.add_argument('--rwalk_delta_t', default=10, type=int, help='The rwalk step')
     #
 
-    opts.add_argument('--imm_mean_lambda', default=0.70, type=float, help='The imm_mean strength')
-    opts.add_argument('--imm_mode_lambda', default=0.70, type=float, help='The imm_mean strength')
+    opts.add_argument('--IMM_Mean_lambda', default=0.70, type=float, help='The imm_mean strength')
+    opts.add_argument('--IMM_Mode_lambda', default=0.70, type=float, help='The imm_mean strength')
+    #
 
+    opts.add_argument('--Naive_lambda', default=0, type=float, help='The rwalk strength')
     #
     opts.add_argument('--SI_lambda', default=0.01, type=float, help='The rwalk strength')
     #
     # General arguments.
-    opts.add_argument('--train_mb_size', default=10, type=int, help='The avalanche training bs')
-    opts.add_argument('--eval_mb_size', default=10, type=int, help='The avalanche evaluation bs')
-    opts.add_argument('--train_epochs', default=40, type=int,
+    opts.add_argument('--train_mb_size', default = 10, type=int, help='The avalanche training bs')
+    opts.add_argument('--eval_mb_size', default = 10, type=int, help='The avalanche evaluation bs')
+    opts.add_argument('--train_epochs', default = 40, type=int,
                       help='The number of epochs')
     return opts.parse_args()
 

@@ -28,6 +28,7 @@ class RegType(Enum):
     SI = 'SI'
     IMM_Mode = 'IMM_Mode'
     IMM_Mean = 'IMM_Mean'
+    Naive = 'Naive'
 
     def __str__(self):
         return self.value

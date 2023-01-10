@@ -1,95 +1,22 @@
-import sys
 import os
+import sys
 from pathlib import Path
 
 sys.path.append(os.path.join('r', Path(__file__).parents[1]))
-from training.Data.Checkpoints import CheckpointSaver
+
 from training.Data.Data_params import RegType
 from training.Data.Parser import GetParser, update_parser
 from training.Modules.Create_Models import create_model
-from training.Utils import create_optimizer_and_scheduler
+
 from training.Data.Get_dataset import get_dataset_for_spatial_relations
 from training.Modules.Models import *
-from avalanche.evaluation.metrics import loss_metrics
-from avalanche.logging import WandBLogger, InteractiveLogger
-from avalanche.training.plugins.evaluation import EvaluationPlugin
 from avalanche.benchmarks.generators import dataset_benchmark
-
-from avalanche_AI.training.Plugins.Evaluation import accuracy_metrics
-from avalanche_AI.training.supervised.strategy_wrappers import MyEWC as ewc, LFL, LWF, MyMAS as mas, Naive, MyIMM_Mean, MyIMM_Mode, MySI
-from training.Metrics.Accuracy import accuracy
+from avalanche_AI.training.supervised.strategy_wrappers import Regularization_strategy
 from Data_Creation.Create_dataset_classes import DsType
-import argparse
-from training.Data.Data_params import Flag
+from training.Metrics.Accuracy import accuracy
+
 from baselines_utils import load_model
 from typing import Union
-
-
-def train_baseline(parser: argparse, checkpoint: CheckpointSaver, reg_type: RegType, scenario: dataset_benchmark,
-                   old_dataset_dict: dict, old_tasks: tuple, new_task: list, Baseline_folder, new_data: dict) -> None:
-    """
-    Args:
-        parser: The parser.
-        checkpoint: The checkpoint saver.
-        reg_type: The regularization type.
-        scenario: The scenario data.
-        old_dataset_dict: The old data dictionary.
-        old_tasks: The old tasks.
-        new_task: The new tasks.
-        Baseline_folder: The Baseline models folder.
-        new_data: The new data.
-
-    """
-    update_parser(opts=parser, attr='ns', new_value=[3, 3, 3])  # Make the ResNet to be as large as BU-TD model.
-    update_parser(opts=parser, attr='use_lateral_bu_td', new_value=False)  # No lateral connections are needed.
-    update_parser(opts=parser, attr='use_laterals_td_bu', new_value=False)  # No lateral connections are needed.
-    model = create_model(parser)  # Create the model.
-    parser.model = model
-    parser.model.trained_tasks.append(old_tasks)
-    parser.prev_data = old_dataset_dict['train_ds']
-    load_model(model, model_path='naive/Model_right/ResNet_epoch40_direction=(1, 0).pt', results_path=Baseline_folder)
-   # load_model(model, model_path='LWF/lambda=0.03/ResNet_epoch20_direction=(1, 0).pt', results_path=Baseline_folder)
-   # print(accuracy(parser, model, new_data['test_dl']))
- #   print(accuracy(parser, model, old_dataset_dict['test_dl']))
-    learned_params = model.get_specific_head(new_task[0], new_task[1])  # Train only the desired params.
-    parser.optimizer, parser.scheduler = create_optimizer_and_scheduler(parser, learned_params, nbatches=len(
-        old_dataset_dict['train_dl']))
-    loggers = [WandBLogger(project_name="avalanche_EWC", run_name="train",
-                           dir='/home/sverkip/data/BU-TD/yonathan/Recognicion/data/emnist/results',
-                           path='/home/sverkip/data/BU-TD/yonathan/Recognicion/data/emnist/results/checkpoint'),
-               InteractiveLogger()]
-    evaluator = EvaluationPlugin(accuracy_metrics(parser, minibatch=True, epoch=True, experience=True, stream=True),
-                                 loss_metrics(minibatch=True, epoch=True, experience=True, stream=True),
-                                 benchmark=scenario, loggers=loggers)
-
-    if reg_type is RegType.EWC:
-        strategy = ewc(parser, checkpoint=checkpoint, evaluator=evaluator, eval_every=1,
-                       prev_model=parser.model)
-
-    elif reg_type is RegType.LWF:
-        strategy = LWF(parser, checkpoint=checkpoint, evaluator=evaluator, eval_every=1, prev_model=parser.model)
-
-    elif reg_type is RegType.LFL:
-        strategy = LFL(parser, checkpoint=checkpoint, evaluator=evaluator, eval_every=1, prev_model=parser.model)
-
-    elif reg_type is RegType.MAS:
-        strategy = mas(parser, checkpoint=checkpoint, evaluator=evaluator, eval_every=1,
-                       prev_model=parser.model, prev_data=old_dataset_dict['train_ds'])
-    elif reg_type is RegType.IMM_Mean:
-        strategy = MyIMM_Mean(parser, checkpoint=checkpoint, evaluator=evaluator, eval_every=1, prev_model=parser.model)
-    elif reg_type is RegType.IMM_Mode:
-        strategy = MyIMM_Mode(parser, checkpoint=checkpoint, evaluator=evaluator, eval_every=1, prev_model=parser.model,prev_data=old_dataset_dict['train_ds'])
-    elif reg_type is RegType.SI:
-        strategy = MySI(parser, checkpoint=checkpoint, evaluator=evaluator, eval_every=1, prev_model=parser.model)
-    else:
-        strategy = Naive(parser, checkpoint=checkpoint, evaluator=evaluator, eval_every=1)
-
-
-    for idx, (exp_train, exp_test) in enumerate(zip(scenario.train_stream, scenario.test_stream)):
-        strategy.optimizer.zero_grad(set_to_none=True)  # Make the taskhead of previous task static.
-        strategy.train(exp_train, [exp_test])
-        print("Done training, now final evaluation of the model.")
-        strategy.eval(exp_test)
 
 
 def main(reg_type: Union[RegType, None], ds_type: DsType):
@@ -103,6 +30,17 @@ def main(reg_type: Union[RegType, None], ds_type: DsType):
     """
     # The parser: NO-FLAG mode, ResNet model.
     parser = GetParser(model_type=ResNet, ds_type=ds_type)
+    update_parser(opts=parser, attr='ns', new_value=[3, 3, 3])  # Make the ResNet to be as large as BU-TD model.
+    update_parser(opts=parser, attr='use_lateral_bu_td', new_value=False)  # No lateral connections are needed.
+    update_parser(opts=parser, attr='use_laterals_td_bu', new_value=False)  # No lateral connections are needed.
+    update_parser(opts=parser, attr='reg_type', new_value=reg_type)
+    model = create_model(parser)  # Create the model.
+    model_path = os.path.join(parser.baselines_dir, 'naive/Model_right/ResNet_epoch40_direction=(1, 0).pt')
+    load_model(model, model_path='naive/Model_right/ResNet_epoch40_direction=(1, 0).pt',
+               results_path=parser.baselines_dir)
+
+    parser.model = model
+    parser.model.trained_tasks.append((0, (1, 0)))
     # Path to the project.
     project_path = Path(__file__).parents[2]
     # Path to the data-set.
@@ -113,32 +51,30 @@ def main(reg_type: Union[RegType, None], ds_type: DsType):
     elif ds_type is DsType.Fashionmnist:
         sample_path = 'samples/(3,3)_Image_Matrix'
     # The path to the samples.
+    task = (0, 1)
     Images_path = os.path.join(Data_specific_path, sample_path)
-    task = (0,-1)
-    # Path to the results.
-    results_path = os.path.join(Data_specific_path, f'Baselines/')
-    # Path to the regularization type results.
-    #   Baseline_folder = os.path.join(results_path, str(reg_type))
-    # The model folder.
-    try:
-        Model_folder = os.path.join(results_path,
-                                    f"{str(reg_type)}/lambda=" + str(reg_type.class_to_reg_factor(parser)))
-    except AttributeError:
-        Model_folder = os.path.join(results_path, "naive/Model_right")
-    # The checkpoint path.
-    checkpoint = CheckpointSaver(Model_folder)
-
-    # The first task is right and then other tasks.
-    old_data = get_dataset_for_spatial_relations(parser, Images_path, 0, [(1, 0)])
     # The new tasks.
+    new_data = get_dataset_for_spatial_relations(parser, Images_path, 0, [task])
+    #
+    old_data = get_dataset_for_spatial_relations(parser, Images_path, 0, [(1, 0)])
+    test = False
+    if test:
+        load_model(model, model_path=f'LWF/Task_(0, 1)/lambda=4000000/ResNet_epoch5_direction=(1, 0).pt',
+                   results_path=parser.baselines_dir)
+        print(accuracy(parser, model, new_data['test_dl']))
+        print(accuracy(parser, model, old_data['test_dl']))
+    #
     new_data = get_dataset_for_spatial_relations(parser, Images_path, 0, [task])
     # The scenario.
     scenario = dataset_benchmark([new_data['train_ds']], [new_data['test_ds']])
     # Train the baselines.
-    train_baseline(parser=parser, checkpoint=checkpoint, reg_type=reg_type, scenario=scenario,
-                   old_dataset_dict=old_data, old_tasks=(0, (1, 0)), new_task=[0, task], Baseline_folder=results_path,
-                   new_data=new_data)
+    strategy = Regularization_strategy(parser, eval_every=1, prev_model=parser.model,
+                                       model_path=model_path,prev_data = old_data)
+    for idx, (exp_train, exp_test) in enumerate(zip(scenario.train_stream, scenario.test_stream)):
+        strategy.optimizer.zero_grad(set_to_none=True)  # Make the taskhead of previous task static.
+        strategy.train(exp_train, [exp_test], kargs=([0, task], len(exp_train.dataset)))
+        print("Done training, now final evaluation of the model.")
+        strategy.eval(exp_test)
 
 
-main(reg_type=RegType.MAS, ds_type=DsType.Emnist)
-
+main(reg_type=RegType.EWC, ds_type=DsType.Emnist)

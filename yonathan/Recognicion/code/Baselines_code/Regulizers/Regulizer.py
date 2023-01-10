@@ -5,17 +5,18 @@ from typing import Union
 
 import torch
 import torch.nn as nn
-from Baselines_code.baselines_utils import construct_flag
 from avalanche.models.utils import avalanche_forward
 from avalanche.training.utils import copy_params_dict, zerolike_params_dict
 from avalanche.training.utils import freeze_everything
 from torch import Tensor
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
+
+from Baselines_code.baselines_utils import construct_flag
+from training.Data.Data_params import Flag
+from training.Data.Data_params import RegType
 from training.Data.Structs import inputs_to_struct, outs_to_struct
 from training.Utils import preprocess
-from training.Data.Data_params import RegType
-from training.Data.Data_params import Flag
 
 KLoss = torch.nn.KLDivLoss(reduction='none')
 class Regulizers():
