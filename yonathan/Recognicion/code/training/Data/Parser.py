@@ -1,27 +1,27 @@
+"""
+Here we define the modl opts needed for all project.
+"""
 import argparse
-import os
 
-from typing import Callable, Union, ClassVar
+from typing import Callable, Union
 
 import torch
 import torch.nn as nn
-
 from Data_Creation.Create_dataset_classes import DsType  # Import the Data_Creation set types.
-
-from training.Data.Data_params import Flag, AllDataSetOptions, RegType
+from training.Data.Data_params import Flag, AllDataSetOptions
 from training.Data.Structs import inputs_to_struct, outs_to_struct
 from training.Metrics.Loss import UnifiedCriterion
 from training.Modules.Batch_norm import BatchNorm
 from training.Modules.Model_Blocks import BasicBlockTD, BasicBlockBU, BasicBlockBUShared
 from training.Modules.Models import BUTDModel, ResNet
+from typing import Type
 
 
-def GetParser(task_idx: int = 0, direction_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDModel,
-              model_flag: Flag = Flag.NOFLAG, ds_type: DsType = DsType.Emnist, reg_type = RegType.LFL ):
+def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDModel,
+              model_flag: Flag = Flag.NOFLAG, ds_type: DsType = DsType.Emnist):
     """
     Args:
         task_idx: The task index.
-        direction_idx: The direction index.
         model_type: The model type  BUTD or ResNet.
         model_flag: The model flag.
         ds_type: The data type e.g. mnist, fashionmnist, omniglot.
@@ -40,7 +40,6 @@ def GetParser(task_idx: int = 0, direction_idx: int = 0, model_type: Union[BUTDM
                                            initial_task_for_omniglot_only=5)
     opts = argparse.ArgumentParser()
     # Flags.
-    opts.add_argument('--reg_type', default=reg_type ,type=RegType, help = 'The regularization type.')
     opts.add_argument('--ds_type', default=ds_type, type=DsType, help='Flag that defines the data-set type.')
     opts.add_argument('--model_flag', default=model_flag, type=Flag, help='Flag that defines the model type.')
     # Optimization arguments.
@@ -62,11 +61,12 @@ def GetParser(task_idx: int = 0, direction_idx: int = 0, model_type: Union[BUTDM
                       help='Basic shared BU block')
     opts.add_argument('--activation_fun', default=nn.ReLU, type=nn.Module, help='The non linear activation function')
     opts.add_argument('--norm_layer', default=BatchNorm, type=nn.Module, help='The used batch normalization')
+    opts.add_argument('--save_stats', default=True, type=bool, help='Whether to save stats')
     opts.add_argument('--use_lateral_butd', default=True, type=bool,
                       help='Whether to use the lateral connection from BU1 to TD')
     opts.add_argument('--use_lateral_tdbu', default=True, type=bool,
                       help='Whether to use the lateral connection from TD to BU2')
-    opts.add_argument('--nfilters', default=[64, 96, 128, 256], type=list, help='The ResNet filters')
+    opts.add_argument('--nfilters', default=[64, 96, 128, 128], type=list, help='The ResNet filters')
     opts.add_argument('--strides', default=[2, 2, 1, 2], type=list, help='The ResNet strides')
     opts.add_argument('--ks', default=[7, 3, 3, 3], type=list, help='The ResNet kernel sizes')
     opts.add_argument('--ns', default=[1, 1, 1], type=list, help='Number of blocks per layer')
@@ -98,9 +98,9 @@ def GetParser(task_idx: int = 0, direction_idx: int = 0, model_type: Union[BUTDM
     opts.add_argument('--task_accuracy', default=Data_specification.data_obj.task_accuracy, type=Callable,
                       help='The Accuracy function')
     # Struct variables.
-    opts.add_argument('--inputs_to_struct', default=inputs_to_struct, type=ClassVar,
+    opts.add_argument('--inputs_to_struct', default=inputs_to_struct, type=Type[inputs_to_struct],
                       help='The struct transform the list of inputs to struct.')
-    opts.add_argument('--outs_to_struct', default=outs_to_struct, type=ClassVar,
+    opts.add_argument('--outs_to_struct', default=outs_to_struct, type=Type[outs_to_struct],
                       help='The struct transform the list of outputs to struct.')
     # Data arguments.
     opts.add_argument('--device', default=torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"),
@@ -110,48 +110,41 @@ def GetParser(task_idx: int = 0, direction_idx: int = 0, model_type: Union[BUTDM
     opts.add_argument('--initial_directions', default=Data_specification.data_obj.initial_directions, type=list,
                       help='The initial tasks to train first')
     # Change to another function
-    model_path = "Model_task_{}_direction_{}_ds_{}".format(task_idx, direction_idx, str(ds_type))
     opts.add_argument('--baselines_dir', default=Data_specification.data_obj.baselines_dir, type=str,
                       help='The path the model will be stored')
     opts.add_argument('--results_dir', default=Data_specification.data_obj.results_dir, type=str,
                       help='The path the model will be stored')
-    model_dir = os.path.join(Data_specification.data_obj.results_dir, model_path)
-    opts.add_argument('--model_dir', default=model_dir, type=str, help='The model path')
+    opts.add_argument('--Data_specific_path', default=Data_specification.data_obj.Data_specific_path, type=str,
+                      help='Path to the data-set type')
     ########################################
     # For Avalanche Baselines only.
     ########################################
-    lambda_rwalk = [20.0, 30.0, 40.0, 50.0, 10.0, 5.0, 2.5]
     # EWC
-    opts.add_argument('--EWC_lambda', default=0.99, type=float, help='The ewc strength')
-    # SI
-    opts.add_argument('--si_lambda', default=1e1, type=float, help='The SI strength')
-    opts.add_argument('--si_eps', default=0.0000001, type=float, help='The SI strength')
+    opts.add_argument('--EWC_lambda', default=0.985, type=float, help='The ewc strength')
     # LFL
-    opts.add_argument('--LFL_lambda', default=0.70, type=float, help='The LFL strength')
+    opts.add_argument('--LFL_lambda', default=0.07, type=float, help='The LFL strength')
     # LWF
-    opts.add_argument('--LWF_lambda', default=40000000, type=float, help='The LWF strength')
+    opts.add_argument('--LWF_lambda', default=0.07, type=float, help='The LWF strength')
     opts.add_argument('--temperature_LWF', default=2.0, type=float, help='The LWF temperature')
     # MAS
     opts.add_argument('--mas_alpha', default=0.5, type=float, help='The MAS continual importance weight')
-    opts.add_argument('--MAS_lambda', default=16000 * 5.1, type=float, help='The MAS strength')
+    opts.add_argument('--MAS_lambda', default=0.001, type=float, help='The MAS strength')
     # RWALK
-    opts.add_argument('--rwalk_lambda', default=lambda_rwalk[-1], type=float, help='The rwalk strength')
+    opts.add_argument('--rwalk_lambda', default=0.5, type=float, help='The rwalk strength')
     opts.add_argument('--rwalk_alpha', default=0.9, type=float, help='The rwalk continual importance weight')
     opts.add_argument('--rwalk_delta_t', default=10, type=int, help='The rwalk step')
-    #
-
-    opts.add_argument('--IMM_Mean_lambda', default=0.70, type=float, help='The imm_mean strength')
+    # IMM
+    opts.add_argument('--IMM_Mean_lambda', default=0.01, type=float, help='The imm_mean strength')
     opts.add_argument('--IMM_Mode_lambda', default=0.70, type=float, help='The imm_mean strength')
-    #
-
+    # Naive
     opts.add_argument('--Naive_lambda', default=0, type=float, help='The rwalk strength')
-    #
-    opts.add_argument('--SI_lambda', default=0.01, type=float, help='The rwalk strength')
-    #
-    # General arguments.
-    opts.add_argument('--train_mb_size', default = 10, type=int, help='The avalanche training bs')
-    opts.add_argument('--eval_mb_size', default = 10, type=int, help='The avalanche evaluation bs')
-    opts.add_argument('--train_epochs', default = 40, type=int,
+    # SI
+    opts.add_argument('--SI_eps', default=0.0000001, type=float, help='The SI strength')
+    opts.add_argument('--SI_lambda', default=0.125, type=float, help='The rwalk strength')
+    # General baseline arguments.
+    opts.add_argument('--train_mb_size', default=10, type=int, help='The avalanche training bs')
+    opts.add_argument('--eval_mb_size', default=10, type=int, help='The avalanche evaluation bs')
+    opts.add_argument('--train_epochs', default=40, type=int,
                       help='The number of epochs')
     return opts.parse_args()
 

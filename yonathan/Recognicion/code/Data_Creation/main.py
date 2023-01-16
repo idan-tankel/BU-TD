@@ -1,8 +1,11 @@
+"""
+The main function, creating the dataset according to the desired type.
+"""
 from typing import Union
 
 from Create_dataset_classes import DsType, UnifiedDataSetType
 from Create_dataset_funcs import create_dataset, Save_meta_data_and_code_script
-from parser import Get_parser
+from data_creation_parser import Get_parser
 
 
 def main(ds_type: DsType = DsType.Emnist, language_list: Union[list, None] = None, num_chars_per_row: int = 6,
@@ -32,7 +35,7 @@ def main(ds_type: DsType = DsType.Emnist, language_list: Union[list, None] = Non
 
 if __name__ == '__main__':
     # main_fashion(ds_type=DsType.Omniglot,language_list=[27, 5, 42, 18, 33])
-    main(ds_type=DsType.Avatar, num_chars_per_row=2, num_rows_in_the_image=2)
+    main(num_chars_per_row=4, num_rows_in_the_image=5)
 # main_fashion(ds_type=DsType.Emnist, num_chars_per_row=6, num_rows_in_the_image=1)
 # for i in [43, 24]:
 #  main_fashion(ds_type=DsType.Omniglot,language_list=[i])

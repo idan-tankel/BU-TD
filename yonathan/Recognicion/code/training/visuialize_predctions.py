@@ -36,6 +36,7 @@ def pause_image(fig=None) -> None:
         fig = plt.gcf()
     fig.waitforbuttonpress()
 
+
 def visualize(opts, train_dataset):
     """
     visualizes the first batch in the train_dataset.
@@ -46,7 +47,7 @@ def visualize(opts, train_dataset):
     inputs = next(ds_iter)  # The first batch.
     model = opts.model
     model.eval()
-    inputs = preprocess(inputs,opts.device)
+    inputs = preprocess(inputs, opts.device)
     outs = opts.model(inputs)  # Getting model outs
     outs = model.outs_to_struct(outs)  # From output to struct.
     samples = model.inputs_to_struct(inputs)  # From input to struct.
@@ -70,7 +71,8 @@ def visualize(opts, train_dataset):
             tit = 'Right of all'
         else:
             direction = 'right' if adj_type == 0 else 'left'
-            ins_st = 'The character in the place: %s' % (char.item()) +'\n what is the character in the {}?'.format(direction)
+            ins_st = 'The character in the place: %s' % (char.item()) + '\n what is the character in the {}?'.format(
+                direction)
             tit = ins_st
         plt.title(tit)  # Adding the task to the title.
 
@@ -107,3 +109,9 @@ def visualize(opts, train_dataset):
         label_all_chars = [[c for c in row] for row in label_all]
         print(label_all_chars)
         pause_image()
+
+
+parser = GetParser(model_flag=flag, ds_type=ds_type, model_type=model_type)
+project_path = Path(__file__).parents[1]
+data_path = os.path.join(project_path, f'data/{str(ds_type)}/samples/(4,4)_image_matrix')
+DataLoaders = get_dataset_for_spatial_relations(parser, data_path, lang_idx=0, direction_tuple=direction)

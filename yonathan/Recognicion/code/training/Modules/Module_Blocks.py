@@ -1,3 +1,6 @@
+"""
+Here we define all module building blocks heritages from nn.Module.
+"""
 import argparse
 
 import torch
@@ -7,8 +10,6 @@ from torch import Tensor
 
 from training.Utils import flag_to_idx
 
-
-# Here we define all module building blocks heritages from nn.Module.
 
 class Depthwise_separable_conv(nn.Module):
     """
@@ -114,13 +115,11 @@ class Modulation_and_Lat(nn.Module):
         super(Modulation_and_Lat, self).__init__()
         shape = [nfilters, 1, 1]
         self.side = nn.Parameter(
-            torch.Tensor(*shape))  # creates the learnable parameter of shape [nchannels,1,1] according to nchannels.
+            torch.Tensor(*shape))  # creates the learnable parameter of shape [nchannels, 1, 1] according to nchannels.
         self.norm_and_relu = nn.Sequential(opts.norm_layer(opts, nfilters), opts.activation_fun())
-        #  self.norm = opts.norm_layer(opts, filters)  # batch norm after the channel-modulation of the lateral.
-        #   self.relu1 = opts.activation_fun()  # activation_fun after the batch_norm_with_statistics_per_sample layer
         self.relu = opts.activation_fun()  # activation_fun after the skip connection
 
-    def forward(self, x: Tensor, flags, lateral: Tensor) -> Tensor:
+    def forward(self, x: Tensor, flags:Tensor, lateral: Tensor) -> Tensor:
         """
         Args:
             x: The model input.

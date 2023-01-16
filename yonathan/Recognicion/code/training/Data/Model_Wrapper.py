@@ -1,3 +1,6 @@
+"""
+Here we define the model wrapper to support training, validation.
+"""
 import argparse
 import os
 import os.path
@@ -30,7 +33,7 @@ class ModelWrapped(LightningModule):
     """
 
     def __init__(self, opts: argparse, model: nn.Module, learned_params: list, check_point: CheckpointSaver,
-                 direction_tuple: list[tuple[int, int]], task_id: int, nbatches_train: int, train_ds):
+                 direction_tuple: list[tuple[int, int]], task_id: int, nbatches_train: int, train_ds: Dataset):
         """
         This is the model wrapper for pytorch lightning training.
         Args:
@@ -41,9 +44,11 @@ class ModelWrapped(LightningModule):
             direction_tuple: The direction id.
             task_id: The task id.
             nbatches_train: The number of batches to train.
+            train_ds: train ds, for reloading the data-loader epoch.
         """
-        super().__init__()
+        super(ModelWrapped, self).__init__()
         self.automatic_optimization = True
+        self.need_to_update_running_stats: bool = True
         self.model: nn.Module = model  # The model.
         self.learned_params: list = learned_params  # The learned parameters.
         self.loss_fun: Callable = opts.criterion  # The loss criterion.
@@ -59,8 +64,7 @@ class ModelWrapped(LightningModule):
         # Define the optimizer, scheduler.
         self.optimizer, self.scheduler = create_optimizer_and_scheduler(self.opts, self.learned_params,
                                                                         self.nbatches_train)
-        self.store_need_storing_stats: bool = True
-        self.train_ds: Dataset = train_ds
+        self.train_ds: Dataset = train_ds  # Our data-set.
 
     def training_step(self, batch: list[Tensor], batch_idx: int) -> float:
         """
@@ -82,7 +86,7 @@ class ModelWrapped(LightningModule):
         self.log('train_acc', acc, on_step=True, on_epoch=True)  # Update acc.
         return loss  # Return the loss.
 
-    def validation_step(self, batch: list[Tensor], batch_idx: int) -> [float, float]:
+    def validation_step(self, batch: list[Tensor], batch_idx: int) -> tuple[float, float]:
         """
         Make the validation step.
         Args:
@@ -92,7 +96,7 @@ class ModelWrapped(LightningModule):
         Returns: The task Accuracy on the batch.
 
         """
-        if batch_idx == 0 and self.store_need_storing_stats and self.store_running_stats:
+        if batch_idx == 0 and self.need_to_update_running_stats and self.store_running_stats:
             store_running_stats(model=self.model, task_id=self.task_id, direction_id=self.direction[0])
             print('Done storing running stats')
 
@@ -105,7 +109,7 @@ class ModelWrapped(LightningModule):
             _, acc = self.accuracy(samples=samples, outs=outs)  # Compute the Accuracy.
             self.log('val_loss', loss, on_step=True, on_epoch=True)  # Update the loss.
             self.log('val_acc', acc, on_step=True, on_epoch=True)  # Update the acc.
-        return acc, batch[0].size(0)  # Return the Accuracy.
+        return acc, batch[0].size(0)  # Return the Accuracy and number of samples in the batch.
 
     def configure_optimizers(self) -> tuple[optim, optim.lr_scheduler]:
         """
@@ -116,7 +120,7 @@ class ModelWrapped(LightningModule):
         scheduler = {'scheduler': scheduler, "interval": "step"}  # Update the scheduler each step.
         return [optimizer], [scheduler]
 
-    def validation_epoch_end(self, outputs: list) -> float:
+    def validation_epoch_end(self, outputs: list[tuple]) -> float:
         """
         Args:
             outputs: All Accuracy outputs.
@@ -133,21 +137,21 @@ class ModelWrapped(LightningModule):
         if self.check_point is not None:
             self.check_point(model=self.model, epoch=self.current_epoch, current_test_accuracy=acc,
                              optimizer=self.optimizer, scheduler=self.scheduler,
-                             opts=self.opts, task_id=self.task_id, direction=self.direction)
+                             opts=self.opts, task_id=self.task_id, direction=self.direction[0])
         print(f"Final accuracy {acc}")
         return acc
 
     def train_dataloader(self):
         """
         We have observed that during training, resting the train dataloader shows much better result
-        for EMNIST,Fashion-MNIST.
+        for EMNIST, Fashion-MNIST.
         """
 
         dataloader = DataLoader(dataset=self.train_ds, batch_size=self.opts.bs, num_workers=self.opts.workers,
                                 shuffle=True, pin_memory=True)
         return dataloader
 
-    def training_epoch_end(self, outputs) -> None:
+    def training_epoch_end(self, outputs: list) -> None:
         """
         After each epoch we reset the data-loader for EMNIST, Fashion-MNIST.
         """
@@ -164,18 +168,18 @@ class ModelWrapped(LightningModule):
         """
         acc = 0.0
         num_inputs = 0.0
-        self.store_need_storing_stats = False
+        self.need_to_update_running_stats = False
         self.model.eval()  # Move into evaluation mode.
         for inputs in dl:  # Iterating over all inputs.
             inputs = preprocess(inputs=inputs, device=self.dev)  # Move to the device.
             acc_batch, batch_size = self.validation_step(batch=inputs, batch_idx=0)  # The accuracy.
             acc += acc_batch * batch_size  # Add to the Accuracy
             num_inputs += batch_size
-        self.store_need_storing_stats = True
+        self.need_to_update_running_stats = True
         acc /= num_inputs  # Normalize to [0,1].
         return acc
 
-    def load_model(self, model_path: str, load_opt_and_sche=False) -> dict:
+    def load_model(self, model_path: str, load_opt_and_sche: bool = False) -> dict:
         """
         Loads and returns the model checkpoint as a dictionary.
         Args:

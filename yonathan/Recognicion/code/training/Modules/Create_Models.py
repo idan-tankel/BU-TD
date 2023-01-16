@@ -1,3 +1,6 @@
+"""
+Here we create the model type according to model type.
+"""
 import argparse
 
 import torch.nn as nn

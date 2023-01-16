@@ -1,20 +1,33 @@
+"""
+Here we define for each data-set its parameters like number of classes,
+number of direction, tasks.
+"""
 import os.path
 from enum import Enum, auto
 from pathlib import Path
 from typing import Callable
 from typing import Union
 
-import argparse
 import numpy as np
 
+from Data_Creation.Create_dataset_classes import DsType  # Import the Data_Creation set types.
 from training.Metrics.Accuracy import multi_label_accuracy, multi_label_accuracy_weighted
 from training.Metrics.Loss import multi_label_loss_weighted, multi_label_loss
 from training.Utils import get_omniglot_dictionary, tuple_direction_to_index
-
-from Data_Creation.Create_dataset_classes import DsType  # Import the Data_Creation set types.
+import argparse
 
 
 # Define the Flag Enums, and Dataset specification and baseline methods.
+
+
+class Flag(Enum):
+    """
+    The possible training flags.
+    """
+    TD = auto()  # Ordinary BU-TD network training.
+    NOFLAG = auto()  # Non-guided model, should output for each character its adjacent neighbor.
+    CL = auto()  # Continual learning flag, a BU-TD network with allocating task embedding for each task.
+
 
 class RegType(Enum):
     """
@@ -45,15 +58,6 @@ class RegType(Enum):
         return getattr(opts, self.__str__() + '_lambda')
 
 
-class Flag(Enum):
-    """
-    The possible training flags.
-    """
-    TD = auto()  # Ordinary BU-TD network training.
-    NOFLAG = auto()  # Non-guided model, should output for each character its adjacent neighbor.
-    CL = auto()  # Continual learning flag, a BU-TD network with allocating task embedding for each task.
-
-
 class GenericDataParams:
     """
     Generic Dataset parameters Specification convenient for all datasets.
@@ -81,11 +85,13 @@ class GenericDataParams:
         self.ndirections: int = (2 * self.num_x_axis + 1) * (
                 2 * self.num_y_axis + 1)  # The number of directions we query about.
         # The number of classes for each task, 47 for mnist, 10 for fashion and for Omniglot its dictionary.
+        # self.ndirections = 1
         self.nclasses: dict = {i: 47 for i in range(self.ndirections)}
         self.results_dir: str = os.path.join(self.project_path,
                                              f'data/{str(ds_type)}/results/')  # The trained model directory.
         self.baselines_dir: str = os.path.join(self.project_path,
                                                f'data/{str(ds_type)}/Baselines/')
+        self.Data_specific_path = os.path.join(self.project_path, 'data/{}'.format(str(ds_type)))
         self.use_bu1_loss: bool = True if flag_at is not Flag.NOFLAG \
             else False  # Whether to use the bu1 loss.
         self.num_heads: list = [1 for _ in range(self.ndirections)]
@@ -109,8 +115,7 @@ class EmnistDataset(GenericDataParams):
         self.initial_directions = [(1, 0)]
         initial_directions = [
             tuple_direction_to_index(num_x_axis=self.num_x_axis, num_y_axis=self.num_y_axis, direction=direction,
-                                     ndirections=self.ndirections,
-                                     task_id=0)[0]
+                                     ndirections=self.ndirections)[0]
             for direction in self.initial_directions]
         # The number of heads.
         self.num_heads = [1 if direction not in initial_directions else len(self.initial_directions) for direction in
@@ -135,14 +140,6 @@ class FashionmnistDataset(GenericDataParams):
         self.image_size = [112, 130]  # The FashionMnist image size.
 
 
-class Avatar(GenericDataParams):
-    def __init__(self, flag_at: Flag):
-        super(Avatar, self).__init__(flag_at=flag_at, ds_type=DsType.Avatar)
-        self.nclasses = {i: 8 for i in
-                         range(self.ndirections)}  # The same as Emnist, just we have just 10 classes in the dataset.
-        self.image_size = [250, 250]  # The FashionMnist image size.
-        self.use_bu1_loss = False
-
 class OmniglotDataset(GenericDataParams):
     """
     The Omniglot specification.
@@ -152,6 +149,7 @@ class OmniglotDataset(GenericDataParams):
         """
         Omniglot dataset.
         Args:
+            initial_tasks: The initial task desired set.
             flag_at: The model flag.
 
         """
@@ -166,7 +164,6 @@ class OmniglotDataset(GenericDataParams):
                                                 raw_data_path)  # Computing for each language its number of characters.
         self.ndirections = 5
         self.num_heads = [1 for _ in range(self.ndirections)]
-        self.ndirections = 1
 
 
 class AllDataSetOptions:
@@ -181,7 +178,7 @@ class AllDataSetOptions:
         Args:
             ds_type: The dataset type.
             flag_at: The training flag.
-            initial_task_for_omniglot_only: The initial task list for Omniglot only.
+            initial_task_for_omniglot_only: The initial task list only for Omniglot.
         """
         if ds_type is DsType.Emnist:
             self.data_obj = EmnistDataset(flag_at=flag_at)  # Emnist.
@@ -192,6 +189,3 @@ class AllDataSetOptions:
         if ds_type is DsType.Omniglot:
             self.data_obj = OmniglotDataset(flag_at=flag_at,
                                             initial_tasks=initial_task_for_omniglot_only)  # Omniglot.
-
-        if ds_type is DsType.Avatar:
-            self.data_obj = Avatar(flag_at=flag_at)

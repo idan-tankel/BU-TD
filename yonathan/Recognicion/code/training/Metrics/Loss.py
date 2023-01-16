@@ -1,3 +1,6 @@
+"""
+Here we define the loss function, including multi label and weighted loss for baselines.
+"""
 import argparse
 
 import torch.nn as nn
@@ -30,8 +33,8 @@ def multi_label_loss_weighted(samples: inputs_to_struct, outs: outs_to_struct):
     """
     The loss over all existing characters in the batch(non-zero loss weight).
     Args:
-        outs: The model outputs.
         samples: The samples.
+        outs: The model outputs.
 
     Returns: The weighted loss over all existing characters, for not existing the loss is zero.
 

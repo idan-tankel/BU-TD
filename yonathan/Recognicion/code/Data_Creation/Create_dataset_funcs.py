@@ -1,3 +1,6 @@
+"""
+Here we define all our functions for data set creation.
+"""
 import argparse
 import datetime
 import os
@@ -83,6 +86,7 @@ def create_image_matrix(parser: argparse, ds_type: str, sample: Sample) -> Sampl
         data_augment = DataAugmentClass(sample.sample_id)
         sample.image = data_augment(sample.image)
     return sample
+
 
 def gen_samples(parser: argparse, job_id: int, range_start: int, range_stop: int,
                 samples: list[Sample],
@@ -320,8 +324,8 @@ def Generate_raw_samples(parser: argparse, raw_dataset: General_raw_data, image_
         # To ensure we have each sequence in train/test at most one we check whether it's in the image_ids.
         # For validation, we know the samples are disjoint as we build it like that.
         if image_id_hash in image_ids and ds_type != "val" and parser.ds_type is not DsType.Avatar:
-            continue    
-        image_ids.add(image_id_hash) 
+            continue
+        image_ids.add(image_id_hash)
         chars = []  # The chosen characters.
         for sample_id in range(num_chars_per_image):
             char = CharInfo(parser, raw_dataset, prng, sample_id, sample_chars)  # Create raw sample.

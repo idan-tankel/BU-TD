@@ -1,3 +1,7 @@
+"""
+Here we define the checkpoint class to support
+storing of best models.
+"""
 import argparse
 import os
 import shutil
@@ -6,6 +10,7 @@ from pathlib import Path
 import numpy as np
 import torch
 import torch.nn as nn
+from typing import Union, Tuple
 
 
 # The Checkpoint class.
@@ -23,7 +28,6 @@ class CheckpointSaver:
         Saving all needed data.
         Args:
             dirpath: The path to the checkpoint.
-            store_running_statistics: Whether to store the running statistics.
             
         """
         self.dirpath = dirpath
@@ -47,7 +51,8 @@ class CheckpointSaver:
         self.optimum = new_optimum
 
     def __call__(self, model: nn.Module, epoch: int, current_test_accuracy: float, optimizer: torch.optim,
-                 scheduler: torch.optim.lr_scheduler, opts: argparse, task_id: int, direction: list[tuple]) -> None:
+                 scheduler: torch.optim.lr_scheduler, opts: argparse, task_id: int, direction: tuple,
+                 optional_kay: Union[Tuple, None] = None) -> None:
         """
         Saves the state.
         Args:
@@ -59,6 +64,7 @@ class CheckpointSaver:
             opts: The model options.
             task_id: The task id.
             direction: The direction id.
+            optional_kay: Optional key to add during run-time, needed for baselines.
 
         """
         # The current model path, updated when new Accuracy is achieved.
@@ -76,6 +82,9 @@ class CheckpointSaver:
         save_data = {'epoch': epoch, 'model_state_dict': model.state_dict(),
                      'optimizer_state_dict': optimizer.state_dict(),
                      'scheduler_state_dict': scheduler.state_dict(), 'parser': opts}
+        if optional_kay is not None:
+            (new_key, new_value) = optional_kay
+            save_data[new_key] = new_value
         torch.save(save_data, model_path_latest)  # Save the current model in model latest path.
         if epoch % 10 == 0:
             torch.save(save_data, model_path_curr)

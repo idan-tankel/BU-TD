@@ -1,3 +1,6 @@
+"""
+Here we define used structs including input to struct, out to struct, and training flag.
+"""
 import argparse
 
 from torch import Tensor
@@ -6,14 +9,12 @@ import torch.nn as nn
 from training.Utils import tuple_direction_to_index
 
 
-# Here we define used structs including input to struct, out to struct, and training flag.
-
 class inputs_to_struct:
     """
     Class receiving list of input tensors and makes to a class.
     """
 
-    def __init__(self, inputs: tuple[Tensor, Tensor, Tensor, Tensor, Tensor]):
+    def __init__(self, inputs: list[Tensor]):
         """
         Args:
             inputs: The tensor list.

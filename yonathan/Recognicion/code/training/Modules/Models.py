@@ -1,3 +1,7 @@
+"""
+Here we define the Models.
+It includes BUTDModel, BUModel and Pure ResNet.
+"""
 import argparse
 
 from typing import Iterator
@@ -5,17 +9,15 @@ from typing import Iterator
 import numpy as np
 import torch
 import torch.nn as nn
+from torch import Tensor
 
 from training.Data.Data_params import Flag, DsType
-from training.Data.Structs import inputs_to_struct
+from training.Data.Structs import inputs_to_struct, outs_to_struct
 from training.Modules.Heads import MultiTaskHead, OccurrenceHead
 from training.Modules.Model_Blocks import BUInitialBlock, init_module_weights, InitialEmbeddingBlock
 from training.Modules.Module_Blocks import Depthwise_separable_conv, Modulation_and_Lat
 from training.Utils import get_laterals, tuple_direction_to_index
 
-
-# Here we define the Models.
-# It includes BUTDModel, BUModel and Pure ResNet.
 
 class BUStreamShared(nn.Module):
     """
@@ -86,7 +88,7 @@ class BUModel(nn.Module):
         bu_shared = BUStreamShared(opts=opts)  # The shared model part.
         self.model = BUStream(opts=opts, shared=bu_shared, is_bu2=use_task_embedding)  # Create the model.
 
-    def forward(self, inputs: list[torch]) -> list[torch]:
+    def forward(self, inputs: list[Tensor]) -> list[Tensor]:
         """
         Args:
             inputs: The model input.
@@ -147,7 +149,7 @@ class BUStream(nn.Module):
             layers.append(layer)  # Add the layer.
         return layers
 
-    def forward(self, inputs: list[torch]) -> tuple:
+    def forward(self, inputs: list[Tensor]) -> list[Tensor, list[list[Tensor]]]:
         """
         The forward includes processing the input and inserting the lateral connections.
         Args:
@@ -165,8 +167,9 @@ class BUStream(nn.Module):
             layer_lats_out = []  # The lateral connections for the next stream.
             for block_id, block in enumerate(layer):
                 lateral_layer_id = layer_id + 1  # Get layer id.
+                # Get the laterals associate with the layer, block_id(if exist).
                 cur_lat_in = get_laterals(laterals=laterals_in, layer_id=lateral_layer_id,
-                                          block_id=block_id)  # Get the laterals associate with the layer, block_id(if exist).
+                                          block_id=block_id)
                 x, block_lats_out = block(x=x, flags=flags,
                                           laterals_in=cur_lat_in)  # Compute the block with the lateral connection.
                 layer_lats_out.append(block_lats_out)
@@ -244,7 +247,7 @@ class TDModel(nn.Module):
         layers = nn.ModuleList()
         block_inshape = self.inshapes[index]
         for i in range(num_blocks - 1):  # Create shape preserving blocks.
-            newblock = self.block(opts=self.opts, in_channels=inplanes, out_chanels=inplanes, stride=1,
+            newblock = self.block(opts=self.opts, in_channels=inplanes, out_channels=inplanes, stride=1,
                                   block_inshape=block_inshape, index=i)
             layers.append(newblock)
         newblock = self.block(opts=self.opts, in_channels=inplanes, out_channels=planes, stride=stride,
@@ -253,7 +256,7 @@ class TDModel(nn.Module):
         layers.append(newblock)
         return layers
 
-    def forward(self, inputs: tuple[torch, torch, torch]) -> list[torch, list[torch]]:
+    def forward(self, inputs: tuple[Tensor, Tensor, Tensor]) -> list[Tensor, list[list[Tensor]]]:
         """
         Args:
             inputs: The output from the BU1 stream, flag the task+arg flag , laterals_in, the laterals from the
@@ -330,8 +333,9 @@ class BUTDModel(nn.Module):
         self.bumodel2 = BUStream(opts=opts, shared=bu_shared2, is_bu2=True)  # The BU2 stream.
         # To save the taskhead parameters.
         self.transfer_learning = [[[] for _ in range(opts.ndirections)] for _ in range(opts.ntasks)]
+        # The task-head to transform to the number of classes.
         self.Head = MultiTaskHead(opts=opts,
-                                  transfer_learning_params=self.transfer_learning)  # The task-head to transform to the number of classes.
+                                  transfer_learning_params=self.transfer_learning)
         if self.model_flag is Flag.CL:  # Storing the Task embedding.
             self.TE = self.bumodel2.task_embedding
             # Store the argument embedding.
@@ -367,6 +371,8 @@ class BUTDModel(nn.Module):
         if self.model_flag is not Flag.NOFLAG:
             td_outs = self.tdmodel(inputs=td_model_inputs)
             _, td_laterals_out = td_outs
+        else:
+            td_laterals_out = None
         bu2_model_inputs = [images, flags]
         if self.use_lateral_tdbu:
             bu2_model_inputs += [td_laterals_out]
@@ -380,7 +386,7 @@ class BUTDModel(nn.Module):
         outs = [occurrence_out, bu_out, bu2_out, task_out]
         return outs  # Return all the outputs from all streams.
 
-    def forward_and_out_to_struct(self, inputs: inputs_to_struct):
+    def forward_and_out_to_struct(self, inputs: inputs_to_struct) -> outs_to_struct:
         """
         Do forward pass, and make the output a struct.
         Args:
@@ -415,15 +421,16 @@ class ResNet(nn.Module):
             opts: The model options.
         """
         super(ResNet, self).__init__()
-        self.opts = opts  # The model opts.
-        self.ntasks = opts.ntasks  # The number of tasks.
-        self.ndirections = opts.ndirections  # The number of directions.
-        self.feature_extractor = BUModel(opts)  # Create the backbone without the task embedding.
-        self.TL = [[[] for _ in range(opts.ndirections)] for _ in range(opts.ntasks)]  # Store the read-out parameters.
-        self.classifier = MultiTaskHead(opts=opts, transfer_learning_params=self.TL)  # The classifier head.
+        self.opts: argparse = opts  # The model opts.
+        self.ntasks: int = opts.ntasks  # The number of tasks.
+        self.ndirections: int = opts.ndirections  # The number of directions.
+        self.feature_extractor: nn.Module = BUModel(opts)  # Create the backbone without the task embedding.
+        self.TL: list = [[[] for _ in range(opts.ndirections)] for _ in range(opts.ntasks)]  # Store the read-out
+        # parameters.
+        self.classifier: nn.Module = MultiTaskHead(opts=opts, transfer_learning_params=self.TL)  # The classifier head.
         self.trained_tasks: list = list()
 
-    def forward(self, samples: inputs_to_struct):
+    def forward(self, samples: inputs_to_struct) -> list[None, None, Tensor, Tensor]:
         """
         Compute model output, including model features and classes
         Args:
@@ -437,7 +444,7 @@ class ResNet(nn.Module):
         task_out = self.classifier(inputs=(bu_out, flags))  # The classifier.
         return [None, None, bu_out, task_out]
 
-    def forward_and_out_to_struct(self, samples: inputs_to_struct):
+    def forward_and_out_to_struct(self, samples: inputs_to_struct) -> outs_to_struct:
         """
         Args:
             samples: The model inputs.

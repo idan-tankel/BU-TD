@@ -1,3 +1,6 @@
+"""
+Here we define the heads, including single head, multi head and occurrence head.
+"""
 import argparse
 from typing import Union
 
@@ -6,7 +9,7 @@ from torch import Tensor
 import torch.nn as nn
 
 from training.Data.Data_params import Flag
-from training.Utils import Flag_to_task
+from training.Utils import Flag_to_task, create_single_one_hot
 
 
 # Here we define the task-head modules.
@@ -18,7 +21,7 @@ class HeadSingleTask(nn.Module):
     if model flag is NOFLAG we allocate subhead for each character.
     """
 
-    def __init__(self, opts: argparse, nclasses: int, num_heads=1) -> None:
+    def __init__(self, opts: argparse, nclasses: int, num_heads: int = 1):
         """
         Args:
             opts: The model options.
@@ -65,11 +68,10 @@ class MultiTaskHead(nn.Module):
         self.ndirections = opts.ndirections  # The number of directions.
         self.num_heads = opts.num_heads  # The number of heads.
         self.num_classes = opts.nclasses  # The number of classes for each task to create the head according to.
-        self.taskhead = nn.ModuleList()  # TODO - CHANGE TO LIST OF LISTS.
+        self.taskhead = nn.ModuleList()
         # For each task, direction create its task-head according to num_classes.
         for i in range(self.ntasks):
             for j in range(self.ndirections):
-                # num_heads = self.num_heads[j]
                 layer = HeadSingleTask(opts=opts, nclasses=self.num_classes[i],
                                        num_heads=self.num_heads[j])  # create a taskhead.
                 self.taskhead.append(layer)
@@ -93,18 +95,13 @@ class MultiTaskHead(nn.Module):
         else:
             outputs = []  # All outputs list.
             for layer in self.taskhead:  # For each task head we compute the output.
-                outputs.append(layer(bu2_out))
-            direction_flag = flag[:, :self.ndirections]
-            print(outputs[0].shape)
+                layer_out = layer(bu2_out).squeeze()
+                outputs.append(layer_out)
 
-            outputs = torch.stack(outputs, dim=-1).squeeze()
-            if len(outputs.shape) == 3:
-                direction_flag = direction_flag.unsqueeze(dim=1)
-            else:
-                direction_flag = direction_flag.unsqueeze(dim=1)
-                direction_flag = direction_flag.unsqueeze(dim=1)
-            outputs = outputs * direction_flag  # Multiply by the direction flag mask.
-            task_out = outputs.sum(dim=-1)  # Sum to have single prediction per task.
+            outs = torch.stack(tensors=outputs, dim=1)  # Sum to have single prediction per
+            # task.
+            task_flag = create_single_one_hot(opts=self.opts, flags=flag).unsqueeze(dim=1)
+            task_out = torch.bmm(task_flag, outs).squeeze()
 
         return task_out
 

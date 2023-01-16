@@ -1,3 +1,6 @@
+"""
+Here we define the function utils.
+"""
 import argparse
 import os
 from typing import Union, Iterator
@@ -151,8 +154,8 @@ def preprocess(inputs: list[Tensor], device: str) -> list[Tensor]:
     return inputs
 
 
-def tuple_direction_to_index(num_x_axis: int, num_y_axis: int, direction: tuple, ndirections: int, task_id: int) -> \
-        tuple[Tensor, Tensor]:
+def tuple_direction_to_index(num_x_axis: int, num_y_axis: int, direction: tuple, ndirections: int, task_id: int = 0) \
+        -> tuple[Tensor, Tensor]:
     """
     Compute given direction tuple and task index the direction index and task index.
     Args:
@@ -238,3 +241,24 @@ def load_model(model, results_dir, model_path: str) -> dict:
     checkpoint = torch.load(model_path)  # Loading the saved data.
     model.load_state_dict(checkpoint['model_state_dict'])  # Loading the saved weights.
     return checkpoint
+
+def create_single_one_hot(opts, flags: Tensor) -> Tensor:
+    """
+    Given the flag, we compose to task, direction flag and compute the unique task id.
+    Args:
+        flags: The flags.
+
+    Returns: The task flag.
+
+    """
+    # Compute the direction, task flag.
+    direction_flags, task_flag, _ = Compose_Flag(opts=opts, flags=flags)
+    # The direction id.
+    direction_id = torch.argmax(direction_flags, dim=1)
+    # The task id.
+    task_id = torch.argmax(task_flag, dim=1)
+    # The task id.
+    task_index = direction_id + opts.ntasks * task_id
+    # The flag
+    flag = torch.nn.functional.one_hot(task_index, opts.ndirections * opts.ntasks).float()
+    return flag

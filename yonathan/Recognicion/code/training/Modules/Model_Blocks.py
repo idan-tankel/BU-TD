@@ -1,3 +1,6 @@
+"""
+Here we define the Basic BU, TD, BU shared blocks.
+"""
 import argparse
 from typing import Iterator, Union
 
@@ -68,17 +71,17 @@ class BUInitialBlock(nn.Module):
         super(BUInitialBlock, self).__init__()
         norm_layer = opts.norm_layer  # The norm layer.
         activation_fun = opts.activation_fun  # The activation layer.
-        self.ndirections = opts.ndirections  # The number of directions.
+        self.ndirections: int = opts.ndirections  # The number of directions.
         # If we use lateral connections, and we are on the second stream, we add lateral connection.
-        self.is_bu2 = is_bu2
-        self.flag_at = opts.model_flag
-        self.opts = opts
-        self.conv1 = nn.Sequential(shared.conv1, norm_layer(opts, opts.nfilters[0]),
-                                   activation_fun())  # The initial block downsample from RGB.
+        self.is_bu2: bool = is_bu2
+        self.flag_at: Flag = opts.model_flag
+        self.opts: argparse = opts
+        self.conv1: nn.Module = nn.Sequential(shared.conv1, norm_layer(opts, opts.nfilters[0]),
+                                              activation_fun())  # The initial block downsample from RGB.
         if opts.use_lateral_tdbu and is_bu2:
-            self.bot_lat = Modulation_and_Lat(opts=opts,
-                                              nfilters=opts.nfilters[
-                                                  0])  # Skip connection from the end of the TD stream.
+            self.bot_lat: nn.Module = Modulation_and_Lat(opts=opts,
+                                                         nfilters=opts.nfilters[
+                                                             0])  # Skip connection from the end of the TD stream.
 
     def forward(self, x: Tensor, flags, laterals_in: Union[list, None]) -> Tensor:
         """
@@ -148,17 +151,17 @@ class BasicBlockBU(nn.Module):
             self.downsample = None
 
         if self.use_lateral and is_bu2:
+            # Lateral connection 1 from the previous stream  if exists.
             self.lat1 = Modulation_and_Lat(opts=opts,
-                                           nfilters=shared.nfilters_lat1)  # Lateral connection 1 from the previous stream
-            # if exists.
+                                           nfilters=shared.nfilters_lat1)
+            # Lateral connection 2 from the previous stream if exists.
             self.lat2 = Modulation_and_Lat(opts=opts,
-                                           nfilters=shared.nfilters_lat2)  # Lateral connection 2 from the previous stream
-            # if exists.
+                                           nfilters=shared.nfilters_lat2)
+            # Lateral connection 3 from the previous stream if exists.
             self.lat3 = Modulation_and_Lat(opts=opts,
-                                           nfilters=shared.nfilters_lat3)  # Lateral connection 3 from the previous stream
-            # if exists.
+                                           nfilters=shared.nfilters_lat3)
 
-    def forward(self, x: Tensor, flags: Tensor, laterals_in: Tensor):
+    def forward(self, x: Tensor, flags: Tensor, laterals_in: Tensor) -> tuple[Tensor, list[Tensor]]:
         """
         Args:
             x: The model input.
@@ -248,7 +251,7 @@ class InitialEmbeddingBlock(nn.Module):
             # The projection layer.
             self.td_linear_proj = nn.Linear(in_features=self.top_filters * 2, out_features=self.top_filters)
 
-    def forward(self, bu_out: Tensor, flags: Tensor) -> tuple[Tensor]:
+    def forward(self, bu_out: Tensor, flags: Tensor) -> Tensor:
         """
         Args:
             bu_out: The BU1 output.
@@ -293,6 +296,7 @@ class BasicBlockTD(nn.Module):
             out_channels: Out channels for the last block.
             stride: The stride to upsample according.
             block_inshape: The model input shape, needed for the upsample block.
+            index: The block index.
         """
         super(BasicBlockTD, self).__init__()
         self.ntasks = opts.ntasks  # The number of tasks.
@@ -323,7 +327,7 @@ class BasicBlockTD(nn.Module):
             self.upsample = nn.Sequential(nn.Identity(), conv1x1(in_channels=in_channels, out_channels=out_channels),
                                           norm_layer(opts=opts, num_channels=out_channels))
 
-    def forward(self, x: Tensor, flags, laterals: Tensor) -> tuple[Tensor, list[Tensor]]:
+    def forward(self, x: Tensor, flags: Tensor, laterals: Tensor) -> tuple[Tensor, list[Tensor]]:
         """
         Args:
             x: The model input.

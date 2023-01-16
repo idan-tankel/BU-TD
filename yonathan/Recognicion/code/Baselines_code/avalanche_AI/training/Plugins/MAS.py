@@ -1,22 +1,28 @@
+"""
+MAS plugin.
+Very similar to EWC
+Just, with another coefficients
+computation rule.
+"""
 import argparse
-import copy
 import sys
 from typing import Dict, Union
 
 import torch
+from training.Data.Structs import inputs_to_struct
 import torch.nn as nn
-from avalanche.training.plugins import MASPlugin
 from avalanche.training.templates.supervised import SupervisedTemplate as Regularization_strategy
-from avalanche.training.utils import copy_params_dict, zerolike_params_dict
 from torch.utils.data import DataLoader
-from torch.utils.data import Dataset
 
-from Baselines_code.baselines_utils import compute_quadratic_loss, compute_fisher_information_matrix
+from Baselines_code.baselines_utils import compute_quadratic_loss, compute_fisher_information_matrix, Norm
+from training.Data.Data_params import RegType
+from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
 
 sys.path.append(r'/')
 
 
-class MAS(MASPlugin):
+# TODO -ADD SUCH DESCRIPTION FOR ALL PLUGINS.
+class MAS(Base_plugin):
     """
     Memory Aware Synapses (MAS) plugin.
 
@@ -35,117 +41,80 @@ class MAS(MASPlugin):
     https://github.com/mmasana/FACIL/blob/master/src/approach/mas.py
     """
 
-    def __init__(self, parser: argparse, prev_model: Union[nn.Module, None] = None,
-                 prev_data: Union[Dataset, None] = None, load_from=None):
+    def __init__(self, opts: argparse, prev_checkpoint: Union[dict, None] = None, load_from=None):
         """
         Args:
-            parser: The parser options.
-            prev_model: The previous model.
-            prev_data: The previous data.
+            opts: The model options.
+            prev_checkpoint: The previous model.
+
         """
 
         # Init super class
-        super().__init__()
-
+        super(MAS, self).__init__(opts=opts, prev_checkpoint=prev_checkpoint, reg_type=RegType.MAS)
         # Regularization Parameters and Importances parameters.
-        self.batch_size, self.device, self.parser, self.reg_factor, self.alpha = parser.bs, parser.device, parser, \
-            parser.MAS_lambda, parser.mas_alpha
+        self.alpha = opts.mas_alpha
         # Model parameters
-        self.params: Union[Dict, None] = None  # The parameters we want to regularize.
         self.importances: Union[Dict, None] = None  # The parameters importances.
-        self.num_exp = 0  # No experiences trained so far.
-        self.inputs_to_struct = parser.inputs_to_struct  # Input to struct.
         # If we have previous model we save it and compute its importances.
-        if prev_model is not None:
-            self.prev_model = copy.deepcopy(prev_model)  # Previous model.
-            print("Computing Importances")
-
-            def Norm(parser, x, out):
-                return torch.norm(out.classifier, dim=1).pow(2).mean()
-
-            dataloader = DataLoader(prev_data, batch_size=self.parser.bs)  # The dataloader.
+        if prev_checkpoint is not None:
+            self.num_exp = 1
+            dataloader = self.Get_old_dl()  # The old data-set for computing the coefficients.
             # Compute the importances.
-
-            #
             if load_from is not None:
                 model_meta_data = torch.load(load_from)
                 try:
                     self.importances = model_meta_data['MAS_importances']
+                    print("Load computed importances.")
                 except KeyError:
-                    self.importances = compute_fisher_information_matrix(parser=parser, model=self.prev_model, norm=1,
+                    print("Computing Importances")
+                    self.importances = compute_fisher_information_matrix(opts=opts, model=self.prev_model, norm=1,
                                                                          criterion=Norm, dataloader=dataloader,
                                                                          device='cuda')
                     model_meta_data['MAS_importances'] = self.importances
                     torch.save(model_meta_data, load_from)
                     print("Computed MAS importances once for all!")
-            #
-            print("Done computing Importances")
             # The parameters we want to regularize are only the backbone parameters.
-            self.params = dict(copy_params_dict(self.prev_model.feature_extractor))
             # Update the number of trained experiences.
-            self.num_exp = 1
 
-    def before_backward(self, strategy: Regularization_strategy, **kwargs) -> None:
+    def penalty(self, model: nn.Module, mb_x: inputs_to_struct, **kwargs):
         """
-        Add the MAS loss to the classification loss.
+
         Args:
-            strategy: The strategy.
-            **kwargs:
+            model: The current model.
+            mb_x: The input.
+            **kwargs: Possible args.
 
         Returns:
 
         """
-        # Check if the task is not the first
-        exp_counter = strategy.clock.train_exp_counter + self.num_exp
-        if exp_counter == 0 or self.reg_factor == 0.0:
-            return
-
-        penalty = compute_quadratic_loss(strategy.model, self.prev_model, importance=self.importances,
-                                         device=strategy.device)
-        strategy.loss += self.reg_factor * penalty
-
-    def before_training(self, strategy: Regularization_strategy, **kwargs) -> None:
-        """
-        Before training initialize the parameters, importances.
-        Args:
-            strategy: The strategy.
-            **kwargs:
-
-        """
-        # Parameters before the first task starts
-        # If no tasks trained so far.
-        if self.num_exp == 0:
-            if not self.params:
-                self.params = dict(copy_params_dict(strategy.model))
-
-            # Initialize Fisher information weight importance
-            if not self.importances:
-                self.importances = dict(zerolike_params_dict(strategy.model))
+        return compute_quadratic_loss(model, self.prev_model, importance=self.importances,
+                                      device=self.device)
 
     def after_training_exp(self, strategy: Regularization_strategy, **kwargs) -> None:
         """
         Update the Importances after the experience is finished.
         Args:
             strategy: The strategy.
-            **kwargs:
+            **kwargs: Possible args.
 
         """
         print("update")
-        self.params = dict(copy_params_dict(strategy.model))
-        # Check if previous importance is available
-        if not self.importances:
-            raise ValueError("Importance is not available")
-
         # Get importance
-        def Norm(parser, x, out):
-            return torch.norm(out.classifier, dim=1).pow(2).mean()
-
-        # Norm_one = lambda parser, x, out: torch.norm(out.classifier, dim=1).pow(2).mean()
-        dataloader = DataLoader(strategy.experience.dataset, batch_size=self.parser.bs)  # The dataloader.
+        dataloader = DataLoader(strategy.experience.dataset, batch_size=self.opts.bs)  # The dataloader.
         # Compute the importances.
-        curr_importances = compute_fisher_information_matrix(parser=self.parser, model=self.prev_model, norm=1,
+        curr_importances = compute_fisher_information_matrix(opts=self.opts, model=self.prev_model, norm=1,
                                                              criterion=Norm, dataloader=dataloader,
                                                              device='cuda')
         # Update importance
         for name in self.importances.keys():
             self.importances[name] = (self.alpha * self.importances[name] + (1 - self.alpha) * curr_importances[name])
+
+    def state_dict(self, strategy: Regularization_strategy):
+        """
+        Args:
+            strategy: The strategy.
+
+        Returns:
+
+        """
+        return self.importances

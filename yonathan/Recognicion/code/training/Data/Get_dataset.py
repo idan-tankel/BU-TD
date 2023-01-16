@@ -1,9 +1,12 @@
+"""
+Here we return the data-set and data-loader objects.
+"""
 import argparse
 import os
 import pickle
 import sys
 from pathlib import Path
-
+from typing import Union
 from torch.utils.data import DataLoader
 
 from training.Data.Data_params import Flag, DsType
@@ -14,7 +17,7 @@ sys.path.append(os.path.join(Path(__file__).parents[2], 'Data_Creation'))
 # Return the datasets and dataloaders.
 
 def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, lang_idx: int,
-                                      direction_tuple: list[tuple[int, int]]) -> dict:
+                                      direction_tuple: list[tuple[int, int]], data: Union[None, type] = None) -> dict:
     """
     Getting the train,test,val(if exists) datasets.
     Args:
@@ -22,6 +25,7 @@ def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, lang_idx:
         data_fname: The data path.
         lang_idx: The language index.
         direction_tuple: The direction tuple.
+        data: Possible data-set object.
 
     Returns: The train_dl, test_dl, val_dl(if exists) datasets.
     """
@@ -34,9 +38,10 @@ def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, lang_idx:
         from training.Data.Datasets import DatasetGuidedSingleTask as dataset
     elif opts.model_flag is Flag.TD:
         from training.Data.Datasets import DatasetGuidedInterleaved as dataset
-
-    if opts.ds_type is DsType.Avatar:
-        from training.Data.Datasets import DatasetAvatar as dataset
+    else:
+        raise Exception("You must implement a dataset object to support that model type.")
+    if data is not None:
+        dataset = data
 
     path_fname = os.path.join(data_fname, 'MetaData')
     # Opening the conf file and retrieve number of samples, img shape, number of objects per image.

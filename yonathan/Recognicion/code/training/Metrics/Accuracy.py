@@ -1,3 +1,6 @@
+"""
+Here we define our accuracy functions, including base, multi label and weighted for baseline models.
+"""
 import argparse
 
 import torch
