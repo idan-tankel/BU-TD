@@ -318,7 +318,7 @@ class BUTDModel(nn.Module):
         self.use_lateral_tdbu = opts.use_lateral_tdbu and opts.model_flag is not Flag.NOFLAG
         # If we use, we create occurrence head.
         if self.use_bu1_loss:
-            self.occhead = OccurrenceHead(opts=opts)  # TODO - CHANGE TO OCCURRENCE_HEAD
+            self.occhead = OccurrenceHead(opts=opts)
         bu_shared = BUStreamShared(opts=opts)  # The shared part between BU1, BU2.
         shapes = bu_shared.inshapes  # The model output layers shape.
         #   self.bu_inshapes = bu_shared.inshapes

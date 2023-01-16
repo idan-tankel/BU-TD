@@ -96,7 +96,7 @@ def get_laterals(laterals: list[Tensor], layer_id: int, block_id: int = 0) -> Un
     return layer_lats
 
 
-def num_params(params: Union[Iterator]) -> int:
+def num_params(params: Iterator) -> int:
     """
     Computing the number of parameters in a given list.
     Args:
@@ -113,7 +113,8 @@ def num_params(params: Union[Iterator]) -> int:
     return num_param
 
 
-def create_optimizer_and_scheduler(opts: argparse, learned_params: list, nbatches: int) -> tuple:
+def create_optimizer_and_scheduler(opts: argparse, learned_params: list, nbatches: int) -> \
+        tuple[optim, optim.lr_scheduler]:
     """
     Create optimizer and a scheduler according to opts.
     Args:
@@ -242,10 +243,12 @@ def load_model(model, results_dir, model_path: str) -> dict:
     model.load_state_dict(checkpoint['model_state_dict'])  # Loading the saved weights.
     return checkpoint
 
+
 def create_single_one_hot(opts, flags: Tensor) -> Tensor:
     """
     Given the flag, we compose to task, direction flag and compute the unique task id.
     Args:
+        opts: The model opts.
         flags: The flags.
 
     Returns: The task flag.

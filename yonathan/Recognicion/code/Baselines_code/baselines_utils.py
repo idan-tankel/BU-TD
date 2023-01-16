@@ -7,18 +7,13 @@ from typing import Callable
 
 from avalanche.models.utils import avalanche_forward
 from avalanche.training.utils import zerolike_params_dict
-from torch import Tensor
-
-from training.Utils import preprocess
-from training.Data.Structs import outs_to_struct
-
 from torch.utils.data import DataLoader
-from training.Data.Parser import GetParser, update_parser
-from training.Modules.Models import *
-from Data_Creation.Create_dataset_classes import DsType
-from training.Modules.Create_Models import create_model
 
 from training.Data.Data_params import RegType
+from training.Data.Parser import GetParser, update_parser
+from training.Modules.Create_Models import create_model
+from training.Modules.Models import *
+from training.Utils import preprocess
 
 
 def load_model(model: nn.Module, results_path: str, model_path: str) -> dict:

@@ -174,6 +174,7 @@ class Regularization_strategy(SupervisedTemplate):
         strategy_state_dict['regulizer_state_dict'] = self.regularization.state_dict(
             self) if self.reg_type is not RegType.Naive else None
         strategy_state_dict['current_model'] = self.model.state_dict()
+        strategy_state_dict['trained_tasks'] = self.model.trained_tasks
         return strategy_state_dict
 
 

@@ -32,13 +32,16 @@ def main(reg_type: Union[RegType, None], ds_type: DsType, new_task, load):
     opts, model = Get_updated_opts(ds_type=ds_type, reg_type=reg_type)
     if reg_type is not RegType.SI:
         path = 'Smaller_model_Task_[0, (1, 0)]/Naive/lambda=0/ResNet_epoch40_direction=(1, 0).pt'
-    #  path = 'Task_[0, (0, 1)]/LWF/lambda=0.1/ResNet_epoch10_direction=(0, 1).pt'
-    #  path = 'Smaller_model_Task_[0, (-2, 0)]/LWF/lambda=0.03/ResNet_epoch15_direction=(-2, 0).pt'
-    #   path = 'Smaller_model_Task_[0, (0, 1)]/Naive/lambda=0/ResNet_epoch40_direction=(0, 1).pt'
-    #  path = 'Task_[0, (0, 1)]/LFL/lambda=0.35/ResNet_epoch10_direction=(0, 1).pt'
-    #  path = 'Smaller_model_Task_[0, (-2, 0)]/LFL/lambda=0.15/ResNet_epoch14_direction=(-2, 0).pt'
-    #   path = 'Smaller_model_Task_[0, (-2, 0)]/LWF/lambda=0.029/ResNet_epoch9_direction=(-2, 0).pt'
-    #  model_path = 'Smaller_model_Task_[0, (0, 1)]/EWC/lambda=0.98/ResNet_epoch6_direction=(0, 1).pt'
+        #  path = 'Task_[0, (0, 1)]/LWF/lambda=0.1/ResNet_epoch10_direction=(0, 1).pt'
+        #  path = 'Smaller_model_Task_[0, (-2, 0)]/LWF/lambda=0.03/ResNet_epoch15_direction=(-2, 0).pt'
+        #   path = 'Smaller_model_Task_[0, (0, 1)]/Naive/lambda=0/ResNet_epoch40_direction=(0, 1).pt'
+        #  path = 'Task_[0, (0, 1)]/LFL/lambda=0.35/ResNet_epoch10_direction=(0, 1).pt'
+        #  path = 'Smaller_model_Task_[0, (-2, 0)]/LFL/lambda=0.15/ResNet_epoch14_direction=(-2, 0).pt'
+        #   path = 'Smaller_model_Task_[0, (-2, 0)]/LWF/lambda=0.029/ResNet_epoch9_direction=(-2, 0).pt'
+        #  model_path = 'Smaller_model_Task_[0, (0, 1)]/EWC/lambda=0.98/ResNet_epoch6_direction=(0, 1).pt'
+        #   path = 'Smaller_model_Task_[0, (0, 1)]/LWF/lambda=0.4/ResNet_epoch16_direction=(0, 1).pt'
+        #   path = 'Smaller_model_Task_[0, (-1, -1)]/LWF/lambda=0.3/ResNet_epoch16_direction=(-1, -1).pt'
+        path = 'Smaller_model_Task_[0, (0, 1)]/LWF/lambda=0.1/ResNet_epoch23_direction=(0, 1).pt'
     else:
         path = 'Smaller_model_Task_[0, (1, 0)]/SI/lambda=0.125/ResNet_epoch40_direction=(1, 0).pt'
     model_path = os.path.join(opts.baselines_dir, path)
@@ -55,9 +58,10 @@ def main(reg_type: Union[RegType, None], ds_type: DsType, new_task, load):
     # The new tasks.
     new_data = get_dataset_for_spatial_relations(opts, opts.Images_path, 0, [new_task[-1]])
     old_data = get_dataset_for_spatial_relations(opts, opts.Images_path, 0, [(1, 0)])
-    test = False
+    test = True
     if test:
-        model_path = 'Smaller_model_Task_[0, (0, 1)]/MAS/lambda=0.01/ResNet_epoch5_direction=(0, 1).pt'
+        model_path = 'Smaller_model_Task_[0, (1, 1)]/LWF/lambda=0.1/ResNet_epoch2_direction=(1, 1).pt'
+        #   model_path =  'Smaller_model_Task_[0, (1, 0)]/Naive/lambda=0/ResNet_epoch40_direction=(1, 0).pt'
         checkpoint = load_model(model, model_path=model_path,
                                 results_path=opts.baselines_dir)
         print(accuracy(opts, model, new_data['test_dl']))
@@ -71,4 +75,4 @@ def main(reg_type: Union[RegType, None], ds_type: DsType, new_task, load):
     strategy.train_sequence(scenario)
 
 
-main(reg_type=RegType.SI, ds_type=DsType.Fashionmnist, new_task=[0, (0, 1)], load=True)
+main(reg_type=RegType.LWF, ds_type=DsType.Fashionmnist, new_task=[0, (1, 1)], load=True)

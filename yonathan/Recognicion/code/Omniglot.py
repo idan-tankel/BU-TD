@@ -17,6 +17,17 @@ from training.Utils import num_params
 
 def main(train_right, train_left, ds_type=DsType.Emnist, flag=Flag.CL, model_type=BUTDModel, lang_id=0,
          direction=(1, 0)):
+    """
+
+    Args:
+        train_right:
+        train_left:
+        ds_type:
+        flag:
+        model_type:
+        lang_id:
+        direction:
+    """
     parser = GetParser(model_flag=flag, ds_type=ds_type, model_type=model_type)
     project_path = Path(__file__).parents[1]
     results_dir = os.path.join(project_path, 'data/{}/results/model'.format(str(ds_type)))
@@ -53,7 +64,8 @@ def main(train_right, train_left, ds_type=DsType.Emnist, flag=Flag.CL, model_typ
                                      task_id=lang_id,
                                      nbatches_train=len(DataLoaders['train_dl']), train_ds=DataLoaders['train_ds'])
 
-        #        wrapped_model.load_model(model_path='modelModel_lang=49_direction=(-1, 0)/BUTDModel_best_direction=(-1, 0).pt')
+        # wrapped_model.load_model(model_path='modelModel_lang=49_direction=(-1, 0)/BUTDModel_best_direction=(-1,
+        # 0).pt')
         print(num_params(learned_params))
         acc = wrapped_model.Accuracy(DataLoaders['test_dl'])
         print(acc)

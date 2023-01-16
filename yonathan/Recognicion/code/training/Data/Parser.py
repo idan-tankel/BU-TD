@@ -122,9 +122,9 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
     # EWC
     opts.add_argument('--EWC_lambda', default=0.985, type=float, help='The ewc strength')
     # LFL
-    opts.add_argument('--LFL_lambda', default=0.07, type=float, help='The LFL strength')
+    opts.add_argument('--LFL_lambda', default=0.5, type=float, help='The LFL strength')
     # LWF
-    opts.add_argument('--LWF_lambda', default=0.07, type=float, help='The LWF strength')
+    opts.add_argument('--LWF_lambda', default=0.5, type=float, help='The LWF strength')
     opts.add_argument('--temperature_LWF', default=2.0, type=float, help='The LWF temperature')
     # MAS
     opts.add_argument('--mas_alpha', default=0.5, type=float, help='The MAS continual importance weight')
@@ -140,7 +140,7 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
     opts.add_argument('--Naive_lambda', default=0, type=float, help='The rwalk strength')
     # SI
     opts.add_argument('--SI_eps', default=0.0000001, type=float, help='The SI strength')
-    opts.add_argument('--SI_lambda', default=0.125, type=float, help='The rwalk strength')
+    opts.add_argument('--SI_lambda', default=0.005, type=float, help='The rwalk strength')
     # General baseline arguments.
     opts.add_argument('--train_mb_size', default=10, type=int, help='The avalanche training bs')
     opts.add_argument('--eval_mb_size', default=10, type=int, help='The avalanche evaluation bs')

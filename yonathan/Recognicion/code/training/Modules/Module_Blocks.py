@@ -119,7 +119,7 @@ class Modulation_and_Lat(nn.Module):
         self.norm_and_relu = nn.Sequential(opts.norm_layer(opts, nfilters), opts.activation_fun())
         self.relu = opts.activation_fun()  # activation_fun after the skip connection
 
-    def forward(self, x: Tensor, flags:Tensor, lateral: Tensor) -> Tensor:
+    def forward(self, x: Tensor, flags: Tensor, lateral: Tensor) -> Tensor:
         """
         Args:
             x: The model input.

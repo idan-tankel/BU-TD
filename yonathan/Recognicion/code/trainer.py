@@ -48,13 +48,13 @@ def main(flag=Flag.CL):
         Non_initial_tasks = [(-1, 0), (0, 1), (0, -1)]  # Three additional tasks.
         initial_tasks = [(1, 0)]
 
-    parser = GetParser(task_idx=0, model_flag=flag, ds_type=Data_type, model_type=BUTDModel)
+    parser = GetParser(model_flag=flag, ds_type=Data_type)
     project_path = Path(__file__).parents[1]
     results_dir = os.path.join(project_path, 'Data_Creation/{}/results/model'.format(Data_type.Enum_to_name()))
     data_path = os.path.join(project_path, 'Data_Creation/{}/samples/{}'.format(Data_type.Enum_to_name(),
                                                                                 cmd_parser.parse_args().data_dir))
     logger_dir = os.path.join(project_path, 'Data_Creation/emnist/results/')
-    Model_checkpoint = ModelCheckpoint(dirpath=logger_dir, monitor="val_loss_epoch", mode="min")
+    Model_checkpoint = ModelCheckpoint(dirpath=logger_dir, monitor="val_loss_epoch")
     Checkpoint_saver = CheckpointSaver(dirpath=parser.model_dir)
     wandb_logger = WandbLogger(project="My_first_project_5.10", job_type='train',
                                save_dir=results_dir)

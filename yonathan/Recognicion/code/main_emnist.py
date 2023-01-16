@@ -19,7 +19,7 @@ import torch.nn.modules as Module
 
 
 def main(train_right, train_left, ds_type: DsType = DsType.Emnist, flag: Flag = Flag.CL, model_type: Module = BUTDModel,
-         task: list = [(-1, 0)], epoch=0):
+         task=None, epoch=0):
     """
 
     Args:
@@ -31,6 +31,8 @@ def main(train_right, train_left, ds_type: DsType = DsType.Emnist, flag: Flag = 
         task:
         epoch:
     """
+    if task is None:
+        task = [(-1, 0)]
     parser = GetParser(model_flag=flag, ds_type=ds_type, model_type=model_type)
     project_path = Path(__file__).parents[1]
     data_path = os.path.join(project_path, f'data/{str(ds_type)}/samples/(4,4)_image_matrix')
@@ -82,4 +84,4 @@ def main(train_right, train_left, ds_type: DsType = DsType.Emnist, flag: Flag = 
         trainer.fit(wrapped_model, train_dataloaders=DataLoaders['train_dl'], val_dataloaders=DataLoaders['test_dl'])
 
 
-main(True, True, task=[(-1, 0)], epoch=60, flag=Flag.NOFLAG)
+main(True, True, task=[(-1, 0)], epoch=60)

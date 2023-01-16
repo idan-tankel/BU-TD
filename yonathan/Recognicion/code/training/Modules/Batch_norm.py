@@ -67,7 +67,7 @@ class BatchNorm(nn.Module):
         if self.training or not self.save_stats:
             return self.norm(input=inputs)  # applying the norm function.
         else:
-            task_flag = create_single_one_hot(opts = self.opts, flags = flags)
+            task_flag = create_single_one_hot(opts=self.opts, flags=flags)
             running_mean = (task_flag @ self.running_mean_list).unsqueeze(dim=2).unsqueeze(dim=2)
             running_var = (task_flag @ self.running_var_list).unsqueeze(dim=2).unsqueeze(dim=2)
             running_var = running_var if not self.training or self.track_running_stats else None
@@ -129,8 +129,6 @@ class BatchNorm(nn.Module):
         running_var = self.norm.running_var.detach().clone()  # Copy the running var.
         self.running_mean_list[task_and_direction_idx, :] = running_mean  # Store the running mean.
         self.running_var_list[task_and_direction_idx, :] = running_var  # Store the running var.`1
-
-
 
 
 def store_running_stats(model: nn.Module, task_id: int, direction_id: tuple) -> None:

@@ -14,7 +14,6 @@ from training.Data.Parser import GetParser
 from training.Data.Structs import Training_flag
 from training.Modules.Create_Models import create_model
 from training.Modules.Models import BUTDModel
-from training.Modules.Batch_norm import BatchNorm
 from training.Utils import num_params
 
 
@@ -75,11 +74,12 @@ def main_fashion(train_original: bool, train_new: bool, ds_type: DsType = DsType
                                      task_id=0,
                                      nbatches_train=len(DataLoaders['train_dl']), train_ds=DataLoaders['train_ds'])
         wrapped_model.load_model(
-            model_path=f'Task_[(0, 1)]smaller_model_model_wd_1e-05_70_epochsModel_(0, 1)/BUTDModel_best_direction=(0, 1).pt')
+            model_path=f'Task_{task}smaller_model_model_wd_1e-05_70_epochsModel_{task[0]}/BUTDModel_best_direction='
+                       f'{task[0]}.pt')
         print(wrapped_model.Accuracy(DataLoaders['test_dl']))
         print(num_params(learned_params))
         parser.model = model
         trainer.fit(wrapped_model, train_dataloaders=DataLoaders['train_dl'], val_dataloaders=DataLoaders['test_dl'])
 
 
-main_fashion(False, True, task=[(0, 1)], num_epochs=60)
+main_fashion(False, True, task=[(-1, 1)], num_epochs=60)

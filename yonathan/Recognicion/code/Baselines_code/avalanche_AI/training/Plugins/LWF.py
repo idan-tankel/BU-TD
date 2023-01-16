@@ -39,9 +39,11 @@ class LwF(Base_plugin):
 
         super(LwF, self).__init__(opts=opts, prev_checkpoint=prev_model, reg_type=RegType.LWF)
         self.temperature = opts.temperature_LWF  # The temperature.
+        #     self.trained_tasks.append([0, (0, 1)])
+        # self.trained_tasks.append([0, (-2, 0)])
+        self.trained_tasks = [[0, (1, 0)]]
         self.trained_tasks.append([0, (0, 1)])
-        self.trained_tasks.append([0, (-2, 0)])
-        #  self.trained_tasks = [[0,(0, 1)]]
+    #    self.trained_tasks.append([0, (-1, -1)])
         self.prev_tasks = dict()
         if prev_model is not None:
             self.num_exp = 1  # Number of trained experiences is set to 1.

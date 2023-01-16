@@ -88,21 +88,19 @@ class MultiTaskHead(nn.Module):
         """
         (bu2_out, flag) = inputs
         # In train mode we train only one head.
-        if self.training or True:
+        if self.training:
             task_id = Flag_to_task(opts=self.opts, flags=flag)  # Get the task id.
-            task_out = self.taskhead[task_id](bu2_out).squeeze()  # apply the appropriate task-head.
+            task_out = self.taskhead[task_id](bu2_out)  # apply the appropriate task-head.
         # Otherwise, we test all heads and choose the desired by the direction flag.
         else:
             outputs = []  # All outputs list.
             for layer in self.taskhead:  # For each task head we compute the output.
-                layer_out = layer(bu2_out).squeeze()
+                layer_out = layer(bu2_out)
                 outputs.append(layer_out)
-
-            outs = torch.stack(tensors=outputs, dim=1)  # Sum to have single prediction per
-            # task.
-            task_flag = create_single_one_hot(opts=self.opts, flags=flag).unsqueeze(dim=1)
-            task_out = torch.bmm(task_flag, outs).squeeze()
-
+            outs = torch.stack(tensors=outputs, dim=1)  # Sum to have single prediction per task.
+            task_flag = create_single_one_hot(opts=self.opts, flags=flag)
+            task_out = torch.einsum('ijkl,ij->ikl', outs, task_flag)  # Multiply the flag and the output.
+        task_out = task_out.squeeze()
         return task_out
 
 

@@ -148,7 +148,7 @@ class ComposeModel(nn.Module):
 ds_type = DsType.Fashionmnist
 
 parser = GetParser(model_flag=Flag.CL, ds_type=ds_type)
-model = create_model(parser)
+model: BUTDModel = create_model(parser)
 load_model(model, parser.results_dir, 'Model_(1, 0)_single_base/BUTDModel_best_direction=[(1, 0)].pt')
 comp_model = ComposeModel(opts=parser, butd_model=model)
 project_path = Path(__file__).parents[1]
