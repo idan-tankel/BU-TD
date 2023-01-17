@@ -8,12 +8,13 @@ import sys
 from typing import Union
 
 import torch
-from torch import Tensor
 import torch.nn as nn
 from avalanche.training.templates.supervised import SupervisedTemplate as Regularization_strategy
+from torch import Tensor
 from torch.utils.data import DataLoader
-from Baselines_code.baselines_utils import compute_quadratic_loss, compute_fisher_information_matrix, RegType
+
 from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
+from Baselines_code.baselines_utils import compute_quadratic_loss, compute_fisher_information_matrix, RegType
 
 sys.path.append(r'/')
 

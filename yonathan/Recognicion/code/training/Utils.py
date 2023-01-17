@@ -6,12 +6,10 @@ import os
 from typing import Union, Iterator
 
 import torch
-from torch import Tensor
 import torch.optim as optim
+from torch import Tensor
 
 from Data_Creation.Create_dataset_classes import Sample
-
-
 
 
 def folder_size(path: str) -> int:
@@ -44,18 +42,18 @@ def create_dict(path: str, offset: int = 0) -> dict:
 
 def get_omniglot_dictionary(num_tasks: int, raw_data_folderpath: str) -> dict:
     """
-    Getting the omniglot dictionary, for each task the number of characters in it.
+    Getting the omniglot dictionary, for each list_task_structs the number of characters in it.
     Args:
         num_tasks: The initial tasks set.
         raw_data_folderpath: The path to the raw data.
 
-    Returns: A dictionary assigning for each task its number of characters.
+    Returns: A dictionary assigning for each list_task_structs its number of characters.
 
     """
     nclasses = create_dict(path=raw_data_folderpath,
-                           offset=1)  # Receiving for each task the number of characters in it.
-    #  nclasses[0] = sum(
-    #      nclasses[51-task-2] for task in range(num_tasks))  # receiving number of characters in the initial tasks.
+                           offset=1)  # Receiving for each list_task_structs the number of characters in it.
+    # nclasses[0] = sum( nclasses[51-list_task_structs-2] for list_task_structs in range(num_tasks))  # receiving
+    # number of characters in the initial tasks.
     nclasses = {k: v for k, v in sorted(nclasses.items(), key=lambda item: item[1])}
     nclasses_New = {}
     for i, key in enumerate(nclasses.keys()):
@@ -160,15 +158,12 @@ def preprocess(inputs: list[Tensor], device: str) -> list[Tensor]:
 def tuple_direction_to_index(num_x_axis: int, num_y_axis: int, direction: tuple, ndirections: int, task_id: int = 0) \
         -> tuple[Tensor, Tensor]:
     """
-    Compute given task tuple and task index the task index and task index.
-    Args:
-        num_x_axis: The neighbor radios we want to generalize to in the x-axis.
-        num_y_axis: The neighbor radios we want to generalize to in the y-axis.
-        direction: The task tuple.
-        ndirections: The number of directions.
-        task_id: The task index.
+    Compute given list_task_structs tuple and list_task_structs index the list_task_structs index and
+    list_task_structs index. Args: num_x_axis: The neighbor radios we want to generalize to in the x-axis.
+    num_y_axis: The neighbor radios we want to generalize to in the y-axis. direction: The list_task_structs tuple.
+    ndirections: The number of directions. task_id: The list_task_structs index.
 
-    Returns: The task index and the task index.
+    Returns: The list_task_structs index and the list_task_structs index.
 
     """
     direction_x, direction_y = direction
@@ -185,29 +180,29 @@ def Compose_Flag(opts: argparse, flags: Tensor) -> tuple[Tensor, Tensor, Tensor]
         opts: The model model_opts.
         flags: The flag we desire to compose.
 
-    Returns: The task,task, arg flags.
+    Returns: The list_task_structs,list_task_structs, arg flags.
 
     """
-    direction_flag = flags[:, :opts.ndirections]  # The task vector.
-    task_flag = flags[:, opts.ndirections:opts.ndirections + opts.ntasks]  # The task vector.
+    direction_flag = flags[:, :opts.ndirections]  # The list_task_structs vector.
+    task_flag = flags[:, opts.ndirections:opts.ndirections + opts.ntasks]  # The list_task_structs vector.
     arg_flag = flags[:, opts.ndirections + opts.ntasks:]  # The argument vector.
     return direction_flag, task_flag, arg_flag
 
 
 def Flag_to_task(opts: argparse, flags: Tensor) -> int:
     """
-    Composes the flag and returns the task id.
+    Composes the flag and returns the list_task_structs id.
     Args:
         opts: The model model_opts.
         flags: The flag
 
-    Returns: The task index.
+    Returns: The list_task_structs index.
 
     """
     direction_flag, task_flag, _ = Compose_Flag(opts=opts, flags=flags)
-    direction_id = flag_to_idx(flags=direction_flag)  # The task id.
-    task_id = flag_to_idx(flags=task_flag)  # The task id.
-    idx = direction_id + opts.ndirections * task_id  # The task.
+    direction_id = flag_to_idx(flags=direction_flag)  # The list_task_structs id.
+    task_id = flag_to_idx(flags=task_flag)  # The list_task_structs id.
+    idx = direction_id + opts.ndirections * task_id  # The list_task_structs.
     return idx
 
 
@@ -248,25 +243,22 @@ def load_model(model, results_dir, model_path: str) -> dict:
 
 def create_single_one_hot(opts, flags: Tensor) -> Tensor:
     """
-    Given the flag, we compose to task, task flag and compute the unique task id.
+    Given the flag, we compose to list_task_structs, list_task_structs flag and compute the unique list_task_structs id.
     Args:
         opts: The model model_opts.
         flags: The flags.
 
-    Returns: The task flag.
+    Returns: The list_task_structs flag.
 
     """
-    # Compute the task, task flag.
+    # Compute the list_task_structs, list_task_structs flag.
     direction_flags, task_flag, _ = Compose_Flag(opts=opts, flags=flags)
-    # The task id.
+    # The list_task_structs id.
     direction_id = torch.argmax(direction_flags, dim=1)
-    # The task id.
+    # The list_task_structs id.
     task_id = torch.argmax(task_flag, dim=1)
-    # The task id.
+    # The list_task_structs id.
     task_index = direction_id + opts.ntasks * task_id
     # The flag
     flag = torch.nn.functional.one_hot(task_index, opts.ndirections * opts.ntasks).float()
     return flag
-
-
-

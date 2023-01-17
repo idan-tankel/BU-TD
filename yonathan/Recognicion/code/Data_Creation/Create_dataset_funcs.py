@@ -12,6 +12,7 @@ from multiprocessing import Pool
 
 import numpy as np
 from PIL import Image
+
 from Create_dataset_classes import DsType, Sample, CharInfo, DataAugmentClass, MetaData, General_raw_data
 
 
@@ -231,9 +232,9 @@ def Create_several_samples_per_sequence(opts: argparse, prng: random, ds_type: s
     valid_queries = range(num_characters_per_image)  # All queries are valid.
 
     query_part_ids = prng.choice(valid_queries, ngenerate, replace=False)  # Choose ngenerate positions
-    for query_id, query_part_id in enumerate(query_part_ids):  # For each position, sample task and create sample.
-        direction_id = prng.choice(len(valid_directions))  # Sample task id.
-        adj_type = valid_directions[direction_id]  # The task.
+    for query_id, query_part_id in enumerate(query_part_ids):  # For each position, sample list_task_structs and create sample.
+        direction_id = prng.choice(len(valid_directions))  # Sample list_task_structs id.
+        adj_type = valid_directions[direction_id]  # The list_task_structs.
         sample = Sample(opts, query_part_id, adj_type, chars,
                         ngenerate * sample_id + query_id)  # Create sample.
         samples.append(sample)  # Add to the samples list.

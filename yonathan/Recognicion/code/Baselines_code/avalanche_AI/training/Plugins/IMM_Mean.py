@@ -6,18 +6,17 @@ Then merges by mean the weights.
 import argparse
 import os
 import sys
-import torch.nn as nn
-import torch
+from typing import Union
 
+import torch
+import torch.nn as nn
 from avalanche.training.templates.supervised import SupervisedTemplate as Regularization_strategy
 
+from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
 from Baselines_code.baselines_utils import compute_quadratic_loss
 from Baselines_code.baselines_utils import set_model
-
 from training.Data.Data_params import RegType
-from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
 from training.Data.Structs import inputs_to_struct
-from typing import Union
 
 sys.path.append(r'/')
 

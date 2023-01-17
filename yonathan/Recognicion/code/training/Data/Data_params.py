@@ -1,7 +1,8 @@
 """
 Here we define for each data-set its parameters like number of classes,
-number of task, tasks.
+number of list_task_structs, tasks.
 """
+import argparse
 import os.path
 from enum import Enum, auto
 from pathlib import Path
@@ -14,7 +15,7 @@ from Data_Creation.Create_dataset_classes import DsType  # Import the Data_Creat
 from training.Metrics.Accuracy import multi_label_accuracy, multi_label_accuracy_weighted
 from training.Metrics.Loss import multi_label_loss_weighted, multi_label_loss
 from training.Utils import get_omniglot_dictionary, tuple_direction_to_index
-import argparse
+from training.Data.Structs import Task_to_struct
 
 
 # Define the Flag Enums, and Dataset specification and baseline methods.
@@ -26,7 +27,7 @@ class Flag(Enum):
     """
     TD = auto()  # Ordinary BU-TD network training.
     NOFLAG = auto()  # Non-guided model, should output for each character its adjacent neighbor.
-    CL = auto()  # Continual learning flag, a BU-TD network with allocating task embedding for each task.
+    CL = auto()  # Continual learning flag, a BU-TD network with allocating list_task_structs embedding for each task.
 
 
 class RegType(Enum):
@@ -75,10 +76,10 @@ class GenericDataParams:
         self.bu2_loss: Callable = multi_label_loss_weighted if flag_at is Flag.NOFLAG \
             else multi_label_loss  # The BU2 classification loss according to the flag.
         self.task_accuracy: Callable = multi_label_accuracy_weighted if flag_at is Flag.NOFLAG \
-            else multi_label_accuracy  # The task Accuracy metric according to the flag.
+            else multi_label_accuracy  # The list_task_structs Accuracy metric according to the flag.
         self.project_path: Path = Path(__file__).parents[3]  # The path to the project.
-        # The initial tasks we first train in our experiments, default to right task.
-        self.initial_directions: list = [(0,(1, 0))]
+        # The initial tasks we first train in our experiments, default to right list_task_structs.
+        self.initial_directions: list[Task_to_struct] = [Task_to_struct(task=0, direction=(1, 0))]
         self.ntasks: int = 1  # The number of tasks, in mnist, Fashionmnist it's 1, for Omniglot 51.
         self.num_x_axis: int = num_x_axis  # Number of directions we want to generalize to in the x-axis.
         self.num_y_axis: int = num_y_axis  # Number of directions we want to generalize to in the y-axis.
@@ -112,11 +113,11 @@ class EmnistDataset(GenericDataParams):
         super(EmnistDataset, self).__init__(flag_at=flag_at, ds_type=DsType.Emnist, num_x_axis=2, num_y_axis=2)
         self.image_size = [130, 200]  # The Emnist image size.
         # The initial indexes.
-        self.initial_directions = [(0, (1, 0))]
+        self.initial_directions = [Task_to_struct(task=0, direction=(1, 0))]
         initial_directions = [
-            tuple_direction_to_index(num_x_axis=self.num_x_axis, num_y_axis=self.num_y_axis, direction=direction,
+            tuple_direction_to_index(num_x_axis=self.num_x_axis, num_y_axis=self.num_y_axis, direction=task.direction,
                                      ndirections=self.ndirections)[0]
-            for (task, direction) in self.initial_directions]
+            for task in self.initial_directions]
         # The number of heads.
         self.num_heads = [1 if direction not in initial_directions else len(self.initial_directions) for direction in
                           range(self.ndirections)]
@@ -149,7 +150,7 @@ class OmniglotDataset(GenericDataParams):
         """
         Omniglot dataset.
         Args:
-            initial_tasks: The initial task desired set.
+            initial_tasks: The initial list_task_structs desired set.
             flag_at: The model flag.
 
         """
@@ -178,7 +179,7 @@ class AllDataSetOptions:
         Args:
             ds_type: The dataset type.
             flag_at: The training flag.
-            initial_task_for_omniglot_only: The initial task list only for Omniglot.
+            initial_task_for_omniglot_only: The initial list_task_structs list only for Omniglot.
         """
         if ds_type is DsType.Emnist:
             self.data_obj = EmnistDataset(flag_at=flag_at)  # Emnist.

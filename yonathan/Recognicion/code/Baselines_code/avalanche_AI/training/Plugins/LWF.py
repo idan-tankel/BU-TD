@@ -11,10 +11,10 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
-from Baselines_code.baselines_utils import construct_flag
-from training.Data.Structs import inputs_to_struct, outs_to_struct
-from training.Data.Data_params import RegType
 from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
+from Baselines_code.baselines_utils import construct_flag
+from training.Data.Data_params import RegType
+from training.Data.Structs import inputs_to_struct, outs_to_struct
 
 sys.path.append(r'/')
 
@@ -26,7 +26,7 @@ class LwF(Base_plugin):
     Learning without Forgetting plugin.
     LwF uses distillation to regularize the current loss with soft targets
     taken from a previous version of the model.
-    This plugin does not use task identities.
+    This plugin does not use list_task_structs identities.
     When used with multi-headed models, all heads are distilled.
     """
 
@@ -48,9 +48,9 @@ class LwF(Base_plugin):
         self.prev_tasks = dict()
         if prev_model is not None:
             self.num_exp = 1  # Number of trained experiences is set to 1.
-            # Creating the desired flags for each trained task.
+            # Creating the desired flags for each trained list_task_structs.
             for i, task in enumerate(self.trained_tasks):
-                (task_id, direction_id) = task  # The task ,task id.
+                (task_id, direction_id) = task  # The list_task_structs ,list_task_structs id.
                 flag = construct_flag(opts, task_id, direction_id)  # Construct the flag.
                 self.prev_tasks[i] = ((task_id, direction_id), flag)  # Construct the dictionary.
 
@@ -89,7 +89,7 @@ class LwF(Base_plugin):
         dist_loss = 0
         old_flag = x.flags  # Store the old flag.
         for _, New_flag in self.prev_tasks.values():
-            x.flags = New_flag  # Set the new flag to activate the appropriate task-head.
+            x.flags = New_flag  # Set the new flag to activate the appropriate list_task_structs-head.
             y_prev = self.prev_model.forward_and_out_to_struct(x)  # The previous distribution.
             y_curr = model.forward_and_out_to_struct(x)  # The current distribution.
             dist_loss += self._distillation_loss(y_curr, y_prev, x)  # The KL div loss.

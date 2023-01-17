@@ -35,24 +35,24 @@ def load_model(model: nn.Module, results_path: str, model_path: str) -> dict:
 
 def construct_flag(opts: argparse, task_id: int, direction_tuple: tuple) -> Tensor:
     """
-    Construct new flag from the new task, task id.
+    Construct new flag from the new list_task_structs, list_task_structs id.
     Args:
         opts: The model model_opts.
-        task_id: The task id.
-        direction_tuple: The task id.
+        task_id: The list_task_structs id.
+        direction_tuple: The list_task_structs id.
 
-    Returns: The new tasks, with the new task and task.
+    Returns: The new tasks, with the new list_task_structs and list_task_structs.
 
     """
-    # From the task tuple to single number.
+    # From the list_task_structs tuple to single number.
     direction_dir, _ = tuple_direction_to_index(num_x_axis=opts.num_x_axis, num_y_axis=opts.num_y_axis,
                                                 direction=direction_tuple,
                                                 ndirections=opts.ndirections,
                                                 task_id=task_id)
     task_id = torch.tensor(task_id)
-    # The new task vector.
+    # The new list_task_structs vector.
     New_task_flag = torch.nn.functional.one_hot(task_id, opts.ntasks)
-    # The new task vector.
+    # The new list_task_structs vector.
     New_direction_flag = torch.nn.functional.one_hot(direction_dir, opts.ndirections)
     # Concat into one flag.
     New_flag = torch.concat([New_direction_flag, New_task_flag], dim=0).float()

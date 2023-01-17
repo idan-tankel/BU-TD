@@ -3,7 +3,6 @@ Here we define the Models.
 It includes BUTDModel, BUModel and Pure ResNet.
 """
 import argparse
-
 from typing import Iterator
 
 import numpy as np
@@ -82,7 +81,7 @@ class BUModel(nn.Module):
         """
         Args:
             opts: The model model_opts.
-            use_task_embedding: Whether to create the task embedding.
+            use_task_embedding: Whether to create the list_task_structs embedding.
         """
         super(BUModel, self).__init__()
         bu_shared = BUStreamShared(opts=opts)  # The shared model part.
@@ -114,7 +113,7 @@ class BUStream(nn.Module):
         super(BUStream, self).__init__()
         self.opts = opts  # Save the model model_opts.
         self.block = opts.bu_block_type  # The basic block type.
-        self.task_embedding = [[] for _ in range(opts.ndirections)]  # List should contain the task embedding.
+        self.task_embedding = [[] for _ in range(opts.ndirections)]  # List should contain the list_task_structs embedding.
         self.inshapes = shared.inshapes  # The output shape of all layers.
         self.use_lateral = opts.use_lateral_tdbu  # Whether to use the TD -> BU2 laterals.
         self.is_bu2 = is_bu2  # Save whether we are on the BU2 stream.
@@ -143,7 +142,7 @@ class BUStream(nn.Module):
         layers = nn.ModuleList()
         for shared_block in blocks:
             # Create Basic BU blocks for each shared block.
-            block_inshape = self.inshapes[layer_id + 1]  # The block input shape, needed for the task embedding.
+            block_inshape = self.inshapes[layer_id + 1]  # The block input shape, needed for the list_task_structs embedding.
             layer = self.block(opts=self.opts, shared=shared_block, block_inshapes=block_inshape, is_bu2=self.is_bu2,
                                task_embedding=self.task_embedding)
             layers.append(layer)  # Add the layer.
@@ -209,7 +208,7 @@ class TDModel(nn.Module):
             # Create the initial TD block.
             self.InitialTaskEmbedding = InitialEmbeddingBlock(opts=opts)
         # Upsample layer to match the shape before the avgpool.
-        shape_before_avg_pool = tuple(bu_inshapes[-1][1:])  # The last shape of BU1, we task the inner shape.
+        shape_before_avg_pool = tuple(bu_inshapes[-1][1:])  # The last shape of BU1, we list_task_structs the inner shape.
         inshape = bu_inshapes[-1][0]
         self.top_upsample = nn.Upsample(scale_factor=shape_before_avg_pool, mode='bilinear',
                                         align_corners=False)
@@ -259,7 +258,7 @@ class TDModel(nn.Module):
     def forward(self, inputs: tuple[Tensor, Tensor, Tensor]) -> list[Tensor, list[list[Tensor]]]:
         """
         Args:
-            inputs: The output from the BU1 stream, flag the task+arg flag , laterals_in, the laterals from the
+            inputs: The output from the BU1 stream, flag the list_task_structs+arg flag , laterals_in, the laterals from the
             BU1 stream.
 
         Returns: The TD output, lateral connections for BU2.
@@ -268,7 +267,7 @@ class TDModel(nn.Module):
         bu_out, flags, laterals_in = inputs
         laterals_out = []
         if self.use_initial_emb:
-            x = self.InitialTaskEmbedding(bu_out=bu_out, flags=flags)  # Compute the initial task embedding.
+            x = self.InitialTaskEmbedding(bu_out=bu_out, flags=flags)  # Compute the initial list_task_structs embedding.
         else:
             x = bu_out
         laterals_out.append([x])
@@ -322,7 +321,7 @@ class BUTDModel(nn.Module):
         bu_shared = BUStreamShared(opts=opts)  # The shared part between BU1, BU2.
         shapes = bu_shared.inshapes  # The model output layers shape.
         #   self.bu_inshapes = bu_shared.inshapes
-        self.bumodel1 = BUStream(opts=opts, shared=bu_shared)  # The BU1 stream, with no task embedding.
+        self.bumodel1 = BUStream(opts=opts, shared=bu_shared)  # The BU1 stream, with no list_task_structs embedding.
         if self.model_flag is not Flag.NOFLAG:
             self.tdmodel = TDModel(opts=opts, bu_inshapes=shapes)  # The TD stream.
         # If shared is true, the shared part is the same, otherwise we create another shared part.
@@ -333,7 +332,7 @@ class BUTDModel(nn.Module):
         self.bumodel2 = BUStream(opts=opts, shared=bu_shared2, is_bu2=True)  # The BU2 stream.
         # To save the taskhead parameters.
         self.transfer_learning = [[[] for _ in range(opts.ndirections)] for _ in range(opts.ntasks)]
-        # The task-head to transform to the number of classes.
+        # The list_task_structs-head to transform to the number of classes.
         self.Head = MultiTaskHead(opts=opts,
                                   transfer_learning_params=self.transfer_learning)
         if self.model_flag is Flag.CL:  # Storing the Task embedding.
@@ -402,7 +401,7 @@ class BUTDModel(nn.Module):
         """
         Update the tasks list.
         Args:
-            task: The task.
+            task: The list_task_structs.
 
         """
 
@@ -424,7 +423,7 @@ class ResNet(nn.Module):
         self.opts: argparse = opts  # The model model_opts.
         self.ntasks: int = opts.ntasks  # The number of tasks.
         self.ndirections: int = opts.ndirections  # The number of directions.
-        self.feature_extractor: nn.Module = BUModel(opts)  # Create the backbone without the task embedding.
+        self.feature_extractor: nn.Module = BUModel(opts)  # Create the backbone without the list_task_structs embedding.
         self.TL: list = [[[] for _ in range(opts.ndirections)] for _ in range(opts.ntasks)]  # Store the read-out
         # parameters.
         self.classifier: nn.Module = MultiTaskHead(opts=opts, transfer_learning_params=self.TL)  # The classifier head.
@@ -459,7 +458,7 @@ class ResNet(nn.Module):
         """
         Update the tasks list.
         Args:
-            task: The task.
+            task: The list_task_structs.
 
         """
 
@@ -469,8 +468,8 @@ class ResNet(nn.Module):
         """
         Get the specific head and the feature parameters.
         Args:
-            task_id: The task id.
-            direction_tuple: The task tuple
+            task_id: The list_task_structs id.
+            direction_tuple: The list_task_structs tuple
 
         Returns: The learned parameters.
 

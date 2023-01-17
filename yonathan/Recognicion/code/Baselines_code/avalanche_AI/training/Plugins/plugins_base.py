@@ -2,17 +2,18 @@
 Base class for all plugins.
 Support backward, penalty, and model saving.
 """
+import argparse
 import copy
 
+import torch.nn as nn
 from avalanche.training.plugins.strategy_plugin import SupervisedPlugin
 from avalanche.training.templates.supervised import SupervisedTemplate as Regularization_strategy
 from torch import Tensor
-import torch.nn as nn
-import argparse
+
 from Baselines_code.baselines_utils import RegType
+from training.Data.Get_dataset import get_dataset_for_spatial_relations
 from training.Data.Structs import inputs_to_struct
 from training.Modules.Create_Models import create_model
-from training.Data.Get_dataset import get_dataset_for_spatial_relations
 
 
 class Base_plugin(SupervisedPlugin):

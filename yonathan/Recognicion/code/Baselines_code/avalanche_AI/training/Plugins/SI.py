@@ -10,11 +10,12 @@ import sys
 from typing import Union
 
 import torch
-from Baselines_code.baselines_utils import compute_quadratic_loss
-from avalanche.training.templates.supervised import SupervisedTemplate
-from training.Data.Data_params import RegType
-from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
 import torch.nn as nn
+from avalanche.training.templates.supervised import SupervisedTemplate
+
+from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
+from Baselines_code.baselines_utils import compute_quadratic_loss
+from training.Data.Data_params import RegType
 from training.Data.Structs import inputs_to_struct
 
 sys.path.append(r'/')
@@ -38,7 +39,7 @@ class SI(Base_plugin):
 
         self.w = {n: torch.zeros(p.shape).to(self.device) for n, p in
                   self.prev_model.feature_extractor.named_parameters() if p.requires_grad}
-        # Store current parameters as the initial parameters before first task starts
+        # Store current parameters as the initial parameters before first list_task_structs starts
         self.older_params = {n: p.clone().detach().to(self.device) for n, p in
                              self.prev_model.feature_extractor.named_parameters()
                              if p.requires_grad}

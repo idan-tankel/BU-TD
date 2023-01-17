@@ -2,26 +2,24 @@
 Here we define all our classes.
 Including Character, sample and data specified params.
 """
-import random
-from enum import Enum
-
-import skimage
-import torch
-from torch import Tensor
-from torch.utils.data import Dataset
-from imgaug import augmenters as iaa
-
 import argparse
 import os
+import random
+from enum import Enum
 from pathlib import Path
+from typing import Union
 
 import numpy as np
+import skimage
 import skimage.io
+import torch
 import torchvision
+import torchvision.transforms.functional as F
+from imgaug import augmenters as iaa
+from torch import Tensor
+from torch.utils.data import Dataset
 from torchvision import datasets
 from torchvision import transforms
-import torchvision.transforms.functional as F
-from typing import Union
 
 try:
     from utils import Download_raw_omniglot_data
@@ -409,13 +407,13 @@ class Sample:
         Args:
             parser: The model_opts.
             query_part_id: The index we query about.
-            adj_type: The task we query about.
+            adj_type: The list_task_structs we query about.
             chars: The list of all characters in the sample.
             sample_id: The sample id.
         """
         #  self.sampled_chars = sampled_chars
         self.query_part_id = query_part_id  # The index we query about.
-        self.direction_query = adj_type  # The task I query about.
+        self.direction_query = adj_type  # The list_task_structs I query about.
         self.chars = chars  # All character objects.
         self.query_coord = np.unravel_index(query_part_id,
                                             [parser.num_rows, parser.num_cols])  # Getting the place we query about.

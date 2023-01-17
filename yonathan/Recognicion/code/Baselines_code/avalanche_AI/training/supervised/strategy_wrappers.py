@@ -2,24 +2,26 @@
 Here we define the strategy,
 to support all regularization methods.
 """
-import torch
 import argparse
 import os.path
 from pathlib import Path
+
+import torch
 import torch.optim as optim
+from avalanche.benchmarks.generators import dataset_benchmark
 from avalanche.evaluation.metrics import loss_metrics
 from avalanche.logging import WandBLogger, InteractiveLogger
 from avalanche.training.plugins import LRSchedulerPlugin
 from avalanche.training.plugins.evaluation import EvaluationPlugin
 from avalanche.training.templates.supervised import SupervisedTemplate
+
 from Baselines_code.avalanche_AI.training.Plugins.Evaluation import accuracy_metrics
-from training.Data.Checkpoints import CheckpointSaver
-from Baselines_code.baselines_utils import RegType
-from training.Utils import create_optimizer_and_scheduler
 from Baselines_code.avalanche_AI.training.Plugins.classes import Get_regularization_plugin
-from training.Data.Structs import outs_to_struct
-from avalanche.benchmarks.generators import dataset_benchmark
 from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
+from Baselines_code.baselines_utils import RegType
+from training.Data.Checkpoints import CheckpointSaver
+from training.Data.Structs import outs_to_struct
+from training.Utils import create_optimizer_and_scheduler
 
 
 class Regularization_strategy(SupervisedTemplate):
@@ -32,7 +34,7 @@ class Regularization_strategy(SupervisedTemplate):
         """
         Args:
             opts: The model model_opts.
-            task: The task.
+            task: The list_task_structs.
             logger: The logger.
             eval_every: Interval evaluation.
             prev_model: The previous model.
@@ -109,7 +111,7 @@ class Regularization_strategy(SupervisedTemplate):
     def update_task(self, new_task: tuple):
         """
         Args:
-            new_task: The new task
+            new_task: The new list_task_structs
 
         Returns:
 

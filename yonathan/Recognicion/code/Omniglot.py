@@ -6,8 +6,8 @@ import copy
 from training.Data.Parser import GetParser
 from training.Data.Structs import Training_flag
 from training.Modules.Create_Models import create_model
-from training.training_funcs.training_step import train_step
 from training.Modules.Models import *
+from training.training_funcs.training_step import train_step
 
 
 def train_trajectory():

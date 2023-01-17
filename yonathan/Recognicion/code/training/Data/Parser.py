@@ -2,11 +2,12 @@
 Here we define the modl model_opts needed for all project.
 """
 import argparse
-
 from typing import Callable, Union
+from typing import Type
 
 import torch
 import torch.nn as nn
+
 from Data_Creation.Create_dataset_classes import DsType  # Import the Data_Creation set types.
 from training.Data.Data_params import Flag, AllDataSetOptions
 from training.Data.Structs import inputs_to_struct, outs_to_struct
@@ -14,14 +15,13 @@ from training.Metrics.Loss import UnifiedCriterion
 from training.Modules.Batch_norm import BatchNorm
 from training.Modules.Model_Blocks import BasicBlockTD, BasicBlockBU, BasicBlockBUShared
 from training.Modules.Models import BUTDModel, ResNet
-from typing import Type
 
 
 def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDModel,
               model_flag: Flag = Flag.NOFLAG, ds_type: DsType = DsType.Emnist):
     """
     Args:
-        task_idx: The task index.
+        task_idx: The list_task_structs index.
         model_type: The model type  BUTD or ResNet.
         model_flag: The model flag.
         ds_type: The data type e.g. mnist, fashionmnist, omniglot.
@@ -32,9 +32,9 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
     # Asserting NOFLAG is used only with ResNet.
     if model_flag is not Flag.NOFLAG and model_type is ResNet:
         raise Exception("Pure ResNet can be trained only in NO-FLAG mode.")
-    # Asserting the task idx is meaningful only for Omniglot.
+    # Asserting the list_task_structs idx is meaningful only for Omniglot.
     if task_idx != 0 and (ds_type is DsType.Emnist or ds_type is DsType.Fashionmnist):
-        raise Exception("The task id is used only for Omniglot.")
+        raise Exception("The list_task_structs id is used only for Omniglot.")
     #
     Data_specification = AllDataSetOptions(ds_type=ds_type, flag_at=model_flag,
                                            initial_task_for_omniglot_only=5)
@@ -71,7 +71,7 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
     opts.add_argument('--ks', default=[7, 3, 3, 3], type=list, help='The ResNet kernel sizes')
     opts.add_argument('--ns', default=[1, 1, 1], type=list, help='Number of blocks per layer')
     opts.add_argument('--nclasses', default=Data_specification.data_obj.nclasses, type=list,
-                      help='The sizes of the task-head classes')
+                      help='The sizes of the list_task_structs-head classes')
     opts.add_argument('--ntasks', default=Data_specification.data_obj.ntasks, type=int,
                       help='Number of tasks the model should solve')
     opts.add_argument('--ndirections', default=Data_specification.data_obj.ndirections, type=int,
@@ -79,7 +79,7 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
     opts.add_argument('--inshape', default=(3, *Data_specification.data_obj.image_size), type=tuple,
                       help='The input image shape, may be override in get_dataset')
     opts.add_argument('--num_heads', default=Data_specification.data_obj.num_heads, type=list,
-                      help='The number of headed for each task, task')
+                      help='The number of headed for each list_task_structs, list_task_structs')
     opts.add_argument('--num_x_axis', default=Data_specification.data_obj.num_x_axis, type=int,
                       help='The neighbor radius in the x-axis.')
     opts.add_argument('--num_y_axis', default=Data_specification.data_obj.num_y_axis, type=int,
@@ -124,7 +124,7 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
     # LFL
     opts.add_argument('--LFL_lambda', default=0.5, type=float, help='The LFL strength')
     # LWF
-    opts.add_argument('--LWF_lambda', default=0.65, type=float, help='The LWF strength')
+    opts.add_argument('--LWF_lambda', default=0.7, type=float, help='The LWF strength')
     opts.add_argument('--temperature_LWF', default=2.0, type=float, help='The LWF temperature')
     # MAS
     opts.add_argument('--mas_alpha', default=0.5, type=float, help='The MAS continual importance weight')

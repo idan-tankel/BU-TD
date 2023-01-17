@@ -2,10 +2,9 @@
 Here we create the model type according to model type.
 """
 import argparse
+from typing import Union
 
 from training.Modules.Models import ResNet, BUTDModel
-
-from typing import Union
 
 
 def create_model(opts: argparse) -> Union[ResNet, BUTDModel]:

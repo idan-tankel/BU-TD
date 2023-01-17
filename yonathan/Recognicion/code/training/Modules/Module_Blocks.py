@@ -5,7 +5,6 @@ import argparse
 
 import torch
 import torch.nn as nn
-
 from torch import Tensor
 
 from training.Utils import flag_to_idx
@@ -159,8 +158,8 @@ class Modulation(nn.Module):
             size = [1, *shape]  # If pixel modulation matches the inner spatial of the input
         else:
             size = [shape, 1, 1]  # If channel modulation matches the number of channels
-        for i in range(opts.ndirections):  # allocating for every task its task embedding
-            layer = nn.Parameter(torch.Tensor(*size))  # The task embedding.
+        for i in range(opts.ndirections):  # allocating for every list_task_structs its list_task_structs embedding
+            layer = nn.Parameter(torch.Tensor(*size))  # The list_task_structs embedding.
             task_embedding[i].append(layer)  # Add to the learnable parameters.
             self.modulations.append(layer)  # Add to the modulation list.
 
@@ -176,6 +175,6 @@ class Modulation(nn.Module):
         """
         direction_id = flag_to_idx(flags=flags)  # Compute the index of the one-hot.
         #    print(direction_id)
-        task_emb = self.modulations[direction_id]  # compute the task embedding according to the direction_idx.
+        task_emb = self.modulations[direction_id]  # compute the list_task_structs embedding according to the direction_idx.
         output = x * (1 - task_emb)  # perform the modulation.
         return output

@@ -3,8 +3,8 @@ Here we define used structs including input to struct, out to struct, and traini
 """
 import argparse
 
-from torch import Tensor
 import torch.nn as nn
+from torch import Tensor
 
 from training.Utils import tuple_direction_to_index
 
@@ -23,7 +23,7 @@ class inputs_to_struct:
         self.image = img  # The image.
         self.label_all = label_all  # The label all.
         self.label_existence = label_existence  # The label existence.
-        self.label_task = label_task.squeeze()  # The label task.
+        self.label_task = label_task.squeeze()  # The label list_task_structs.
         self.flags = flag  # The flag.
 
 
@@ -59,7 +59,7 @@ class Training_flag:
             opts: The model options.
             train_all_model: Whether to train all model.
             train_arg: Whether to train arg.
-            train_task_embedding: Whether to train the task embedding.
+            train_task_embedding: Whether to train the list_task_structs embedding.
             train_head: Whether to train the read-out head.
         """
         self.train_all_model = train_all_model
@@ -70,11 +70,11 @@ class Training_flag:
 
     def Get_learned_params(self, model: nn.Module, task_idx: int, direction: tuple[int, int]):
         """
-        Given model, task, task we return the desired trainable parameters.
+        Given model, list_task_structs, list_task_structs we return the desired trainable parameters.
         Args:
             model: The model.
             task_idx: Language index.
-            direction: The task.
+            direction: The list_task_structs.
 
         Returns: The desired parameters.
         """
@@ -89,13 +89,28 @@ class Training_flag:
             return learned_params
 
         if self.task_embedding:
-            # Training the task embedding associate with the task.
+            # Training the list_task_structs embedding associate with the list_task_structs.
             learned_params.extend(model.TE[direction_idx])
         if self.head_learning:
-            # Train the task-head associated with the task, task.
+            # Train the list_task_structs-head associated with the list_task_structs, list_task_structs.
             learned_params.extend(model.transfer_learning[task_idx][direction_idx])
         if self.train_arg:
-            # Train the argument embedding associated with the task.
+            # Train the argument embedding associated with the list_task_structs.
             learned_params.extend(model.tdmodel.argument_embedding[task_idx])
 
         return learned_params
+
+
+class Task_to_struct:
+    """
+    Struct to contain the task, direction.
+    """
+
+    def __init__(self, task: int, direction: tuple):
+        """
+        Args:
+            task: The task.
+            direction: The direction.
+        """
+        self.task = task
+        self.direction = direction

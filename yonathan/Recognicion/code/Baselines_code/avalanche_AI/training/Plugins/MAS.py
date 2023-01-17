@@ -9,14 +9,14 @@ import sys
 from typing import Dict, Union
 
 import torch
-from training.Data.Structs import inputs_to_struct
 import torch.nn as nn
 from avalanche.training.templates.supervised import SupervisedTemplate as Regularization_strategy
 from torch.utils.data import DataLoader
 
+from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
 from Baselines_code.baselines_utils import compute_quadratic_loss, compute_fisher_information_matrix, Norm
 from training.Data.Data_params import RegType
-from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
+from training.Data.Structs import inputs_to_struct
 
 sys.path.append(r'/')
 

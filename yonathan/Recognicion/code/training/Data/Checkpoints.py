@@ -6,11 +6,11 @@ import argparse
 import os
 import shutil
 from pathlib import Path
+from typing import Union, Tuple
 
 import numpy as np
 import torch
 import torch.nn as nn
-from typing import Union, Tuple
 
 
 # The Checkpoint class.
@@ -62,8 +62,8 @@ class CheckpointSaver:
             optimizer: The optimizer.
             scheduler: The scheduler.
             opts: The model options.
-            task_id: The task id.
-            direction: The task id.
+            task_id: The list_task_structs id.
+            direction: The list_task_structs id.
             optional_kay: Optional key to add during run-time, needed for baselines.
 
         """

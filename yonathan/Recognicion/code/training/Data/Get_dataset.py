@@ -7,24 +7,25 @@ import pickle
 import sys
 from pathlib import Path
 from typing import Union
+
 from torch.utils.data import DataLoader
 
-from training.Data.Data_params import Flag, DsType
+from training.Data.Data_params import Flag
+from training.Data.Structs import Task_to_struct
 
 sys.path.append(os.path.join(Path(__file__).parents[2], 'Data_Creation'))
 
 
 # Return the datasets and dataloaders.
 
-def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, lang_idx: int,
-                                      direction_tuple: list[tuple[int, int]], data: Union[None, type] = None) -> dict:
+def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, list_task_structs: list[Task_to_struct],
+                                      data: Union[None, type] = None) -> dict:
     """
     Getting the train,test,val(if exists) datasets.
     Args:
         opts: The model options.
         data_fname: The data path.
-        lang_idx: The language index.
-        direction_tuple: The task tuple.
+        list_task_structs: The task tuple.
         data: Possible data-set object.
 
     Returns: The train_dl, test_dl, val_dl(if exists) datasets.
@@ -66,16 +67,12 @@ def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, lang_idx:
         nsamples_val = MetaData.nsamples_dict['val']  # Getting the number of test  samples.
     except KeyError:
         nsamples_val = 0
-    # The task index is meaningful only for Omniglot.
-    task_idx = lang_idx if opts.ds_type is DsType.Omniglot else 0
     # Create train dataset.
-    train_ds = dataset(root=os.path.join(data_fname, 'train'), opts=opts, task_idx=task_idx,
-                       direction_tuple=direction_tuple,
+    train_ds = dataset(root=os.path.join(data_fname, 'train'), opts=opts, task_struct=list_task_structs,
                        nexamples=nsamples_train, obj_per_row=obj_per_row, obj_per_col=obj_per_col)
     # Create the test dataset.
-    test_ds = dataset(root=os.path.join(data_fname, 'test'), opts=opts, task_idx=task_idx,
-                      direction_tuple=direction_tuple,
-                      is_train=False, nexamples=nsamples_test, obj_per_row=obj_per_row, obj_per_col=obj_per_col)
+    test_ds = dataset(root=os.path.join(data_fname, 'test'), is_train=False, opts=opts, task_struct=list_task_structs,
+                      nexamples=nsamples_test, obj_per_row=obj_per_row, obj_per_col=obj_per_col)
     batch_size = opts.bs
     # Creating the data-loaders.
     train_dl = DataLoader(dataset=train_ds, batch_size=batch_size, num_workers=opts.workers, shuffle=True,
@@ -87,9 +84,9 @@ def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, lang_idx:
 
     # Create the val dataset if nsamples_val is non-zero.
     if nsamples_val > 0:
-        val_ds = dataset(root=os.path.join(data_fname, 'val'), opts=opts, task_idx=task_idx,
-                         direction_tuple=direction_tuple,
-                         is_train=False, nexamples=nsamples_test, obj_per_row=obj_per_row, obj_per_col=obj_per_col)
+        val_ds = dataset(root=os.path.join(data_fname, 'val'), is_train=False, opts=opts,
+                         task_struct=list_task_structs,
+                         nexamples=nsamples_val, obj_per_row=obj_per_row, obj_per_col=obj_per_col)
         val_dl = DataLoader(dataset=val_ds, batch_size=batch_size, num_workers=opts.workers, shuffle=False,
                             pin_memory=True)
 

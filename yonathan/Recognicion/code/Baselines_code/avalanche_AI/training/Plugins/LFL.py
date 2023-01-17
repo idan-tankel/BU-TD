@@ -9,10 +9,10 @@ from typing import Union
 
 import torch
 import torch.nn as nn
-
 from torch import Tensor
-from training.Data.Data_params import RegType
+
 from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
+from training.Data.Data_params import RegType
 from training.Data.Structs import inputs_to_struct
 
 sys.path.append(r'/')
@@ -29,7 +29,7 @@ class LFL(Base_plugin):
     of model as regularization to maintain the feature space and avoid
     catastrophic forgetting.
     Refer paper https://arxiv.org/pdf/1607.00122.pdf for more details
-    This plugin does not use task identities.
+    This plugin does not use list_task_structs identities.
     """
 
     def __init__(self, opts: argparse, prev_checkpoint: Union[dict, None] = None):

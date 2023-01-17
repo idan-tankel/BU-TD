@@ -2,8 +2,9 @@
 Here we define and perform  a composition of tasks sequentially as BU-TD model allows us.
 """
 import os
-
 from pathlib import Path
+from typing import Union
+
 
 from torch.utils.data import DataLoader
 
@@ -11,11 +12,6 @@ from training.Data.Get_dataset import get_dataset_for_spatial_relations
 from training.Data.Parser import GetParser
 from training.Modules.Create_Models import create_model
 from training.Modules.Models import *
-from torch import Tensor
-import torch.nn as nn
-import argparse
-from typing import Union
-
 from training.Utils import preprocess, tuple_direction_to_index, load_model
 
 
@@ -56,9 +52,9 @@ class ComposeModel(nn.Module):
         Create the new flag.
         Args:
             prediction: The prediction, first cycle None.
-            direction: The task.
+            direction: The list_task_structs.
             char: The characters, needed for first cycle only as no prediction is computed.
-            direction_id: The task id.
+            direction_id: The list_task_structs id.
 
         Returns: The New flag instruction for next phase.
 
@@ -71,7 +67,7 @@ class ComposeModel(nn.Module):
         direction_index, _ = tuple_direction_to_index(self.opts.num_x_axis, self.opts.num_y_axis, direction,
                                                       self.opts.ndirections)
         task_type_ohe = torch.nn.functional.one_hot(torch.zeros(B, dtype=torch.long), 1).cuda()
-        # Getting the task embedding, telling which task we solve now.
+        # Getting the list_task_structs embedding, telling which list_task_structs we solve now.
         direction_type_ohe = torch.nn.functional.one_hot(torch.ones(B, dtype=torch.long) * direction_index,
                                                          self.opts.ndirections).cuda()
         # Getting the character embedding, which character we query about.
@@ -154,5 +150,5 @@ comp_model = ComposeModel(opts=parser, butd_model=model)
 project_path = Path(__file__).parents[1]
 data_path = os.path.join(project_path, f'data/{str(ds_type)}/samples/(3,3)_Image_Matrix')
 #
-DataLoaders = get_dataset_for_spatial_relations(parser, data_path, lang_idx=0, direction_tuple=[(-1, 0)])
+DataLoaders = get_dataset_for_spatial_relations(parser, data_path, list_task_structs=[(-1, 0)])
 print(comp_model.compose_tasks_full_data_loader(DataLoaders['test_dl'], [(-1, 0)]))

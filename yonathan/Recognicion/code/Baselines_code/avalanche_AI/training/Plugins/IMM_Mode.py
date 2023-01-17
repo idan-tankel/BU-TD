@@ -6,17 +6,17 @@ uses the EWC importances.
 """
 import argparse
 import sys
+from typing import Union
 
 import torch
-from typing import Union
 import torch.nn as nn
-from avalanche.training.templates.supervised import SupervisedTemplate as Regularization_strategy
 from avalanche.training.templates.supervised import SupervisedTemplate
-from training.Data.Structs import inputs_to_struct
+from avalanche.training.templates.supervised import SupervisedTemplate as Regularization_strategy
 
+from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
 from Baselines_code.baselines_utils import compute_quadratic_loss, compute_fisher_information_matrix
 from training.Data.Data_params import RegType
-from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
+from training.Data.Structs import inputs_to_struct
 
 sys.path.append(r'/')
 

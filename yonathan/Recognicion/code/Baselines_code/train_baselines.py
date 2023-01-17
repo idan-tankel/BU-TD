@@ -21,7 +21,7 @@ def main(reg_type: Union[RegType, None], ds_type: DsType, new_task, load):
     Args:
         reg_type: The regularization type.
         ds_type: The data-set type.
-        new_task: The new task.
+        new_task: The new list_task_structs.
         load: Whether to load pretrained model.
 
     Returns:

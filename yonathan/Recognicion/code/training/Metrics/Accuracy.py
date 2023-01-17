@@ -5,7 +5,6 @@ import argparse
 
 import torch
 import torch.nn as nn
-
 from torch.utils.data import DataLoader
 
 from training.Data.Structs import inputs_to_struct, outs_to_struct
@@ -17,30 +16,30 @@ from training.Utils import preprocess
 def multi_label_accuracy_base(samples: inputs_to_struct, outs: outs_to_struct) -> tuple:
     """
     The base function for multi, weighted versions.
-    Here for each head we compute its accuracy according to the model out and label task.
+    Here for each head we compute its accuracy according to the model out and label list_task_structs.
     Args:
         samples: The samples.
         outs: The model outs.
 
 
-    Returns: The predictions, the task accuracy.
+    Returns: The predictions, the list_task_structs accuracy.
 
     """
     predictions = torch.argmax(input=outs.classifier, dim=1)  # Find the prediction for each queried character.
-    label_task = samples.label_task  # The label task.
+    label_task = samples.label_task  # The label list_task_structs.
     task_accuracy = torch.eq(input=predictions, other=label_task).float()  # Compute the number of matches.
     return predictions, task_accuracy  # return the predictions and the accuracy.
 
 
 def multi_label_accuracy(samples: inputs_to_struct, outs: outs_to_struct):
     """
-    Compute the task Accuracy mean over all samples for the guided model.
+    Compute the list_task_structs Accuracy mean over all samples for the guided model.
     Args:
         samples: The samples.
         outs: The model outs.
 
 
-    Returns: The predictions and task Accuracy over the batch.
+    Returns: The predictions and list_task_structs Accuracy over the batch.
 
     """
     preds, task_accuracy = multi_label_accuracy_base(samples=samples, outs=outs)  # The Accuracy and the prediction.
@@ -50,7 +49,7 @@ def multi_label_accuracy(samples: inputs_to_struct, outs: outs_to_struct):
 
 def multi_label_accuracy_weighted(samples: inputs_to_struct, outs: outs_to_struct):
     """
-    Compute the task Accuracy weighted mean over the existing characters in the image.
+    Compute the list_task_structs Accuracy weighted mean over the existing characters in the image.
     Args:
         samples: The inputs samples.
         outs: The model outs.

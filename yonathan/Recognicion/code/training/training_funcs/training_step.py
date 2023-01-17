@@ -1,17 +1,16 @@
-from pathlib import Path
 import os
+from pathlib import Path
+
 import pytorch_lightning as pl
+import torch.nn.modules as Module
 from pytorch_lightning.loggers import WandbLogger
 
 from training.Data.Checkpoints import CheckpointSaver
 from training.Data.Get_dataset import get_dataset_for_spatial_relations
 from training.Data.Model_Wrapper import ModelWrapped
 from training.Data.Structs import Training_flag
-
-from training.Modules.Models import *
 from training.Modules.Batch_norm import *
-
-import torch.nn.modules as Module
+from training.Modules.Models import *
 
 
 def Get_checkpoint_and_logger(opts: argparse, ds_type, task: tuple[int, tuple], epoch: int = 0) -> \
@@ -41,7 +40,7 @@ def Get_checkpoint_and_logger(opts: argparse, ds_type, task: tuple[int, tuple], 
         data_path = data_path + f"{task[0][0]}"
     Checkpoint_saver = CheckpointSaver(
         dirpath=os.path.join(opts.results_dir,
-                             f'Model_use_reset_{str(task[0][1])}_wd_{str(opts.wd)}_base_lr_'
+                             f'Model_use_reset_{str(task[0].direction)}_wd_{str(opts.wd)}_base_lr_'
                              f'{opts.base_lr}_max_lr_{opts.max_lr}_'
                              f'epoch_{epoch}_option_bs_{opts.bs}'))
     wandb_logger = WandbLogger(project="My_first_project_5.10", save_dir=opts.results_dir)
@@ -63,11 +62,11 @@ def train_step(model_opts: argparse, model: Module, training_flag: Training_flag
     Checkpoint_saver, wandb_logger, data_path = Get_checkpoint_and_logger(opts=model_opts, ds_type=ds_type, task=task,
                                                                           epoch=0)
     trainer = pl.Trainer(max_epochs=model_opts.EPOCHS, logger=wandb_logger, accelerator='gpu')
-    learned_params = training_flag.Get_learned_params(model, task_idx=task[0][0], direction=task[0][1])
-    DataLoaders = get_dataset_for_spatial_relations(model_opts, data_path, lang_idx=task[0][0], direction_tuple=task)
+    learned_params = training_flag.Get_learned_params(model, task_idx=task[0].task, direction=task[0].direction)
+    DataLoaders = get_dataset_for_spatial_relations(model_opts, data_path, list_task_structs = task)
     wrapped_model = ModelWrapped(model_opts, model, learned_params, check_point=Checkpoint_saver,
-                                 direction_tuple=task[0][1],
-                                 task_id=task[0][0],
+                                 direction_tuple=task[0].direction,
+                                 task_id=task[0].task,
                                  nbatches_train=len(DataLoaders['train_dl']), train_ds=DataLoaders['train_ds'])
     test = False
     if test:

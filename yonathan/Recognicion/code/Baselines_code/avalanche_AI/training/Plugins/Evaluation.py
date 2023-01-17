@@ -14,8 +14,8 @@ from avalanche.training.templates.supervised import SupervisedTemplate
 from torch import Tensor
 
 from training.Data.Data_params import Flag
-from training.Metrics.Accuracy import multi_label_accuracy_weighted, multi_label_accuracy
 from training.Data.Structs import inputs_to_struct, outs_to_struct
+from training.Metrics.Accuracy import multi_label_accuracy_weighted, multi_label_accuracy
 
 
 class Accuracy_fun(Accuracy):
@@ -48,7 +48,7 @@ class Accuracy_fun(Accuracy):
         Args:
             predicted_y: The predicted label.
             gt: The ground truth.
-            task_labels: The task labels.
+            task_labels: The list_task_structs labels.
 
         Returns:
 
@@ -57,7 +57,7 @@ class Accuracy_fun(Accuracy):
             # The predicted 'classes' distribution.
             # The prediction and accuracy.
             preds, task_accuracy = self.accuracy_fun(gt, predicted_y)
-            # Update the task accuracy.
+            # Update the list_task_structs accuracy.
             self._mean_accuracy[task_labels].update(task_accuracy, preds.shape[0])
 
         else:

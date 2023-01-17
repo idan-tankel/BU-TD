@@ -19,7 +19,7 @@ def flag_to_comp(flag: torch, ntasks: int) -> tuple:
     :param ntasks: The number of tasks we should solve.
     :return: The non zero index entries in the one-hot vectors.
     """
-    flag_task = flag[:4]  # The ntasks first entries are related to the task.
+    flag_task = flag[:4]  # The ntasks first entries are related to the list_task_structs.
     flag_arg = flag[5:]  # The last entries are related to the argument.
     task = torch.argmax(flag_task, dim=0)  # Find the entry in the one hot.
     arg = torch.argmax(flag_arg, dim=0)  # Find the entry in the one hot.
@@ -56,7 +56,7 @@ def visualize(opts, train_dataset):
     imgs = imgs.transpose(0, 2, 3, 1)  # Transpose to have the appropriate dimensions for an image.
     fig = plt.figure(figsize=(15, 4))  # Defining the plot.
     n = 2
-    for k in range(len(samples.image)):  # For each image in the batch, show it and its task and label.
+    for k in range(len(samples.image)):  # For each image in the batch, show it and its list_task_structs and label.
         fig.clf()
         fig.tight_layout()
         ax = plt.subplot(1, n, 1)
@@ -65,7 +65,7 @@ def visualize(opts, train_dataset):
         plt.imshow(img.astype(np.uint8))  # Showing the image with the title.
         flag = samples.flag[k]
 
-        adj_type, char = flag_to_comp(flag, opts.ntasks)  # Compose to the task and argument.
+        adj_type, char = flag_to_comp(flag, opts.ntasks)  # Compose to the list_task_structs and argument.
 
         if opts.model_flag is Flag.NOFLAG:
             tit = 'Right of all'
@@ -74,7 +74,7 @@ def visualize(opts, train_dataset):
             ins_st = 'The character in the place: %s' % (char.item()) + '\n what is the character in the {}?'.format(
                 direction)
             tit = ins_st
-        plt.title(tit)  # Adding the task to the title.
+        plt.title(tit)  # Adding the list_task_structs to the title.
 
         ax = plt.subplot(1, n, 2)
         ax.axis('off')

@@ -4,24 +4,20 @@ Here we define the model wrapper to support training, validation.
 import argparse
 import os
 import os.path
+from typing import Callable
 
 import torch
-from torch import Tensor
 import torch.nn as nn
 import torch.optim as optim
 from pytorch_lightning import LightningModule
+from torch import Tensor
 from torch.utils.data import DataLoader
+from torch.utils.data import Dataset
 
 from training.Data.Checkpoints import CheckpointSaver
-from training.Utils import create_optimizer_and_scheduler, preprocess
-
-from typing import Callable
-
-from training.Modules.Batch_norm import store_running_stats
-
 from training.Data.Data_params import Flag, DsType
-
-from torch.utils.data import Dataset
+from training.Modules.Batch_norm import store_running_stats
+from training.Utils import create_optimizer_and_scheduler, preprocess
 
 
 # Define the model wrapper class.
@@ -41,8 +37,8 @@ class ModelWrapped(LightningModule):
             model: The model.
             learned_params: The parameters we desire to train.
             check_point: The check point.
-            direction_tuple: The task id.
-            task_id: The task id.
+            direction_tuple: The list_task_structs id.
+            task_id: The list_task_structs id.
             nbatches_train: The number of batches to train.
             train_ds: train ds, for reloading the data-loader epoch.
         """
@@ -57,8 +53,8 @@ class ModelWrapped(LightningModule):
         self.opts: argparse = opts  # The model options.
         self.check_point: CheckpointSaver = check_point  # The checkpoint saver.
         self.nbatches_train: int = nbatches_train  # The number of train batches.
-        self.direction: list[tuple[int, int]] = direction_tuple  # The task id.
-        self.task_id: int = task_id  # The task id.
+        self.direction: list[tuple[int, int]] = direction_tuple  # The list_task_structs id.
+        self.task_id: int = task_id  # The list_task_structs id.
         self.store_running_stats: bool = self.opts.model_flag is Flag.CL
         self.ds_type: DsType = self.opts.ds_type
         # Define the optimizer, scheduler.
@@ -93,7 +89,7 @@ class ModelWrapped(LightningModule):
             batch: The input.
             batch_idx: The batch id.
 
-        Returns: The task Accuracy on the batch.
+        Returns: The list_task_structs Accuracy on the batch.
 
         """
         if batch_idx == 0 and self.need_to_update_running_stats and self.store_running_stats:

@@ -5,20 +5,19 @@ import argparse
 from typing import Union
 
 import torch
-from torch import Tensor
 import torch.nn as nn
+from torch import Tensor
 
+from Data_Creation.Create_dataset_classes import DsType  # Import the Data_Creation set types.
 from training.Data.Data_params import Flag
 from training.Utils import Flag_to_task, create_single_one_hot
 
-from Data_Creation.Create_dataset_classes import DsType  # Import the Data_Creation set types.
 
-
-# Here we define the task-head modules.
+# Here we define the list_task_structs-head modules.
 
 class HeadSingleTask(nn.Module):
     """
-    Task head for single task.
+    Task head for single list_task_structs.
     Allocate tasks according to the desired output size.
     if model flag is NOFLAG we allocate subhead for each character.
     """
@@ -28,7 +27,7 @@ class HeadSingleTask(nn.Module):
         Args:
             opts: The model options.
             nclasses: The number of classes.
-            num_heads: Number of heads for the task.
+            num_heads: Number of heads for the list_task_structs.
         """
         super(HeadSingleTask, self).__init__()
         self.opts = opts
@@ -48,31 +47,31 @@ class HeadSingleTask(nn.Module):
 
         """
         x = inputs.squeeze()  # Squeeze the input.
-        outs = [layer(x) for layer in self.layers]  # Compute all task-head outputs for all layers.
+        outs = [layer(x) for layer in self.layers]  # Compute all list_task_structs-head outputs for all layers.
         return torch.stack(tensors=outs, dim=-1)  # stacks all tensor into one tensor
 
 
 class MultiTaskHead(nn.Module):
     """
-    # Create task-head per task, task.
+    # Create list_task_structs-head per list_task_structs, list_task_structs.
     """
 
     def __init__(self, opts: argparse, transfer_learning_params: Union[list, None] = None):
         """
-        Multi head task-head allocating for each task and task a single task head.
+        Multi head list_task_structs-head allocating for each list_task_structs and list_task_structs a single list_task_structs head.
         Args:
             opts: The model options.
-            transfer_learning_params: list containing the associate taskhead params of the task, task.
+            transfer_learning_params: list containing the associate taskhead params of the list_task_structs, list_task_structs.
         """
         super(MultiTaskHead, self).__init__()
         self.opts = opts  # The options.
         self.ntasks = opts.ntasks  # The number of tasks.
         self.ndirections = opts.ndirections  # The number of directions.
         self.num_heads = opts.num_heads  # The number of heads.
-        self.num_classes = opts.nclasses  # The number of classes for each task to create the head according to.
+        self.num_classes = opts.nclasses  # The number of classes for each list_task_structs to create the head according to.
         self.ds_type = self.opts.ds_type  # The data-set type.
         self.taskhead = nn.ModuleList()
-        # For each task, task create its task-head according to num_classes.
+        # For each list_task_structs, list_task_structs create its list_task_structs-head according to num_classes.
         for i in range(self.ntasks):
             for j in range(self.ndirections):
                 layer = HeadSingleTask(opts=opts, nclasses=self.num_classes[i],
@@ -92,15 +91,15 @@ class MultiTaskHead(nn.Module):
         (bu2_out, flag) = inputs
         # In train mode we train only one head.
         if self.training or self.ds_type is DsType.Omniglot:
-            task_id = Flag_to_task(opts=self.opts, flags=flag)  # Get the task id.
-            task_out = self.taskhead[task_id](bu2_out)  # apply the appropriate task-head.
-        # Otherwise, we test all heads and choose the desired by the task flag.
+            task_id = Flag_to_task(opts=self.opts, flags=flag)  # Get the list_task_structs id.
+            task_out = self.taskhead[task_id](bu2_out)  # apply the appropriate list_task_structs-head.
+        # Otherwise, we test all heads and choose the desired by the list_task_structs flag.
         else:
             outputs = []  # All outputs list.
-            for layer in self.taskhead:  # For each task head we compute the output.
+            for layer in self.taskhead:  # For each list_task_structs head we compute the output.
                 layer_out = layer(bu2_out)
                 outputs.append(layer_out)
-            outs = torch.stack(tensors=outputs, dim=1)  # Sum to have single prediction per task.
+            outs = torch.stack(tensors=outputs, dim=1)  # Sum to have single prediction per list_task_structs.
             task_flag = create_single_one_hot(opts=self.opts, flags=flag)
             task_out = torch.einsum('ijkl,ij->ikl', outs, task_flag)  # Multiply the flag and the output.
         task_out = task_out.squeeze()
