@@ -1,6 +1,6 @@
 """
 Here we define for each data-set its parameters like number of classes,
-number of direction, tasks.
+number of task, tasks.
 """
 import os.path
 from enum import Enum, auto
@@ -50,7 +50,7 @@ class RegType(Enum):
         """
         Given the model options, get the associated regularization factor.
         Args:
-            opts: The model opts.
+            opts: The model model_opts.
 
         Returns: The regularization factor
 
@@ -77,8 +77,8 @@ class GenericDataParams:
         self.task_accuracy: Callable = multi_label_accuracy_weighted if flag_at is Flag.NOFLAG \
             else multi_label_accuracy  # The task Accuracy metric according to the flag.
         self.project_path: Path = Path(__file__).parents[3]  # The path to the project.
-        self.initial_directions: list = [
-            (1, 0)]  # The initial tasks we first train in our experiments, default to right direction
+        # The initial tasks we first train in our experiments, default to right task.
+        self.initial_directions: list = [(0,(1, 0))]
         self.ntasks: int = 1  # The number of tasks, in mnist, Fashionmnist it's 1, for Omniglot 51.
         self.num_x_axis: int = num_x_axis  # Number of directions we want to generalize to in the x-axis.
         self.num_y_axis: int = num_y_axis  # Number of directions we want to generalize to in the y-axis.
@@ -112,11 +112,11 @@ class EmnistDataset(GenericDataParams):
         super(EmnistDataset, self).__init__(flag_at=flag_at, ds_type=DsType.Emnist, num_x_axis=2, num_y_axis=2)
         self.image_size = [130, 200]  # The Emnist image size.
         # The initial indexes.
-        self.initial_directions = [(1, 0)]
+        self.initial_directions = [(0, (1, 0))]
         initial_directions = [
             tuple_direction_to_index(num_x_axis=self.num_x_axis, num_y_axis=self.num_y_axis, direction=direction,
                                      ndirections=self.ndirections)[0]
-            for direction in self.initial_directions]
+            for (task, direction) in self.initial_directions]
         # The number of heads.
         self.num_heads = [1 if direction not in initial_directions else len(self.initial_directions) for direction in
                           range(self.ndirections)]

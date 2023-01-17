@@ -24,7 +24,7 @@ def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, lang_idx:
         opts: The model options.
         data_fname: The data path.
         lang_idx: The language index.
-        direction_tuple: The direction tuple.
+        direction_tuple: The task tuple.
         data: Possible data-set object.
 
     Returns: The train_dl, test_dl, val_dl(if exists) datasets.

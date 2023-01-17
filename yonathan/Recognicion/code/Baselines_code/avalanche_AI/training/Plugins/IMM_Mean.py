@@ -31,7 +31,7 @@ class IMM_Mean(Base_plugin):
     def __init__(self, opts: argparse, prev_checkpoint: Union[None, dict] = None):
         """
         Args:
-            opts: The model opts.
+            opts: The model model_opts.
             prev_checkpoint: A pretrained model
         """
         super(IMM_Mean, self).__init__(opts=opts, prev_checkpoint=prev_checkpoint, reg_type=RegType.IMM_Mean)

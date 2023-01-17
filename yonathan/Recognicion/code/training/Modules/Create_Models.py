@@ -12,7 +12,7 @@ def create_model(opts: argparse) -> Union[ResNet, BUTDModel]:
     """
     Create and return a model according to the options.
     Args:
-        opts: The model opts.
+        opts: The model model_opts.
 
     Returns: A model.
 

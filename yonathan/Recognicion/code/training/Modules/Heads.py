@@ -11,6 +11,8 @@ import torch.nn as nn
 from training.Data.Data_params import Flag
 from training.Utils import Flag_to_task, create_single_one_hot
 
+from Data_Creation.Create_dataset_classes import DsType  # Import the Data_Creation set types.
+
 
 # Here we define the task-head modules.
 
@@ -52,15 +54,15 @@ class HeadSingleTask(nn.Module):
 
 class MultiTaskHead(nn.Module):
     """
-    # Create task-head per task, direction.
+    # Create task-head per task, task.
     """
 
     def __init__(self, opts: argparse, transfer_learning_params: Union[list, None] = None):
         """
-        Multi head task-head allocating for each task and direction a single task head.
+        Multi head task-head allocating for each task and task a single task head.
         Args:
             opts: The model options.
-            transfer_learning_params: list containing the associate taskhead params of the task, direction.
+            transfer_learning_params: list containing the associate taskhead params of the task, task.
         """
         super(MultiTaskHead, self).__init__()
         self.opts = opts  # The options.
@@ -68,8 +70,9 @@ class MultiTaskHead(nn.Module):
         self.ndirections = opts.ndirections  # The number of directions.
         self.num_heads = opts.num_heads  # The number of heads.
         self.num_classes = opts.nclasses  # The number of classes for each task to create the head according to.
+        self.ds_type = self.opts.ds_type  # The data-set type.
         self.taskhead = nn.ModuleList()
-        # For each task, direction create its task-head according to num_classes.
+        # For each task, task create its task-head according to num_classes.
         for i in range(self.ntasks):
             for j in range(self.ndirections):
                 layer = HeadSingleTask(opts=opts, nclasses=self.num_classes[i],
@@ -88,10 +91,10 @@ class MultiTaskHead(nn.Module):
         """
         (bu2_out, flag) = inputs
         # In train mode we train only one head.
-        if self.training:
+        if self.training or self.ds_type is DsType.Omniglot:
             task_id = Flag_to_task(opts=self.opts, flags=flag)  # Get the task id.
             task_out = self.taskhead[task_id](bu2_out)  # apply the appropriate task-head.
-        # Otherwise, we test all heads and choose the desired by the direction flag.
+        # Otherwise, we test all heads and choose the desired by the task flag.
         else:
             outputs = []  # All outputs list.
             for layer in self.taskhead:  # For each task head we compute the output.

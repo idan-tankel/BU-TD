@@ -27,7 +27,7 @@ def main(reg_type: Union[RegType, None], ds_type: DsType, new_task, load):
     Returns:
 
     """
-    # The model opts: NO-FLAG mode, ResNet model.
+    # The model model_opts: NO-FLAG mode, ResNet model.
     checkpoint = None
     opts, model = Get_updated_opts(ds_type=ds_type, reg_type=reg_type)
     if reg_type is not RegType.SI:
@@ -42,6 +42,8 @@ def main(reg_type: Union[RegType, None], ds_type: DsType, new_task, load):
         #   path = 'Smaller_model_Task_[0, (0, 1)]/LWF/lambda=0.4/ResNet_epoch16_direction=(0, 1).pt'
         #   path = 'Smaller_model_Task_[0, (-1, -1)]/LWF/lambda=0.3/ResNet_epoch16_direction=(-1, -1).pt'
         path = 'Smaller_model_Task_[0, (0, 1)]/LWF/lambda=0.1/ResNet_epoch23_direction=(0, 1).pt'
+        path = 'Smaller_model_Task_[0, (1, 1)]/LWF/lambda=0.1/ResNet_epoch40_direction=(1, 1).pt'
+        path = 'Smaller_model_Task_[0, (1, -1)]/LWF/lambda=0.08/ResNet_epoch18_direction=(1, -1).pt'
     else:
         path = 'Smaller_model_Task_[0, (1, 0)]/SI/lambda=0.125/ResNet_epoch40_direction=(1, 0).pt'
     model_path = os.path.join(opts.baselines_dir, path)
@@ -57,22 +59,22 @@ def main(reg_type: Union[RegType, None], ds_type: DsType, new_task, load):
     opts.Images_path = os.path.join(Data_specific_path, sample_path)
     # The new tasks.
     new_data = get_dataset_for_spatial_relations(opts, opts.Images_path, 0, [new_task[-1]])
-    old_data = get_dataset_for_spatial_relations(opts, opts.Images_path, 0, [(1, 0)])
-    test = True
+    old_data = get_dataset_for_spatial_relations(opts, opts.Images_path, 0, [(0, (0,1))])
+    test = False
     if test:
-        model_path = 'Smaller_model_Task_[0, (1, 1)]/LWF/lambda=0.1/ResNet_epoch2_direction=(1, 1).pt'
+        model_path = 'Smaller_model_Task_[0, (1, -1)]/LWF/lambda=0.08/ResNet_epoch18_direction=(1, -1).pt'
         #   model_path =  'Smaller_model_Task_[0, (1, 0)]/Naive/lambda=0/ResNet_epoch40_direction=(1, 0).pt'
         checkpoint = load_model(model, model_path=model_path,
                                 results_path=opts.baselines_dir)
         print(accuracy(opts, model, new_data['test_dl']))
         print(accuracy(opts, model, old_data['test_dl']))
     # The scenario.
-    #  model_path = os.path.join(opts.baselines_dir, f'{new_task}/{str(reg_type)}/{reg_type.class_to_reg_factor(opts)}')
+    #  model_path = os.path.join(model_opts.baselines_dir, f'{new_task}/{str(reg_type)}/{reg_type.class_to_reg_factor(model_opts)}')
     scenario = dataset_benchmark([new_data['train_ds']], [new_data['test_ds']])
     # Train the baselines.
     strategy = Regularization_strategy(opts, eval_every=1, prev_model=checkpoint,
-                                       model_path=model_path, task=new_task, reg_type=reg_type)
+                                       model_path=model_path, task=new_task[0], reg_type=reg_type)
     strategy.train_sequence(scenario)
 
 
-main(reg_type=RegType.LWF, ds_type=DsType.Fashionmnist, new_task=[0, (1, 1)], load=True)
+main(reg_type=RegType.LWF, ds_type=DsType.Fashionmnist, new_task=[(0, (-1, 0))], load=True)

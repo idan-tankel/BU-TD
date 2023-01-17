@@ -20,7 +20,7 @@ def Get_regularization_plugin(opts: argparse, reg_type: RegType, prev_checkpoint
     """
     Returns the desired regularization plugin.
     Args:
-        opts: The model opts.
+        opts: The model model_opts.
         reg_type: Regularization type.
         prev_checkpoint: The previous model.
         load_from: load from.

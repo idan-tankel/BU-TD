@@ -63,7 +63,7 @@ class CheckpointSaver:
             scheduler: The scheduler.
             opts: The model options.
             task_id: The task id.
-            direction: The direction id.
+            direction: The task id.
             optional_kay: Optional key to add during run-time, needed for baselines.
 
         """
@@ -81,7 +81,7 @@ class CheckpointSaver:
         # All the data we want to store.
         save_data = {'epoch': epoch, 'model_state_dict': model.state_dict(),
                      'optimizer_state_dict': optimizer.state_dict(),
-                     'scheduler_state_dict': scheduler.state_dict(), 'parser': opts}
+                     'scheduler_state_dict': scheduler.state_dict(), 'model_opts': opts}
         if optional_kay is not None:
             (new_key, new_value) = optional_kay
             save_data[new_key] = new_value

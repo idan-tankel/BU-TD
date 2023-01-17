@@ -41,7 +41,7 @@ class ModelWrapped(LightningModule):
             model: The model.
             learned_params: The parameters we desire to train.
             check_point: The check point.
-            direction_tuple: The direction id.
+            direction_tuple: The task id.
             task_id: The task id.
             nbatches_train: The number of batches to train.
             train_ds: train ds, for reloading the data-loader epoch.
@@ -57,7 +57,7 @@ class ModelWrapped(LightningModule):
         self.opts: argparse = opts  # The model options.
         self.check_point: CheckpointSaver = check_point  # The checkpoint saver.
         self.nbatches_train: int = nbatches_train  # The number of train batches.
-        self.direction: list[tuple[int, int]] = direction_tuple  # The direction id.
+        self.direction: list[tuple[int, int]] = direction_tuple  # The task id.
         self.task_id: int = task_id  # The task id.
         self.store_running_stats: bool = self.opts.model_flag is Flag.CL
         self.ds_type: DsType = self.opts.ds_type
@@ -97,7 +97,7 @@ class ModelWrapped(LightningModule):
 
         """
         if batch_idx == 0 and self.need_to_update_running_stats and self.store_running_stats:
-            store_running_stats(model=self.model, task_id=self.task_id, direction_id=self.direction[0])
+            store_running_stats(model=self.model, task_id=self.task_id, direction_id=self.direction)
             print('Done storing running stats')
 
         model = self.model

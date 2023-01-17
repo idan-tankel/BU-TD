@@ -81,7 +81,7 @@ class BUModel(nn.Module):
     def __init__(self, opts: argparse, use_task_embedding: bool = False):
         """
         Args:
-            opts: The model opts.
+            opts: The model model_opts.
             use_task_embedding: Whether to create the task embedding.
         """
         super(BUModel, self).__init__()
@@ -112,7 +112,7 @@ class BUStream(nn.Module):
             is_bu2: Whether the stream is BU1 or BU2.
         """
         super(BUStream, self).__init__()
-        self.opts = opts  # Save the model opts.
+        self.opts = opts  # Save the model model_opts.
         self.block = opts.bu_block_type  # The basic block type.
         self.task_embedding = [[] for _ in range(opts.ndirections)]  # List should contain the task embedding.
         self.inshapes = shared.inshapes  # The output shape of all layers.
@@ -193,11 +193,11 @@ class TDModel(nn.Module):
     def __init__(self, opts: argparse, bu_inshapes: list):
         """
         Args:
-            opts: The model opts.
+            opts: The model model_opts.
             bu_inshapes: The BU shapes.
         """
         super(TDModel, self).__init__()
-        self.opts = opts  # Save the opts.
+        self.opts = opts  # Save the model_opts.
         self.block = opts.td_block_type  # The block type
         self.use_lateral = opts.use_lateral_butd  # Whether to use the BU1 -> TD laterals.
         self.ntasks = opts.ntasks  # The number of tasks
@@ -310,7 +310,7 @@ class BUTDModel(nn.Module):
             opts: Model options.
         """
         super(BUTDModel, self).__init__()
-        self.opts = opts  # Save the model opts.
+        self.opts = opts  # Save the model model_opts.
         self.model_flag = opts.model_flag  # The model type
         self.use_bu1_loss = opts.use_bu1_loss  # Whether to use the Occurrence loss.
         self.use_lateral_butd = opts.use_lateral_butd  # Whether to use the BU1 -> TD laterals.
@@ -421,7 +421,7 @@ class ResNet(nn.Module):
             opts: The model options.
         """
         super(ResNet, self).__init__()
-        self.opts: argparse = opts  # The model opts.
+        self.opts: argparse = opts  # The model model_opts.
         self.ntasks: int = opts.ntasks  # The number of tasks.
         self.ndirections: int = opts.ndirections  # The number of directions.
         self.feature_extractor: nn.Module = BUModel(opts)  # Create the backbone without the task embedding.
@@ -470,7 +470,7 @@ class ResNet(nn.Module):
         Get the specific head and the feature parameters.
         Args:
             task_id: The task id.
-            direction_tuple: The direction tuple
+            direction_tuple: The task tuple
 
         Returns: The learned parameters.
 

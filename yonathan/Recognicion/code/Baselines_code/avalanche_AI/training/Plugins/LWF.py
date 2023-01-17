@@ -33,7 +33,7 @@ class LwF(Base_plugin):
     def __init__(self, opts: argparse, prev_model: Union[dict, None] = None):
         """
         Args:
-            opts: The model opts.
+            opts: The model model_opts.
             prev_model: The prev_model if exists.
         """
 
@@ -43,13 +43,14 @@ class LwF(Base_plugin):
         # self.trained_tasks.append([0, (-2, 0)])
         self.trained_tasks = [[0, (1, 0)]]
         self.trained_tasks.append([0, (0, 1)])
-    #    self.trained_tasks.append([0, (-1, -1)])
+        self.trained_tasks.append([0, (1, 1)])
+        self.trained_tasks.append([0,(1, -1)])
         self.prev_tasks = dict()
         if prev_model is not None:
             self.num_exp = 1  # Number of trained experiences is set to 1.
             # Creating the desired flags for each trained task.
             for i, task in enumerate(self.trained_tasks):
-                (task_id, direction_id) = task  # The task ,direction id.
+                (task_id, direction_id) = task  # The task ,task id.
                 flag = construct_flag(opts, task_id, direction_id)  # Construct the flag.
                 self.prev_tasks[i] = ((task_id, direction_id), flag)  # Construct the dictionary.
 

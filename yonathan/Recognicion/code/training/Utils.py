@@ -12,6 +12,8 @@ import torch.optim as optim
 from Data_Creation.Create_dataset_classes import Sample
 
 
+
+
 def folder_size(path: str) -> int:
     """
     Returns the number of files in a given folder.
@@ -116,7 +118,7 @@ def num_params(params: Iterator) -> int:
 def create_optimizer_and_scheduler(opts: argparse, learned_params: list, nbatches: int) -> \
         tuple[optim, optim.lr_scheduler]:
     """
-    Create optimizer and a scheduler according to opts.
+    Create optimizer and a scheduler according to model_opts.
     Args:
         opts: The model options.
         learned_params: The learned parameters.
@@ -158,15 +160,15 @@ def preprocess(inputs: list[Tensor], device: str) -> list[Tensor]:
 def tuple_direction_to_index(num_x_axis: int, num_y_axis: int, direction: tuple, ndirections: int, task_id: int = 0) \
         -> tuple[Tensor, Tensor]:
     """
-    Compute given direction tuple and task index the direction index and task index.
+    Compute given task tuple and task index the task index and task index.
     Args:
         num_x_axis: The neighbor radios we want to generalize to in the x-axis.
         num_y_axis: The neighbor radios we want to generalize to in the y-axis.
-        direction: The direction tuple.
+        direction: The task tuple.
         ndirections: The number of directions.
         task_id: The task index.
 
-    Returns: The direction index and the task index.
+    Returns: The task index and the task index.
 
     """
     direction_x, direction_y = direction
@@ -180,13 +182,13 @@ def Compose_Flag(opts: argparse, flags: Tensor) -> tuple[Tensor, Tensor, Tensor]
     """
     Compose the flag into three flags.
     Args:
-        opts: The model opts.
+        opts: The model model_opts.
         flags: The flag we desire to compose.
 
-    Returns: The direction,task, arg flags.
+    Returns: The task,task, arg flags.
 
     """
-    direction_flag = flags[:, :opts.ndirections]  # The direction vector.
+    direction_flag = flags[:, :opts.ndirections]  # The task vector.
     task_flag = flags[:, opts.ndirections:opts.ndirections + opts.ntasks]  # The task vector.
     arg_flag = flags[:, opts.ndirections + opts.ntasks:]  # The argument vector.
     return direction_flag, task_flag, arg_flag
@@ -196,14 +198,14 @@ def Flag_to_task(opts: argparse, flags: Tensor) -> int:
     """
     Composes the flag and returns the task id.
     Args:
-        opts: The model opts.
+        opts: The model model_opts.
         flags: The flag
 
     Returns: The task index.
 
     """
     direction_flag, task_flag, _ = Compose_Flag(opts=opts, flags=flags)
-    direction_id = flag_to_idx(flags=direction_flag)  # The direction id.
+    direction_id = flag_to_idx(flags=direction_flag)  # The task id.
     task_id = flag_to_idx(flags=task_flag)  # The task id.
     idx = direction_id + opts.ndirections * task_id  # The task.
     return idx
@@ -246,17 +248,17 @@ def load_model(model, results_dir, model_path: str) -> dict:
 
 def create_single_one_hot(opts, flags: Tensor) -> Tensor:
     """
-    Given the flag, we compose to task, direction flag and compute the unique task id.
+    Given the flag, we compose to task, task flag and compute the unique task id.
     Args:
-        opts: The model opts.
+        opts: The model model_opts.
         flags: The flags.
 
     Returns: The task flag.
 
     """
-    # Compute the direction, task flag.
+    # Compute the task, task flag.
     direction_flags, task_flag, _ = Compose_Flag(opts=opts, flags=flags)
-    # The direction id.
+    # The task id.
     direction_id = torch.argmax(direction_flags, dim=1)
     # The task id.
     task_id = torch.argmax(task_flag, dim=1)
@@ -265,3 +267,6 @@ def create_single_one_hot(opts, flags: Tensor) -> Tensor:
     # The flag
     flag = torch.nn.functional.one_hot(task_index, opts.ndirections * opts.ntasks).float()
     return flag
+
+
+

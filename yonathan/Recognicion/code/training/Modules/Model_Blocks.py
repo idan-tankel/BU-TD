@@ -185,7 +185,7 @@ class BasicBlockBU(nn.Module):
         x = self.conv_block1[0](x=x)  # Perform first Conv Block.
         x = self.conv_block1[1](inputs=x, flags=flags)
         x = self.conv_block1[2](input=x)
-        direction_flag, _, _ = Compose_Flag(opts=self.opts, flags=flags)  # Get the direction flag.
+        direction_flag, _, _ = Compose_Flag(opts=self.opts, flags=flags)  # Get the task flag.
         if self.flag_at is Flag.CL and self.is_bu2:  # perform the first task embedding if needed.
             x = self.column_modulation_after_conv1(x=x, flags=direction_flag)
             x = self.channel_modulation_after_conv1(x=x, flags=direction_flag)
@@ -261,10 +261,10 @@ class InitialEmbeddingBlock(nn.Module):
 
         """
         direction_flag, task_flag, arg_flag = Compose_Flag(opts=self.opts,
-                                                           flags=flags)  # Get the direction, task, argument flags.
+                                                           flags=flags)  # Get the task, task, argument flags.
         task_id = flag_to_idx(flags=task_flag)  # The lan index, for Omniglot it means the langauge index.
         if self.model_flag is not Flag.CL:
-            top_td_task = self.top_td_task_emb(input=direction_flag)  # Compute the direction embedding.
+            top_td_task = self.top_td_task_emb(input=direction_flag)  # Compute the task embedding.
             top_td_task = top_td_task.view(-1, self.top_filters // 2)  # Reshape.
         else:
             top_td_task = None  # No task embedding is needed.

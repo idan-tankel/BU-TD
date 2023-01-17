@@ -18,9 +18,9 @@ class BatchNorm(nn.Module):
     """
     Creates batch_norm_with_statistics_per_sample class.
     As continual learning overrides the running statistics, we created a class saving the running stats
-    for each direction, task.
+    for each task, task.
     We support storing and loading running stats of the model to dynamically evaluate the learning of the task.
-    For each task, direction stores its mean,var as continual learning overrides those variables.
+    For each task, task stores its mean,var as continual learning overrides those variables.
     """
 
     def __init__(self, opts: argparse, num_channels: int, dims: int = 2, device='cuda'):
@@ -42,7 +42,7 @@ class BatchNorm(nn.Module):
             self.norm = nn.BatchNorm2d(num_features=num_channels)  # Create 2d BN.
         else:
             self.norm = nn.BatchNorm1d(num_features=num_channels)  # Create 1d BN.
-        # creates list that should store the mean, var for each task and direction.
+        # creates list that should store the mean, var for each task and task.
         if self.save_stats:
             # The running mean.
             self.running_mean_list = torch.zeros(opts.ndirections * opts.ntasks, num_channels).to(device)
@@ -100,7 +100,7 @@ class BatchNorm(nn.Module):
         Loads the mean, variance associated with the task_id and the direction_id.
         Args:
             task_id: The task id.
-            direction_tuple: The direction tuple.
+            direction_tuple: The task tuple.
 
         """
         _, task_and_direction_idx = tuple_direction_to_index(num_x_axis=self.opts.num_x_axis,
@@ -117,7 +117,7 @@ class BatchNorm(nn.Module):
         Stores the mean, variance to the running_mean, running_var in the training time.
         Args:
             task_id: The task id.
-            direction_tuple: The direction tuple.
+            direction_tuple: The task tuple.
 
         """
         # Get the index to load from.
@@ -137,14 +137,14 @@ def store_running_stats(model: nn.Module, task_id: int, direction_id: tuple) -> 
     Args:
         model: The model.
         task_id: The task id.
-        direction_id: The direction id.
+        direction_id: The task id.
 
     """
     for _, layer in model.named_modules():  # Iterating over all layers.
         if isinstance(layer, BatchNorm):  # Save only for BatchNorm layers
+            # For each BatchNorm instance store its running stats.
             layer.store_running_stats(task_id=task_id,
-                                      direction_tuple=direction_id)  # For each BatchNorm instance store its running
-            # stats.
+                                      direction_tuple=direction_id)
 
 
 def load_running_stats(model: nn.Module, task_id: int, direction_id: tuple) -> None:
@@ -153,7 +153,7 @@ def load_running_stats(model: nn.Module, task_id: int, direction_id: tuple) -> N
     Args:
         model: The model.
         task_id: The task id.
-        direction_id: The direction id.
+        direction_id: The task id.
 
     """
     for _, layer in model.named_modules():  # Iterating over all layers.

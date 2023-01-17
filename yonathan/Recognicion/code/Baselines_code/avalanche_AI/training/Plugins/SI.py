@@ -29,7 +29,7 @@ class SI(Base_plugin):
     def __init__(self, opts: argparse, prev_checkpoint: Union[dict, None] = None, eps=1e-7):
         """
         Args:
-            opts: The model opts.
+            opts: The model model_opts.
             prev_checkpoint: A pretrained model
             eps: The epsilon needed for non-zero devising.
         """

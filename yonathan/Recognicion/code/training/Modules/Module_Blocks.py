@@ -153,13 +153,13 @@ class Modulation(nn.Module):
             column_modulation: Whether to create pixel/channel modulation.
         """
         super(Modulation, self).__init__()
-        self.opts = opts  # Store the model opts.
+        self.opts = opts  # Store the model model_opts.
         self.modulations = nn.ParameterList()  # Module list containing modulation for all directions.
         if column_modulation:
             size = [1, *shape]  # If pixel modulation matches the inner spatial of the input
         else:
             size = [shape, 1, 1]  # If channel modulation matches the number of channels
-        for i in range(opts.ndirections):  # allocating for every direction its task embedding
+        for i in range(opts.ndirections):  # allocating for every task its task embedding
             layer = nn.Parameter(torch.Tensor(*size))  # The task embedding.
             task_embedding[i].append(layer)  # Add to the learnable parameters.
             self.modulations.append(layer)  # Add to the modulation list.

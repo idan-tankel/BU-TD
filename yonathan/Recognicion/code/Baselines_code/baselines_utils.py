@@ -35,16 +35,16 @@ def load_model(model: nn.Module, results_path: str, model_path: str) -> dict:
 
 def construct_flag(opts: argparse, task_id: int, direction_tuple: tuple) -> Tensor:
     """
-    Construct new flag from the new task, direction id.
+    Construct new flag from the new task, task id.
     Args:
-        opts: The model opts.
+        opts: The model model_opts.
         task_id: The task id.
-        direction_tuple: The direction id.
+        direction_tuple: The task id.
 
-    Returns: The new tasks, with the new task and direction.
+    Returns: The new tasks, with the new task and task.
 
     """
-    # From the direction tuple to single number.
+    # From the task tuple to single number.
     direction_dir, _ = tuple_direction_to_index(num_x_axis=opts.num_x_axis, num_y_axis=opts.num_y_axis,
                                                 direction=direction_tuple,
                                                 ndirections=opts.ndirections,
@@ -52,7 +52,7 @@ def construct_flag(opts: argparse, task_id: int, direction_tuple: tuple) -> Tens
     task_id = torch.tensor(task_id)
     # The new task vector.
     New_task_flag = torch.nn.functional.one_hot(task_id, opts.ntasks)
-    # The new direction vector.
+    # The new task vector.
     New_direction_flag = torch.nn.functional.one_hot(direction_dir, opts.ndirections)
     # Concat into one flag.
     New_flag = torch.concat([New_direction_flag, New_task_flag], dim=0).float()
@@ -78,7 +78,7 @@ def compute_fisher_information_matrix(opts: argparse, model: nn.Module, criterio
     """
     Compute fisher importance matrix for each parameter.
     Args:
-        opts: The model opts
+        opts: The model model_opts
         model: The model we compute its coefficients.
         criterion: The loss criterion.
         dataloader: The train data-loader.
@@ -142,7 +142,7 @@ def Norm(opts: argparse, x: inputs_to_struct, out: outs_to_struct) -> torch.floa
     """
     Return the norm of the output classifier.
     Args:
-        opts: The model opts-not used.
+        opts: The model model_opts-not used.
         x: The input struct.
         out: The output struct.
 

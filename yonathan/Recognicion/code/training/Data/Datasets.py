@@ -39,7 +39,7 @@ class DataSetBase(Dataset):
         self.nexamples: int = nexamples  # The number of examples.
         self.obj_per_row: int = obj_per_row  # The number of rows.
         self.obj_per_col: int = obj_per_col  # The number of columns.
-        # self.nexamples = 100
+        #self.nexamples = 100
         self.targets = [0 for _ in range(self.nexamples)]  # Used only for Avalanche_AI.
         self.split_size: int = 1000  # The split size we created the dataset according to.
         self.edge_class: Tensor = torch.tensor(nclasses)  # The edge class.
@@ -78,13 +78,13 @@ class DataSetBase(Dataset):
             r: The row index.
             c: The column index.
             label_all: The label_all
-            direction_list: The direction.
+            direction_list: The task.
 
         Returns: The label task.
 
         """
         labels_task = []
-        for direction in direction_list:
+        for task, direction in direction_list:
             direction_x, direction_y = direction
             # If the target not in the Border.
             if 0 <= r + direction_y <= self.obj_per_col - 1 and 0 <= c + direction_x <= self.obj_per_row - 1:
@@ -140,7 +140,7 @@ class DatasetGuidedSingleTask(DataSetBase):
             opts: The model options.
             nexamples: The number of examples.
             task_idx: The language index.
-            direction_tuple: The direction tuple.
+            direction_tuple: The task tuple.
             obj_per_row: Number of objects per row.
             obj_per_col: Number of objects per column.
         """
@@ -151,10 +151,10 @@ class DatasetGuidedSingleTask(DataSetBase):
                                                       obj_per_col=obj_per_col, obj_per_row=obj_per_row)
         self.ntasks = opts.ntasks
         self.tuple_direction = direction_tuple
-        # The direction index(not tuple).
+        # The task index(not tuple).
         self.ds_type = opts.ds_type
         self.direction, _ = tuple_direction_to_index(num_x_axis=opts.num_x_axis, num_y_axis=opts.num_y_axis,
-                                                     direction=direction_tuple[0],
+                                                     direction=direction_tuple[0][1],
                                                      ndirections=opts.ndirections, task_id=task_idx)
         self.task_idx = torch.tensor(task_idx)  # The task id.
         self.edge_class = torch.tensor(self.nclasses)  # The 'border' class.
@@ -171,7 +171,7 @@ class DatasetGuidedSingleTask(DataSetBase):
         img, char_type_one, label_all, label_existence, r, c, _ = super(DatasetGuidedSingleTask, self).__getitem__(
             index=index)
         task_type_ohe = torch.nn.functional.one_hot(self.task_idx, self.ntasks)
-        # Getting the direction embedding, telling which direction we solve now.
+        # Getting the task embedding, telling which task we solve now.
         direction_type_ohe = torch.nn.functional.one_hot(self.direction, self.ndirections)
         # Getting the character embedding, which character we query about.
         # Concatenating all three flags into one flag.
@@ -204,7 +204,7 @@ class DatasetGuidedInterleaved(DataSetBase):
                                           nclasses=opts.nclasses[task_idx], root=root,
                                           nexamples=nexamples, is_train=is_train)
         self.ntasks = opts.ntasks
-        # The direction index(not tuple).
+        # The task index(not tuple).
         self.ds_type = opts.ds_type
         self.obj_per_row = obj_per_row  # Number of row.
         self.obj_per_col = obj_per_col  # Number of columns.
@@ -223,7 +223,7 @@ class DatasetGuidedInterleaved(DataSetBase):
         img, char_type_one, label_all, label_existence, r, c, sample_direction = \
             super(DatasetGuidedInterleaved, self).__getitem__(index=index)
         task_type_ohe = torch.nn.functional.one_hot(self.task_idx, self.ntasks)
-        # Getting the direction embedding, telling which direction we solve now.
+        # Getting the task embedding, telling which task we solve now.
         direction_type_ohe = torch.nn.functional.one_hot(sample_direction, self.ndirections)
         # Getting the character embedding, which character we query about.
         # Concatenating all three flags into one flag.
@@ -239,7 +239,7 @@ class DatasetNonGuided(DatasetGuidedSingleTask):
     Returning for each character its adjacent character.
     """
 
-    # In this dataset, we return for each character its adjacent character according to the direction to all characters.
+    # In this dataset, we return for each character its adjacent character according to the task to all characters.
     def Get_label_task_all(self, label_all: Tensor) -> Tensor:
         """
         Compute for each character its neighbor, if exists in the sample.

@@ -26,7 +26,7 @@ class ComposeModel(nn.Module):
 
     def __init__(self, opts: argparse, butd_model: BUTDModel):
         super(ComposeModel, self).__init__()
-        self.opts = opts  # The model opts.
+        self.opts = opts  # The model model_opts.
         self.model: BUTDModel = butd_model  # The model.
         self.flag = opts.model_flag  # The model flag.
         # Compute the edge class, needed for early stopping.
@@ -56,9 +56,9 @@ class ComposeModel(nn.Module):
         Create the new flag.
         Args:
             prediction: The prediction, first cycle None.
-            direction: The direction.
+            direction: The task.
             char: The characters, needed for first cycle only as no prediction is computed.
-            direction_id: The direction id.
+            direction_id: The task id.
 
         Returns: The New flag instruction for next phase.
 
@@ -71,7 +71,7 @@ class ComposeModel(nn.Module):
         direction_index, _ = tuple_direction_to_index(self.opts.num_x_axis, self.opts.num_y_axis, direction,
                                                       self.opts.ndirections)
         task_type_ohe = torch.nn.functional.one_hot(torch.zeros(B, dtype=torch.long), 1).cuda()
-        # Getting the direction embedding, telling which direction we solve now.
+        # Getting the task embedding, telling which task we solve now.
         direction_type_ohe = torch.nn.functional.one_hot(torch.ones(B, dtype=torch.long) * direction_index,
                                                          self.opts.ndirections).cuda()
         # Getting the character embedding, which character we query about.

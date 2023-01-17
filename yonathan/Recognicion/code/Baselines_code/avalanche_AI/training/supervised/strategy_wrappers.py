@@ -31,7 +31,7 @@ class Regularization_strategy(SupervisedTemplate):
                  eval_every: int = -1, prev_model=None, model_path=None):
         """
         Args:
-            opts: The model opts.
+            opts: The model model_opts.
             task: The task.
             logger: The logger.
             eval_every: Interval evaluation.
@@ -42,7 +42,7 @@ class Regularization_strategy(SupervisedTemplate):
         self.reg_type = reg_type
         self.task_id = task[0]
         self.direction_id = task[1]
-        self.opts = opts  # The model opts.
+        self.opts = opts  # The model model_opts.
         self.logger = logger  # The logger.
         self.inputs_to_struct = opts.inputs_to_struct
         self.outs_to_struct = opts.outs_to_struct

@@ -70,11 +70,11 @@ class Training_flag:
 
     def Get_learned_params(self, model: nn.Module, task_idx: int, direction: tuple[int, int]):
         """
-        Given model, direction, task we return the desired trainable parameters.
+        Given model, task, task we return the desired trainable parameters.
         Args:
             model: The model.
             task_idx: Language index.
-            direction: The direction.
+            direction: The task.
 
         Returns: The desired parameters.
         """
@@ -89,10 +89,10 @@ class Training_flag:
             return learned_params
 
         if self.task_embedding:
-            # Training the task embedding associate with the direction.
+            # Training the task embedding associate with the task.
             learned_params.extend(model.TE[direction_idx])
         if self.head_learning:
-            # Train the task-head associated with the task, direction.
+            # Train the task-head associated with the task, task.
             learned_params.extend(model.transfer_learning[task_idx][direction_idx])
         if self.train_arg:
             # Train the argument embedding associated with the task.

@@ -28,7 +28,7 @@ class EWC(Base_plugin):
                  load_from: Union[str, None] = None):
         """
         Args:
-            opts: The model opts.
+            opts: The model model_opts.
             prev_checkpoint: A pretrained model
         """
         super(EWC, self).__init__(opts=opts, prev_checkpoint=prev_checkpoint, reg_type=RegType.EWC)

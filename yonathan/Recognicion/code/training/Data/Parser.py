@@ -1,5 +1,5 @@
 """
-Here we define the modl opts needed for all project.
+Here we define the modl model_opts needed for all project.
 """
 import argparse
 
@@ -26,7 +26,7 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
         model_flag: The model flag.
         ds_type: The data type e.g. mnist, fashionmnist, omniglot.
 
-    Returns: The options opts.
+    Returns: The options model_opts.
 
     """
     # Asserting NOFLAG is used only with ResNet.
@@ -79,7 +79,7 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
     opts.add_argument('--inshape', default=(3, *Data_specification.data_obj.image_size), type=tuple,
                       help='The input image shape, may be override in get_dataset')
     opts.add_argument('--num_heads', default=Data_specification.data_obj.num_heads, type=list,
-                      help='The number of headed for each task, direction')
+                      help='The number of headed for each task, task')
     opts.add_argument('--num_x_axis', default=Data_specification.data_obj.num_x_axis, type=int,
                       help='The neighbor radius in the x-axis.')
     opts.add_argument('--num_y_axis', default=Data_specification.data_obj.num_y_axis, type=int,
@@ -124,7 +124,7 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
     # LFL
     opts.add_argument('--LFL_lambda', default=0.5, type=float, help='The LFL strength')
     # LWF
-    opts.add_argument('--LWF_lambda', default=0.5, type=float, help='The LWF strength')
+    opts.add_argument('--LWF_lambda', default=0.65, type=float, help='The LWF strength')
     opts.add_argument('--temperature_LWF', default=2.0, type=float, help='The LWF temperature')
     # MAS
     opts.add_argument('--mas_alpha', default=0.5, type=float, help='The MAS continual importance weight')
@@ -137,7 +137,7 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
     opts.add_argument('--IMM_Mean_lambda', default=0.01, type=float, help='The imm_mean strength')
     opts.add_argument('--IMM_Mode_lambda', default=0.70, type=float, help='The imm_mean strength')
     # Naive
-    opts.add_argument('--Naive_lambda', default=0, type=float, help='The rwalk strength')
+    opts.add_argument('--Naive_lambda', const=0, action='store_const', help='The Naive strength')
     # SI
     opts.add_argument('--SI_eps', default=0.0000001, type=float, help='The SI strength')
     opts.add_argument('--SI_lambda', default=0.005, type=float, help='The rwalk strength')
@@ -151,9 +151,9 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
 
 def update_parser(opts: argparse, attr: str, new_value: any) -> None:
     """
-    Update existing model opts attribute to new_value.
+    Update existing model model_opts attribute to new_value.
     Args:
-        opts: A model opts.
+        opts: A model model_opts.
         attr: An attr.
         new_value: The new value we want to assign
 

@@ -15,21 +15,20 @@ def train_trajectory():
     Returns:
 
     """
-    Models = []
-    opts = GetParser(model_flag=Flag.CL, ds_type=DsType.Omniglot)
+    Models, Data = [], []
+    opts = GetParser(model_flag=Flag.CL)
     model = create_model(opts)
     first_task = opts.initial_directions
     training_flag = Training_flag(opts, train_all_model=True)
-    new_model = train_step(model_opts=opts, model=model, task=first_task, training_flag=training_flag,
-                           ds_type=DsType.Omniglot)
+    new_model, new_data = train_step(model_opts=opts, model=model, task=first_task, training_flag=training_flag)
     Models.append(new_model)
-    new_tasks = [[1, (1, 0)], [2, (1, 0)], [3, (1, 0)]]
-    for direction, lang_id in new_tasks:
+    Data.append(new_data)
+    new_tasks = [[0, (-1, 0)], [0, (0, 1)], [0, (0, -1)]]
+    for task in new_tasks:
         training_flag = Training_flag(opts, train_head=True, train_task_embedding=True)
-        model = train_step(model_opts=opts, model=model, task=direction, training_flag=training_flag,
-                           ds_type=DsType.Omniglot)
+        model, data = train_step(model_opts=opts, model=model, task=task, training_flag=training_flag)
         Models.append(copy.deepcopy(model))
-
+        Data.append(data)
     print(len(Models))
 
 

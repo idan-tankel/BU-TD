@@ -27,7 +27,7 @@ class Base_plugin(SupervisedPlugin):
             self.prev_model.load_state_dict(state_dict=prev_checkpoint['model_state_dict'])
             self.num_exp = 1
         self.trained_tasks = [(0, (1, 0))]
-        self.opts = opts  # The model opts.
+        self.opts = opts  # The model model_opts.
         self.num_exp = 0  # The number of exp trained so far.
         self.inputs_to_struct = opts.inputs_to_struct  # The inputs to struct method.
         self.outs_to_struct = opts.outs_to_struct  # The outputs to struct method

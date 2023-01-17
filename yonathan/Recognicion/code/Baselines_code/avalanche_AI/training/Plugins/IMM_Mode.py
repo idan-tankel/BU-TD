@@ -30,7 +30,7 @@ class MyIMM_Mode(Base_plugin):
     def __init__(self, opts: argparse, prev_checkpoint: Union[dict, None] = None, load_from=None):
         """
         Args:
-            opts: The model opts.
+            opts: The model model_opts.
             prev_checkpoint: A pretrained model
             load_from: Path we load from
         """

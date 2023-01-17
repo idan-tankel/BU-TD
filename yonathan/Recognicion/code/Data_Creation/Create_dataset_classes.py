@@ -7,6 +7,7 @@ from enum import Enum
 
 import skimage
 import torch
+from torch import Tensor
 from torch.utils.data import Dataset
 from imgaug import augmenters as iaa
 
@@ -38,7 +39,6 @@ class DsType(Enum):
     Emnist = 'Emnist'
     Omniglot = 'Omniglot'
     Fashionmnist = 'Fashionmnist'
-    Avatar = 'Avatars'
 
     def __str__(self):
         return self.value
@@ -60,6 +60,7 @@ class General_raw_data(Dataset):
         self.raw_images = None  # The raw images.
         self.labels = None  # The labels.
         self.nclasses = None  # The number of classes.
+        self.num_examples_per_character = None
         self.shape = (1, 28, 28)  # The image shape.
 
     def Merge_two_datasets(self, train_raw_dataset: Dataset, test_raw_dataset: Dataset) -> \
@@ -105,12 +106,12 @@ class Emnist_raw_data(General_raw_data):
     The Emnist data-set.
     """
 
-    def __init__(self, download_dir):
+    def __init__(self, download_dir: str):
         """
         Args:
             download_dir: The path download the raw data into.
         """
-        super(Emnist_raw_data, self).__init__(download_dir)
+        super(Emnist_raw_data, self).__init__(download_dir=download_dir)
         # Rotation transform, as the emnist images come rotated and flipped.
         self.emnist_transform = torchvision.transforms.Compose([
             lambda data_image: F.rotate(
@@ -120,7 +121,7 @@ class Emnist_raw_data(General_raw_data):
         ])
         # Train Data.
         train_raw_dataset = datasets.EMNIST(
-            download_dir,
+            root=download_dir,
             download=True,
             split='balanced',
             train=True,
@@ -128,7 +129,7 @@ class Emnist_raw_data(General_raw_data):
 
         # Test Data.
         test_raw_dataset = datasets.EMNIST(
-            download_dir,
+            root=download_dir,
             download=True,
             split='balanced',
             train=False,
@@ -151,13 +152,12 @@ class FashionMnist_raw_data(General_raw_data):
         Args:
             download_dir: The path download the raw Data into.
         """
-        super(FashionMnist_raw_data, self).__init__(download_dir)
+        super(FashionMnist_raw_data, self).__init__(download_dir=download_dir)
         # Train Data.
-        train_raw_dataset = datasets.FashionMNIST(
-            download_dir, download=True)
+        train_raw_dataset = datasets.FashionMNIST(root=download_dir, download=True)
         # Test Data.
         test_raw_dataset = datasets.FashionMNIST(
-            download_dir, train=False, download=True)
+            root=download_dir, train=False, download=True)
         self.nclasses = 10  # Ten classes.
         # Merge the data.
         self.raw_images, self.labels = self.Merge_two_datasets(train_raw_dataset, test_raw_dataset)
@@ -169,7 +169,7 @@ class Omniglot_data_set(General_raw_data):
     The Omniglot data-set.
     """
 
-    def __init__(self, download_dir, language_list):
+    def __init__(self, download_dir: str, language_list: list[int]):
         """
         Args:
             download_dir: The path download the raw Data into.
@@ -179,7 +179,7 @@ class Omniglot_data_set(General_raw_data):
         # The raw data path.
         self.raw_data_source = os.path.join(Path(__file__).parents[3], 'data/Omniglot/RAW/omniglot-py/Unified')
         # Make the Omniglot dictionary.
-        Omniglot_dict = Download_raw_omniglot_data(download_dir)
+        Omniglot_dict = Download_raw_omniglot_data(raw_data_path=download_dir)
         # List of all languages, ordered by number of characters.
         All_languages = list(Omniglot_dict)
         # Transform to make tensors.
@@ -196,8 +196,8 @@ class Omniglot_data_set(General_raw_data):
             self.raw_images.extend(language_images)  # Add all language characters images.
         self.num_examples_per_character = 20  # 20 images per character.
         self.nclasses = len(self.raw_images) // 20  # The number of labels.
-        self.labels = sum([self.num_examples_per_character * [i] for i in range(self.nclasses)], [])  # Merge into one
-        # list.
+        # Merge into one list.
+        self.labels = sum([self.num_examples_per_character * [i] for i in range(self.nclasses)], [])
 
 
 class GenericDatasetParams:
@@ -217,6 +217,7 @@ class GenericDatasetParams:
         """
         self.ds_type: DsType = ds_type  # The data-set type.
         self.letter_size: int = 28  # The letter size is always 28.
+        self.num_chars_per_image: int = num_cols * num_rows
         self.min_scale = None  # The minimal scale factor we apply.
         self.max_scale = None  # The maximal scale factor we apply.
         self.ngenerate = None  # The number of samples to generate per chosen sequence.
@@ -231,6 +232,7 @@ class GenericDatasetParams:
         self.nsamples_val = None  # The number of samples for the CG test.
         self.Data_path = os.path.join(Path(__file__).parents[2],
                                       f'data/{str(ds_type)}/RAW')  # The path to the raw Data.
+
         # This is the rule, we define the number of samples we generate per chosen sequence.
         if num_rows == 1 or num_cols == 1:
             self.ngenerate = num_rows - 1 if num_cols == 1 else num_cols - 1
@@ -256,10 +258,9 @@ class EmnistParams(GenericDatasetParams):
         self.max_scale = 1.1
         self.min_shift = 2.0
         self.max_shift = 0.2 * 28
-        self.generalize = True
         self.create_CG_test = True
         self.image_size = [130, 200]
-        self.ngenerate = 5
+        self.ngenerate = 5 if 5 < self.num_chars_per_image else self.ngenerate
         self.nsamples_train = 20000
         self.nsamples_test = 2000
         self.nsamples_val = 2000
@@ -284,12 +285,12 @@ class FashionMnistParams(GenericDatasetParams):
         self.max_scale = 1.5
         self.min_shift = 2.0
         self.max_shift = 0.2 * 28
-        self.generalize = False
+        self.create_CG_test = False
         self.image_size = [112, 130]
         self.nsamples_train = 25000
         self.nsamples_test = 2000
         self.nsamples_val = 2000
-        self.raw_data_set = FashionMnist_raw_data(self.Data_path)
+        self.raw_data_set = FashionMnist_raw_data(download_dir=self.Data_path)
 
 
 class OmniglotParams(GenericDatasetParams):
@@ -308,7 +309,7 @@ class OmniglotParams(GenericDatasetParams):
         self.max_scale = 1.5
         self.min_shift = 2.0
         self.max_shift = 0.2 * 28
-        self.generalize = False
+        self.create_CG_test = False
         self.image_size = [55, 200]
         self.nsamples_train = 20000
         self.nsamples_test = 2000
@@ -346,10 +347,12 @@ class CharInfo:
     contains the image, scale, shift, coordinates.
     """
 
-    def __init__(self, parser: argparse, raw_dataset, prng: random, sample_id: int, sample_chars: list):
+    def __init__(self, parser: argparse, raw_dataset: General_raw_data, prng: random, sample_id: int,
+                 sample_chars: list):
         """
         Args:
-            parser: The option parser.
+            parser: The option model_opts.
+            raw_dataset: The raw image data-set.
             prng: The random generator.
             sample_id: The sample id.
             sample_chars: The sampled characters list
@@ -363,7 +366,7 @@ class CharInfo:
         new_size = int(self.scale * parser.letter_size)
         shift = prng.rand(2) * (max_shift - min_shift) + min_shift
         y, x = shift.astype(np.int)
-        start_row, start_col = np.unravel_index(sample_id, [parser.num_rows, parser.num_cols])
+        start_row, start_col = np.unravel_index(indices=sample_id, shape=[parser.num_rows, parser.num_cols])
         c = start_col + 0.5  # start in the middle of the column.
         r = start_row + 0.1  # Start in the 0.1 of the row.
         image_height, image_width = parser.image_size  # The desired image dimension.
@@ -379,7 +382,6 @@ class CharInfo:
         # The index in the data-loader.
         self.img_id = num_examples_per_character * self.label + self.label_id
         self.img, self.feature_label = raw_dataset[self.img_id]  # The character image.
-
         self.letter_size = letter_size
         self.location_x = stx
         self.nclasses = raw_dataset.nclasses
@@ -401,27 +403,24 @@ class Sample:
     the query part id.
     """
 
-    def __init__(self, parser, query_part_id: int, adj_type: int, chars: list[CharInfo], sample_id: int):
+    def __init__(self, parser: argparse, query_part_id: int, adj_type: int, chars: list[CharInfo], sample_id: int):
         """
 
         Args:
-            parser: The parser.
+            parser: The model_opts.
             query_part_id: The index we query about.
-            adj_type: The direction we query about.
+            adj_type: The task we query about.
             chars: The list of all characters in the sample.
+            sample_id: The sample id.
         """
         #  self.sampled_chars = sampled_chars
         self.query_part_id = query_part_id  # The index we query about.
-        self.direction_query = adj_type  # The direction I query about.
+        self.direction_query = adj_type  # The task I query about.
         self.chars = chars  # All character objects.
         self.query_coord = np.unravel_index(query_part_id,
                                             [parser.num_rows, parser.num_cols])  # Getting the place we query about.
-        if parser.ds_type is not DsType.Avatar:
-            self.image = np.zeros((1, *parser.image_size),
-                                  dtype=np.float32)  # Initialize with zeros, will be updated in create_image_matrix.
-        else:
-            self.image = np.ones((1, *parser.image_size),
-                                 dtype=np.float32)  # Initialize with zeros, will be updated in create_image_matrix.
+        self.image = np.zeros((1, *parser.image_size),
+                              dtype=np.float32)  # Initialize with zeros, will be updated in create_image_matrix.
         self.label_existence = Get_label_existence(chars, chars[0].nclasses)  # The label existence.
         self.label_ordered = Get_label_ordered(chars)  # The label ordered.
         self.sample_id = sample_id  # The sample id.
@@ -458,21 +457,21 @@ class DataAugmentClass:
         aug = self.aug
         aug_seed = self.aug_seed
         aug.seed_(aug_seed)
-        aug_images = aug.augment_images([image])
+        aug_images = aug.augment_images(images=[image])
         return aug_images[0]
 
 
 # TODO - CHANGE THE CLASS.
 class MetaData:
     """
-     Saves the parser, and the number of samples per dataset.
+     Saves the model_opts, and the number of samples per dataset.
     """
 
     def __init__(self, parser: argparse, nsamples_per_data_type_dict: dict):
         """
 
         Args:
-            parser: The parser.
+            parser: The model_opts.
             nsamples_per_data_type_dict: The nsamples dictionary.
         """
 
@@ -480,7 +479,7 @@ class MetaData:
         self.parser = parser
 
 
-def Get_label_existence(chars: list[CharInfo], nclasses: int) -> torch:
+def Get_label_existence(chars: list[CharInfo], nclasses: int) -> Tensor:
     """
     Generating the label_existence label.
     Args:
@@ -495,7 +494,7 @@ def Get_label_existence(chars: list[CharInfo], nclasses: int) -> torch:
     return label_existence
 
 
-def Get_label_ordered(chars: list[CharInfo]) -> torch:
+def Get_label_ordered(chars: list[CharInfo]) -> Tensor:
     """
     Generate the label_ordered label.
     Args:
