@@ -11,6 +11,7 @@ import torchvision.transforms as T
 from PIL import Image
 from torch import Tensor
 from torch.utils.data import Dataset
+
 from training.Data.Structs import Task_to_struct
 from training.Utils import tuple_direction_to_index, struct_to_input
 
@@ -116,7 +117,7 @@ class DataSetBase(Dataset):
         # Concatenating all three flags into one flag.
         sample_direction = sample.direction_query
         # If the list_task_structs is part of the initial tasks, we solve all initial tasks together.
-        return img, char_type_one, label_all, label_existence, r, c, sample_direction
+        return img, char_type_one, label_all, label_existence, r, c, sample_direction, index
 
     def __len__(self):
         """
@@ -137,7 +138,7 @@ class DatasetGuidedSingleTask(DataSetBase):
 
         Args:
             root: Path to the data.
-            opts: The model options.
+            opts: The model_test options.
             nexamples: The number of examples.
             obj_per_row: Number of objects per row.
             obj_per_col: Number of objects per column.
@@ -159,7 +160,7 @@ class DatasetGuidedSingleTask(DataSetBase):
         self.task_idx = torch.tensor(task_idx)  # The list_task_structs id.
         self.edge_class = torch.tensor(self.nclasses)  # The 'border' class.
 
-    def __getitem__(self, index: int) -> tuple[Tensor, Tensor, Tensor, Tensor, Tensor]:
+    def __getitem__(self, index: int) -> tuple[Tensor, Tensor, Tensor, Tensor, Tensor, Tensor]:
         """
         Args:
             index: sample index.
@@ -168,7 +169,8 @@ class DatasetGuidedSingleTask(DataSetBase):
 
         """
         # Getting root to the sample
-        img, char_type_one, label_all, label_existence, r, c, _ = super(DatasetGuidedSingleTask, self).__getitem__(
+        img, char_type_one, label_all, label_existence, r, c,_, id = super(DatasetGuidedSingleTask,
+                                                                                 self).__getitem__(
             index=index)
         task_type_ohe = torch.nn.functional.one_hot(self.task_idx, self.ntasks)
         # Getting the list_task_structs embedding, telling which list_task_structs we solve now.
@@ -178,7 +180,7 @@ class DatasetGuidedSingleTask(DataSetBase):
         flag = torch.concat([direction_type_ohe, task_type_ohe, char_type_one], dim=0).float()
         # If the list_task_structs is part of the initial tasks, we solve all initial tasks together.
         label_task = self.Compute_label_task(r=r, c=c, label_all=label_all, direction_list=self.tuple_direction)
-        return img, label_task, flag, label_all, label_existence
+        return img, label_task, flag, label_all, label_existence, id
 
 
 class DatasetGuidedInterleaved(DataSetBase):
@@ -193,7 +195,7 @@ class DatasetGuidedInterleaved(DataSetBase):
 
         Args:
             root: Path to the data.
-            opts: The model options.
+            opts: The model_test options.
             nexamples: The number of examples.
             task_idx: The language index.
             obj_per_row: Number of objects per row.
@@ -269,8 +271,8 @@ class DatasetNonGuided(DatasetGuidedSingleTask):
         Returns: The sample data.
 
         """
-        img, label_task, flag, label_all, label_existence = super(DatasetNonGuided, self).__getitem__(index=index)
+        img, label_task, flag, label_all, label_existence,id = super(DatasetNonGuided, self).__getitem__(index=index)
         # The same get item.
         # Change the label list_task_structs to return all adjacent characters.
         label_task = self.Get_label_task_all(label_all=label_all)
-        return img, label_task, flag, label_all, label_existence
+        return img, label_task, flag, label_all, label_existence, id

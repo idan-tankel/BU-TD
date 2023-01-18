@@ -19,24 +19,25 @@ class inputs_to_struct:
         Args:
             inputs: The tensor list.
         """
-        img, label_task, flag, label_all, label_existence, *rest = inputs
+        img, label_task, flag, label_all, label_existence,index, *rest = inputs
         self.image = img  # The image.
         self.label_all = label_all  # The label all.
         self.label_existence = label_existence  # The label existence.
         self.label_task = label_task.squeeze()  # The label list_task_structs.
         self.flags = flag  # The flag.
+        self.index = index
 
 
 class outs_to_struct:
     """
-    Struct transforming the model output list to struct.
+    Struct transforming the model_test output list to struct.
     """
 
     def __init__(self, outs: list[Tensor]):
         """
-        Struct transforming the model output list to struct.
+        Struct transforming the model_test output list to struct.
         Args:
-            outs: The model outs.
+            outs: The model_test outs.
         """
         occurrence_out, bu_features, bu2_features, classifier = outs
         self.occurrence_out = occurrence_out  # The occurrence output.
@@ -56,8 +57,8 @@ class Training_flag:
                  train_head: bool = False):
         """
         Args:
-            opts: The model options.
-            train_all_model: Whether to train all model.
+            opts: The model_test options.
+            train_all_model: Whether to train all model_test.
             train_arg: Whether to train arg.
             train_task_embedding: Whether to train the list_task_structs embedding.
             train_head: Whether to train the read-out head.
@@ -70,9 +71,9 @@ class Training_flag:
 
     def Get_learned_params(self, model: nn.Module, task_idx: int, direction: tuple[int, int]):
         """
-        Given model, list_task_structs, list_task_structs we return the desired trainable parameters.
+        Given model_test, list_task_structs, list_task_structs we return the desired trainable parameters.
         Args:
-            model: The model.
+            model: The model_test.
             task_idx: Language index.
             direction: The list_task_structs.
 
@@ -84,7 +85,7 @@ class Training_flag:
                                                       ndirections=self.opts.ndirections, task_id=task_idx)
         learned_params = []
         if self.train_all_model:
-            # Train all model.
+            # Train all model_test.
             learned_params = list(model.parameters())
             return learned_params
 

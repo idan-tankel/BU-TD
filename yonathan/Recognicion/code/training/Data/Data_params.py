@@ -12,10 +12,10 @@ from typing import Union
 import numpy as np
 
 from Data_Creation.Create_dataset_classes import DsType  # Import the Data_Creation set types.
+from training.Data.Structs import Task_to_struct
 from training.Metrics.Accuracy import multi_label_accuracy, multi_label_accuracy_weighted
 from training.Metrics.Loss import multi_label_loss_weighted, multi_label_loss
 from training.Utils import get_omniglot_dictionary, tuple_direction_to_index
-from training.Data.Structs import Task_to_struct
 
 
 # Define the Flag Enums, and Dataset specification and baseline methods.
@@ -26,7 +26,7 @@ class Flag(Enum):
     The possible training flags.
     """
     TD = auto()  # Ordinary BU-TD network training.
-    NOFLAG = auto()  # Non-guided model, should output for each character its adjacent neighbor.
+    NOFLAG = auto()  # Non-guided model_test, should output for each character its adjacent neighbor.
     CL = auto()  # Continual learning flag, a BU-TD network with allocating list_task_structs embedding for each task.
 
 
@@ -49,9 +49,9 @@ class RegType(Enum):
 
     def class_to_reg_factor(self, opts: argparse) -> float:
         """
-        Given the model options, get the associated regularization factor.
+        Given the model_test options, get the associated regularization factor.
         Args:
-            opts: The model model_opts.
+            opts: The model_test model_opts.
 
         Returns: The regularization factor
 
@@ -67,7 +67,7 @@ class GenericDataParams:
     def __init__(self, flag_at: Flag, ds_type: DsType, num_x_axis: int = 1, num_y_axis: int = 1):
         """
         Args:
-            flag_at: The model flag.
+            flag_at: The model_test flag.
             ds_type: The data-set type flag.
             num_x_axis: The neighbor levels in the x-axis.
             num_y_axis: The neighbor levels in the x-axis.
@@ -89,7 +89,7 @@ class GenericDataParams:
         # self.ndirections = 1
         self.nclasses: dict = {i: 47 for i in range(self.ndirections)}
         self.results_dir: str = os.path.join(self.project_path,
-                                             f'data/{str(ds_type)}/results/')  # The trained model directory.
+                                             f'data/{str(ds_type)}/results/')  # The trained model_test directory.
         self.baselines_dir: str = os.path.join(self.project_path,
                                                f'data/{str(ds_type)}/Baselines/')
         self.Data_specific_path = os.path.join(self.project_path, 'data/{}'.format(str(ds_type)))
@@ -107,7 +107,7 @@ class EmnistDataset(GenericDataParams):
     def __init__(self, flag_at: Flag):
         """
         Args:
-            flag_at: The model flag.
+            flag_at: The model_test flag.
 
         """
         super(EmnistDataset, self).__init__(flag_at=flag_at, ds_type=DsType.Emnist, num_x_axis=2, num_y_axis=2)
@@ -133,7 +133,7 @@ class FashionmnistDataset(GenericDataParams):
         Fashionmnist dataset.
         The same as Emnist but with 10 classes.
         Args:
-            flag_at: The model flag.
+            flag_at: The model_test flag.
         """
         super(FashionmnistDataset, self).__init__(flag_at=flag_at, ds_type=DsType.Fashionmnist)
         self.nclasses = {i: 10 for i in
@@ -151,7 +151,7 @@ class OmniglotDataset(GenericDataParams):
         Omniglot dataset.
         Args:
             initial_tasks: The initial list_task_structs desired set.
-            flag_at: The model flag.
+            flag_at: The model_test flag.
 
         """
         super(OmniglotDataset, self).__init__(flag_at=flag_at, ds_type=DsType.Omniglot,

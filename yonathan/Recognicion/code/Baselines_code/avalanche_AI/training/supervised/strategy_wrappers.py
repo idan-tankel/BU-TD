@@ -33,18 +33,18 @@ class Regularization_strategy(SupervisedTemplate):
                  eval_every: int = -1, prev_model=None, model_path=None):
         """
         Args:
-            opts: The model model_opts.
+            opts: The model_test model_opts.
             task: The list_task_structs.
             logger: The logger.
             eval_every: Interval evaluation.
-            prev_model: The previous model.
-            model_path: The model path.
+            prev_model: The previous model_test.
+            model_path: The model_test path.
         """
         self.task = task
         self.reg_type = reg_type
         self.task_id = task[0]
         self.direction_id = task[1]
-        self.opts = opts  # The model model_opts.
+        self.opts = opts  # The model_test model_opts.
         self.logger = logger  # The logger.
         self.inputs_to_struct = opts.inputs_to_struct
         self.outs_to_struct = opts.outs_to_struct
@@ -100,7 +100,7 @@ class Regularization_strategy(SupervisedTemplate):
         (new_task, dl_len) = kwargs['kargs']
         self.update_task(new_task=new_task)
         learned_params = self.model.get_specific_head(new_task[0], new_task[1])  # Train only the desired params.
-        #   learned_params = self.model.parameters()
+        #   learned_params = self.model_test.parameters()
         self.optimizer, self.scheduler = create_optimizer_and_scheduler(self.opts, learned_params,
                                                                         nbatches=dl_len // self.opts.bs)
 
@@ -128,7 +128,7 @@ class Regularization_strategy(SupervisedTemplate):
 
     def forward(self) -> outs_to_struct:
         """
-        Forward the model.
+        Forward the model_test.
         Returns:
 
         """
@@ -149,7 +149,7 @@ class Regularization_strategy(SupervisedTemplate):
         """
         for (exp_train, exp_test) in zip(scenario.train_stream, scenario.test_stream):
             self.train(exp_train, [exp_test], kargs=(self.task, len(exp_train.dataset)))
-            print("Done training, now final evaluation of the model.")
+            print("Done training, now final evaluation of the model_test.")
             self.eval(exp_test)
 
     def eval_epoch(self, **kwargs):

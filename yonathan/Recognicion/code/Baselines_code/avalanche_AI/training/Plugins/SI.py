@@ -30,8 +30,8 @@ class SI(Base_plugin):
     def __init__(self, opts: argparse, prev_checkpoint: Union[dict, None] = None, eps=1e-7):
         """
         Args:
-            opts: The model model_opts.
-            prev_checkpoint: A pretrained model
+            opts: The model_test model_opts.
+            prev_checkpoint: A pretrained model_test
             eps: The epsilon needed for non-zero devising.
         """
         super(SI, self).__init__(opts=opts, prev_checkpoint=prev_checkpoint, reg_type=RegType.SI)

@@ -1,10 +1,9 @@
 """
-Here we define and perform  a composition of tasks sequentially as BU-TD model allows us.
+Here we define and perform  a composition of tasks sequentially as BU-TD model_test allows us.
 """
 import os
 from pathlib import Path
 from typing import Union
-
 
 from torch.utils.data import DataLoader
 
@@ -17,14 +16,14 @@ from training.Utils import preprocess, tuple_direction_to_index, load_model
 
 class ComposeModel(nn.Module):
     """
-    Here we define composite model, to solve all spatial relations using sequential tasks.
+    Here we define composite model_test, to solve all spatial relations using sequential tasks.
     """
 
     def __init__(self, opts: argparse, butd_model: BUTDModel):
         super(ComposeModel, self).__init__()
-        self.opts = opts  # The model model_opts.
-        self.model: BUTDModel = butd_model  # The model.
-        self.flag = opts.model_flag  # The model flag.
+        self.opts = opts  # The model_test model_opts.
+        self.model: BUTDModel = butd_model  # The model_test.
+        self.flag = opts.model_flag  # The model_test flag.
         # Compute the edge class, needed for early stopping.
         self.edge_class = 47 if self.flag is DsType.Emnist else 10
         # Input to struct object.
@@ -34,7 +33,7 @@ class ComposeModel(nn.Module):
 
     def forward(self, batch: inputs_to_struct) -> Tensor:
         """
-        Here we just forward the model and return the prediction.
+        Here we just forward the model_test and return the prediction.
         Args:
             batch: The input
 

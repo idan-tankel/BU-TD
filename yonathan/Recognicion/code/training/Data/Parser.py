@@ -2,6 +2,7 @@
 Here we define the modl model_opts needed for all project.
 """
 import argparse
+from pathlib import Path
 from typing import Callable, Union
 from typing import Type
 
@@ -22,8 +23,8 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
     """
     Args:
         task_idx: The list_task_structs index.
-        model_type: The model type  BUTD or ResNet.
-        model_flag: The model flag.
+        model_type: The model_test type  BUTD or ResNet.
+        model_flag: The model_test flag.
         ds_type: The data type e.g. mnist, fashionmnist, omniglot.
 
     Returns: The options model_opts.
@@ -41,7 +42,7 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
     opts = argparse.ArgumentParser()
     # Flags.
     opts.add_argument('--ds_type', default=ds_type, type=DsType, help='Flag that defines the data-set type.')
-    opts.add_argument('--model_flag', default=model_flag, type=Flag, help='Flag that defines the model type.')
+    opts.add_argument('--model_flag', default=model_flag, type=Flag, help='Flag that defines the model_test type.')
     # Optimization arguments.
     opts.add_argument('--wd', default=0.00001, type=float, help='The weight decay of the Adam optimizer.')
     opts.add_argument('--SGD', default=False, type=bool, help='Whether to use SGD or Adam optimizer.')
@@ -54,7 +55,7 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
     opts.add_argument('--bs', default=10, type=int, help='The training batch size.')
     opts.add_argument('--EPOCHS', default=100, type=int, help='Number of epochs in the training.')
     # Model architecture arguments.
-    opts.add_argument('--model_type', default=model_type, type=DsType, help='The model type BUTD or ResNet.')
+    opts.add_argument('--model_type', default=model_type, type=DsType, help='The model_test type BUTD or ResNet.')
     opts.add_argument('--td_block_type', default=BasicBlockTD, type=nn.Module, help='Basic TD block.')
     opts.add_argument('--bu_block_type', default=BasicBlockBU, type=nn.Module, help='Basic BU block.')
     opts.add_argument('--bu_shared_block_type', default=BasicBlockBUShared, type=nn.Module,
@@ -66,16 +67,16 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
                       help='Whether to use the lateral connection from BU1 to TD')
     opts.add_argument('--use_lateral_tdbu', default=True, type=bool,
                       help='Whether to use the lateral connection from TD to BU2')
-    opts.add_argument('--nfilters', default=[64, 96, 128, 128], type=list, help='The ResNet filters')
+    opts.add_argument('--nfilters', default=[64, 96, 128, 256], type=list, help='The ResNet filters')
     opts.add_argument('--strides', default=[2, 2, 1, 2], type=list, help='The ResNet strides')
     opts.add_argument('--ks', default=[7, 3, 3, 3], type=list, help='The ResNet kernel sizes')
     opts.add_argument('--ns', default=[1, 1, 1], type=list, help='Number of blocks per layer')
     opts.add_argument('--nclasses', default=Data_specification.data_obj.nclasses, type=list,
                       help='The sizes of the list_task_structs-head classes')
     opts.add_argument('--ntasks', default=Data_specification.data_obj.ntasks, type=int,
-                      help='Number of tasks the model should solve')
+                      help='Number of tasks the model_test should solve')
     opts.add_argument('--ndirections', default=Data_specification.data_obj.ndirections, type=int,
-                      help='Number of directions the model should handle')
+                      help='Number of directions the model_test should handle')
     opts.add_argument('--inshape', default=(3, *Data_specification.data_obj.image_size), type=tuple,
                       help='The input image shape, may be override in get_dataset')
     opts.add_argument('--num_heads', default=Data_specification.data_obj.num_heads, type=list,
@@ -111,11 +112,12 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
                       help='The initial tasks to train first')
     # Change to another function
     opts.add_argument('--baselines_dir', default=Data_specification.data_obj.baselines_dir, type=str,
-                      help='The path the model will be stored')
+                      help='The path the model_test will be stored')
     opts.add_argument('--results_dir', default=Data_specification.data_obj.results_dir, type=str,
-                      help='The path the model will be stored')
+                      help='The path the model_test will be stored')
     opts.add_argument('--Data_specific_path', default=Data_specification.data_obj.Data_specific_path, type=str,
                       help='Path to the data-set type')
+    opts.add_argument('--project_path', default=Path(__file__).parents[3], type=str, help='The project path')
     ########################################
     # For Avalanche Baselines only.
     ########################################
@@ -124,7 +126,7 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
     # LFL
     opts.add_argument('--LFL_lambda', default=0.5, type=float, help='The LFL strength')
     # LWF
-    opts.add_argument('--LWF_lambda', default=0.7, type=float, help='The LWF strength')
+    opts.add_argument('--LWF_lambda', default=0.9, type=float, help='The LWF strength')
     opts.add_argument('--temperature_LWF', default=2.0, type=float, help='The LWF temperature')
     # MAS
     opts.add_argument('--mas_alpha', default=0.5, type=float, help='The MAS continual importance weight')
@@ -151,9 +153,9 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
 
 def update_parser(opts: argparse, attr: str, new_value: any) -> None:
     """
-    Update existing model model_opts attribute to new_value.
+    Update existing model_test model_opts attribute to new_value.
     Args:
-        opts: A model model_opts.
+        opts: A model_test model_opts.
         attr: An attr.
         new_value: The new value we want to assign
 

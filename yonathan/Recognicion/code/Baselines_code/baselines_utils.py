@@ -18,16 +18,16 @@ from training.Utils import preprocess
 
 def load_model(model: nn.Module, results_path: str, model_path: str) -> dict:
     """
-    Loads and returns the model checkpoint as a dictionary.
+    Loads and returns the model_test checkpoint as a dictionary.
     Args:
-        model_path: The path to the model.
+        model_path: The path to the model_test.
         results_path: The path to results dir.
-        model: The path to the model.
+        model: The path to the model_test.
 
     Returns: The loaded checkpoint.
 
     """
-    model_path = os.path.join(results_path, model_path)  # The path to the model.
+    model_path = os.path.join(results_path, model_path)  # The path to the model_test.
     checkpoint = torch.load(model_path)  # Loading the saved data.
     model.load_state_dict(state_dict=checkpoint['model_state_dict'])  # Loading the saved weights.
     return checkpoint
@@ -37,7 +37,7 @@ def construct_flag(opts: argparse, task_id: int, direction_tuple: tuple) -> Tens
     """
     Construct new flag from the new list_task_structs, list_task_structs id.
     Args:
-        opts: The model model_opts.
+        opts: The model_test model_opts.
         task_id: The list_task_structs id.
         direction_tuple: The list_task_structs id.
 
@@ -62,9 +62,9 @@ def construct_flag(opts: argparse, task_id: int, direction_tuple: tuple) -> Tens
 
 def set_model(model: nn.Module, state_dict: dict) -> None:
     """
-    Set model state by state dict.
+    Set model_test state by state dict.
     Args:
-        model: The model we want to load into.
+        model: The model_test we want to load into.
         state_dict: The state dictionary.
 
     Returns:
@@ -78,12 +78,12 @@ def compute_fisher_information_matrix(opts: argparse, model: nn.Module, criterio
     """
     Compute fisher importance matrix for each parameter.
     Args:
-        opts: The model model_opts
-        model: The model we compute its coefficients.
+        opts: The model_test model_opts
+        model: The model_test we compute its coefficients.
         criterion: The loss criterion.
         dataloader: The train data-loader.
         device: The device.
-        train: Whether the model should be in train/eval mode.
+        train: Whether the model_test should be in train/eval mode.
         norm: The norm to multiply the gradients.
 
     Returns: The importance coefficients.
@@ -120,8 +120,8 @@ def compute_quadratic_loss(current_model: nn.Module, previous_model: nn.Module, 
     Compute quadratic loss.
     Very common in regularization methods to use such loss.
     Args:
-        current_model: The current model.
-        previous_model: The previous model.
+        current_model: The current model_test.
+        previous_model: The previous model_test.
         importance: The per-weight importance.
         device: The device the computation on.
 
@@ -142,7 +142,7 @@ def Norm(opts: argparse, x: inputs_to_struct, out: outs_to_struct) -> torch.floa
     """
     Return the norm of the output classifier.
     Args:
-        opts: The model model_opts-not used.
+        opts: The model_test model_opts-not used.
         x: The input struct.
         out: The output struct.
 
@@ -152,25 +152,27 @@ def Norm(opts: argparse, x: inputs_to_struct, out: outs_to_struct) -> torch.floa
     return torch.norm(out.classifier, dim=1).pow(2).mean()
 
 
-def Get_updated_opts(ds_type: DsType, reg_type: RegType, model_type=ResNet):
+def Get_updated_opts(ds_type: DsType, reg_type: RegType, model_type=ResNet,model_flag = Flag.NOFLAG):
     """
     Args:
         ds_type: The data-set type
         reg_type: The regularization type.
-        model_type: The model type.
+        model_type: The model_test type.
 
     Returns:
 
     """
-    opts = GetParser(model_type=model_type, ds_type=ds_type)
-    # ResNet to be as large as BU-TD model.
+    opts = GetParser(model_type=model_type, ds_type=ds_type,model_flag=model_flag)
+    # ResNet to be as large as BU-TD model_test.
     factor = [2, 1, 1] if ds_type is DsType.Fashionmnist else [3, 3, 3]
     filters = [64, 96, 128, 128] if ds_type is DsType.Fashionmnist else [64, 96, 128, 256]
+    filters = filters if ds_type is not DsType.Omniglot else [64, 96, 128, 256]
+    factor = factor if ds_type is not DsType.Omniglot else [1,1,1]
     update_parser(opts=opts, attr='ns', new_value=factor)  # Make the
     update_parser(opts=opts, attr='use_lateral_bu_td', new_value=False)  # No lateral connections are needed.
     update_parser(opts=opts, attr='use_laterals_td_bu', new_value=False)  # No lateral connections are needed.
     update_parser(opts=opts, attr='nfilters', new_value=filters)
-    model = create_model(opts)  # Create the model.
+    model = create_model(opts)  # Create the model_test.
     opts.model = model
     return opts, model
 

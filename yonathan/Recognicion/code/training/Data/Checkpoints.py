@@ -56,26 +56,26 @@ class CheckpointSaver:
         """
         Saves the state.
         Args:
-            model: The model to save.
+            model: The model_test to save.
             epoch: The epoch id.
             current_test_accuracy: The current test Accuracy.
             optimizer: The optimizer.
             scheduler: The scheduler.
-            opts: The model options.
+            opts: The model_test options.
             task_id: The list_task_structs id.
             direction: The list_task_structs id.
             optional_kay: Optional key to add during run-time, needed for baselines.
 
         """
-        # The current model path, updated when new Accuracy is achieved.
+        # The current model_test path, updated when new Accuracy is achieved.
         model_path_curr = os.path.join(self.dirpath,
-                                       model.__class__.__name__ + f'_epoch{epoch}_direction={direction}.pt')
-        # The best model path, updated when new Accuracy is achieved.
+                                       model.__class__.__name__ + f'_epoch{epoch}.pt')
+        # The best model_test path, updated when new Accuracy is achieved.
         model_path_best = os.path.join(self.dirpath,
-                                       model.__class__.__name__ + f'_best_direction={direction}.pt')
-        # The latest model path, updated every epoch.
+                                       model.__class__.__name__ + f'_best.pt')
+        # The latest model_test path, updated every epoch.
         model_path_latest = os.path.join(self.dirpath,
-                                         model.__class__.__name__ + f'_latest_direction={direction}.pt')
+                                         model.__class__.__name__ + f'_latest.pt')
 
         better_than_optimum = current_test_accuracy > self.optimum  # Compute whether we passed the optimum so far.
         # All the data we want to store.
@@ -85,7 +85,7 @@ class CheckpointSaver:
         if optional_kay is not None:
             (new_key, new_value) = optional_kay
             save_data[new_key] = new_value
-        torch.save(save_data, model_path_latest)  # Save the current model in model latest path.
+        torch.save(save_data, model_path_latest)  # Save the current model_test in model_test latest path.
         if epoch % 10 == 0:
             torch.save(save_data, model_path_curr)
         # If we passed the optimum we save in model_id and in model_best.

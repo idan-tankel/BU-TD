@@ -30,7 +30,7 @@ class BasicBlockBUShared(nn.Module):
     def __init__(self, opts: argparse, in_channels: int, out_channels: int, stride: int):
         """
         Args:
-            opts: The model options.
+            opts: The model_test options.
             in_channels: In channel from the previous block.
             out_channels: Out channel of the block for the Next block.
             stride: Stride to perform.
@@ -63,7 +63,7 @@ class BUInitialBlock(nn.Module):
 
         Receiving the shared conv layers and initializes other parameters specifically.
         Args:
-            opts: The model options.
+            opts: The model_test options.
             shared: The shared part between BU1, BU2.
             is_bu2: Whether the block is part of the BU2 stream.
         """
@@ -111,7 +111,7 @@ class BasicBlockBU(nn.Module):
                  task_embedding: Union[list, None] = None) -> None:
         """
         Args:
-            opts: The model options.
+            opts: The model_test options.
             shared: The shared part between BU1, BU2.
             block_inshapes: The input shape of the block.
             is_bu2: Whether the stream is BU1 or BU2.
@@ -164,7 +164,7 @@ class BasicBlockBU(nn.Module):
     def forward(self, x: Tensor, flags: Tensor, laterals_in: Tensor) -> tuple[Tensor, list[Tensor]]:
         """
         Args:
-            x: The model input.
+            x: The model_test input.
             flags: The flags, needed for BN statistics storing.
             laterals_in: The previous stream laterals(if exists).
 
@@ -224,7 +224,7 @@ class InitialEmbeddingBlock(nn.Module):
     def __init__(self, opts: argparse):
         """
         Args:
-            opts: The model options.
+            opts: The model_test options.
         """
         super(InitialEmbeddingBlock, self).__init__()
         self.opts = opts
@@ -255,7 +255,7 @@ class InitialEmbeddingBlock(nn.Module):
         """
         Args:
             bu_out: The BU1 output.
-            flags: The model flags.
+            flags: The model_test flags.
 
         Returns: The initial block output, match the last BU layer shape.
 
@@ -291,11 +291,11 @@ class BasicBlockTD(nn.Module):
                  index: int):
         """
         Args:
-            opts: The model options.
+            opts: The model_test options.
             in_channels: In channels from the last block.
             out_channels: Out channels for the last block.
             stride: The stride to upsample according.
-            block_inshape: The model input shape, needed for the upsample block.
+            block_inshape: The model_test input shape, needed for the upsample block.
             index: The block index.
         """
         super(BasicBlockTD, self).__init__()
@@ -330,7 +330,7 @@ class BasicBlockTD(nn.Module):
     def forward(self, x: Tensor, flags: Tensor, laterals: Tensor) -> tuple[Tensor, list[Tensor]]:
         """
         Args:
-            x: The model input.
+            x: The model_test input.
             flags: The flags, needed for BN statistics storing.
             laterals: The previous stream lateral connections.
 
@@ -374,7 +374,7 @@ def init_module_weights(modules: Iterator[nn.Module]) -> None:
     """
     Initializing the module weights according to the original BU-TD paper.
     Args:
-        modules: All model's layers
+        modules: All model_test's layers
 
     """
     for m in modules:

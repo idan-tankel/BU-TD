@@ -9,7 +9,6 @@ from training.Data.Checkpoints import CheckpointSaver
 from training.Data.Get_dataset import get_dataset_for_spatial_relations
 from training.Data.Model_Wrapper import ModelWrapped
 from training.Data.Structs import Training_flag
-from training.Modules.Batch_norm import *
 from training.Modules.Models import *
 
 
@@ -18,7 +17,7 @@ def Get_checkpoint_and_logger(opts: argparse, ds_type, task: tuple[int, tuple], 
     """
     Get the checkpoint and logger.
     Args:
-        opts: The model model_opts.
+        opts: The model_test model_opts.
         ds_type: The data-set type.
         task: The task.
         epoch: The epoch.
@@ -37,7 +36,7 @@ def Get_checkpoint_and_logger(opts: argparse, ds_type, task: tuple[int, tuple], 
 
     data_path = os.path.join(project_path, f'data/{str(ds_type)}/samples/{image_tuple}_Image_Matrix')
     if ds_type is DsType.Omniglot:
-        data_path = data_path + f"{task[0][0]}"
+        data_path = data_path + f"{task[0].task}"
     Checkpoint_saver = CheckpointSaver(
         dirpath=os.path.join(opts.results_dir,
                              f'Model_use_reset_{str(task[0].direction)}_wd_{str(opts.wd)}_base_lr_'
@@ -53,8 +52,8 @@ def train_step(model_opts: argparse, model: Module, training_flag: Training_flag
     """
     Train step
     Args:
-        model_opts: The model opts.
-        model: The model.
+        model_opts: The model_test opts.
+        model: The model_test.
         task: The task we solve.
         ds_type: The data-set type.
     """
@@ -71,7 +70,7 @@ def train_step(model_opts: argparse, model: Module, training_flag: Training_flag
     test = False
     if test:
         wrapped_model.load_model(
-            model_path='Model_(1, 0)_1e-05_test_again/BUTDModel_epoch50_direction=[(1, 0), (-1, 0)].pt')
+            model_path='Right_model/BUTDModel_epoch70_direction=(1, 0).pt')
         print(wrapped_model.Accuracy(DataLoaders['test_dl']))
     trainer.fit(wrapped_model, train_dataloaders=DataLoaders['train_dl'], val_dataloaders=DataLoaders['test_dl'])
     return model, DataLoaders

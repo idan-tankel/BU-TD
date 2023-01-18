@@ -23,7 +23,7 @@ def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, list_task
     """
     Getting the train,test,val(if exists) datasets.
     Args:
-        opts: The model options.
+        opts: The model_test options.
         data_fname: The data path.
         list_task_structs: The task tuple.
         data: Possible data-set object.
@@ -40,7 +40,7 @@ def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, list_task
     elif opts.model_flag is Flag.TD:
         from training.Data.Datasets import DatasetGuidedInterleaved as dataset
     else:
-        raise Exception("You must implement a dataset object to support that model type.")
+        raise Exception("You must implement a dataset object to support that model_test type.")
     if data is not None:
         dataset = data
 

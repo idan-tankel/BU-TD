@@ -16,10 +16,10 @@ from training.Utils import preprocess
 def multi_label_accuracy_base(samples: inputs_to_struct, outs: outs_to_struct) -> tuple:
     """
     The base function for multi, weighted versions.
-    Here for each head we compute its accuracy according to the model out and label list_task_structs.
+    Here for each head we compute its accuracy according to the model_test out and label list_task_structs.
     Args:
         samples: The samples.
-        outs: The model outs.
+        outs: The model_test outs.
 
 
     Returns: The predictions, the list_task_structs accuracy.
@@ -33,10 +33,10 @@ def multi_label_accuracy_base(samples: inputs_to_struct, outs: outs_to_struct) -
 
 def multi_label_accuracy(samples: inputs_to_struct, outs: outs_to_struct):
     """
-    Compute the list_task_structs Accuracy mean over all samples for the guided model.
+    Compute the list_task_structs Accuracy mean over all samples for the guided model_test.
     Args:
         samples: The samples.
-        outs: The model outs.
+        outs: The model_test outs.
 
 
     Returns: The predictions and list_task_structs Accuracy over the batch.
@@ -52,7 +52,7 @@ def multi_label_accuracy_weighted(samples: inputs_to_struct, outs: outs_to_struc
     Compute the list_task_structs Accuracy weighted mean over the existing characters in the image.
     Args:
         samples: The inputs samples.
-        outs: The model outs.
+        outs: The model_test outs.
 
     Returns: The predication and mean Accuracy over the batch.
 
@@ -67,10 +67,10 @@ def multi_label_accuracy_weighted(samples: inputs_to_struct, outs: outs_to_struc
 
 def accuracy(opts: argparse, model: nn.Module, test_data_loader: DataLoader) -> float:
     """
-    Compute the accuracy of the model overall test_data_loader.
+    Compute the accuracy of the model_test overall test_data_loader.
     Args:
-        opts: The model options.
-        model: The model.
+        opts: The model_test options.
+        model: The model_test.
         test_data_loader: The test data.
 
     Returns: The Accuracy over the test loadr.

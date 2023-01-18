@@ -1,5 +1,5 @@
 """
-Here we define the model wrapper to support training, validation.
+Here we define the model_test wrapper to support training, validation.
 """
 import argparse
 import os
@@ -20,7 +20,7 @@ from training.Modules.Batch_norm import store_running_stats
 from training.Utils import create_optimizer_and_scheduler, preprocess
 
 
-# Define the model wrapper class.
+# Define the model_test wrapper class.
 # Support training and load_model.
 
 class ModelWrapped(LightningModule):
@@ -31,10 +31,10 @@ class ModelWrapped(LightningModule):
     def __init__(self, opts: argparse, model: nn.Module, learned_params: list, check_point: CheckpointSaver,
                  direction_tuple: list[tuple[int, int]], task_id: int, nbatches_train: int, train_ds: Dataset):
         """
-        This is the model wrapper for pytorch lightning training.
+        This is the model_test wrapper for pytorch lightning training.
         Args:
-            opts: The model options.
-            model: The model.
+            opts: The model_test options.
+            model: The model_test.
             learned_params: The parameters we desire to train.
             check_point: The check point.
             direction_tuple: The list_task_structs id.
@@ -45,12 +45,12 @@ class ModelWrapped(LightningModule):
         super(ModelWrapped, self).__init__()
         self.automatic_optimization = True
         self.need_to_update_running_stats: bool = True
-        self.model: nn.Module = model  # The model.
+        self.model: nn.Module = model  # The model_test.
         self.learned_params: list = learned_params  # The learned parameters.
         self.loss_fun: Callable = opts.criterion  # The loss criterion.
         self.accuracy: Callable = opts.task_accuracy  # The Accuracy criterion.
         self.dev: str = opts.device  # The device.
-        self.opts: argparse = opts  # The model options.
+        self.opts: argparse = opts  # The model_test options.
         self.check_point: CheckpointSaver = check_point  # The checkpoint saver.
         self.nbatches_train: int = nbatches_train  # The number of train batches.
         self.direction: list[tuple[int, int]] = direction_tuple  # The list_task_structs id.
@@ -73,9 +73,9 @@ class ModelWrapped(LightningModule):
 
         """
         model = self.model
-        model.train()  # Move the model into the train mode.
+        model.train()  # Move the model_test into the train mode.
         samples = self.opts.inputs_to_struct(inputs=batch)  # Compute the sample struct.
-        outs = model.forward_and_out_to_struct(inputs=samples)  # Compute the model output.
+        outs = model.forward_and_out_to_struct(inputs=samples)  # Compute the model_test output.
         loss = self.loss_fun(opts=self.opts, samples=samples, outs=outs)  # Compute the loss.
         _, acc = self.accuracy(samples=samples, outs=outs)  # The Accuracy.
         self.log('train_loss', loss, on_step=True, on_epoch=True)  # Update loss.
@@ -97,7 +97,7 @@ class ModelWrapped(LightningModule):
             print('Done storing running stats')
 
         model = self.model
-        model.eval()  # Move the model into the evaluation mode.
+        model.eval()  # Move the model_test into the evaluation mode.
         samples = self.opts.inputs_to_struct(inputs=batch)
         with torch.no_grad():  # Without grad.
             outs = self.model.forward_and_out_to_struct(inputs=samples)  # Forward and make a struct.
@@ -177,16 +177,16 @@ class ModelWrapped(LightningModule):
 
     def load_model(self, model_path: str, load_opt_and_sche: bool = False) -> dict:
         """
-        Loads and returns the model checkpoint as a dictionary.
+        Loads and returns the model_test checkpoint as a dictionary.
         Args:
-            model_path: The path to the model.
+            model_path: The path to the model_test.
             load_opt_and_sche: Whether to load also the optimizer, scheduler state.
 
         Returns: The loaded checkpoint.
 
         """
         results_path = self.opts.results_dir  # Getting the result dir.
-        model_path = os.path.join(results_path, model_path)  # The path to the model.
+        model_path = os.path.join(results_path, model_path)  # The path to the model_test.
         checkpoint = torch.load(model_path)  # Loading the saved data.
         self.model.load_state_dict(checkpoint['model_state_dict'])  # Loading the saved weights.
         if load_opt_and_sche:

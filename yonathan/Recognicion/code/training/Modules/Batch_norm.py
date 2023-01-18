@@ -18,7 +18,7 @@ class BatchNorm(nn.Module):
     Creates batch_norm_with_statistics_per_sample class.
     As continual learning overrides the running statistics, we created a class saving the running stats
     for each list_task_structs, list_task_structs.
-    We support storing and loading running stats of the model to dynamically evaluate the learning of the list_task_structs.
+    We support storing and loading running stats of the model_test to dynamically evaluate the learning of the list_task_structs.
     For each list_task_structs, list_task_structs stores its mean,var as continual learning overrides those variables.
     """
 
@@ -26,7 +26,7 @@ class BatchNorm(nn.Module):
         """
 
         Args:
-            opts: The model options
+            opts: The model_test options
             num_channels: num channels to apply batch_norm_with_statistics_per_sample on.
             dims: apply 2d or 1d batch normalization.
             device: The device.
@@ -134,7 +134,7 @@ def store_running_stats(model: nn.Module, task_id: int, direction_id: tuple) -> 
     """
     Stores the running_stats of the task_id for each norm_layer.
     Args:
-        model: The model.
+        model: The model_test.
         task_id: The list_task_structs id.
         direction_id: The list_task_structs id.
 
@@ -150,7 +150,7 @@ def load_running_stats(model: nn.Module, task_id: int, direction_id: tuple) -> N
     """
     Loads the running_stats of the task_id for each norm_layer.
     Args:
-        model: The model.
+        model: The model_test.
         task_id: The list_task_structs id.
         direction_id: The list_task_structs id.
 

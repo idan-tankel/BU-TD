@@ -30,11 +30,11 @@ class IMM_Mean(Base_plugin):
     def __init__(self, opts: argparse, prev_checkpoint: Union[None, dict] = None):
         """
         Args:
-            opts: The model model_opts.
-            prev_checkpoint: A pretrained model
+            opts: The model_test model_opts.
+            prev_checkpoint: A pretrained model_test
         """
         super(IMM_Mean, self).__init__(opts=opts, prev_checkpoint=prev_checkpoint, reg_type=RegType.IMM_Mean)
-        # Supporting pretrained model.
+        # Supporting pretrained model_test.
         self.num_exp = 1 if prev_checkpoint is not None else 0
         self.importances = {name: 1 for name, _ in self.prev_model.feature_extractor.named_parameters()}
 
@@ -42,7 +42,7 @@ class IMM_Mean(Base_plugin):
         """
         Return the L2 penalty.
         Args:
-            model: The current model.
+            model: The current model_test.
             mb_x: The input.
             **kwargs: optional kwargs.
 
@@ -60,19 +60,19 @@ class IMM_Mean(Base_plugin):
 
         """
         exp_counter = strategy.clock.train_exp_counter + self.num_exp
-        # Current model state.
+        # Current model_test state.
         current_model_state = strategy.model.feature_extractor.state_dict()
-        # Previous model state.
+        # Previous model_test state.
         prev_model_state = self.prev_model.feature_extractor.state_dict()
-        # Update the current and previous model.
+        # Update the current and previous model_test.
         for name, param in strategy.model.feature_extractor.named_parameters():
             current_model_state[name] = (current_model_state[name] + prev_model_state[name] * exp_counter) / (
                     exp_counter + 1)
-        # Set the new weights into the model.
+        # Set the new weights into the model_test.
         set_model(strategy.model.feature_extractor, current_model_state)
         model_path_curr = os.path.join(strategy.Model_folder, 'Merged_model')
         strategy.model.state_dict()['IMM_Mean_state_dict'] = self.state_dict(strategy)
-        # Save the model.
+        # Save the model_test.
         torch.save(strategy.model.state_dict(), model_path_curr)
 
     def state_dict(self, strategy: Regularization_strategy):

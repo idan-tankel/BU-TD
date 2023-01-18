@@ -243,7 +243,7 @@ def Create_several_samples_per_sequence(opts: argparse, prng: random, ds_type: s
 def Get_valid_classes_for_emnist_only(data_set_type: DsType, use_only_valid_classes: bool,
                                       nclasses: int) -> np.array:  # Only for emnist.
     """
-    To avoid confusion of the model, we omit some classes from the original number of classes.
+    To avoid confusion of the model_test, we omit some classes from the original number of classes.
     Args:
         data_set_type: The dataset name. If emnist we omit some classes o.w. we take them all.
         use_only_valid_classes: Whether to use only valid classes.

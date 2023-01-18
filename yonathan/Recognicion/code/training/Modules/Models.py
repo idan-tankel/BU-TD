@@ -30,7 +30,7 @@ class BUStreamShared(nn.Module):
             opts: Model options.
         """
         super(BUStreamShared, self).__init__()
-        self.opts = opts  # The model options.
+        self.opts = opts  # The model_test options.
         self.block = opts.bu_shared_block_type  # The block type.
         Model_inshape = np.array(opts.inshape)  # The image resolution.
         self.conv1 = Depthwise_separable_conv(channels_in=Model_inshape[0], channels_out=opts.nfilters[0],
@@ -80,19 +80,19 @@ class BUModel(nn.Module):
     def __init__(self, opts: argparse, use_task_embedding: bool = False):
         """
         Args:
-            opts: The model model_opts.
+            opts: The model_test model_opts.
             use_task_embedding: Whether to create the list_task_structs embedding.
         """
         super(BUModel, self).__init__()
-        bu_shared = BUStreamShared(opts=opts)  # The shared model part.
-        self.model = BUStream(opts=opts, shared=bu_shared, is_bu2=use_task_embedding)  # Create the model.
+        bu_shared = BUStreamShared(opts=opts)  # The shared model_test part.
+        self.model = BUStream(opts=opts, shared=bu_shared, is_bu2=use_task_embedding)  # Create the model_test.
 
     def forward(self, inputs: list[Tensor]) -> list[Tensor]:
         """
         Args:
-            inputs: The model input.
+            inputs: The model_test input.
 
-        Returns: The model output.
+        Returns: The model_test output.
 
         """
         return self.model(inputs=inputs)
@@ -100,18 +100,18 @@ class BUModel(nn.Module):
 
 class BUStream(nn.Module):
     """
-    The BU stream model.
+    The BU stream model_test.
     """
 
     def __init__(self, opts: argparse, shared: nn.Module, is_bu2: bool = False):
         """
         Args:
-            opts: The model options.
+            opts: The model_test options.
             shared: The shared part between BU1, BU2.
             is_bu2: Whether the stream is BU1 or BU2.
         """
         super(BUStream, self).__init__()
-        self.opts = opts  # Save the model model_opts.
+        self.opts = opts  # Save the model_test model_opts.
         self.block = opts.bu_block_type  # The basic block type.
         self.task_embedding = [[] for _ in range(opts.ndirections)]  # List should contain the list_task_structs embedding.
         self.inshapes = shared.inshapes  # The output shape of all layers.
@@ -154,7 +154,7 @@ class BUStream(nn.Module):
         Args:
             inputs: The input, the flags, the lateral connection from TD network.
 
-        Returns: The model output + The lateral connections.
+        Returns: The model_test output + The lateral connections.
 
         """
         # The input is the image, the flag and the lateral connections from the previous stream(if exist).
@@ -185,14 +185,14 @@ class BUStream(nn.Module):
 
 class TDModel(nn.Module):
     """
-    TD model.
+    TD model_test.
     Getting the argument and lateral connections as an input.
     """
 
     def __init__(self, opts: argparse, bu_inshapes: list):
         """
         Args:
-            opts: The model model_opts.
+            opts: The model_test model_opts.
             bu_inshapes: The BU shapes.
         """
         super(TDModel, self).__init__()
@@ -200,7 +200,7 @@ class TDModel(nn.Module):
         self.block = opts.td_block_type  # The block type
         self.use_lateral = opts.use_lateral_butd  # Whether to use the BU1 -> TD laterals.
         self.ntasks = opts.ntasks  # The number of tasks
-        self.inshapes = bu_inshapes  # The model layers output.
+        self.inshapes = bu_inshapes  # The model_test layers output.
         self.argument_embedding = [[] for _ in range(self.ntasks)]
         # Only in Omniglot we have several tasks, with different argument embeddings.
         self.use_initial_emb = opts.model_flag is not Flag.NOFLAG
@@ -297,8 +297,8 @@ class TDModel(nn.Module):
 
 class BUTDModel(nn.Module):
     """
-    The main model.
-    The full BU-TD model with possible embedding for continual learning.
+    The main model_test.
+    The full BU-TD model_test with possible embedding for continual learning.
     """
 
     def __init__(self, opts: argparse):
@@ -309,8 +309,8 @@ class BUTDModel(nn.Module):
             opts: Model options.
         """
         super(BUTDModel, self).__init__()
-        self.opts = opts  # Save the model model_opts.
-        self.model_flag = opts.model_flag  # The model type
+        self.opts = opts  # Save the model_test model_opts.
+        self.model_flag = opts.model_flag  # The model_test type
         self.use_bu1_loss = opts.use_bu1_loss  # Whether to use the Occurrence loss.
         self.use_lateral_butd = opts.use_lateral_butd  # Whether to use the BU1 -> TD laterals.
         # Whether to use the TD -> BU2 laterals.
@@ -319,7 +319,7 @@ class BUTDModel(nn.Module):
         if self.use_bu1_loss:
             self.occhead = OccurrenceHead(opts=opts)
         bu_shared = BUStreamShared(opts=opts)  # The shared part between BU1, BU2.
-        shapes = bu_shared.inshapes  # The model output layers shape.
+        shapes = bu_shared.inshapes  # The model_test output layers shape.
         #   self.bu_inshapes = bu_shared.inshapes
         self.bumodel1 = BUStream(opts=opts, shared=bu_shared)  # The BU1 stream, with no list_task_structs embedding.
         if self.model_flag is not Flag.NOFLAG:
@@ -345,7 +345,7 @@ class BUTDModel(nn.Module):
     def forward(self, samples: inputs_to_struct) -> list[torch]:
         """
         Args:
-            samples: The model input.
+            samples: The model_test input.
 
         Returns: The output from all streams.
 
@@ -389,9 +389,9 @@ class BUTDModel(nn.Module):
         """
         Do forward pass, and make the output a struct.
         Args:
-            inputs: The model input.
+            inputs: The model_test input.
 
-        Returns: The model output in the desired head.
+        Returns: The model_test output in the desired head.
 
         """
         outs = self.forward(samples=inputs)  # Forward.
@@ -410,17 +410,17 @@ class BUTDModel(nn.Module):
 
 class ResNet(nn.Module):
     """
-    A ResNet model.
+    A ResNet model_test.
     """
 
     def __init__(self, opts: argparse):
         """
-        Pure ResNet model, used usually as a baseline to the BU-TD model.
+        Pure ResNet model_test, used usually as a baseline to the BU-TD model_test.
         Args:
-            opts: The model options.
+            opts: The model_test options.
         """
         super(ResNet, self).__init__()
-        self.opts: argparse = opts  # The model model_opts.
+        self.opts: argparse = opts  # The model_test model_opts.
         self.ntasks: int = opts.ntasks  # The number of tasks.
         self.ndirections: int = opts.ndirections  # The number of directions.
         self.feature_extractor: nn.Module = BUModel(opts)  # Create the backbone without the list_task_structs embedding.
@@ -431,9 +431,9 @@ class ResNet(nn.Module):
 
     def forward(self, samples: inputs_to_struct) -> list[None, None, Tensor, Tensor]:
         """
-        Compute model output, including model features and classes
+        Compute model_test output, including model_test features and classes
         Args:
-            samples: The model inputs.
+            samples: The model_test inputs.
 
         Returns: Compute the features and the classification head.
 
@@ -446,12 +446,12 @@ class ResNet(nn.Module):
     def forward_and_out_to_struct(self, samples: inputs_to_struct) -> outs_to_struct:
         """
         Args:
-            samples: The model inputs.
+            samples: The model_test inputs.
 
         Returns: The output struct.
 
         """
-        outs = self.forward(samples=samples)  # The model output.
+        outs = self.forward(samples=samples)  # The model_test output.
         return self.opts.outs_to_struct(outs=outs)  # Making the struct.
 
     def update_task_list(self, task: tuple) -> None:

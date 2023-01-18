@@ -246,7 +246,7 @@ class EmnistParams(GenericDatasetParams):
     def __init__(self, ds_type: DsType, num_cols: int, num_rows: int):
         """
         Here we define the Emnist data-set specification.
-        Those params help the model to generalize and the output images that are understandable.
+        Those params help the model_test to generalize and the output images that are understandable.
         Args:
             num_cols: The number of columns.
             num_rows: The number of rows
@@ -273,7 +273,7 @@ class FashionMnistParams(GenericDatasetParams):
     def __init__(self, ds_type, num_cols: int, num_rows: int):
         """
         Here we define the Fashion-Mnist data-set specification.
-        Those params help the model to generalize and the output images are understandable.
+        Those params help the model_test to generalize and the output images are understandable.
         Args:
             num_cols: The number of columns.
             num_rows: The number of rows
@@ -414,7 +414,7 @@ class Sample:
         #  self.sampled_chars = sampled_chars
         self.query_part_id = query_part_id  # The index we query about.
         self.direction_query = adj_type  # The list_task_structs I query about.
-        self.chars = chars  # All character objects.
+        self.chars:list[CharInfo] = chars  # All character objects.
         self.query_coord = np.unravel_index(query_part_id,
                                             [parser.num_rows, parser.num_cols])  # Getting the place we query about.
         self.image = np.zeros((1, *parser.image_size),

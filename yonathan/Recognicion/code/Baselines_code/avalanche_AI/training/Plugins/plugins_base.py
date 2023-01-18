@@ -1,6 +1,6 @@
 """
 Base class for all plugins.
-Support backward, penalty, and model saving.
+Support backward, penalty, and model_test saving.
 """
 import argparse
 import copy
@@ -28,7 +28,7 @@ class Base_plugin(SupervisedPlugin):
             self.prev_model.load_state_dict(state_dict=prev_checkpoint['model_state_dict'])
             self.num_exp = 1
         self.trained_tasks = [(0, (1, 0))]
-        self.opts = opts  # The model model_opts.
+        self.opts = opts  # The model_test model_opts.
         self.num_exp = 0  # The number of exp trained so far.
         self.inputs_to_struct = opts.inputs_to_struct  # The inputs to struct method.
         self.outs_to_struct = opts.outs_to_struct  # The outputs to struct method
@@ -50,7 +50,7 @@ class Base_plugin(SupervisedPlugin):
         """
         The penalty.
         Args:
-            model: The model.
+            model: The model_test.
             mb_x: The input.
             **kwargs:
         """
@@ -99,5 +99,5 @@ class Base_plugin(SupervisedPlugin):
             *args:
             **kwargs:
         """
-        print("Copy the new model!")
-        self.prev_model = copy.deepcopy(strategy.model)  # Copy the new version of the model.
+        print("Copy the new model_test!")
+        self.prev_model = copy.deepcopy(strategy.model)  # Copy the new version of the model_test.

@@ -1,6 +1,6 @@
 """
 LFL plugin.
-Stores the old model and penalties
+Stores the old model_test and penalties
 The L2 feature distance.
 """
 import argparse
@@ -26,7 +26,7 @@ class LFL(Base_plugin):
     1) To keep the decision boundaries unchanged
     2) The feature space should not change much on target(new) Data_Creation
     LFL uses euclidean loss between features from current and previous version
-    of model as regularization to maintain the feature space and avoid
+    of model_test as regularization to maintain the feature space and avoid
     catastrophic forgetting.
     Refer paper https://arxiv.org/pdf/1607.00122.pdf for more details
     This plugin does not use list_task_structs identities.
@@ -36,23 +36,23 @@ class LFL(Base_plugin):
         """
         Create LFL plugin, if prev_model is not None, we copy its parameters.
         Args:
-            opts: The model options.
-            prev_checkpoint: The prev model.
+            opts: The model_test options.
+            prev_checkpoint: The prev model_test.
         """
         super(LFL, self).__init__(opts=opts, prev_checkpoint=prev_checkpoint, reg_type=RegType.LFL)
 
     def compute_features(self, model: nn.Module, x: inputs_to_struct) -> tuple[Tensor, Tensor]:
         """
-        Compute features from prev model and current model
+        Compute features from prev model_test and current model_test
         Args:
-            model: The current model.
+            model: The current model_test.
             x: The input to the models.
 
         Returns: The old, new features.
 
         """
         model.eval()  # Move to eval mode.
-        self.prev_model.eval()  # Move to eval model.
+        self.prev_model.eval()  # Move to eval model_test.
         features = model.forward_and_out_to_struct(x).features  # New features.
         prev_features = self.prev_model.forward_and_out_to_struct(x).features  # Old features.
         return features, prev_features
@@ -61,8 +61,8 @@ class LFL(Base_plugin):
         """
         Compute weighted euclidean loss
         Args:
-            x: The input to the model.
-            model: The current model.
+            x: The input to the model_test.
+            model: The current model_test.
 
         Returns: The weighted MSE loss.
 

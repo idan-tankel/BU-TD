@@ -25,7 +25,7 @@ class LwF(Base_plugin):
     """
     Learning without Forgetting plugin.
     LwF uses distillation to regularize the current loss with soft targets
-    taken from a previous version of the model.
+    taken from a previous version of the model_test.
     This plugin does not use list_task_structs identities.
     When used with multi-headed models, all heads are distilled.
     """
@@ -33,7 +33,7 @@ class LwF(Base_plugin):
     def __init__(self, opts: argparse, prev_model: Union[dict, None] = None):
         """
         Args:
-            opts: The model model_opts.
+            opts: The model_test model_opts.
             prev_model: The prev_model if exists.
         """
 
@@ -45,6 +45,7 @@ class LwF(Base_plugin):
         self.trained_tasks.append([0, (0, 1)])
         self.trained_tasks.append([0, (1, 1)])
         self.trained_tasks.append([0,(1, -1)])
+        self.trained_tasks.append([0,(-1,0)])
         self.prev_tasks = dict()
         if prev_model is not None:
             self.num_exp = 1  # Number of trained experiences is set to 1.
@@ -57,8 +58,8 @@ class LwF(Base_plugin):
     def _distillation_loss(self, cur_out: outs_to_struct, prev_out: outs_to_struct,
                            x: inputs_to_struct) -> Tensor.float:
         """
-        Compute distillation loss between output of the current model and
-        output of the previous (saved) model.
+        Compute distillation loss between output of the current model_test and
+        output of the previous (saved) model_test.
         Args:
             cur_out: The current output.
             prev_out: The previous output.
@@ -80,7 +81,7 @@ class LwF(Base_plugin):
         """
         Compute weighted distillation loss.
         Args:
-            model: The model.
+            model: The model_test.
             x: The input.
 
         Returns: The penalty.

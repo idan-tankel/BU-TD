@@ -44,8 +44,8 @@ class MAS(Base_plugin):
     def __init__(self, opts: argparse, prev_checkpoint: Union[dict, None] = None, load_from=None):
         """
         Args:
-            opts: The model options.
-            prev_checkpoint: The previous model.
+            opts: The model_test options.
+            prev_checkpoint: The previous model_test.
 
         """
 
@@ -55,7 +55,7 @@ class MAS(Base_plugin):
         self.alpha = opts.mas_alpha
         # Model parameters
         self.importances: Union[Dict, None] = None  # The parameters importances.
-        # If we have previous model we save it and compute its importances.
+        # If we have previous model_test we save it and compute its importances.
         if prev_checkpoint is not None:
             self.num_exp = 1
             dataloader = self.Get_old_dl()  # The old data-set for computing the coefficients.
@@ -80,7 +80,7 @@ class MAS(Base_plugin):
         """
 
         Args:
-            model: The current model.
+            model: The current model_test.
             mb_x: The input.
             **kwargs: Possible args.
 

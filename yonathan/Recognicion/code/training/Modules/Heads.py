@@ -19,20 +19,20 @@ class HeadSingleTask(nn.Module):
     """
     Task head for single list_task_structs.
     Allocate tasks according to the desired output size.
-    if model flag is NOFLAG we allocate subhead for each character.
+    if model_test flag is NOFLAG we allocate subhead for each character.
     """
 
     def __init__(self, opts: argparse, nclasses: int, num_heads: int = 1):
         """
         Args:
-            opts: The model options.
+            opts: The model_test options.
             nclasses: The number of classes.
             num_heads: Number of heads for the list_task_structs.
         """
         super(HeadSingleTask, self).__init__()
         self.opts = opts
         num_heads = nclasses if opts.model_flag is Flag.NOFLAG \
-            else num_heads  # If The model flag is NOFLAG we allocate for each character a head o.w. according to the
+            else num_heads  # If The model_test flag is NOFLAG we allocate for each character a head o.w. according to the
         # nclasses.
         infilters = opts.nfilters[-1]  # The input size from the end of the BU2 stream.
         self.layers = nn.ModuleList(
@@ -41,7 +41,7 @@ class HeadSingleTask(nn.Module):
     def forward(self, inputs: Tensor) -> Tensor:
         """
         Args:
-            inputs: The output from the model.
+            inputs: The output from the model_test.
 
         Returns: A tensor with the shape of the number of classes.
 
@@ -60,7 +60,7 @@ class MultiTaskHead(nn.Module):
         """
         Multi head list_task_structs-head allocating for each list_task_structs and list_task_structs a single list_task_structs head.
         Args:
-            opts: The model options.
+            opts: The model_test options.
             transfer_learning_params: list containing the associate taskhead params of the list_task_structs, list_task_structs.
         """
         super(MultiTaskHead, self).__init__()
@@ -115,7 +115,7 @@ class OccurrenceHead(nn.Module):
         """
         Occurrence head predicting for each character whether it exists in the sample.
         Args:
-            opts: The model options.
+            opts: The model_test options.
         """
         super(OccurrenceHead, self).__init__()
         filters = opts.nclasses[0]  # The number of binary classifiers needed to recognize all characters.

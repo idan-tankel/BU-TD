@@ -108,7 +108,7 @@ class Modulation_and_Lat(nn.Module):
     def __init__(self, opts: argparse, nfilters: int):
         """
         Args:
-            opts: The model options.
+            opts: The model_test options.
             nfilters: The number of filters.
         """
         super(Modulation_and_Lat, self).__init__()
@@ -121,7 +121,7 @@ class Modulation_and_Lat(nn.Module):
     def forward(self, x: Tensor, flags: Tensor, lateral: Tensor) -> Tensor:
         """
         Args:
-            x: The model input.
+            x: The model_test input.
             flags: The flags, needed for BN.
             lateral: The previous stream lateral connection, of the same shape.
 
@@ -147,12 +147,12 @@ class Modulation(nn.Module):
         """
 
         Args:
-            opts: The model options.
-            shape: The shape to create the model according to.
+            opts: The model_test options.
+            shape: The shape to create the model_test according to.
             column_modulation: Whether to create pixel/channel modulation.
         """
         super(Modulation, self).__init__()
-        self.opts = opts  # Store the model model_opts.
+        self.opts = opts  # Store the model_test model_opts.
         self.modulations = nn.ParameterList()  # Module list containing modulation for all directions.
         if column_modulation:
             size = [1, *shape]  # If pixel modulation matches the inner spatial of the input
