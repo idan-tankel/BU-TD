@@ -246,7 +246,7 @@ class EmnistParams(GenericDatasetParams):
     def __init__(self, ds_type: DsType, num_cols: int, num_rows: int):
         """
         Here we define the Emnist data-set specification.
-        Those params help the model_test to generalize and the output images that are understandable.
+        Those params help the model to generalize and the output images that are understandable.
         Args:
             num_cols: The number of columns.
             num_rows: The number of rows
@@ -273,7 +273,7 @@ class FashionMnistParams(GenericDatasetParams):
     def __init__(self, ds_type, num_cols: int, num_rows: int):
         """
         Here we define the Fashion-Mnist data-set specification.
-        Those params help the model_test to generalize and the output images are understandable.
+        Those params help the model to generalize and the output images are understandable.
         Args:
             num_cols: The number of columns.
             num_rows: The number of rows
@@ -349,7 +349,7 @@ class CharInfo:
                  sample_chars: list):
         """
         Args:
-            parser: The option model_opts.
+            parser: The option opts.
             raw_dataset: The raw image data-set.
             prng: The random generator.
             sample_id: The sample id.
@@ -405,15 +405,15 @@ class Sample:
         """
 
         Args:
-            parser: The model_opts.
+            parser: The opts.
             query_part_id: The index we query about.
-            adj_type: The list_task_structs we query about.
+            adj_type: The task we query about.
             chars: The list of all characters in the sample.
             sample_id: The sample id.
         """
         #  self.sampled_chars = sampled_chars
         self.query_part_id = query_part_id  # The index we query about.
-        self.direction_query = adj_type  # The list_task_structs I query about.
+        self.direction_query = adj_type  # The task I query about.
         self.chars:list[CharInfo] = chars  # All character objects.
         self.query_coord = np.unravel_index(query_part_id,
                                             [parser.num_rows, parser.num_cols])  # Getting the place we query about.
@@ -462,14 +462,14 @@ class DataAugmentClass:
 # TODO - CHANGE THE CLASS.
 class MetaData:
     """
-     Saves the model_opts, and the number of samples per dataset.
+     Saves the opts, and the number of samples per dataset.
     """
 
     def __init__(self, parser: argparse, nsamples_per_data_type_dict: dict):
         """
 
         Args:
-            parser: The model_opts.
+            parser: The opts.
             nsamples_per_data_type_dict: The nsamples dictionary.
         """
 

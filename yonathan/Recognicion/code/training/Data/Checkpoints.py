@@ -51,29 +51,27 @@ class CheckpointSaver:
         self.optimum = new_optimum
 
     def __call__(self, model: nn.Module, epoch: int, current_test_accuracy: float, optimizer: torch.optim,
-                 scheduler: torch.optim.lr_scheduler, opts: argparse, task_id: int, direction: tuple,
+                 scheduler: torch.optim.lr_scheduler, opts: argparse,
                  optional_kay: Union[Tuple, None] = None) -> None:
         """
         Saves the state.
         Args:
-            model: The model_test to save.
+            model: The model to save.
             epoch: The epoch id.
             current_test_accuracy: The current test Accuracy.
             optimizer: The optimizer.
             scheduler: The scheduler.
-            opts: The model_test options.
-            task_id: The list_task_structs id.
-            direction: The list_task_structs id.
+            opts: The model options.
             optional_kay: Optional key to add during run-time, needed for baselines.
 
         """
-        # The current model_test path, updated when new Accuracy is achieved.
+        # The current model path, updated when new Accuracy is achieved.
         model_path_curr = os.path.join(self.dirpath,
                                        model.__class__.__name__ + f'_epoch{epoch}.pt')
-        # The best model_test path, updated when new Accuracy is achieved.
+        # The best model path, updated when new Accuracy is achieved.
         model_path_best = os.path.join(self.dirpath,
                                        model.__class__.__name__ + f'_best.pt')
-        # The latest model_test path, updated every epoch.
+        # The latest model path, updated every epoch.
         model_path_latest = os.path.join(self.dirpath,
                                          model.__class__.__name__ + f'_latest.pt')
 
@@ -81,11 +79,11 @@ class CheckpointSaver:
         # All the data we want to store.
         save_data = {'epoch': epoch, 'model_state_dict': model.state_dict(),
                      'optimizer_state_dict': optimizer.state_dict(),
-                     'scheduler_state_dict': scheduler.state_dict(), 'model_opts': opts}
+                     'scheduler_state_dict': scheduler.state_dict(), 'opts': opts}
         if optional_kay is not None:
             (new_key, new_value) = optional_kay
             save_data[new_key] = new_value
-        torch.save(save_data, model_path_latest)  # Save the current model_test in model_test latest path.
+        torch.save(save_data, model_path_latest)  # Save the current model in model latest path.
         if epoch % 10 == 0:
             torch.save(save_data, model_path_curr)
         # If we passed the optimum we save in model_id and in model_best.

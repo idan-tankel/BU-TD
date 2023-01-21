@@ -1,5 +1,5 @@
 """
-Here we define and perform  a composition of tasks sequentially as BU-TD model_test allows us.
+Here we define and perform  a composition of tasks sequentially as BU-TD model allows us.
 """
 import os
 from pathlib import Path
@@ -12,18 +12,19 @@ from training.Data.Parser import GetParser
 from training.Modules.Create_Models import create_model
 from training.Modules.Models import *
 from training.Utils import preprocess, tuple_direction_to_index, load_model
+from training.Data.Structs import Task_to_struct
 
 
 class ComposeModel(nn.Module):
     """
-    Here we define composite model_test, to solve all spatial relations using sequential tasks.
+    Here we define composite model, to solve all spatial relations using sequential tasks.
     """
 
     def __init__(self, opts: argparse, butd_model: BUTDModel):
         super(ComposeModel, self).__init__()
-        self.opts = opts  # The model_test model_opts.
-        self.model: BUTDModel = butd_model  # The model_test.
-        self.flag = opts.model_flag  # The model_test flag.
+        self.opts = opts  # The model opts.
+        self.model: BUTDModel = butd_model  # The model.
+        self.flag = opts.model_flag  # The model flag.
         # Compute the edge class, needed for early stopping.
         self.edge_class = 47 if self.flag is DsType.Emnist else 10
         # Input to struct object.
@@ -33,7 +34,7 @@ class ComposeModel(nn.Module):
 
     def forward(self, batch: inputs_to_struct) -> Tensor:
         """
-        Here we just forward the model_test and return the prediction.
+        Here we just forward the model and return the prediction.
         Args:
             batch: The input
 
@@ -51,9 +52,9 @@ class ComposeModel(nn.Module):
         Create the new flag.
         Args:
             prediction: The prediction, first cycle None.
-            direction: The list_task_structs.
+            direction: The task.
             char: The characters, needed for first cycle only as no prediction is computed.
-            direction_id: The list_task_structs id.
+            direction_id: The task id.
 
         Returns: The New flag instruction for next phase.
 
@@ -66,7 +67,7 @@ class ComposeModel(nn.Module):
         direction_index, _ = tuple_direction_to_index(self.opts.num_x_axis, self.opts.num_y_axis, direction,
                                                       self.opts.ndirections)
         task_type_ohe = torch.nn.functional.one_hot(torch.zeros(B, dtype=torch.long), 1).cuda()
-        # Getting the list_task_structs embedding, telling which list_task_structs we solve now.
+        # Getting the task embedding, telling which task we solve now.
         direction_type_ohe = torch.nn.functional.one_hot(torch.ones(B, dtype=torch.long) * direction_index,
                                                          self.opts.ndirections).cuda()
         # Getting the character embedding, which character we query about.
@@ -149,5 +150,7 @@ comp_model = ComposeModel(opts=parser, butd_model=model)
 project_path = Path(__file__).parents[1]
 data_path = os.path.join(project_path, f'data/{str(ds_type)}/samples/(3,3)_Image_Matrix')
 #
-DataLoaders = get_dataset_for_spatial_relations(parser, data_path, list_task_structs=[(-1, 0)])
+DataLoaders = get_dataset_for_spatial_relations(parser, data_path, task=[Task_to_struct(task=0,
+                                                                                        direction=(-1, 0))])
+
 print(comp_model.compose_tasks_full_data_loader(DataLoaders['test_dl'], [(-1, 0)]))

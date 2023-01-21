@@ -30,14 +30,14 @@ class MyIMM_Mode(Base_plugin):
     def __init__(self, opts: argparse, prev_checkpoint: Union[dict, None] = None, load_from=None):
         """
         Args:
-            opts: The model_test model_opts.
-            prev_checkpoint: A pretrained model_test
+            opts: The model opts.
+            prev_checkpoint: A pretrained model
             load_from: Path we load from
         """
         super(MyIMM_Mode, self).__init__(opts=opts, prev_checkpoint=prev_checkpoint, reg_type=RegType.IMM_Mode)
         self.fisher_new = None
         self.load_from = load_from
-        # Supporting pretrained model_test.
+        # Supporting pretrained model.
         if prev_checkpoint is not None:
             self.num_exp = 1  #
             dataloader = self.Get_old_dl()  # The old data-set for computing the coefficients.
@@ -84,7 +84,7 @@ class MyIMM_Mode(Base_plugin):
         """
 
         Args:
-            model: The model_test.
+            model: The model.
             mb_x: The input.
             **kwargs: The args.
 

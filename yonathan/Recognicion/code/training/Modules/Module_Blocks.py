@@ -108,7 +108,7 @@ class Modulation_and_Lat(nn.Module):
     def __init__(self, opts: argparse, nfilters: int):
         """
         Args:
-            opts: The model_test options.
+            opts: The model options.
             nfilters: The number of filters.
         """
         super(Modulation_and_Lat, self).__init__()
@@ -121,7 +121,7 @@ class Modulation_and_Lat(nn.Module):
     def forward(self, x: Tensor, flags: Tensor, lateral: Tensor) -> Tensor:
         """
         Args:
-            x: The model_test input.
+            x: The model input.
             flags: The flags, needed for BN.
             lateral: The previous stream lateral connection, of the same shape.
 
@@ -147,19 +147,19 @@ class Modulation(nn.Module):
         """
 
         Args:
-            opts: The model_test options.
-            shape: The shape to create the model_test according to.
+            opts: The model options.
+            shape: The shape to create the model according to.
             column_modulation: Whether to create pixel/channel modulation.
         """
         super(Modulation, self).__init__()
-        self.opts = opts  # Store the model_test model_opts.
+        self.opts = opts  # Store the model opts.
         self.modulations = nn.ParameterList()  # Module list containing modulation for all directions.
         if column_modulation:
             size = [1, *shape]  # If pixel modulation matches the inner spatial of the input
         else:
             size = [shape, 1, 1]  # If channel modulation matches the number of channels
-        for i in range(opts.ndirections):  # allocating for every list_task_structs its list_task_structs embedding
-            layer = nn.Parameter(torch.Tensor(*size))  # The list_task_structs embedding.
+        for i in range(opts.ndirections):  # allocating for every task its task embedding
+            layer = nn.Parameter(torch.Tensor(*size))  # The task embedding.
             task_embedding[i].append(layer)  # Add to the learnable parameters.
             self.modulations.append(layer)  # Add to the modulation list.
 
@@ -174,7 +174,8 @@ class Modulation(nn.Module):
 
         """
         direction_id = flag_to_idx(flags=flags)  # Compute the index of the one-hot.
-        #    print(direction_id)
-        task_emb = self.modulations[direction_id]  # compute the list_task_structs embedding according to the direction_idx.
+        #  print(direction_id)
+        # direction_id = 11
+        task_emb = self.modulations[direction_id]  # compute the task embedding according to the direction_idx.
         output = x * (1 - task_emb)  # perform the modulation.
         return output

@@ -20,7 +20,7 @@ def store_sample_disk(opts: argparse, sample: Sample, store_dir: str) -> None:
     """
     Storing the sample on the disk.
     Args:
-        opts: The data model_opts.
+        opts: The data opts.
         sample: The sample we desire to save.
         store_dir: The directory we store into.
     """
@@ -95,7 +95,7 @@ def gen_samples(opts: argparse, job_id: int, range_start: int, range_stop: int,
     """
     Generates and stored samples, by calling to create_sample and store_sample_disk.
     Args:
-        opts: The option model_opts.
+        opts: The option opts.
         job_id: The job id.
         range_start: The range start in the job.
         range_stop: The range stop of the job.
@@ -133,7 +133,7 @@ def Get_valid_pairs_for_the_combinatorial_test(opts: argparse, nclasses: int, va
     Validation is only the excluded data (combinatorial generalization).
 
     Args:
-        opts: The option model_opts.
+        opts: The option opts.
         nclasses: The number of classes.
         valid_classes: The valid classes.
 
@@ -173,7 +173,7 @@ def Choose_Chars(opts: argparse, prng: random, valid_pairs: np.array, ds_type: s
     If the sample is from the validation dataset then the sample will be one of the test_chars_list,
     Otherwise it is built according to the CG rule to have valid CG test.
     Args:
-        opts: The dataset model_opts.
+        opts: The dataset opts.
         prng: The random generator.
         valid_pairs: The valid pairs to sample from.
         ds_type: The dataset type.
@@ -218,7 +218,7 @@ def Create_several_samples_per_sequence(opts: argparse, prng: random, ds_type: s
     """
     Given sampled sequence of characters, generate several samples, and add to the samples list.
     Args:
-        opts: The data model_opts.
+        opts: The data opts.
         prng: The random generator.
         ds_type: The data-set type.
         samples: The samples list.
@@ -232,9 +232,9 @@ def Create_several_samples_per_sequence(opts: argparse, prng: random, ds_type: s
     valid_queries = range(num_characters_per_image)  # All queries are valid.
 
     query_part_ids = prng.choice(valid_queries, ngenerate, replace=False)  # Choose ngenerate positions
-    for query_id, query_part_id in enumerate(query_part_ids):  # For each position, sample list_task_structs and create sample.
-        direction_id = prng.choice(len(valid_directions))  # Sample list_task_structs id.
-        adj_type = valid_directions[direction_id]  # The list_task_structs.
+    for query_id, query_part_id in enumerate(query_part_ids):  # For each position, sample task and create sample.
+        direction_id = prng.choice(len(valid_directions))  # Sample task id.
+        adj_type = valid_directions[direction_id]  # The task.
         sample = Sample(opts, query_part_id, adj_type, chars,
                         ngenerate * sample_id + query_id)  # Create sample.
         samples.append(sample)  # Add to the samples list.
@@ -243,7 +243,7 @@ def Create_several_samples_per_sequence(opts: argparse, prng: random, ds_type: s
 def Get_valid_classes_for_emnist_only(data_set_type: DsType, use_only_valid_classes: bool,
                                       nclasses: int) -> np.array:  # Only for emnist.
     """
-    To avoid confusion of the model_test, we omit some classes from the original number of classes.
+    To avoid confusion of the model, we omit some classes from the original number of classes.
     Args:
         data_set_type: The dataset name. If emnist we omit some classes o.w. we take them all.
         use_only_valid_classes: Whether to use only valid classes.
@@ -269,7 +269,7 @@ def Make_data_dir(opts: argparse, ds_type: DsType, language_list: list) -> tuple
     """
     Making the data-dir for the samples.
     Args:
-        opts: The data model_opts.
+        opts: The data opts.
         ds_type: The data-set type.
         language_list: The language list.
 
@@ -295,7 +295,7 @@ def Generate_raw_samples(opts: argparse, raw_dataset: General_raw_data, image_id
     Given the valid pairs, valid classes, we generate raw samples for each data-set type.
     Here we just choose the character sequence.
     Args:
-        opts: The dataset model_opts.
+        opts: The dataset opts.
         raw_dataset: The raw image dataset.
         image_ids: The image ids.
         data_set_index: The seed for each dataset.
@@ -362,7 +362,7 @@ def Save_meta_data_and_code_script(opts: argparse, ds_type: DsType, nsamples_per
     """
     storage_dir, meta_data_fname = Make_data_dir(opts, ds_type, language_list)
     with open(meta_data_fname, "wb") as new_data_file:
-        # Creating a struct containing the model_opts and number of samples per data set type dict.
+        # Creating a struct containing the opts and number of samples per data set type dict.
         struct = MetaData(opts,
                           nsamples_per_data_type_dict)
         pickle.dump(struct, new_data_file)  # Dump to the memory.
@@ -375,7 +375,7 @@ def Split_samples_into_jobs_and_generate(opts: argparse, samples: list[Sample],
     After the sequence are chosen, we generate samples by splitting into parallel jobs and
     generate the samples including all supervision.
     Args:
-        opts: The dataset model_opts.
+        opts: The dataset opts.
         samples: The sampled sequence.
         storage_dir: The storage directory.
         ds_type: The dataset type.
@@ -383,7 +383,7 @@ def Split_samples_into_jobs_and_generate(opts: argparse, samples: list[Sample],
     """
     num_jobs = opts.num_threads  # The number of threads.
     job_chunk_size = opts.job_chunk_size  # The number of samples per job.
-    num_samples = len(samples)  # The number of samples
+    num_samples = len(samples)  # The number of samples.
     # each 'job' processes several chunks. Each chunk is of 'storage_batch_size' samples.
     cur_num_jobs = min(num_jobs, np.ceil(num_samples / job_chunk_size).astype(int))  # The needed number of jobs.
     use_multiprocess = num_jobs > 1  # Whether to use multiprocessing.

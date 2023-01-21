@@ -20,13 +20,13 @@ def train_trajectory():
     model = create_model(opts)
     first_task = opts.initial_directions
     training_flag = Training_flag(opts, train_all_model=True)
-    new_model = train_step(model_opts=opts, model=model, task=first_task, training_flag=training_flag,
+    new_model = train_step(opts=opts, model=model, task=first_task, training_flag=training_flag,
                            ds_type=DsType.Fashionmnist)
     Models.append(new_model)
     new_tasks = [[(-1, 0)], [(0, 1)], [(0, -1)]]
     for task in new_tasks:
         training_flag = Training_flag(opts, train_head=True, train_task_embedding=True)
-        model = train_step(model_opts=opts, model=model, task=task, training_flag=training_flag)
+        model = train_step(opts=opts, model=model, task=task, training_flag=training_flag)
         Models.append(copy.deepcopy(model))
     print(len(Models))
 

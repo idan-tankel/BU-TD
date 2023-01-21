@@ -101,11 +101,11 @@ def Add_keypoint(data_set: DataSetBase, sample: inputs_to_struct, image, k):
     end_x = char.end_x
     sty = char.sty
     end_y = char.end_y
-    box = torch.tensor([20, 10, 20, 10]).unsqueeze(0)
+    box = torch.tensor([80, 10, 80, 10], dtype=torch.int).unsqueeze(0)
     key_point_location = torch.tensor([(stx + end_x) // 2, (sty + end_y) // 2]).reshape(1, 1, 2)
     image = torch.tensor(image)
     image = image.reshape((3, 130, 200))
-    image = torchvision.utils.draw_bounding_boxes(image=image, boxes=box, fill=True, colors='grey', width=10)
+    image = torchvision.utils.draw_bounding_boxes(image=image, boxes=box, fill=True, colors=(255, 255, 0), width=50)
     black = np.zeros((130, 200, 3), dtype=np.uint8)
     #  print(image.shape)
     #  return cv2.circle(img=image/255, center=key_point_location, radius=2, color=(0, 0, 255))

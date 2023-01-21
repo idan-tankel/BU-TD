@@ -18,16 +18,16 @@ from training.Utils import preprocess
 
 def load_model(model: nn.Module, results_path: str, model_path: str) -> dict:
     """
-    Loads and returns the model_test checkpoint as a dictionary.
+    Loads and returns the model checkpoint as a dictionary.
     Args:
-        model_path: The path to the model_test.
+        model_path: The path to the model.
         results_path: The path to results dir.
-        model: The path to the model_test.
+        model: The path to the model.
 
     Returns: The loaded checkpoint.
 
     """
-    model_path = os.path.join(results_path, model_path)  # The path to the model_test.
+    model_path = os.path.join(results_path, model_path)  # The path to the model.
     checkpoint = torch.load(model_path)  # Loading the saved data.
     model.load_state_dict(state_dict=checkpoint['model_state_dict'])  # Loading the saved weights.
     return checkpoint
@@ -35,24 +35,24 @@ def load_model(model: nn.Module, results_path: str, model_path: str) -> dict:
 
 def construct_flag(opts: argparse, task_id: int, direction_tuple: tuple) -> Tensor:
     """
-    Construct new flag from the new list_task_structs, list_task_structs id.
+    Construct new flag from the new task, direction id.
     Args:
-        opts: The model_test model_opts.
-        task_id: The list_task_structs id.
-        direction_tuple: The list_task_structs id.
+        opts: The model opts.
+        task_id: The task id.
+        direction_tuple: The direction id.
 
-    Returns: The new tasks, with the new list_task_structs and list_task_structs.
+    Returns: The new tasks, with the new task and direction.
 
     """
-    # From the list_task_structs tuple to single number.
+    # From the task tuple to single number.
     direction_dir, _ = tuple_direction_to_index(num_x_axis=opts.num_x_axis, num_y_axis=opts.num_y_axis,
                                                 direction=direction_tuple,
                                                 ndirections=opts.ndirections,
                                                 task_id=task_id)
     task_id = torch.tensor(task_id)
-    # The new list_task_structs vector.
+    # The new task vector.
     New_task_flag = torch.nn.functional.one_hot(task_id, opts.ntasks)
-    # The new list_task_structs vector.
+    # The new direction vector.
     New_direction_flag = torch.nn.functional.one_hot(direction_dir, opts.ndirections)
     # Concat into one flag.
     New_flag = torch.concat([New_direction_flag, New_task_flag], dim=0).float()
@@ -62,9 +62,9 @@ def construct_flag(opts: argparse, task_id: int, direction_tuple: tuple) -> Tens
 
 def set_model(model: nn.Module, state_dict: dict) -> None:
     """
-    Set model_test state by state dict.
+    Set model state by state dict.
     Args:
-        model: The model_test we want to load into.
+        model: The model we want to load into.
         state_dict: The state dictionary.
 
     Returns:
@@ -78,12 +78,12 @@ def compute_fisher_information_matrix(opts: argparse, model: nn.Module, criterio
     """
     Compute fisher importance matrix for each parameter.
     Args:
-        opts: The model_test model_opts
-        model: The model_test we compute its coefficients.
+        opts: The opts
+        model: The model we compute its coefficients.
         criterion: The loss criterion.
         dataloader: The train data-loader.
         device: The device.
-        train: Whether the model_test should be in train/eval mode.
+        train: Whether the model should be in train/eval mode.
         norm: The norm to multiply the gradients.
 
     Returns: The importance coefficients.
@@ -120,8 +120,8 @@ def compute_quadratic_loss(current_model: nn.Module, previous_model: nn.Module, 
     Compute quadratic loss.
     Very common in regularization methods to use such loss.
     Args:
-        current_model: The current model_test.
-        previous_model: The previous model_test.
+        current_model: The current model.
+        previous_model: The previous model.
         importance: The per-weight importance.
         device: The device the computation on.
 
@@ -142,7 +142,7 @@ def Norm(opts: argparse, x: inputs_to_struct, out: outs_to_struct) -> torch.floa
     """
     Return the norm of the output classifier.
     Args:
-        opts: The model_test model_opts-not used.
+        opts: The model opts-not used.
         x: The input struct.
         out: The output struct.
 
@@ -152,27 +152,29 @@ def Norm(opts: argparse, x: inputs_to_struct, out: outs_to_struct) -> torch.floa
     return torch.norm(out.classifier, dim=1).pow(2).mean()
 
 
-def Get_updated_opts(ds_type: DsType, reg_type: RegType, model_type=ResNet,model_flag = Flag.NOFLAG):
+def Get_updated_opts(ds_type: DsType, reg_type: RegType, model_type=ResNet, model_flag=Flag.NOFLAG):
     """
     Args:
         ds_type: The data-set type
         reg_type: The regularization type.
-        model_type: The model_test type.
+        model_type: The model type.
+        model_flag: The model flag.
 
     Returns:
 
     """
-    opts = GetParser(model_type=model_type, ds_type=ds_type,model_flag=model_flag)
-    # ResNet to be as large as BU-TD model_test.
+    opts = GetParser(model_type=model_type, ds_type=ds_type, model_flag=model_flag)
+    # ResNet to be as large as BU-TD model.
     factor = [2, 1, 1] if ds_type is DsType.Fashionmnist else [3, 3, 3]
     filters = [64, 96, 128, 128] if ds_type is DsType.Fashionmnist else [64, 96, 128, 256]
     filters = filters if ds_type is not DsType.Omniglot else [64, 96, 128, 256]
-    factor = factor if ds_type is not DsType.Omniglot else [1,1,1]
+    factor = factor if ds_type is not DsType.Omniglot else [1, 1, 1]
     update_parser(opts=opts, attr='ns', new_value=factor)  # Make the
-    update_parser(opts=opts, attr='use_lateral_bu_td', new_value=False)  # No lateral connections are needed.
-    update_parser(opts=opts, attr='use_laterals_td_bu', new_value=False)  # No lateral connections are needed.
+    # update_parser(opts=opts, attr='use_lateral_butd', new_value=False)  # No lateral connections are needed.
+    #  update_parser(opts=opts, attr='use_lateral_tdbu', new_value=False)  # No lateral connections are needed.
     update_parser(opts=opts, attr='nfilters', new_value=filters)
-    model = create_model(opts)  # Create the model_test.
+    update_parser(opts=opts, attr='save_stats', new_value=False)
+    model = create_model(opts)  # Create the model.
     opts.model = model
     return opts, model
 
@@ -192,5 +194,5 @@ def Get_samples_data(ds_type, lang_id=50):
     elif ds_type is DsType.Fashionmnist:
         sample_path = 'samples/(3,3)_Image_Matrix'
     elif ds_type is DsType.Omniglot:
-        sample_path = f'samples/(1,6)_data_set_matrix{lang_id}'
+        sample_path = f'samples/(1,6)_Image_Matrix{lang_id}'
     return sample_path

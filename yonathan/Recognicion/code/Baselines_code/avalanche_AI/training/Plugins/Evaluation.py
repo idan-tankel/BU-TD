@@ -27,7 +27,7 @@ class Accuracy_fun(Accuracy):
 
         """
         Args:
-            opts: The model_test model_opts.
+            opts: The model opts.
         """
         super(Accuracy_fun, self).__init__()
         # From outs to struct.
@@ -48,7 +48,7 @@ class Accuracy_fun(Accuracy):
         Args:
             predicted_y: The predicted label.
             gt: The ground truth.
-            task_labels: The list_task_structs labels.
+            task_labels: The task labels.
 
         Returns:
 
@@ -57,7 +57,7 @@ class Accuracy_fun(Accuracy):
             # The predicted 'classes' distribution.
             # The prediction and accuracy.
             preds, task_accuracy = self.accuracy_fun(gt, predicted_y)
-            # Update the list_task_structs accuracy.
+            # Update the task accuracy.
             self._mean_accuracy[task_labels].update(task_accuracy, preds.shape[0])
 
         else:
@@ -75,7 +75,7 @@ class MyGenericPluginMetric(GenericPluginMetric[float]):
     def __init__(self, opts: argparse, reset_at: str, emit_at: str, mode: str):
         """
         Args:
-            opts: The model_test model_opts.
+            opts: The model opts.
             reset_at: When to reset the plugin.
             emit_at: When to show the results.
             mode: Train/val mode.
@@ -156,7 +156,7 @@ class RunningEpochAccuracy(MyGenericPluginMetric):
         """
         Creates an instance of the RunningEpochAccuracy metric.
         Args:
-            opts: The model_test model_opts.
+            opts: The model opts.
         """
         super(RunningEpochAccuracy, self).__init__(opts=opts, reset_at="epoch", emit_at="iteration", mode="train")
 
@@ -175,7 +175,7 @@ class ExperienceAccuracy(MyGenericPluginMetric):
         """
         Creates an instance of ExperienceAccuracy metric
         Args:
-           opts: The model_test model_opts.
+           opts: The model opts.
         """
         super(ExperienceAccuracy, self).__init__(opts=opts, reset_at="experience", emit_at="experience",
                                                  mode="eval")
@@ -195,7 +195,7 @@ class StreamAccuracy(MyGenericPluginMetric):
         """
         Creates an instance of StreamAccuracy metric.
         Args:
-           opts: The model_test model_opts.
+           opts: The model opts.
         """
         super(StreamAccuracy, self).__init__(opts=opts, reset_at="stream", emit_at="stream", mode="eval")
 
@@ -216,7 +216,7 @@ def accuracy_metrics(
     Helper method that can be used to obtain the desired set of
     plugin metrics.
     Args:
-        opts: The model_test model_opts.
+        opts: The model opts.
         minibatch: True, will return a metric able to log the minibatch Accuracy at training time.
         epoch: If True, will return a metric able to log the epoch Accuracy at training time.
         epoch_running:  If True, will return a metric able to log the running epoch Accuracy at training time.

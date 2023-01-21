@@ -18,14 +18,14 @@ sys.path.append(os.path.join(Path(__file__).parents[2], 'Data_Creation'))
 
 # Return the datasets and dataloaders.
 
-def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, list_task_structs: list[Task_to_struct],
+def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, task: list[Task_to_struct],
                                       data: Union[None, type] = None) -> dict:
     """
     Getting the train,test,val(if exists) datasets.
     Args:
-        opts: The model_test options.
+        opts: The model options.
         data_fname: The data path.
-        list_task_structs: The task tuple.
+        task: The task tuple.
         data: Possible data-set object.
 
     Returns: The train_dl, test_dl, val_dl(if exists) datasets.
@@ -35,12 +35,12 @@ def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, list_task
     if opts.model_flag is Flag.NOFLAG:
         from training.Data.Datasets import DatasetNonGuided as dataset
     # Import 'guided' dataset.
-    elif opts.model_flag is Flag.CL:
+    elif opts.model_flag is Flag.CL or opts.model_flag is Flag.Read_argument:
         from training.Data.Datasets import DatasetGuidedSingleTask as dataset
     elif opts.model_flag is Flag.TD:
         from training.Data.Datasets import DatasetGuidedInterleaved as dataset
     else:
-        raise Exception("You must implement a dataset object to support that model_test type.")
+        raise Exception("You must implement a dataset object to support that model type.")
     if data is not None:
         dataset = data
 
@@ -61,17 +61,17 @@ def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, list_task
         obj_per_col = MetaData.num_rows  # Getting the number of chars per col.
 
     nsamples_train = MetaData.nsamples_dict['train']  # Getting the number of train samples.
-    nsamples_test = MetaData.nsamples_dict['test']  # Getting the number of test  samples.
+    nsamples_test = MetaData.nsamples_dict['test']  # Getting the number of test samples.
     # if there is no validation set, then the number of samples in the validation set is 0.
     try:
-        nsamples_val = MetaData.nsamples_dict['val']  # Getting the number of test  samples.
+        nsamples_val = MetaData.nsamples_dict['val']  # Getting the number of validation(CG test) samples.
     except KeyError:
         nsamples_val = 0
     # Create train dataset.
-    train_ds = dataset(root=os.path.join(data_fname, 'train'), opts=opts, task_struct=list_task_structs,
+    train_ds = dataset(root=os.path.join(data_fname, 'train'), opts=opts, task_struct=task,
                        nexamples=nsamples_train, obj_per_row=obj_per_row, obj_per_col=obj_per_col)
     # Create the test dataset.
-    test_ds = dataset(root=os.path.join(data_fname, 'test'), is_train=False, opts=opts, task_struct=list_task_structs,
+    test_ds = dataset(root=os.path.join(data_fname, 'test'), is_train=False, opts=opts, task_struct=task,
                       nexamples=nsamples_test, obj_per_row=obj_per_row, obj_per_col=obj_per_col)
     batch_size = opts.bs
     # Creating the data-loaders.
@@ -85,7 +85,7 @@ def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, list_task
     # Create the val dataset if nsamples_val is non-zero.
     if nsamples_val > 0:
         val_ds = dataset(root=os.path.join(data_fname, 'val'), is_train=False, opts=opts,
-                         task_struct=list_task_structs,
+                         task_struct=task,
                          nexamples=nsamples_val, obj_per_row=obj_per_row, obj_per_col=obj_per_col)
         val_dl = DataLoader(dataset=val_ds, batch_size=batch_size, num_workers=opts.workers, shuffle=False,
                             pin_memory=True)

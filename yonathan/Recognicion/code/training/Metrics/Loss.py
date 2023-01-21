@@ -16,11 +16,11 @@ def multi_label_loss(samples: inputs_to_struct, outs: outs_to_struct):
     """
     The average loss over all images in the batch.
     Args:
-        samples: The samples.
-        outs: The model_test outputs.
+        samples: The inputs.
+        outs: The model outputs.
 
 
-    Returns: The mean loss over all samples in the batch.
+    Returns: The mean loss over all inputs in the batch.
 
     """
     samples.label_task = samples.label_task.squeeze()
@@ -33,8 +33,8 @@ def multi_label_loss_weighted(samples: inputs_to_struct, outs: outs_to_struct):
     """
     The loss over all existing characters in the batch(non-zero loss weight).
     Args:
-        samples: The samples.
-        outs: The model_test outputs.
+        samples: The inputs.
+        outs: The model outputs.
 
     Returns: The weighted loss over all existing characters, for not existing the loss is zero.
 
@@ -50,9 +50,9 @@ def UnifiedCriterion(opts: argparse, samples: inputs_to_struct, outs: outs_to_st
     """
     BU1 loss plus BU2 loss.
     Args:
-        opts: The model_test options.
-        samples:  The input samples to the model_test.
-        outs: The model_test out.
+        opts: The model options.
+        samples:  The input inputs to the model.
+        outs: The model out.
 
     Returns: The overall loss, including BU1 loss(if needed) and BU2.
 

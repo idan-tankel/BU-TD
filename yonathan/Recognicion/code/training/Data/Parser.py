@@ -1,5 +1,5 @@
 """
-Here we define the modl model_opts needed for all project.
+Here we define the modl opts needed for all project.
 """
 import argparse
 from pathlib import Path
@@ -22,40 +22,41 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
               model_flag: Flag = Flag.NOFLAG, ds_type: DsType = DsType.Emnist):
     """
     Args:
-        task_idx: The list_task_structs index.
-        model_type: The model_test type  BUTD or ResNet.
-        model_flag: The model_test flag.
+        task_idx: The task index.
+        model_type: The model type  BUTD or ResNet.
+        model_flag: The model flag.
         ds_type: The data type e.g. mnist, fashionmnist, omniglot.
 
-    Returns: The options model_opts.
+    Returns: The options opts.
 
     """
     # Asserting NOFLAG is used only with ResNet.
-    if model_flag is not Flag.NOFLAG and model_type is ResNet:
-        raise Exception("Pure ResNet can be trained only in NO-FLAG mode.")
-    # Asserting the list_task_structs idx is meaningful only for Omniglot.
+    if (model_flag is not Flag.NOFLAG and model_flag is not Flag.Read_argument) and model_type is ResNet:
+        raise Exception("Pure ResNet can be trained only in NO-FLAG or Read-argument mode.")
+    # Asserting the task idx is meaningful only for Omniglot.
     if task_idx != 0 and (ds_type is DsType.Emnist or ds_type is DsType.Fashionmnist):
-        raise Exception("The list_task_structs id is used only for Omniglot.")
+        raise Exception("The task id is used only for Omniglot.")
     #
     Data_specification = AllDataSetOptions(ds_type=ds_type, flag_at=model_flag,
                                            initial_task_for_omniglot_only=5)
     opts = argparse.ArgumentParser()
     # Flags.
     opts.add_argument('--ds_type', default=ds_type, type=DsType, help='Flag that defines the data-set type.')
-    opts.add_argument('--model_flag', default=model_flag, type=Flag, help='Flag that defines the model_test type.')
+    opts.add_argument('--model_flag', default=model_flag, type=Flag, help='Flag that defines the model type.')
     # Optimization arguments.
     opts.add_argument('--wd', default=0.00001, type=float, help='The weight decay of the Adam optimizer.')
     opts.add_argument('--SGD', default=False, type=bool, help='Whether to use SGD or Adam optimizer.')
     opts.add_argument('--initial_lr', default=0.0001, type=float, help='Base lr for the SGD optimizer.')
     opts.add_argument('--cycle_lr', default=True, type=bool, help='Whether to cycle the lr.')
-    opts.add_argument('--base_lr', default=0.0002, type=float, help='Base lr of the cyclic scheduler.')
-    opts.add_argument('--max_lr', default=0.002, type=float,
+    opts.add_argument('--base_lr', default=0.00001, type=float, help='Base lr of the cyclic scheduler.')
+    opts.add_argument('--use_embedding', default=True, type=bool, help='')
+    opts.add_argument('--max_lr', default=0.00001, type=float,
                       help='Max lr of the cyclic scheduler before the lr returns to the base_lr.')
     opts.add_argument('--momentum', default=0.9, type=float, help='Momentum of the optimizer.')
     opts.add_argument('--bs', default=10, type=int, help='The training batch size.')
     opts.add_argument('--EPOCHS', default=100, type=int, help='Number of epochs in the training.')
     # Model architecture arguments.
-    opts.add_argument('--model_type', default=model_type, type=DsType, help='The model_test type BUTD or ResNet.')
+    opts.add_argument('--model_type', default=model_type, type=DsType, help='The model type BUTD or ResNet.')
     opts.add_argument('--td_block_type', default=BasicBlockTD, type=nn.Module, help='Basic TD block.')
     opts.add_argument('--bu_block_type', default=BasicBlockBU, type=nn.Module, help='Basic BU block.')
     opts.add_argument('--bu_shared_block_type', default=BasicBlockBUShared, type=nn.Module,
@@ -67,20 +68,21 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
                       help='Whether to use the lateral connection from BU1 to TD')
     opts.add_argument('--use_lateral_tdbu', default=True, type=bool,
                       help='Whether to use the lateral connection from TD to BU2')
+    opts.add_argument('--read_argument', default=True)
     opts.add_argument('--nfilters', default=[64, 96, 128, 256], type=list, help='The ResNet filters')
     opts.add_argument('--strides', default=[2, 2, 1, 2], type=list, help='The ResNet strides')
     opts.add_argument('--ks', default=[7, 3, 3, 3], type=list, help='The ResNet kernel sizes')
-    opts.add_argument('--ns', default=[1, 1, 1], type=list, help='Number of blocks per layer')
+    opts.add_argument('--ns', default=[4, 4, 4], type=list, help='Number of blocks per layer')
     opts.add_argument('--nclasses', default=Data_specification.data_obj.nclasses, type=list,
-                      help='The sizes of the list_task_structs-head classes')
+                      help='The sizes of the task-head classes')
     opts.add_argument('--ntasks', default=Data_specification.data_obj.ntasks, type=int,
-                      help='Number of tasks the model_test should solve')
+                      help='Number of tasks the model should solve')
     opts.add_argument('--ndirections', default=Data_specification.data_obj.ndirections, type=int,
-                      help='Number of directions the model_test should handle')
+                      help='Number of directions the model should handle')
     opts.add_argument('--inshape', default=(3, *Data_specification.data_obj.image_size), type=tuple,
                       help='The input image shape, may be override in get_dataset')
     opts.add_argument('--num_heads', default=Data_specification.data_obj.num_heads, type=list,
-                      help='The number of headed for each list_task_structs, list_task_structs')
+                      help='The number of headed for each task, direction')
     opts.add_argument('--num_x_axis', default=Data_specification.data_obj.num_x_axis, type=int,
                       help='The neighbor radius in the x-axis.')
     opts.add_argument('--num_y_axis', default=Data_specification.data_obj.num_y_axis, type=int,
@@ -112,9 +114,9 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
                       help='The initial tasks to train first')
     # Change to another function
     opts.add_argument('--baselines_dir', default=Data_specification.data_obj.baselines_dir, type=str,
-                      help='The path the model_test will be stored')
+                      help='The path the model will be stored')
     opts.add_argument('--results_dir', default=Data_specification.data_obj.results_dir, type=str,
-                      help='The path the model_test will be stored')
+                      help='The path the model will be stored')
     opts.add_argument('--Data_specific_path', default=Data_specification.data_obj.Data_specific_path, type=str,
                       help='Path to the data-set type')
     opts.add_argument('--project_path', default=Path(__file__).parents[3], type=str, help='The project path')
@@ -126,7 +128,7 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
     # LFL
     opts.add_argument('--LFL_lambda', default=0.5, type=float, help='The LFL strength')
     # LWF
-    opts.add_argument('--LWF_lambda', default=0.9, type=float, help='The LWF strength')
+    opts.add_argument('--LWF_lambda', default=0.79, type=float, help='The LWF strength')
     opts.add_argument('--temperature_LWF', default=2.0, type=float, help='The LWF temperature')
     # MAS
     opts.add_argument('--mas_alpha', default=0.5, type=float, help='The MAS continual importance weight')
@@ -153,9 +155,9 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
 
 def update_parser(opts: argparse, attr: str, new_value: any) -> None:
     """
-    Update existing model_test model_opts attribute to new_value.
+    Update existing model opts attribute to new_value.
     Args:
-        opts: A model_test model_opts.
+        opts: A model opts.
         attr: An attr.
         new_value: The new value we want to assign
 

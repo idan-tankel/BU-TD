@@ -1,5 +1,5 @@
 """
-Here we create the model_test type according to model_test type.
+Here we create the model type according to model type.
 """
 import argparse
 from typing import Union
@@ -9,11 +9,11 @@ from training.Modules.Models import ResNet, BUTDModel
 
 def create_model(opts: argparse) -> Union[ResNet, BUTDModel]:
     """
-    Create and return a model_test according to the options.
+    Create and return a model according to the options.
     Args:
-        opts: The model_test model_opts.
+        opts: The model opts.
 
-    Returns: A model_test.
+    Returns: A model.
 
     """
     if opts.model_type is BUTDModel:

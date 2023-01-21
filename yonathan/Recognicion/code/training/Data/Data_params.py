@@ -1,6 +1,6 @@
 """
 Here we define for each data-set its parameters like number of classes,
-number of list_task_structs, tasks.
+number of directions, tasks.
 """
 import argparse
 import os.path
@@ -26,8 +26,9 @@ class Flag(Enum):
     The possible training flags.
     """
     TD = auto()  # Ordinary BU-TD network training.
-    NOFLAG = auto()  # Non-guided model_test, should output for each character its adjacent neighbor.
-    CL = auto()  # Continual learning flag, a BU-TD network with allocating list_task_structs embedding for each task.
+    NOFLAG = auto()  # Non-guided model, should output for each character its adjacent neighbor.
+    CL = auto()  # Continual learning flag, a BU-TD network with allocating task embedding for each task.
+    Read_argument = auto()
 
 
 class RegType(Enum):
@@ -49,9 +50,9 @@ class RegType(Enum):
 
     def class_to_reg_factor(self, opts: argparse) -> float:
         """
-        Given the model_test options, get the associated regularization factor.
+        Given the model options, get the associated regularization factor.
         Args:
-            opts: The model_test model_opts.
+            opts: The model opts.
 
         Returns: The regularization factor
 
@@ -67,7 +68,7 @@ class GenericDataParams:
     def __init__(self, flag_at: Flag, ds_type: DsType, num_x_axis: int = 1, num_y_axis: int = 1):
         """
         Args:
-            flag_at: The model_test flag.
+            flag_at: The model flag.
             ds_type: The data-set type flag.
             num_x_axis: The neighbor levels in the x-axis.
             num_y_axis: The neighbor levels in the x-axis.
@@ -76,9 +77,9 @@ class GenericDataParams:
         self.bu2_loss: Callable = multi_label_loss_weighted if flag_at is Flag.NOFLAG \
             else multi_label_loss  # The BU2 classification loss according to the flag.
         self.task_accuracy: Callable = multi_label_accuracy_weighted if flag_at is Flag.NOFLAG \
-            else multi_label_accuracy  # The list_task_structs Accuracy metric according to the flag.
+            else multi_label_accuracy  # The task Accuracy metric according to the flag.
         self.project_path: Path = Path(__file__).parents[3]  # The path to the project.
-        # The initial tasks we first train in our experiments, default to right list_task_structs.
+        # The initial tasks we first train in our experiments, default to right task.
         self.initial_directions: list[Task_to_struct] = [Task_to_struct(task=0, direction=(1, 0))]
         self.ntasks: int = 1  # The number of tasks, in mnist, Fashionmnist it's 1, for Omniglot 51.
         self.num_x_axis: int = num_x_axis  # Number of directions we want to generalize to in the x-axis.
@@ -89,7 +90,7 @@ class GenericDataParams:
         # self.ndirections = 1
         self.nclasses: dict = {i: 47 for i in range(self.ndirections)}
         self.results_dir: str = os.path.join(self.project_path,
-                                             f'data/{str(ds_type)}/results/')  # The trained model_test directory.
+                                             f'data/{str(ds_type)}/results/')  # The trained model directory.
         self.baselines_dir: str = os.path.join(self.project_path,
                                                f'data/{str(ds_type)}/Baselines/')
         self.Data_specific_path = os.path.join(self.project_path, 'data/{}'.format(str(ds_type)))
@@ -107,7 +108,7 @@ class EmnistDataset(GenericDataParams):
     def __init__(self, flag_at: Flag):
         """
         Args:
-            flag_at: The model_test flag.
+            flag_at: The model flag.
 
         """
         super(EmnistDataset, self).__init__(flag_at=flag_at, ds_type=DsType.Emnist, num_x_axis=2, num_y_axis=2)
@@ -133,7 +134,7 @@ class FashionmnistDataset(GenericDataParams):
         Fashionmnist dataset.
         The same as Emnist but with 10 classes.
         Args:
-            flag_at: The model_test flag.
+            flag_at: The model flag.
         """
         super(FashionmnistDataset, self).__init__(flag_at=flag_at, ds_type=DsType.Fashionmnist)
         self.nclasses = {i: 10 for i in
@@ -150,8 +151,8 @@ class OmniglotDataset(GenericDataParams):
         """
         Omniglot dataset.
         Args:
-            initial_tasks: The initial list_task_structs desired set.
-            flag_at: The model_test flag.
+            initial_tasks: The initial task desired set.
+            flag_at: The model flag.
 
         """
         super(OmniglotDataset, self).__init__(flag_at=flag_at, ds_type=DsType.Omniglot,
@@ -163,7 +164,7 @@ class OmniglotDataset(GenericDataParams):
         raw_data_path = os.path.join(self.project_path, 'data/Omniglot/RAW/omniglot-py/Unified')  # The raw data path.
         self.nclasses = get_omniglot_dictionary(self.initial_tasks,
                                                 raw_data_path)  # Computing for each language its number of characters.
-        self.ndirections = 5
+        #   self.ndirections = 5
         self.num_heads = [1 for _ in range(self.ndirections)]
 
 
@@ -179,7 +180,7 @@ class AllDataSetOptions:
         Args:
             ds_type: The dataset type.
             flag_at: The training flag.
-            initial_task_for_omniglot_only: The initial list_task_structs list only for Omniglot.
+            initial_task_for_omniglot_only: The initial task list only for Omniglot.
         """
         if ds_type is DsType.Emnist:
             self.data_obj = EmnistDataset(flag_at=flag_at)  # Emnist.

@@ -33,18 +33,18 @@ class Regularization_strategy(SupervisedTemplate):
                  eval_every: int = -1, prev_model=None, model_path=None):
         """
         Args:
-            opts: The model_test model_opts.
-            task: The list_task_structs.
+            opts: The model opts.
+            task: The task.
             logger: The logger.
             eval_every: Interval evaluation.
-            prev_model: The previous model_test.
-            model_path: The model_test path.
+            prev_model: The previous model.
+            model_path: The model path.
         """
         self.task = task
         self.reg_type = reg_type
         self.task_id = task[0]
         self.direction_id = task[1]
-        self.opts = opts  # The model_test model_opts.
+        self.opts = opts  # The model opts.
         self.logger = logger  # The logger.
         self.inputs_to_struct = opts.inputs_to_struct
         self.outs_to_struct = opts.outs_to_struct
@@ -100,7 +100,7 @@ class Regularization_strategy(SupervisedTemplate):
         (new_task, dl_len) = kwargs['kargs']
         self.update_task(new_task=new_task)
         learned_params = self.model.get_specific_head(new_task[0], new_task[1])  # Train only the desired params.
-        #   learned_params = self.model_test.parameters()
+        #   learned_params = self.model.parameters()
         self.optimizer, self.scheduler = create_optimizer_and_scheduler(self.opts, learned_params,
                                                                         nbatches=dl_len // self.opts.bs)
 
@@ -111,7 +111,7 @@ class Regularization_strategy(SupervisedTemplate):
     def update_task(self, new_task: tuple):
         """
         Args:
-            new_task: The new list_task_structs
+            new_task: The new task
 
         Returns:
 
@@ -128,7 +128,7 @@ class Regularization_strategy(SupervisedTemplate):
 
     def forward(self) -> outs_to_struct:
         """
-        Forward the model_test.
+        Forward the model.
         Returns:
 
         """
@@ -149,7 +149,7 @@ class Regularization_strategy(SupervisedTemplate):
         """
         for (exp_train, exp_test) in zip(scenario.train_stream, scenario.test_stream):
             self.train(exp_train, [exp_test], kargs=(self.task, len(exp_train.dataset)))
-            print("Done training, now final evaluation of the model_test.")
+            print("Done training, now final evaluation of the model.")
             self.eval(exp_test)
 
     def eval_epoch(self, **kwargs):
@@ -164,7 +164,7 @@ class Regularization_strategy(SupervisedTemplate):
             new_key = self.reg_type.__str__() + "_state_dict"
             new_value = (new_key, reg_state_dict)
             self.checkpoint(self.model, self.clock.train_exp_epochs, acc, self.optimizer, self.scheduler,
-                            self.opts, self.task_id, self.direction_id, new_value)  # Updating checkpoint.
+                            self.opts, new_value)  # Updating checkpoint.
 
     def state_dict(self):
         """

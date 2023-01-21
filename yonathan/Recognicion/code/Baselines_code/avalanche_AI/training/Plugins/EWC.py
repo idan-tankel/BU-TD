@@ -29,12 +29,12 @@ class EWC(Base_plugin):
                  load_from: Union[str, None] = None):
         """
         Args:
-            opts: The model_test model_opts.
-            prev_checkpoint: A pretrained model_test
+            opts: The model opts.
+            prev_checkpoint: A pretrained model
         """
         super(EWC, self).__init__(opts=opts, prev_checkpoint=prev_checkpoint, reg_type=RegType.EWC)
         dataloader = self.Get_old_dl()  # The old data-set for computing the coefficients.
-        # Supporting pretrained model_test.
+        # Supporting pretrained model.
         if prev_checkpoint is not None and dataloader is not None and self.reg_factor != 0.0:
             # Update importance and old params to begin with EWC training.
             self.num_exp = 1  #
@@ -74,7 +74,7 @@ class EWC(Base_plugin):
         """
 
         Args:
-            model: The model_test.
+            model: The model.
             mb_x: The input.
             **kwargs:
 

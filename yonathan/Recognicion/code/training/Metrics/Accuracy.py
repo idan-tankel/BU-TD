@@ -16,30 +16,30 @@ from training.Utils import preprocess
 def multi_label_accuracy_base(samples: inputs_to_struct, outs: outs_to_struct) -> tuple:
     """
     The base function for multi, weighted versions.
-    Here for each head we compute its accuracy according to the model_test out and label list_task_structs.
+    Here for each head we compute its accuracy according to the model out and label task.
     Args:
         samples: The samples.
-        outs: The model_test outs.
+        outs: The model outs.
 
 
-    Returns: The predictions, the list_task_structs accuracy.
+    Returns: The predictions, the task accuracy.
 
     """
     predictions = torch.argmax(input=outs.classifier, dim=1)  # Find the prediction for each queried character.
-    label_task = samples.label_task  # The label list_task_structs.
+    label_task = samples.label_task  # The label task.
     task_accuracy = torch.eq(input=predictions, other=label_task).float()  # Compute the number of matches.
     return predictions, task_accuracy  # return the predictions and the accuracy.
 
 
 def multi_label_accuracy(samples: inputs_to_struct, outs: outs_to_struct):
     """
-    Compute the list_task_structs Accuracy mean over all samples for the guided model_test.
+    Compute the task Accuracy mean over all samples for the guided model.
     Args:
         samples: The samples.
-        outs: The model_test outs.
+        outs: The model outs.
 
 
-    Returns: The predictions and list_task_structs Accuracy over the batch.
+    Returns: The predictions and task Accuracy over the batch.
 
     """
     preds, task_accuracy = multi_label_accuracy_base(samples=samples, outs=outs)  # The Accuracy and the prediction.
@@ -49,10 +49,10 @@ def multi_label_accuracy(samples: inputs_to_struct, outs: outs_to_struct):
 
 def multi_label_accuracy_weighted(samples: inputs_to_struct, outs: outs_to_struct):
     """
-    Compute the list_task_structs Accuracy weighted mean over the existing characters in the image.
+    Compute the task Accuracy weighted mean over the existing characters in the image.
     Args:
-        samples: The inputs samples.
-        outs: The model_test outs.
+        samples: The samples.
+        outs: The model outs.
 
     Returns: The predication and mean Accuracy over the batch.
 
@@ -67,10 +67,10 @@ def multi_label_accuracy_weighted(samples: inputs_to_struct, outs: outs_to_struc
 
 def accuracy(opts: argparse, model: nn.Module, test_data_loader: DataLoader) -> float:
     """
-    Compute the accuracy of the model_test overall test_data_loader.
+    Compute the accuracy of the model overall test_data_loader.
     Args:
-        opts: The model_test options.
-        model: The model_test.
+        opts: The model options.
+        model: The model.
         test_data_loader: The test data.
 
     Returns: The Accuracy over the test loadr.
@@ -79,7 +79,7 @@ def accuracy(opts: argparse, model: nn.Module, test_data_loader: DataLoader) -> 
     model.eval()
     model = model.cuda()
     num_correct_preds = 0.0
-    for inputs in test_data_loader:  # Running over all inputs.
+    for inputs in test_data_loader:  # Running over all samples.
         inputs = preprocess(inputs=inputs, device='cuda')  # Move to the cuda.
         samples = opts.inputs_to_struct(inputs=inputs)  # Make it a struct.
         outs = model(samples)  # Compute the output.

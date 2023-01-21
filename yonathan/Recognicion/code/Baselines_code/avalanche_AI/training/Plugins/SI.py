@@ -30,8 +30,8 @@ class SI(Base_plugin):
     def __init__(self, opts: argparse, prev_checkpoint: Union[dict, None] = None, eps=1e-7):
         """
         Args:
-            opts: The model_test model_opts.
-            prev_checkpoint: A pretrained model_test
+            opts: The model opts.
+            prev_checkpoint: A pretrained model
             eps: The epsilon needed for non-zero devising.
         """
         super(SI, self).__init__(opts=opts, prev_checkpoint=prev_checkpoint, reg_type=RegType.SI)
@@ -39,7 +39,7 @@ class SI(Base_plugin):
 
         self.w = {n: torch.zeros(p.shape).to(self.device) for n, p in
                   self.prev_model.feature_extractor.named_parameters() if p.requires_grad}
-        # Store current parameters as the initial parameters before first list_task_structs starts
+        # Store current parameters as the initial parameters before first task starts
         self.older_params = {n: p.clone().detach().to(self.device) for n, p in
                              self.prev_model.feature_extractor.named_parameters()
                              if p.requires_grad}

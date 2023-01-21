@@ -42,17 +42,17 @@ def create_dict(path: str, offset: int = 0) -> dict:
 
 def get_omniglot_dictionary(num_tasks: int, raw_data_folderpath: str) -> dict:
     """
-    Getting the omniglot dictionary, for each list_task_structs the number of characters in it.
+    Getting the omniglot dictionary, for each task the number of characters in it.
     Args:
         num_tasks: The initial tasks set.
         raw_data_folderpath: The path to the raw data.
 
-    Returns: A dictionary assigning for each list_task_structs its number of characters.
+    Returns: A dictionary assigning for each task its number of characters.
 
     """
     nclasses = create_dict(path=raw_data_folderpath,
-                           offset=1)  # Receiving for each list_task_structs the number of characters in it.
-    # nclasses[0] = sum( nclasses[51-list_task_structs-2] for list_task_structs in range(num_tasks))  # receiving
+                           offset=1)  # Receiving for each task the number of characters in it.
+    # nclasses[0] = sum( nclasses[51-task-2] for task in range(num_tasks))  # receiving
     # number of characters in the initial tasks.
     nclasses = {k: v for k, v in sorted(nclasses.items(), key=lambda item: item[1])}
     nclasses_New = {}
@@ -107,7 +107,7 @@ def num_params(params: Iterator) -> int:
     """
     num_param = 0
     for param in params:
-        # For each parameter in the model_test we multiply all its shape dimensions.
+        # For each parameter in the model we multiply all its shape dimensions.
         shape = torch.tensor(param.shape)  # Make a tensor.
         num_param += torch.prod(shape)  # Add to the sum.
     return num_param
@@ -116,9 +116,9 @@ def num_params(params: Iterator) -> int:
 def create_optimizer_and_scheduler(opts: argparse, learned_params: list, nbatches: int) -> \
         tuple[optim, optim.lr_scheduler]:
     """
-    Create optimizer and a scheduler according to model_opts.
+    Create optimizer and a scheduler according to opts.
     Args:
-        opts: The model_test options.
+        opts: The model options.
         learned_params: The learned parameters.
         nbatches: The number of batches in the data-loader
 
@@ -161,12 +161,12 @@ def preprocess(inputs: list[Tensor], device: str) -> list[Tensor]:
 def tuple_direction_to_index(num_x_axis: int, num_y_axis: int, direction: tuple, ndirections: int, task_id: int = 0) \
         -> tuple[Tensor, Tensor]:
     """
-    Compute given list_task_structs tuple and list_task_structs index the list_task_structs index and
-    list_task_structs index. Args: num_x_axis: The neighbor radios we want to generalize to in the x-axis.
-    num_y_axis: The neighbor radios we want to generalize to in the y-axis. direction: The list_task_structs tuple.
-    ndirections: The number of directions. task_id: The list_task_structs index.
+    Compute given task tuple and task index the task index and
+    task index. Args: num_x_axis: The neighbor radios we want to generalize to in the x-axis.
+    num_y_axis: The neighbor radios we want to generalize to in the y-axis. direction: The task tuple.
+    ndirections: The number of directions. task_id: The task index.
 
-    Returns: The list_task_structs index and the list_task_structs index.
+    Returns: The direction index and the task index.
 
     """
     direction_x, direction_y = direction
@@ -176,36 +176,36 @@ def tuple_direction_to_index(num_x_axis: int, num_y_axis: int, direction: tuple,
     return direction_dir, index_dir
 
 
-def Compose_Flag(opts: argparse, flags: Tensor) -> tuple[Tensor, Tensor, Tensor]:
+def compose_Flag(opts: argparse, flags: Tensor) -> tuple[Tensor, Tensor, Tensor]:
     """
     Compose the flag into three flags.
     Args:
-        opts: The model_test model_opts.
+        opts: The model opts.
         flags: The flag we desire to compose.
 
-    Returns: The list_task_structs,list_task_structs, arg flags.
+    Returns: The direction, task, arg flags.
 
     """
-    direction_flag = flags[:, :opts.ndirections]  # The list_task_structs vector.
-    task_flag = flags[:, opts.ndirections:opts.ndirections + opts.ntasks]  # The list_task_structs vector.
+    direction_flag = flags[:, :opts.ndirections]  # The direction vector.
+    task_flag = flags[:, opts.ndirections:opts.ndirections + opts.ntasks]  # The task vector.
     arg_flag = flags[:, opts.ndirections + opts.ntasks:]  # The argument vector.
     return direction_flag, task_flag, arg_flag
 
 
 def Flag_to_task(opts: argparse, flags: Tensor) -> int:
     """
-    Composes the flag and returns the list_task_structs id.
+    Composes the flag and returns the task id.
     Args:
-        opts: The model_test model_opts.
+        opts: The model opts.
         flags: The flag
 
-    Returns: The list_task_structs index.
+    Returns: The task index.
 
     """
-    direction_flag, task_flag, _ = Compose_Flag(opts=opts, flags=flags)
-    direction_id = flag_to_idx(flags=direction_flag)  # The list_task_structs id.
-    task_id = flag_to_idx(flags=task_flag)  # The list_task_structs id.
-    idx = direction_id + opts.ndirections * task_id  # The list_task_structs.
+    direction_flag, task_flag, _ = compose_Flag(opts=opts, flags=flags)
+    direction_id = flag_to_idx(flags=direction_flag)  # The direction id.
+    task_id = flag_to_idx(flags=task_flag)  # The task id.
+    idx = direction_id + opts.ndirections * task_id  # The task.
     return idx
 
 
@@ -229,16 +229,16 @@ def struct_to_input(sample: Sample) -> tuple[Tensor, Tensor, Tensor]:
 
 def load_model(model, results_dir, model_path: str) -> dict:
     """
-    Loads and returns the model_test checkpoint as a dictionary.
+    Loads and returns the model checkpoint as a dictionary.
     Args:
-        model: The model_test we want to load into.
-        model_path: The path to the model_test.
-        results_dir: Trained model_test dir.
+        model: The model we want to load into.
+        model_path: The path to the model.
+        results_dir: Trained model dir.
 
     Returns: The loaded checkpoint.
 
     """
-    model_path = os.path.join(results_dir, model_path)  # The path to the model_test.
+    model_path = os.path.join(results_dir, model_path)  # The path to the model.
     checkpoint = torch.load(model_path)  # Loading the saved data.
     model.load_state_dict(checkpoint['model_state_dict'])  # Loading the saved weights.
     return checkpoint
@@ -246,21 +246,21 @@ def load_model(model, results_dir, model_path: str) -> dict:
 
 def create_single_one_hot(opts, flags: Tensor) -> Tensor:
     """
-    Given the flag, we compose to list_task_structs, list_task_structs flag and compute the unique list_task_structs id.
+    Given the flag, we compose to direction, task flag and compute the unique task id.
     Args:
-        opts: The model_test model_opts.
+        opts: The model opts.
         flags: The flags.
 
-    Returns: The list_task_structs flag.
+    Returns: The task flag.
 
     """
-    # Compute the list_task_structs, list_task_structs flag.
-    direction_flags, task_flag, _ = Compose_Flag(opts=opts, flags=flags)
-    # The list_task_structs id.
+    # Compute the direction, task flag.
+    direction_flags, task_flag, _ = compose_Flag(opts=opts, flags=flags)
+    # The direction id.
     direction_id = torch.argmax(direction_flags, dim=1)
-    # The list_task_structs id.
+    # The direction id.
     task_id = torch.argmax(task_flag, dim=1)
-    # The list_task_structs id.
+    # The task id.
     task_index = direction_id + opts.ndirections * task_id
     # The flag
     flag = torch.nn.functional.one_hot(task_index, opts.ndirections * opts.ntasks).float()

@@ -1,5 +1,5 @@
 """
-Here we define the batch norm class, supporting statistics per list_task_structs.
+Here we define the batch norm class, supporting statistics per task.
 """
 import argparse
 
@@ -15,18 +15,17 @@ from training.Utils import tuple_direction_to_index, create_single_one_hot
 
 class BatchNorm(nn.Module):
     """
-    Creates batch_norm_with_statistics_per_sample class.
-    As continual learning overrides the running statistics, we created a class saving the running stats
-    for each list_task_structs, list_task_structs.
-    We support storing and loading running stats of the model_test to dynamically evaluate the learning of the list_task_structs.
-    For each list_task_structs, list_task_structs stores its mean,var as continual learning overrides those variables.
+    Creates batch_norm_with_statistics_per_sample class. As continual learning overrides the running statistics,
+    we created a class saving the running stats for each task, task. We support storing and
+    loading running stats of the model to dynamically evaluate the learning of the task. For each
+    task, task stores its mean,var as continual learning overrides those variables.
     """
 
     def __init__(self, opts: argparse, num_channels: int, dims: int = 2, device='cuda'):
         """
 
         Args:
-            opts: The model_test options
+            opts: The model options
             num_channels: num channels to apply batch_norm_with_statistics_per_sample on.
             dims: apply 2d or 1d batch normalization.
             device: The device.
@@ -41,8 +40,8 @@ class BatchNorm(nn.Module):
             self.norm = nn.BatchNorm2d(num_features=num_channels)  # Create 2d BN.
         else:
             self.norm = nn.BatchNorm1d(num_features=num_channels)  # Create 1d BN.
-        # creates list that should store the mean, var for each list_task_structs and list_task_structs.
-        if self.save_stats:
+        # creates list that should store the mean, var for each task and task.
+        if self.save_stats or True:
             # The running mean.
             self.running_mean_list = torch.zeros(opts.ndirections * opts.ntasks, num_channels).to(device)
             # The running variance.
@@ -63,6 +62,7 @@ class BatchNorm(nn.Module):
         Returns: Tensor of dim [B,C,H,W].
 
         """
+        # TODO - ADD CHECKING IF NEEDED
         if self.training or not self.save_stats:
             return self.norm(input=inputs)  # applying the norm function.
         else:
@@ -98,8 +98,8 @@ class BatchNorm(nn.Module):
         """
         Loads the mean, variance associated with the task_id and the direction_id.
         Args:
-            task_id: The list_task_structs id.
-            direction_tuple: The list_task_structs tuple.
+            task_id: The task id.
+            direction_tuple: The task tuple.
 
         """
         _, task_and_direction_idx = tuple_direction_to_index(num_x_axis=self.opts.num_x_axis,
@@ -115,8 +115,8 @@ class BatchNorm(nn.Module):
         """
         Stores the mean, variance to the running_mean, running_var in the training time.
         Args:
-            task_id: The list_task_structs id.
-            direction_tuple: The list_task_structs tuple.
+            task_id: The task id.
+            direction_tuple: The task tuple.
 
         """
         # Get the index to load from.
@@ -134,9 +134,9 @@ def store_running_stats(model: nn.Module, task_id: int, direction_id: tuple) -> 
     """
     Stores the running_stats of the task_id for each norm_layer.
     Args:
-        model: The model_test.
-        task_id: The list_task_structs id.
-        direction_id: The list_task_structs id.
+        model: The model.
+        task_id: The task id.
+        direction_id: The task id.
 
     """
     for _, layer in model.named_modules():  # Iterating over all layers.
@@ -150,9 +150,9 @@ def load_running_stats(model: nn.Module, task_id: int, direction_id: tuple) -> N
     """
     Loads the running_stats of the task_id for each norm_layer.
     Args:
-        model: The model_test.
-        task_id: The list_task_structs id.
-        direction_id: The list_task_structs id.
+        model: The model.
+        task_id: The task id.
+        direction_id: The task id.
 
     """
     for _, layer in model.named_modules():  # Iterating over all layers.
