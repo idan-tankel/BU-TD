@@ -20,7 +20,8 @@ def main(language_list: Union[list, None] = None, num_chars_per_row: int = 6,
 
     """
     ds_type: DsType = DsType.Omniglot
-    parser = Get_parser(ds_type=ds_type, num_rows=num_rows_in_the_image, num_cols=num_chars_per_row)
+    parser = Get_parser(ds_type=ds_type, num_rows=num_rows_in_the_image, num_cols=num_chars_per_row,
+                        language_list=language_list)
     # Iterating over all dataset types, and its number of desired number of inputs.
     raw_data = UnifiedDataSetType(ds_type=ds_type, num_cols=num_chars_per_row, num_rows=num_rows_in_the_image,
                                   language_list=language_list).ds_obj.raw_data_set

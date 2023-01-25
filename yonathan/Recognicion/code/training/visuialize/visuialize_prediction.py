@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch.nn as nn
 
-from Data_Creation.Create_dataset_classes import DsType  # Import the Data_Creation set types.
+from Data_Creation.src.Create_dataset_classes import DsType  # Import the Data_Creation set types.
 from training.Data.Data_params import Flag
 from training.Data.Get_dataset import get_dataset_for_spatial_relations
 from training.Data.Parser import GetParser
@@ -17,7 +17,7 @@ from training.Data.Structs import Task_to_struct, inputs_to_struct
 from training.Modules.Create_Models import create_model
 from training.Utils import preprocess, compose_Flag
 from training.visuialize.visuaialize_utils import From_id_to_class_Fashion_MNIST, From_id_to_class_EMNIST, title, \
-    pause_image, Add_keypoint
+    pause_image
 
 
 class Visualize:
@@ -72,7 +72,7 @@ class Visualize:
             ax = plt.subplot(1, 2, 1)
             ax.axis('off')
             img = images[k].astype(np.uint8)  # Getting the k image.
-            img = Add_keypoint(data_set=DataLoaders['test_ds'], sample=samples, image=img, k=k)
+            # img = Add_keypoint(data_set=DataLoaders['test_ds'], sample=samples, image=img, k=k)
             plt.imshow(img.astype(np.uint8))  # Showing the image with the title.
             char = self.cl2let[chars[k].item()]  # Current character.
             if self.opts.model_flag is Flag.NOFLAG:
@@ -84,13 +84,18 @@ class Visualize:
             ax = plt.subplot(1, 2, 2)
             ax.axis('off')
             if self.opts.model_flag is Flag.NOFLAG:
-                pred = outs.classifier[k].argmax(axis=0)
-                gt = samples.label_task[k]
-                gt_st = [self.cl2let[let.item()] for let in gt]
-                pred_st = [self.cl2let[let.item()] for let in pred]
                 font = {'color': 'blue'}
-                gt_str = 'Ground Truth:\n%s...' % gt_st[:10]
-                pred_str = 'Prediction:\n%s...' % pred_st[:10]
+                text = ""
+                label_existence = samples.label_existence[k].squeeze()
+                num_chars = len(label_existence)
+                for i in range(num_chars):
+                    if label_existence[i] == 1:
+                        gt = str(self.cl2let[samples.label_task[k][i].item()])
+                        prediction = str(self.cl2let[outs.classifier[k].argmax(axis=0)[i].item()])
+                        ref = str(self.cl2let[i])
+                        text += "The Reference: " + ref + ", Ground truth: " + gt + ", Pred: " + prediction + '\n'
+                plt.text(s=text, x=-100, y=350, color='red')
+
             else:
                 gt_val = self.cl2let[gt_vals[k].item()]  # Current sample.
                 pred_val = self.cl2let[pred_vals[k].item()]  # Current prediction.
@@ -99,10 +104,12 @@ class Visualize:
                 else:
                     font = {'color': 'red'}  # If the prediction is incorrect the color is red.
 
-                gt_str = f'Ground Truth: {gt_val}'
-                pred_str = f'Prediction: {pred_val}'
+                gt = str(gt_val)
+                prediction = str(pred_val)
+                text = "Ground truth: " + gt + ", Pred: " + prediction + '\n'
+                plt.text(s=text, x=-100, y=200, color='red')
 
-            tit_str = gt_str + '\n' + pred_str  # plotting the ground truth + the predicted values.
+            tit_str = ""
             plt.title(tit_str, fontdict=font)
             plt.imshow(images[k].astype(np.uint8))  # Showing the image with the GT + predicted values.
             pause_image()
@@ -110,8 +117,6 @@ class Visualize:
 
 parser = GetParser(model_flag=Flag.CL)
 model = create_model(parser)
-# load_model(model = model, results_dir = parser.results_dir, model_path =
-# 'left_success/BUTDModel_best_direction=[( -1, 0)].pt')
 project_path = Path(__file__).parents[2]
 vis = Visualize(opts=parser, model=model)
-vis(direction=(-2, 0), batch_id=2)
+vis(direction=(1, 0), batch_id=2)

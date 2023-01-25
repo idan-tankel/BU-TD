@@ -5,6 +5,7 @@ import argparse
 
 import torch
 import torch.nn as nn
+from torch import Tensor
 from torch.utils.data import DataLoader
 
 from training.Data.Structs import inputs_to_struct, outs_to_struct
@@ -59,6 +60,7 @@ def multi_label_accuracy_weighted(samples: inputs_to_struct, outs: outs_to_struc
     """
     preds, task_accuracy = multi_label_accuracy_base(samples=samples, outs=outs)  # The Accuracy and the prediction.
     loss_weight = samples.label_existence  # The weight of the desired characters.
+    loss_weight = loss_weight.view(task_accuracy.shape)
     task_accuracy = task_accuracy * loss_weight  # Compute the accuracy over only existing characters.
     # Compute the mean over all characters and samples in the batch.
     task_accuracy = task_accuracy.sum() / loss_weight.sum()
@@ -78,7 +80,7 @@ def accuracy(opts: argparse, model: nn.Module, test_data_loader: DataLoader) -> 
     """
     model.eval()
     model = model.cuda()
-    num_correct_preds = 0.0
+    num_correct_preds: Tensor = 0.0
     for inputs in test_data_loader:  # Running over all samples.
         inputs = preprocess(inputs=inputs, device='cuda')  # Move to the cuda.
         samples = opts.inputs_to_struct(inputs=inputs)  # Make it a struct.
@@ -86,4 +88,4 @@ def accuracy(opts: argparse, model: nn.Module, test_data_loader: DataLoader) -> 
         outs = opts.outs_to_struct(outs=outs)  # From output to struct.
         (_, task_accuracy_batch) = opts.task_accuracy(samples=samples, outs=outs)  # Compute the Accuracy on the batch.
         num_correct_preds += task_accuracy_batch  # Sum all accuracies on the batches.
-    return num_correct_preds / len(test_data_loader)  # Compute the mean.
+    return num_correct_preds.item() / len(test_data_loader)  # Compute the mean.

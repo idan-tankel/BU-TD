@@ -130,8 +130,8 @@ def compute_quadratic_loss(current_model: nn.Module, previous_model: nn.Module, 
     """
     penalty = torch.tensor(0).float().to(device)
 
-    for (name, param), (same_name, param_old) in zip(current_model.feature_extractor.named_parameters(),
-                                                     previous_model.feature_extractor.named_parameters()):
+    for (name, param), (same_name, param_old) in zip(current_model.feature_extractor().named_parameters(),
+                                                     previous_model.feature_extractor().named_parameters()):
         # Add the quadratic loss.
         penalty += torch.sum(importance[name] * (param - param_old).pow(2))
         # Update the new loss.
@@ -169,9 +169,10 @@ def Get_updated_opts(ds_type: DsType, reg_type: RegType, model_type=ResNet, mode
     filters = [64, 96, 128, 128] if ds_type is DsType.Fashionmnist else [64, 96, 128, 256]
     filters = filters if ds_type is not DsType.Omniglot else [64, 96, 128, 256]
     factor = factor if ds_type is not DsType.Omniglot else [1, 1, 1]
+    if model_type is ResNet:
+        update_parser(opts=opts, attr='use_lateral_butd', new_value=False)  # No lateral connections are needed.
+        update_parser(opts=opts, attr='use_lateral_tdbu', new_value=False)  # No lateral connections are needed.
     update_parser(opts=opts, attr='ns', new_value=factor)  # Make the
-    # update_parser(opts=opts, attr='use_lateral_butd', new_value=False)  # No lateral connections are needed.
-    #  update_parser(opts=opts, attr='use_lateral_tdbu', new_value=False)  # No lateral connections are needed.
     update_parser(opts=opts, attr='nfilters', new_value=filters)
     update_parser(opts=opts, attr='save_stats', new_value=False)
     model = create_model(opts)  # Create the model.
@@ -196,3 +197,4 @@ def Get_samples_data(ds_type, lang_id=50):
     elif ds_type is DsType.Omniglot:
         sample_path = f'samples/(1,6)_Image_Matrix{lang_id}'
     return sample_path
+

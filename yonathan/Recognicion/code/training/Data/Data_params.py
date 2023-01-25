@@ -11,7 +11,7 @@ from typing import Union
 
 import numpy as np
 
-from Data_Creation.Create_dataset_classes import DsType  # Import the Data_Creation set types.
+from Data_Creation.src.Create_dataset_classes import DsType  # Import the Data_Creation set types.
 from training.Data.Structs import Task_to_struct
 from training.Metrics.Accuracy import multi_label_accuracy, multi_label_accuracy_weighted
 from training.Metrics.Loss import multi_label_loss_weighted, multi_label_loss
@@ -87,7 +87,6 @@ class GenericDataParams:
         self.ndirections: int = (2 * self.num_x_axis + 1) * (
                 2 * self.num_y_axis + 1)  # The number of directions we query about.
         # The number of classes for each task, 47 for mnist, 10 for fashion and for Omniglot its dictionary.
-        # self.ndirections = 1
         self.nclasses: dict = {i: 47 for i in range(self.ndirections)}
         self.results_dir: str = os.path.join(self.project_path,
                                              f'data/{str(ds_type)}/results/')  # The trained model directory.
@@ -98,6 +97,8 @@ class GenericDataParams:
             else False  # Whether to use the bu1 loss.
         self.num_heads: list = [1 for _ in range(self.ndirections)]
         self.image_size: np.array = None  # The image size, will be defined later.
+        self.new_tasks: list[Task_to_struct]
+        self.epoch_dictionary: dict
 
 
 class EmnistDataset(GenericDataParams):
@@ -122,6 +123,10 @@ class EmnistDataset(GenericDataParams):
         # The number of heads.
         self.num_heads = [1 if direction not in initial_directions else len(self.initial_directions) for direction in
                           range(self.ndirections)]
+        self.new_tasks = [[Task_to_struct(task=0, direction=(-1, 0))], [Task_to_struct(task=0, direction=(0, 1))],
+                          [Task_to_struct(task=0, direction=(0, -1))]]
+        # To have better accuracy as in the paper you may increase the number of epochs.
+        self.epoch_dictionary = {(0, (1, 0)): 70, (0, (-1, 0)): 30, (0, (0, 1)): 30, (0, (0, -1)): 30}
 
 
 class FashionmnistDataset(GenericDataParams):
@@ -140,6 +145,9 @@ class FashionmnistDataset(GenericDataParams):
         self.nclasses = {i: 10 for i in
                          range(self.ndirections)}  # The same as Emnist, just we have just 10 classes in the dataset.
         self.image_size = [112, 130]  # The FashionMnist image size.
+        self.epoch_dictionary = {(0, (1, 0)): 60, (0, (-1, 0)): 30, (0, (0, 1)): 30, (0, (0, -1)): 30}
+        self.new_tasks = [[Task_to_struct(task=0, direction=(-1, 0))], [Task_to_struct(task=0, direction=(0, 1))],
+                          [Task_to_struct(task=0, direction=(0, -1))]]
 
 
 class OmniglotDataset(GenericDataParams):
@@ -156,7 +164,7 @@ class OmniglotDataset(GenericDataParams):
 
         """
         super(OmniglotDataset, self).__init__(flag_at=flag_at, ds_type=DsType.Omniglot,
-                                              num_y_axis=0)  # No Up/Down relations, just Right/Left.
+                                              num_y_axis=2, num_x_axis=2)  # No Up/Down relations, just Right/Left.
         self.initial_tasks = initial_tasks  # The number of languages we want to use.
         self.ntasks = 51  # We have 51 tasks.
         self.use_bu1_loss = False  # As there are many classes we don't use the bu1 loss.
@@ -164,8 +172,27 @@ class OmniglotDataset(GenericDataParams):
         raw_data_path = os.path.join(self.project_path, 'data/Omniglot/RAW/omniglot-py/Unified')  # The raw data path.
         self.nclasses = get_omniglot_dictionary(self.initial_tasks,
                                                 raw_data_path)  # Computing for each language its number of characters.
-        #   self.ndirections = 5
+        #  self.ndirections = 15
         self.num_heads = [1 for _ in range(self.ndirections)]
+        self.initial_directions = [Task_to_struct(task=50, direction=(1, 0)),
+                                   Task_to_struct(task=50, direction=(-1, 0))]
+        self.epoch_dictionary = {(50, (1, 0)): 70, (50, (-1, 0)): 40, (49, (1, 0)): 15,
+                                 (49, (-1, 0)): 15, (43, (1, 0)): 15,
+                                 (43, (-1, 0)): 15, (42, (1, 0)): 15, (42, (-1, 0)): 15,
+                                 (41, (1, 0)): 15, (41, (-1, 0)): 15,
+                                 (40, (1, 0)): 15, (40, (-1, 0)): 15}
+
+        new_tasks_right = [[Task_to_struct(task=49, direction=(1, 0))], [Task_to_struct(task=43, direction=(1, 0))],
+                           [Task_to_struct(task=42, direction=(1, 0))], [Task_to_struct(task=41, direction=(1, 0))],
+                           [Task_to_struct(task=40, direction=(1, 0))]]
+        #
+        new_tasks_left = [[Task_to_struct(task=49, direction=(-1, 0))], [Task_to_struct(task=43, direction=(-1, 0))],
+                          [Task_to_struct(task=42, direction=(-1, 0))], [Task_to_struct(task=41, direction=(-1, 0))],
+                          [Task_to_struct(task=40, direction=(-1, 0))]]
+        self.num_heads = [2 if direction not in self.initial_directions else len(self.initial_directions) for
+                          direction in
+                          range(self.ndirections)]
+        self.new_tasks = [new_tasks_right, new_tasks_left]
 
 
 class AllDataSetOptions:

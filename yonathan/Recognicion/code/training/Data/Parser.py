@@ -9,7 +9,7 @@ from typing import Type
 import torch
 import torch.nn as nn
 
-from Data_Creation.Create_dataset_classes import DsType  # Import the Data_Creation set types.
+from Data_Creation.src.Create_dataset_classes import DsType  # Import the Data_Creation set types.
 from training.Data.Data_params import Flag, AllDataSetOptions
 from training.Data.Structs import inputs_to_struct, outs_to_struct
 from training.Metrics.Loss import UnifiedCriterion
@@ -48,13 +48,13 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
     opts.add_argument('--SGD', default=False, type=bool, help='Whether to use SGD or Adam optimizer.')
     opts.add_argument('--initial_lr', default=0.0001, type=float, help='Base lr for the SGD optimizer.')
     opts.add_argument('--cycle_lr', default=True, type=bool, help='Whether to cycle the lr.')
-    opts.add_argument('--base_lr', default=0.00001, type=float, help='Base lr of the cyclic scheduler.')
+    opts.add_argument('--base_lr', default=0.0002, type=float, help='Base lr of the cyclic scheduler.')
     opts.add_argument('--use_embedding', default=True, type=bool, help='')
-    opts.add_argument('--max_lr', default=0.00001, type=float,
+    opts.add_argument('--max_lr', default=0.002, type=float,
                       help='Max lr of the cyclic scheduler before the lr returns to the base_lr.')
     opts.add_argument('--momentum', default=0.9, type=float, help='Momentum of the optimizer.')
     opts.add_argument('--bs', default=10, type=int, help='The training batch size.')
-    opts.add_argument('--EPOCHS', default=100, type=int, help='Number of epochs in the training.')
+    opts.add_argument('--EPOCHS', default=3, type=int, help='Number of epochs in the training.')
     # Model architecture arguments.
     opts.add_argument('--model_type', default=model_type, type=DsType, help='The model type BUTD or ResNet.')
     opts.add_argument('--td_block_type', default=BasicBlockTD, type=nn.Module, help='Basic TD block.')
@@ -69,10 +69,12 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
     opts.add_argument('--use_lateral_tdbu', default=True, type=bool,
                       help='Whether to use the lateral connection from TD to BU2')
     opts.add_argument('--read_argument', default=True)
-    opts.add_argument('--nfilters', default=[64, 96, 128, 256], type=list, help='The ResNet filters')
+    opts.add_argument('--nfilters', default=[32, 32, 32, 48], type=list, help='The ResNet filters')
     opts.add_argument('--strides', default=[2, 2, 1, 2], type=list, help='The ResNet strides')
     opts.add_argument('--ks', default=[7, 3, 3, 3], type=list, help='The ResNet kernel sizes')
-    opts.add_argument('--ns', default=[4, 4, 4], type=list, help='Number of blocks per layer')
+    opts.add_argument('--ns', default=[1, 1, 1], type=list, help='Number of blocks per layer')
+    opts.add_argument('--epoch_dictionary', default=Data_specification.data_obj.epoch_dictionary, type=list,
+                      help='The sizes of the task-head classes')
     opts.add_argument('--nclasses', default=Data_specification.data_obj.nclasses, type=list,
                       help='The sizes of the task-head classes')
     opts.add_argument('--ntasks', default=Data_specification.data_obj.ntasks, type=int,
@@ -86,6 +88,8 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
     opts.add_argument('--num_x_axis', default=Data_specification.data_obj.num_x_axis, type=int,
                       help='The neighbor radius in the x-axis.')
     opts.add_argument('--num_y_axis', default=Data_specification.data_obj.num_y_axis, type=int,
+                      help='The neighbor radius in the y-axis.')
+    opts.add_argument('--new_tasks', default=Data_specification.data_obj.new_tasks, type=list,
                       help='The neighbor radius in the y-axis.')
     opts.add_argument('--shared', default=True, type=bool,
                       help='Whether the conv layers of BU1, BU2 should be identical.')
@@ -102,9 +106,9 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
                       help='The Accuracy function')
     # Struct variables.
     opts.add_argument('--inputs_to_struct', default=inputs_to_struct, type=Type[inputs_to_struct],
-                      help='The struct transform the list of inputs to struct.')
+                      help='The struct transforms the list of inputs to struct.')
     opts.add_argument('--outs_to_struct', default=outs_to_struct, type=Type[outs_to_struct],
-                      help='The struct transform the list of outputs to struct.')
+                      help='The struct transforms the list of outputs to struct.')
     # Data arguments.
     opts.add_argument('--device', default=torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"),
                       type=str, help='The device we use,usually cuda')

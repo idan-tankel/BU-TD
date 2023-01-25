@@ -9,10 +9,10 @@ from torch.utils.data import DataLoader
 
 from training.Data.Get_dataset import get_dataset_for_spatial_relations
 from training.Data.Parser import GetParser
+from training.Data.Structs import Task_to_struct
 from training.Modules.Create_Models import create_model
 from training.Modules.Models import *
 from training.Utils import preprocess, tuple_direction_to_index, load_model
-from training.Data.Structs import Task_to_struct
 
 
 class ComposeModel(nn.Module):
@@ -89,8 +89,8 @@ class ComposeModel(nn.Module):
         prediction = None
         for direction_idx, direction in enumerate(directions):
             # TODO - THROW AWAY.
-            load_model(model, parser.results_dir,
-                       f'Model_{direction}_single_base/BUTDModel_best_direction=[{direction}].pt')
+            #            load_model(model, parser.results_dir,
+            #             f'Model_{direction}_single_base/BUTDModel_best_direction=[{direction}].pt')
 
             if direction_idx == 0:
                 char = batch.flags[:, self.opts.ndirections + self.opts.ntasks:]
@@ -145,12 +145,12 @@ ds_type = DsType.Fashionmnist
 
 parser = GetParser(model_flag=Flag.CL, ds_type=ds_type)
 model: BUTDModel = create_model(parser)
-load_model(model, parser.results_dir, 'Model_(1, 0)_single_base/BUTDModel_best_direction=[(1, 0)].pt')
+# load_model(model, parser.results_dir, 'Model_(1, 0)_single_base/BUTDModel_best_direction=[(1, 0)].pt')
 comp_model = ComposeModel(opts=parser, butd_model=model)
-project_path = Path(__file__).parents[1]
+project_path = Path(__file__).parents[3]
 data_path = os.path.join(project_path, f'data/{str(ds_type)}/samples/(3,3)_Image_Matrix')
 #
 DataLoaders = get_dataset_for_spatial_relations(parser, data_path, task=[Task_to_struct(task=0,
                                                                                         direction=(-1, 0))])
 
-print(comp_model.compose_tasks_full_data_loader(DataLoaders['test_dl'], [(-1, 0)]))
+print(comp_model.compose_tasks_full_data_loader(DataLoaders['test_dl'], [(0, 1), (-1, 0)]))

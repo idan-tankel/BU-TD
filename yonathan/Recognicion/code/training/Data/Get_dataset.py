@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 from training.Data.Data_params import Flag
 from training.Data.Structs import Task_to_struct
 
-sys.path.append(os.path.join(Path(__file__).parents[2], 'Data_Creation'))
+sys.path.append(os.path.join(Path(__file__).parents[2], 'Data_Creation/src'))
 
 
 # Return the datasets and dataloaders.

@@ -41,7 +41,8 @@ def multi_label_loss_weighted(samples: inputs_to_struct, outs: outs_to_struct):
     """
     losses_task = CE(input=outs.classifier, target=samples.label_task)  # Compute the CE loss without reduction.
     loss_weight = samples.label_existence  # The loss weight for only existing characters.
-    losses_task = losses_task * loss_weight  # Compute the loss only in the existing characters.
+    loss_weight = loss_weight.view(losses_task.shape)
+    losses_task *= loss_weight  # Compute the loss only in the existing characters.
     loss_task = losses_task.sum() / loss_weight.sum()  # Mean the loss over all batch and characters.
     return loss_task
 

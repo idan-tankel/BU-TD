@@ -46,8 +46,9 @@ def main(reg_type: Union[RegType, None], ds_type: DsType, new_task, load):
         path = 'Smaller_model_Task_[0, (1, 1)]/LWF/lambda=0.1/ResNet_epoch40_direction=(1, 1).pt'
         path = 'Smaller_model_Task_[0, (1, -1)]/LWF/lambda=0.08/ResNet_epoch18_direction=(1, -1).pt'
         path = 'Smaller_model_Task_(0, (-1, 0))/LWF/lambda=0.45/ResNet_epoch30_direction=(-1, 0).pt'
-        path = 'Model_use_reset_(1, 0)_wd_1e-05_base_lr_0.0002_max_lr_0.002_epoch_0_option_bs_10_use_emb_True' \
-               '/BUTDModel_epoch15.pt'
+        path = 'Model_use_reset_(-1, 0)_wd_1e-05_base_lr_0.0002_max_lr_0.002_epoch_0_option_bs_10_use_emb_True_ns_[1, ' \
+               '1, 1]_nfilters_[64, 96, 128, 256]' \
+               '/BUTDModel_epoch26.pt'
     else:
         path = 'Smaller_model_Task_[0, (1, 0)]/SI/lambda=0.125/ResNet_epoch40_direction=(1, 0).pt'
     model_path = os.path.join(opts.results_dir, path)
@@ -64,12 +65,12 @@ def main(reg_type: Union[RegType, None], ds_type: DsType, new_task, load):
     # The new tasks.
     task = [Task_to_struct(task=50, direction=new_task[1])]
     new_data = get_dataset_for_spatial_relations(opts=opts, data_fname=opts.Images_path, task=task)
-    task = [Task_to_struct(task=50, direction=(1, 0))]
+    task = [Task_to_struct(task=50, direction=(-1, 0))]
     old_data = get_dataset_for_spatial_relations(opts, opts.Images_path, task=task)
     test = True
     if test:
         model_path = path
-        model_path = 'Smaller_model_Task_(50, (-2, 0))/LWF/lambda=0.79/BUTDModel_epoch12.pt'
+        model_path = 'Model_(50, (2, 0))/LFL/lambda=0.9/BUTDModel_epoch7.pt'
         #   model_path =  'Smaller_model_Task_[0, (1, 0)]/Naive/lambda=0/ResNet_epoch40_direction=(1, 0).pt'
         checkpoint = load_model(model, model_path=model_path,
                                 results_path=opts.baselines_dir)
@@ -84,4 +85,4 @@ def main(reg_type: Union[RegType, None], ds_type: DsType, new_task, load):
     strategy.train_sequence(scenario)
 
 
-main(reg_type=RegType.LWF, ds_type=DsType.Omniglot, new_task=(50, (-2, 0)), load=True)
+main(reg_type=RegType.LFL, ds_type=DsType.Omniglot, new_task=(50, (2, 0)), load=True)

@@ -1,5 +1,5 @@
 """
-Here we define the Models.
+Here we define the models.
 It includes BUTDModel, BUModel and Pure ResNet.
 """
 import argparse
@@ -15,7 +15,7 @@ from training.Data.Structs import inputs_to_struct, outs_to_struct
 from training.Modules.Heads import MultiTaskHead, OccurrenceHead
 from training.Modules.Model_Blocks import BUInitialBlock, init_module_weights, InitialEmbeddingBlock
 from training.Modules.Module_Blocks import Depthwise_separable_conv, Modulation_and_Lat
-from training.Utils import get_laterals, tuple_direction_to_index, num_params
+from training.Utils import get_laterals, tuple_direction_to_index
 
 
 class BUStreamShared(nn.Module):
@@ -46,7 +46,7 @@ class BUStreamShared(nn.Module):
         for k in range(len(opts.ns)):  # For each stride create layer of Blocks.
             nblocks = opts.ns[k]  # The number of blocks in the layer.
             stride = opts.strides[k + 1]  # The stride.
-            filters = opts.nfilters[k + 1]  # The number of filters transform to.
+            filters = opts.nfilters[k + 1]  # The number of filters transforms to.
             self.alllayers.append(
                 self._make_layer(inplanes=inplanes, planes=filters, nblocks=nblocks, stride=stride))  # Making a layer.
             # Compute the output shape of the layer.
@@ -335,10 +335,10 @@ class BUTDModel(nn.Module):
             bu_shared2 = BUStreamShared(opts=opts)  # Create new shared part.
         self.bumodel2 = BUStream(opts=opts, shared=bu_shared2, is_bu2=True)  # The BU2 stream.
         # To save the taskhead parameters.
-        self.TL = [[[] for _ in range(opts.ndirections)] for _ in range(opts.ntasks)]
-        # The task-head to transform to the number of classes.
+        self.transfer_learning = [[[] for _ in range(opts.ndirections)] for _ in range(opts.ntasks)]
+        # The task-head to transforms to the number of classes.
         self.Head = MultiTaskHead(opts=opts,
-                                  transfer_learning_params=self.TL)
+                                  transfer_learning_params=self.transfer_learning)
         if self.model_flag is Flag.CL:  # Storing the Task embedding.
             self.TE = self.bumodel2.task_embedding
             # Store the argument embedding.
@@ -411,6 +411,9 @@ class BUTDModel(nn.Module):
 
         self.trained_tasks.append(task)
 
+    def feature_extractor(self):
+        return nn.ModuleList([self.bumodel1, self.bumodel2, self.tdmodel])
+
     def get_specific_head(self, task_id: int, direction_tuple: tuple[int, int]) -> list[nn.Parameter]:
         """
         Get the specific head and the feature parameters.
@@ -429,7 +432,7 @@ class BUTDModel(nn.Module):
         direction_id, _ = tuple_direction_to_index(num_x_axis=self.opts.num_x_axis, num_y_axis=self.opts.num_y_axis,
                                                    direction=direction_tuple, ndirections=self.opts.ndirections,
                                                    task_id=task_id)
-        learned_params.extend(self.TL[task_id][direction_id])
+        learned_params.extend(self.transfer_learning[task_id][direction_id])
         return learned_params
 
 

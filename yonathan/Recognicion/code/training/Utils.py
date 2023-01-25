@@ -3,13 +3,13 @@ Here we define the function utils.
 """
 import argparse
 import os
-from typing import Union, Iterator
+from typing import Iterator, Optional
 
 import torch
 import torch.optim as optim
 from torch import Tensor
 
-from Data_Creation.Create_dataset_classes import Sample
+from Data_Creation.src.Create_dataset_classes import Sample
 
 
 def folder_size(path: str) -> int:
@@ -75,7 +75,7 @@ def flag_to_idx(flags: Tensor) -> int:
     return task
 
 
-def get_laterals(laterals: list[Tensor], layer_id: int, block_id: int = 0) -> Union[Tensor, None]:
+def get_laterals(laterals: list[Tensor], layer_id: int, block_id: int = 0) -> Optional[Tensor]:
     """
     Returns the lateral connections associated with the block in the layer.
     Args:
@@ -146,15 +146,14 @@ def preprocess(inputs: list[Tensor], device: str) -> list[Tensor]:
     Move list of tensors to the device.
     Args:
         inputs: The list of inputs we desire to move to the device.
-        device: The device we desire to transform to.
+        device: The device we desire to transforms to.
 
     Returns: The same inputs but in another device.
 
     """
     inputs = [torch.tensor(inp) for inp in inputs]
     inputs = [inp.to(device) for inp in inputs]  # Moves the tensor into the device,
-    # usually to the
-    # cuda.
+    # usually to the cuda.
     return inputs
 
 
@@ -207,6 +206,22 @@ def Flag_to_task(opts: argparse, flags: Tensor) -> int:
     task_id = flag_to_idx(flags=task_flag)  # The task id.
     idx = direction_id + opts.ndirections * task_id  # The task.
     return idx
+
+
+def Get_task_and_direction(opts: argparse, flags: Tensor) -> tuple[int, int]:
+    """
+    Composes the flag and returns the task id.
+    Args:
+        opts: The model opts.
+        flags: The flag
+
+    Returns: The task index.
+
+    """
+    direction_flag, task_flag, _ = compose_Flag(opts=opts, flags=flags)
+    direction_id = flag_to_idx(flags=direction_flag)  # The direction id.
+    task_id = flag_to_idx(flags=task_flag)  # The task id.
+    return direction_id, task_id
 
 
 def struct_to_input(sample: Sample) -> tuple[Tensor, Tensor, Tensor]:

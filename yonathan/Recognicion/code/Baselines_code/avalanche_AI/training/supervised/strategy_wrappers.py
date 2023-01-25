@@ -40,40 +40,20 @@ class Regularization_strategy(SupervisedTemplate):
             prev_model: The previous model.
             model_path: The model path.
         """
-        self.task = task
-        self.reg_type = reg_type
-        self.task_id = task[0]
-        self.direction_id = task[1]
+        plugins = []
+        self.Project_path = Path(__file__).parents[5]  # The project path.
+        self.task = task  # The task.
+        self.reg_type = reg_type  # The regularization type.
         self.opts = opts  # The model opts.
         self.logger = logger  # The logger.
+        self.ds_type = opts.ds_type
         self.inputs_to_struct = opts.inputs_to_struct
         self.outs_to_struct = opts.outs_to_struct
         self.load_from = model_path
         self.scheduler = None
-        plugins = []
-        Project_path = Path(__file__).parents[5]
-        #
-        #  project_path = Path(__file__).parents[2]
-        # Path to the data-set.
-        Data_specific_path = os.path.join(Project_path, 'data/{}'.format(str(opts.ds_type)))
-        # Path to the results.
-        results_path = os.path.join(Data_specific_path, f'Baselines/')
-        # Path to the regularization type results.
-        Model_folder = os.path.join(results_path,
-                                    f"Smaller_model_Task_{task}/{str(self.reg_type)}/lambda"
-                                    f"={str(self.reg_type.class_to_reg_factor(opts))}")
-        self.Model_folder = Model_folder
-        self.checkpoint = CheckpointSaver(Model_folder)  # The Checkpoint.
-        #
-        log_path = os.path.join(Project_path, f'data/Baselines/{str(self.reg_type)}/logging')
-        Checkpoint_path = os.path.join(Project_path,
-                                       f'fata/Baselines/{str(self.reg_type)}/checkpoints/Task_{task[0]}_{task[1]}')
-        loggers = [WandBLogger(project_name=f"avalanche_{str(self.reg_type)}", run_name="train", dir=log_path,
-                               path=Checkpoint_path), InteractiveLogger()]
-        evaluator = EvaluationPlugin(accuracy_metrics(opts, minibatch=True, epoch=True, experience=True, stream=True),
-                                     loss_metrics(minibatch=True, epoch=True, experience=True, stream=True),
-                                     loggers=loggers)
-
+        self.Model_folder = self.Get_Model_folder()  # The model folder.
+        self.checkpoint = CheckpointSaver(self.Model_folder)  # The Checkpoint.
+        loggers, evaluator = self.Get_logger_and_evaluator()
         if self.reg_type is not RegType.Naive:
             self.regularization: Base_plugin = Get_regularization_plugin(prev_checkpoint=prev_model,
                                                                          load_from=self.load_from, opts=self.opts,
@@ -95,7 +75,8 @@ class Regularization_strategy(SupervisedTemplate):
 
     def make_optimizer(self, **kwargs):
         """
-        We already pass the optimizer in the initialization.
+        We already passed the optimizer in the initialization.
+        Now we update to take only specific parameters.
         """
         (new_task, dl_len) = kwargs['kargs']
         self.update_task(new_task=new_task)
@@ -103,7 +84,6 @@ class Regularization_strategy(SupervisedTemplate):
         #   learned_params = self.model.parameters()
         self.optimizer, self.scheduler = create_optimizer_and_scheduler(self.opts, learned_params,
                                                                         nbatches=dl_len // self.opts.bs)
-
         scheduler = LRSchedulerPlugin(self.scheduler, reset_scheduler=False, reset_lr=False,
                                       step_granularity='iteration')  # Every iteration updatable scheduler.
         self.plugins.append(scheduler)  # Add the scheduler to the Plugins.
@@ -116,23 +96,22 @@ class Regularization_strategy(SupervisedTemplate):
         Returns:
 
         """
-        self.model.trained_tasks.append(new_task)
+        self.model.update_task_list(new_task)
 
     @property
     def mb_x(self):
         """
         Current mini-batch input.
-        Omit the ids and make a struct.
         """
-        return self.opts.inputs_to_struct(self.mbatch[:-1])
+        return self.inputs_to_struct(self.mbatch)
 
     def forward(self) -> outs_to_struct:
         """
         Forward the model.
-        Returns:
+        Returns: The model output.
 
         """
-        return self.outs_to_struct(self.model(self.mb_x))
+        return self.model.forward_and_out_to_struct(self.mb_x)
 
     def criterion(self) -> torch.float:
         """
@@ -152,8 +131,15 @@ class Regularization_strategy(SupervisedTemplate):
             print("Done training, now final evaluation of the model.")
             self.eval(exp_test)
 
-    def eval_epoch(self, **kwargs):
-        """Evaluation loop over the current `self.dataloader`."""
+    def eval_epoch(self, **kwargs: dict) -> None:
+        """
+        Evaluation loop over the current `self.dataloader`.
+        Args:
+            **kwargs: The args.
+
+        Returns: Saves the new model and updated the optimum if needed.
+
+        """
         super(Regularization_strategy, self).eval_epoch(**kwargs)
         if self.clock.train_iterations > 0:
             Metrics = self.evaluator.get_last_metrics()
@@ -161,7 +147,7 @@ class Regularization_strategy(SupervisedTemplate):
                 filter(lambda key: key[0].startswith('Top1_Acc_Exp/eval_phase/test_stream'), Metrics.items()))
             acc = list(Metrics.items())[-1][-1]
             reg_state_dict = self.state_dict()
-            new_key = self.reg_type.__str__() + "_state_dict"
+            new_key = "reg_state_dict"
             new_value = (new_key, reg_state_dict)
             self.checkpoint(self.model, self.clock.train_exp_epochs, acc, self.optimizer, self.scheduler,
                             self.opts, new_value)  # Updating checkpoint.
@@ -169,7 +155,6 @@ class Regularization_strategy(SupervisedTemplate):
     def state_dict(self):
         """
         Returns:
-
         """
         strategy_state_dict = dict()
         strategy_state_dict['current_data_loader'] = self.dataloader
@@ -178,6 +163,37 @@ class Regularization_strategy(SupervisedTemplate):
         strategy_state_dict['current_model'] = self.model.state_dict()
         strategy_state_dict['trained_tasks'] = self.model.trained_tasks
         return strategy_state_dict
+
+    def Get_Model_folder(self):
+        """
+        Returns:
+        """
+        # Path to the data-set.
+        Data_specific_path = os.path.join(self.Project_path, 'data/{}'.format(str(self.ds_type)))
+        # Path to the results.
+        results_path = os.path.join(Data_specific_path, f'Baselines/')
+        # Path to the regularization type results.
+        Model_folder = os.path.join(results_path,
+                                    f"Model_{self.task}/{str(self.reg_type)}/lambda"
+                                    f"={str(self.reg_type.class_to_reg_factor(self.opts))}")
+        return Model_folder
+
+    def Get_logger_and_evaluator(self):
+        """
+        Returns:
+
+        """
+        log_path = os.path.join(self.Project_path, f'data/Baselines/{str(self.reg_type)}/logging')
+        Checkpoint_path = os.path.join(self.Project_path,
+                                       f'fata/Baselines/{str(self.reg_type)}/checkpoints/Task_{self.task[0]}_'
+                                       f'{self.task[1]}')
+        loggers = [WandBLogger(project_name=f"avalanche_{str(self.reg_type)}", run_name="train", dir=log_path,
+                               path=Checkpoint_path), InteractiveLogger()]
+        evaluator = EvaluationPlugin(accuracy_metrics(self.opts, minibatch=True, epoch=True, experience=True,
+                                                      stream=True),
+                                     loss_metrics(minibatch=True, epoch=True, experience=True, stream=True),
+                                     loggers=loggers)
+        return loggers, evaluator
 
 
 __all__ = [

@@ -8,12 +8,42 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
-from Data_Creation.Create_dataset_classes import DsType  # Import the Data_Creation set types.
 from training.Data.Data_params import Flag
-from training.Utils import Flag_to_task, create_single_one_hot
+from training.Utils import create_single_one_hot, Get_task_and_direction
 
 
 # Here we define the task-head modules.
+
+class HeadMultiClass(nn.Module):
+    """
+    Multi Class Head.
+    Support single output or output per class.
+    """
+
+    def __init__(self, infilters: int, nclasses: int, num_heads: int):
+        """
+        Multi Class Head.
+        Args:
+            infilters: The infilters.
+            nclasses: The number of classes.
+            num_heads: The number of heads.
+        """
+        super(HeadMultiClass, self).__init__()
+        self.layers = nn.ModuleList(
+            [nn.Linear(in_features=infilters, out_features=nclasses + 1) for _ in range(num_heads)])
+
+    def forward(self, x: Tensor) -> Tensor:
+        """
+       Forward the head.
+       Args:
+           x: The input.
+
+       Returns: The output.
+
+       """
+        outs = [layer(x) for layer in self.layers]
+        return torch.stack(tensors=outs, dim=-1)
+
 
 class HeadSingleTask(nn.Module):
     """
@@ -31,13 +61,13 @@ class HeadSingleTask(nn.Module):
         """
         super(HeadSingleTask, self).__init__()
         self.opts = opts
-        num_heads = nclasses if opts.model_flag is Flag.NOFLAG \
-            else num_heads  # If The model flag is NOFLAG we allocate for each character a head o.w. according
-        # to the
-        # nclasses.
+        # If The model flag is NOFLAG we allocate for each character a head o.w. according
+        # to the nclasses.
+        num_head = nclasses if opts.model_flag is Flag.NOFLAG \
+            else num_heads
+
         infilters = opts.nfilters[-1]  # The input size from the end of the BU2 stream.
-        self.layers = nn.ModuleList(
-            [nn.Linear(in_features=infilters, out_features=nclasses + 1) for _ in range(num_heads)])
+        self.layers = nn.ModuleList([HeadMultiClass(infilters, nclasses, num_head)])
 
     def forward(self, inputs: Tensor) -> Tensor:
         """
@@ -72,14 +102,17 @@ class MultiTaskHead(nn.Module):
         # according to.
         self.ds_type = self.opts.ds_type  # The data-set type.
         self.taskhead = nn.ModuleList()
+        task_head = nn.ModuleList()
         # For each task, task create its task-head according to num_classes.
         for i in range(self.ntasks):
             for j in range(self.ndirections):
                 layer = HeadSingleTask(opts=opts, nclasses=self.num_classes[i],
                                        num_heads=self.num_heads[j])  # create a taskhead.
-                self.taskhead.append(layer)
+                task_head.append(layer)
                 if transfer_learning_params is not None:
                     transfer_learning_params[i][j].extend(layer.parameters())  # Storing the taskhead params.
+            self.taskhead.append(task_head)
+            task_head = nn.ModuleList()
 
     def forward(self, inputs: Tensor) -> Tensor:
         """
@@ -91,9 +124,9 @@ class MultiTaskHead(nn.Module):
         """
         (bu2_out, flag) = inputs
         # In train mode we train only one head.
-        if self.training or self.ds_type is DsType.Omniglot:
-            task_id = Flag_to_task(opts=self.opts, flags=flag)  # Get the task id.
-            task_out = self.taskhead[task_id](bu2_out)  # apply the appropriate task-head.
+        if self.training or True:
+            direction_id, task_id = Get_task_and_direction(opts=self.opts, flags=flag)  # Get the task id.
+            task_out = self.taskhead[task_id][direction_id](bu2_out)  # apply the appropriate task-head.
         # print(task_out.shape)
         # Otherwise, we test all heads and choose the desired by the task flag.
         else:
@@ -132,5 +165,5 @@ class OccurrenceHead(nn.Module):
         Returns: The binary classification input.
 
         """
-        x = self.occurrence_transform(input=bu_out)  # Apply the transform for the BU1 loss.
+        x = self.occurrence_transform(input=bu_out)  # Apply the transforms for the BU1 loss.
         return x

@@ -38,18 +38,19 @@ class SI(Base_plugin):
         self.eps = eps
 
         self.w = {n: torch.zeros(p.shape).to(self.device) for n, p in
-                  self.prev_model.feature_extractor.named_parameters() if p.requires_grad}
+                  self.prev_model.feature_extractor().named_parameters() if p.requires_grad}
         # Store current parameters as the initial parameters before first task starts
         self.older_params = {n: p.clone().detach().to(self.device) for n, p in
-                             self.prev_model.feature_extractor.named_parameters()
+                             self.prev_model.feature_extractor().named_parameters()
                              if p.requires_grad}
         # Store importance weights matrices
         self.importances = {n: torch.zeros(p.shape).to(self.device) for n, p in
-                            self.prev_model.feature_extractor.named_parameters()
+                            self.prev_model.feature_extractor().named_parameters()
                             if p.requires_grad}
-        self.grads = {n: torch.zeros(p.shape) for n, p in self.prev_model.feature_extractor.named_parameters()
+        self.grads = {n: torch.zeros(p.shape) for n, p in self.prev_model.feature_extractor().named_parameters()
                       if p.requires_grad}
-        self.curr_feat_ext = {n: p.clone().detach() for n, p in self.prev_model.feature_extractor.named_parameters() if
+        self.curr_feat_ext = {n: p.clone().detach() for n, p in self.prev_model.feature_extractor().named_parameters()
+                              if
                               p.requires_grad}
         self.num_exp = 1
         if prev_checkpoint is not None:
@@ -66,11 +67,11 @@ class SI(Base_plugin):
             strategy: The strategy.
 
         """
-        self.curr_feat_ext = {n: p.clone().detach() for n, p in strategy.model.feature_extractor.named_parameters() if
+        self.curr_feat_ext = {n: p.clone().detach() for n, p in strategy.model.feature_extractor().named_parameters() if
                               p.requires_grad}
         loss = strategy.loss
         loss.backward(retain_graph=True)
-        self.grads = {n: p.grad.clone().detach() for n, p in strategy.model.feature_extractor.named_parameters()
+        self.grads = {n: p.grad.clone().detach() for n, p in strategy.model.feature_extractor().named_parameters()
                       if p.grad is not None}
         if self.num_exp > 0:
             # store gradients without regularization term
@@ -88,7 +89,7 @@ class SI(Base_plugin):
         # Eq. 3: accumulate w, compute the path integral -- "In practice, we can approximate w online as the running
         #  sum of the product of the gradient with the parameter update".
         with torch.no_grad():
-            for n, p in strategy.model.feature_extractor.named_parameters():
+            for n, p in strategy.model.feature_extractor().named_parameters():
                 if n in self.grads.keys():
                     # w[n] >=0, but minus for loss decrease
                     self.w[n] -= self.grads[n] * (p.detach() - self.curr_feat_ext[n])
@@ -123,7 +124,7 @@ class SI(Base_plugin):
 
         """
         with torch.no_grad():
-            curr_params = {n: p for n, p in strategy.model.feature_extractor.named_parameters() if p.requires_grad}
+            curr_params = {n: p for n, p in strategy.model.feature_extractor().named_parameters() if p.requires_grad}
             for n, p in self.importances.items():
                 new_importances[n] = self.importances[n] + self.w[n] / ((curr_params[n] - self.older_params[n]) ** 2 +
                                                                         self.eps)
@@ -139,5 +140,5 @@ class SI(Base_plugin):
 
         """
         self.importances = self.compute_new_importances(new_importances=self.importances, zero=True, strategy=strategy)
-        self.older_params = {n: p.clone().detach() for n, p in strategy.model.feature_extractor.named_parameters() if
+        self.older_params = {n: p.clone().detach() for n, p in strategy.model.feature_extractor().named_parameters() if
                              p.requires_grad}

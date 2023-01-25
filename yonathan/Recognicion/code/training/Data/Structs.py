@@ -115,3 +115,4 @@ class Task_to_struct:
         """
         self.task = task
         self.direction = direction
+        self.unified_task = (task, direction)

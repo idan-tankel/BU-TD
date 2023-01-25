@@ -22,8 +22,8 @@ from torchvision import datasets
 from torchvision import transforms
 
 try:
-    from utils import Download_raw_omniglot_data
-except ModuleNotFoundError:
+    from .utils import Download_raw_omniglot_data
+except ImportError:
     pass
 
 
@@ -228,7 +228,7 @@ class GenericDatasetParams:
         self.nsamples_train = None  # The number of train samples.
         self.nsamples_test = None  # The number of test samples.
         self.nsamples_val = None  # The number of samples for the CG test.
-        self.Data_path = os.path.join(Path(__file__).parents[2],
+        self.Data_path = os.path.join(Path(__file__).parents[3],
                                       f'data/{str(ds_type)}/RAW')  # The path to the raw Data.
 
         # This is the rule, we define the number of samples we generate per chosen sequence.

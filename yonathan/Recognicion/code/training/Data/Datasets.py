@@ -40,7 +40,7 @@ class DataSetBase(Dataset):
         self.nexamples: int = nexamples  # The number of examples.
         self.obj_per_row: int = obj_per_row  # The number of rows.
         self.obj_per_col: int = obj_per_col  # The number of columns.
-        #    self.nexamples = 100
+        #    self.nexamples = 50
         self.targets = [0 for _ in range(self.nexamples)]  # Used only for Avalanche_AI.
         self.split_size: int = 1000  # The split size we created the dataset according to.
         self.edge_class: Tensor = torch.tensor(nclasses)  # The edge class.
@@ -252,7 +252,7 @@ class DatasetNonGuided(DatasetGuidedSingleTask):
         Returns: The label task.
         """
 
-        label_adj_all = self.nclasses * torch.ones(size=(self.nclasses,), dtype=torch.long)
+        label_adj_all = self.nclasses * torch.ones(size=(self.nclasses, len(self.tuple_direction)), dtype=torch.long)
         for r, row in enumerate(label_all):  # Iterating over all rows.
             for c, char in enumerate(row):  # Iterating over all character in the row.
                 # Compute the label task.
@@ -276,4 +276,5 @@ class DatasetNonGuided(DatasetGuidedSingleTask):
         # The same get item.
         # Change the label task to return all adjacent characters.
         label_task = self.Get_label_task_all(label_all=label_all)
+        label_existence = label_existence.repeat((len(self.tuple_direction), 1, 1))
         return img, label_task, flag, label_all, label_existence, sample_id

@@ -91,7 +91,7 @@ class BatchNorm(nn.Module):
                 running_var + self.norm.eps)  # Subtract the mean and divide by std.
         weight = self.norm.weight.view(1, -1, 1, 1)  # Resize to match the desired shape.
         bias = self.norm.bias.view((1, -1, 1, 1))  # Resize to match the desired shape.
-        out = weight * inputs + bias  # Use the Affine transform.
+        out = weight * inputs + bias  # Use the Affine transforms.
         return out
 
     def load_running_stats(self, task_id: int, direction_tuple: tuple[int, int]) -> None:

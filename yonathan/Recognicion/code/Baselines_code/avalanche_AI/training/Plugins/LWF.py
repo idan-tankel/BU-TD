@@ -13,10 +13,10 @@ from torch import Tensor
 
 from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
 from Baselines_code.baselines_utils import construct_flag
-from training.Utils import compose_Flag
+from Data_Creation.src.Create_dataset_classes import DsType
 from training.Data.Data_params import RegType
-from Data_Creation.Create_dataset_classes import DsType
 from training.Data.Structs import inputs_to_struct, outs_to_struct
+from training.Utils import compose_Flag
 
 sys.path.append(r'/')
 

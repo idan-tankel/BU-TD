@@ -6,7 +6,7 @@ import argparse
 import os
 import shutil
 from pathlib import Path
-from typing import Union, Tuple
+from typing import Union, Tuple, Optional
 
 import numpy as np
 import torch
@@ -52,7 +52,7 @@ class CheckpointSaver:
 
     def __call__(self, model: nn.Module, epoch: int, current_test_accuracy: float, optimizer: torch.optim,
                  scheduler: torch.optim.lr_scheduler, opts: argparse,
-                 optional_kay: Union[Tuple, None] = None) -> None:
+                 optional_kay: Optional[Tuple] = None) -> None:
         """
         Saves the state.
         Args:

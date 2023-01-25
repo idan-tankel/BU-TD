@@ -13,7 +13,7 @@ from multiprocessing import Pool
 import numpy as np
 from PIL import Image
 
-from Create_dataset_classes import DsType, Sample, CharInfo, DataAugmentClass, MetaData, General_raw_data
+from .Create_dataset_classes import DsType, Sample, CharInfo, DataAugmentClass, MetaData, General_raw_data
 
 
 def store_sample_disk(opts: argparse, sample: Sample, store_dir: str) -> None:
