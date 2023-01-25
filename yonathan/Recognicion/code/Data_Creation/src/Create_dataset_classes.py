@@ -110,7 +110,7 @@ class Emnist_raw_data(General_raw_data):
             download_dir: The path download the raw data into.
         """
         super(Emnist_raw_data, self).__init__(download_dir=download_dir)
-        # Rotation transform, as the emnist images come rotated and flipped.
+        # Rotation transforms, as the emnist images come rotated and flipped.
         self.emnist_transform = torchvision.transforms.Compose([
             lambda data_image: F.rotate(
                 data_image, -90),
@@ -388,7 +388,7 @@ class CharInfo:
         # Scaling character and getting the desired location to plant the character.
         h, w = new_size, new_size
         sz = (1, h, w)
-        self.img = skimage.transform.resize(self.img, sz, mode='constant')  # Apply the resize transform.
+        self.img = skimage.transform.resize(self.img, sz, mode='constant')  # Apply the resize transforms.
         self.stx = self.location_x
         self.end_x = stx + w
         self.sty = self.location_y
@@ -414,7 +414,7 @@ class Sample:
         #  self.sampled_chars = sampled_chars
         self.query_part_id = query_part_id  # The index we query about.
         self.direction_query = adj_type  # The task I query about.
-        self.chars:list[CharInfo] = chars  # All character objects.
+        self.chars: list[CharInfo] = chars  # All character objects.
         self.query_coord = np.unravel_index(query_part_id,
                                             [parser.num_rows, parser.num_cols])  # Getting the place we query about.
         self.image = np.zeros((1, *parser.image_size),
@@ -447,7 +447,7 @@ class DataAugmentClass:
         """
         Applying the data augmentation on the image.
         Args:
-            image: The image we want to apply the transform on.
+            image: The image we want to apply the transforms on.
 
         Returns: The augmented image.
 
