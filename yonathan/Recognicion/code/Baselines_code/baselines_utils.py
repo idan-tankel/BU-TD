@@ -8,7 +8,6 @@ from typing import Callable
 from avalanche.models.utils import avalanche_forward
 from avalanche.training.utils import zerolike_params_dict
 from torch.utils.data import DataLoader
-
 from training.Data.Data_params import RegType
 from training.Data.Parser import GetParser, update_parser
 from training.Modules.Create_Models import create_model

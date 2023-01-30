@@ -4,8 +4,7 @@ Here we define the loss function, including multi label and weighted loss for ba
 import argparse
 
 import torch.nn as nn
-
-from training.Data.Structs import inputs_to_struct, outs_to_struct
+from ..Data.Structs import inputs_to_struct, outs_to_struct
 
 CE = nn.CrossEntropyLoss(reduction='none')
 

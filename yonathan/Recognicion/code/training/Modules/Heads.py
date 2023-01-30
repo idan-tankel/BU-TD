@@ -2,14 +2,13 @@
 Here we define the heads, including single head, multi head and occurrence head.
 """
 import argparse
-from typing import Union
+from typing import Optional
 
 import torch
 import torch.nn as nn
 from torch import Tensor
-
-from training.Data.Data_params import Flag
-from training.Utils import create_single_one_hot, Get_task_and_direction
+from ..Data.Data_params import Flag
+from ..Utils import create_single_one_hot, Get_task_and_direction
 
 
 # Here we define the task-head modules.
@@ -87,7 +86,7 @@ class MultiTaskHead(nn.Module):
     # Create task-head per task, task.
     """
 
-    def __init__(self, opts: argparse, transfer_learning_params: Union[list, None] = None):
+    def __init__(self, opts: argparse, transfer_learning_params: Optional[list]):
         """
         Multi head task-head allocating for each task and task a single
         task head. Args: opts: The model options. transfer_learning_params: list containing the

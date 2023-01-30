@@ -5,8 +5,7 @@ import argparse
 
 import torch.nn as nn
 from torch import Tensor
-
-from training.Utils import tuple_direction_to_index
+from ..Utils import tuple_direction_to_index
 
 
 class inputs_to_struct:

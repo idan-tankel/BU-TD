@@ -6,15 +6,14 @@ computation rule.
 """
 import argparse
 import sys
-from typing import Dict, Union
+from typing import Dict, Optional
 
 import torch
 import torch.nn as nn
-from avalanche.training.templates.supervised import SupervisedTemplate as Regularization_strategy
-from torch.utils.data import DataLoader
-
 from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
 from Baselines_code.baselines_utils import compute_quadratic_loss, compute_fisher_information_matrix, Norm
+from avalanche.training.templates.supervised import SupervisedTemplate as Regularization_strategy
+from torch.utils.data import DataLoader
 from training.Data.Data_params import RegType
 from training.Data.Structs import inputs_to_struct
 
@@ -41,7 +40,7 @@ class MAS(Base_plugin):
     https://github.com/mmasana/FACIL/blob/master/src/approach/mas.py
     """
 
-    def __init__(self, opts: argparse, prev_checkpoint: Union[dict, None] = None, load_from=None):
+    def __init__(self, opts: argparse, prev_checkpoint: Optional[dict], load_from=None):
         """
         Args:
             opts: The model options.
@@ -54,7 +53,7 @@ class MAS(Base_plugin):
         # Regularization Parameters and Importances parameters.
         self.alpha = opts.mas_alpha
         # Model parameters
-        self.importances: Union[Dict, None] = None  # The parameters importances.
+        self.importances: Optional[Dict]# The parameters importances.
         # If we have previous model we save it and compute its importances.
         if prev_checkpoint is not None:
             self.num_exp = 1

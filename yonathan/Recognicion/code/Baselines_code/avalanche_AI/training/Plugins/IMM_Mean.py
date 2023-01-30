@@ -6,15 +6,14 @@ Then merges by mean the weights.
 import argparse
 import os
 import sys
-from typing import Union
+from typing import Optional
 
 import torch
 import torch.nn as nn
-from avalanche.training.templates.supervised import SupervisedTemplate as Regularization_strategy
-
 from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
 from Baselines_code.baselines_utils import compute_quadratic_loss
 from Baselines_code.baselines_utils import set_model
+from avalanche.training.templates.supervised import SupervisedTemplate as Regularization_strategy
 from training.Data.Data_params import RegType
 from training.Data.Structs import inputs_to_struct
 
@@ -27,7 +26,7 @@ class IMM_Mean(Base_plugin):
     Stores for each parameter its importance.
     """
 
-    def __init__(self, opts: argparse, prev_checkpoint: Union[None, dict] = None):
+    def __init__(self, opts: argparse, prev_checkpoint: Optional[dict]):
         """
         Args:
             opts: The model opts.

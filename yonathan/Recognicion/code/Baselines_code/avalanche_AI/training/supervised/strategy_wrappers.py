@@ -8,17 +8,16 @@ from pathlib import Path
 
 import torch
 import torch.optim as optim
+from Baselines_code.avalanche_AI.training.Plugins.Evaluation import accuracy_metrics
+from Baselines_code.avalanche_AI.training.Plugins.classes import Get_regularization_plugin
+from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
+from Baselines_code.baselines_utils import RegType
 from avalanche.benchmarks.generators import dataset_benchmark
 from avalanche.evaluation.metrics import loss_metrics
 from avalanche.logging import WandBLogger, InteractiveLogger
 from avalanche.training.plugins import LRSchedulerPlugin
 from avalanche.training.plugins.evaluation import EvaluationPlugin
 from avalanche.training.templates.supervised import SupervisedTemplate
-
-from Baselines_code.avalanche_AI.training.Plugins.Evaluation import accuracy_metrics
-from Baselines_code.avalanche_AI.training.Plugins.classes import Get_regularization_plugin
-from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
-from Baselines_code.baselines_utils import RegType
 from training.Data.Checkpoints import CheckpointSaver
 from training.Data.Structs import outs_to_struct
 from training.Utils import create_optimizer_and_scheduler

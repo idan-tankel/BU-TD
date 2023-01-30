@@ -6,9 +6,8 @@ import argparse
 import torch
 import torch.nn as nn
 from torch import Tensor
-
-from training.Data.Data_params import Flag
-from training.Utils import tuple_direction_to_index, create_single_one_hot
+from ..Data.Data_params import Flag
+from ..Utils import tuple_direction_to_index, create_single_one_hot
 
 
 # Batch Norm class.
@@ -21,18 +20,18 @@ class BatchNorm(nn.Module):
     task, task stores its mean,var as continual learning overrides those variables.
     """
 
-    def __init__(self, opts: argparse, num_channels: int, dims: int = 2, device='cuda'):
+    def __init__(self, opts: argparse, num_channels: int, dims: int = 2):
         """
 
         Args:
             opts: The model options
             num_channels: num channels to apply batch_norm_with_statistics_per_sample on.
             dims: apply 2d or 1d batch normalization.
-            device: The device.
         """
         super(BatchNorm, self).__init__()
         self.opts = opts
         self.ndirections = opts.ndirections
+        device = 'cuda'
         self.ntasks = opts.ntasks
         self.save_stats = opts.model_flag is Flag.CL and opts.save_stats  # Save only for the continual learning flag.
         # Creates the norm function.
@@ -66,6 +65,9 @@ class BatchNorm(nn.Module):
         if self.training or not self.save_stats:
             return self.norm(input=inputs)  # applying the norm function.
         else:
+            device = inputs.device
+            self.running_mean_list = self.running_mean_list.to(device)
+            self.running_var_list = self.running_var_list.to(device)
             task_flag = create_single_one_hot(opts=self.opts, flags=flags)
             running_mean = (task_flag @ self.running_mean_list).unsqueeze(dim=2).unsqueeze(dim=2)
             running_var = (task_flag @ self.running_var_list).unsqueeze(dim=2).unsqueeze(dim=2)

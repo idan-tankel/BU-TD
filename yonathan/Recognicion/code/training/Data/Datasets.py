@@ -4,16 +4,16 @@ Here we define the datasets, including guided and non-guided.
 import argparse
 import os
 import pickle
-from typing import Union
+from typing import Optional
 
 import torch
+import torchvision.transforms
 import torchvision.transforms as T
 from PIL import Image
 from torch import Tensor
 from torch.utils.data import Dataset
-
-from training.Data.Structs import Task_to_struct
-from training.Utils import tuple_direction_to_index, struct_to_input
+from Structs import Task_to_struct
+from ..Utils import tuple_direction_to_index, struct_to_input
 
 
 class DataSetBase(Dataset):
@@ -23,7 +23,7 @@ class DataSetBase(Dataset):
     """
 
     def __init__(self, root: str, nclasses: int, ndirections: int, is_train: bool,
-                 nexamples: Union[int, None] = None, obj_per_row: int = 6, obj_per_col: int = 1):
+                 nexamples: Optional[int], obj_per_row: int = 6, obj_per_col: int = 1):
         """
         Args:
             root: The root to the data.
@@ -159,6 +159,7 @@ class DatasetGuidedSingleTask(DataSetBase):
                                                      ndirections=opts.ndirections, task_id=task_idx)
         self.task_idx = torch.tensor(task_idx)  # The task id.
         self.edge_class = torch.tensor(self.nclasses)  # The 'border' class.
+        self.transform = torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
     def __getitem__(self, index: int) -> tuple[Tensor, Tensor, Tensor, Tensor, Tensor, Tensor]:
         """
@@ -172,6 +173,7 @@ class DatasetGuidedSingleTask(DataSetBase):
         img, char_type_one, label_all, label_existence, r, c, _, sample_id = super(DatasetGuidedSingleTask,
                                                                                    self).__getitem__(
             index=index)
+        img = self.transform(img)
         task_type_ohe = torch.nn.functional.one_hot(self.task_idx, self.ntasks)
         # Getting the task embedding, telling which task we solve now.
         direction_type_ohe = torch.nn.functional.one_hot(self.direction, self.ndirections)

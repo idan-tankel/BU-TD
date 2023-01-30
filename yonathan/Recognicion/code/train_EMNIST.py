@@ -3,10 +3,11 @@ Full EMNIST training.
 """
 import copy
 
+from Data_Creation.src.Create_dataset_classes import DsType
+from training.Data.Data_params import Flag
 from training.Data.Parser import GetParser
 from training.Data.Structs import Training_flag
 from training.Modules.Create_Models import create_model
-from training.Modules.Models import *
 from training.training_funcs.training_step import train_step, Show_zero_forgetting
 
 

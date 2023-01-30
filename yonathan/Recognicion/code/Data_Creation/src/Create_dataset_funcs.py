@@ -34,8 +34,9 @@ def store_sample_disk(opts: argparse, sample: Sample, store_dir: str) -> None:
             os.makedirs(samples_dir)
     img = sample.image  # The image.
     img_fname = os.path.join(samples_dir, '%d_img.jpg' % i)  # The image directory.
-    c = Image.fromarray(img.transpose(1, 2, 0))  # Convert to Image format.
-    c.save(img_fname)  # Saving the image.
+    img_trans = Image.fromarray(img.transpose(1, 2, 0))  # Convert to Image format.
+    #   img_trans = img_trans.float()
+    img_trans.save(img_fname)  # Saving the image.
     data_fname = os.path.join(samples_dir, '%d_raw.pkl' % i)  # The labels' directory.
     del sample.image
     with open(data_fname, "wb") as new_data_file:  # Dumping the supervision labels in the pickle file.
@@ -279,7 +280,7 @@ def Make_data_dir(opts: argparse, ds_type: DsType, language_list: list) -> tuple
     if ds_type is DsType.Omniglot:
         folder_name += 'data_set_matrix' + str(language_list[0])
     else:
-        folder_name += 'Test_open_files'
+        folder_name += 'Image_Matrix_train'
     Samples_dir = os.path.join(opts.store_folder, folder_name)  # The path we store into.
     if not os.path.exists(Samples_dir):  # Making the samples dir.
         os.makedirs(Samples_dir)
@@ -328,7 +329,7 @@ def Generate_raw_samples(opts: argparse, raw_dataset: General_raw_data, image_id
         image_ids.add(image_id_hash)
         chars = []  # The chosen characters.
         for sample_id in range(num_chars_per_image):
-            char = CharInfo(opts, raw_dataset, prng, sample_id, sample_chars)  # Create raw sample.
+            char = CharInfo(opts,ds_type, raw_dataset, prng, sample_id, sample_chars)  # Create raw sample.
             chars.append(char)  # Add to the characters list.
         # Create several samples for the chosen sequence.
         Create_several_samples_per_sequence(opts, prng, ds_type, samples, chars,

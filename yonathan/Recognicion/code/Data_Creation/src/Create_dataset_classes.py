@@ -7,7 +7,7 @@ import os
 import random
 from enum import Enum
 from pathlib import Path
-from typing import Union
+from typing import Optional
 
 import numpy as np
 import skimage
@@ -37,6 +37,7 @@ class DsType(Enum):
     Emnist = 'Emnist'
     Omniglot = 'Omniglot'
     Fashionmnist = 'Fashionmnist'
+    cifar10 = 'cifar10'
 
     def __str__(self):
         return self.value
@@ -48,13 +49,14 @@ class General_raw_data(Dataset):
     Support initialization, merging(for Omniglot) and getitem.
     """
 
-    def __init__(self, download_dir: str):
+    def __init__(self, download_dir: str, ds_type: DsType):
         """
 
         Args:
             download_dir: The path download the raw data into.
         """
         self.download_dir = download_dir  # Download path.
+        self.ds_type = ds_type
         self.raw_images = None  # The raw images.
         self.labels = None  # The labels.
         self.nclasses = None  # The number of classes.
@@ -77,7 +79,11 @@ class General_raw_data(Dataset):
         # For each dataset iterate over images, labels into the list.
         for data_set in [train_raw_dataset, test_raw_dataset]:
             for (img, label) in data_set:
-                Images_arranged[label].append(np.array(img).reshape(self.shape))
+                if self.ds_type is DsType.cifar10:
+                    img = transforms.ToTensor()(img)
+                    Images_arranged[label].append(img)
+                else:
+                    Images_arranged[label].append(np.array(img).reshape(self.shape))
         # Make all images in one path.
         Images_arranged = sum(Images_arranged, [])
         # The number of images per single label.
@@ -86,13 +92,14 @@ class General_raw_data(Dataset):
         labels_arranged = sum([[k] * num_images_per_label for k in range(self.nclasses)], [])
         return Images_arranged, labels_arranged
 
-    def __getitem__(self, index: int) -> tuple:
+    def __getitem__(self, index:tuple[int, str]) -> tuple:
         """
         Args:
             index: The image index.
 
         Returns: The image, label in that index.
         """
+
         return self.raw_images[index], self.labels[index]
 
     def __len__(self):
@@ -109,7 +116,7 @@ class Emnist_raw_data(General_raw_data):
         Args:
             download_dir: The path download the raw data into.
         """
-        super(Emnist_raw_data, self).__init__(download_dir=download_dir)
+        super(Emnist_raw_data, self).__init__(download_dir=download_dir, ds_type=DsType.Emnist)
         # Rotation transforms, as the emnist images come rotated and flipped.
         self.emnist_transform = torchvision.transforms.Compose([
             lambda data_image: F.rotate(
@@ -150,7 +157,7 @@ class FashionMnist_raw_data(General_raw_data):
         Args:
             download_dir: The path download the raw Data into.
         """
-        super(FashionMnist_raw_data, self).__init__(download_dir=download_dir)
+        super(FashionMnist_raw_data, self).__init__(download_dir=download_dir, ds_type=DsType.Fashionmnist)
         # Train Data.
         train_raw_dataset = datasets.FashionMNIST(root=download_dir, download=True)
         # Test Data.
@@ -173,7 +180,7 @@ class Omniglot_data_set(General_raw_data):
             download_dir: The path download the raw Data into.
             language_list: The list of desired languages.
         """
-        super(Omniglot_data_set, self).__init__(download_dir=download_dir)
+        super(Omniglot_data_set, self).__init__(download_dir=download_dir, ds_type=DsType.Omniglot)
         # The raw data path.
         self.raw_data_source = os.path.join(Path(__file__).parents[3], 'data/Omniglot/RAW/omniglot-py/Unified')
         # Make the Omniglot dictionary.
@@ -196,6 +203,27 @@ class Omniglot_data_set(General_raw_data):
         self.nclasses = len(self.raw_images) // 20  # The number of labels.
         # Merge into one list.
         self.labels = sum([self.num_examples_per_character * [i] for i in range(self.nclasses)], [])
+
+
+class Cifar10_data_set(General_raw_data):
+    def __init__(self, download_dir: str):
+        """
+        Fashionmnist raw Data.
+        Args:
+            download_dir: The path download the raw Data into.
+        """
+        super(Cifar10_data_set, self).__init__(download_dir=download_dir, ds_type=DsType.cifar10)
+        self.shape = (3, 32, 32)
+
+        # Train Data.
+        train_raw_dataset = datasets.CIFAR10(root=download_dir, download=True)
+        # Test Data.
+        test_raw_dataset = datasets.CIFAR10(
+            root=download_dir, train=False, download=True)
+        self.nclasses = 10  # Ten classes.
+        # Merge the data.
+        self.raw_images, self.labels = self.Merge_two_datasets(train_raw_dataset, test_raw_dataset)
+        self.num_examples_per_character = len(self.raw_images) // 10
 
 
 class GenericDatasetParams:
@@ -230,6 +258,7 @@ class GenericDatasetParams:
         self.nsamples_val = None  # The number of samples for the CG test.
         self.Data_path = os.path.join(Path(__file__).parents[3],
                                       f'data/{str(ds_type)}/RAW')  # The path to the raw Data.
+        self.augment = True
 
         # This is the rule, we define the number of samples we generate per chosen sequence.
         if num_rows == 1 or num_cols == 1:
@@ -257,7 +286,7 @@ class EmnistParams(GenericDatasetParams):
         self.min_shift = 2.0
         self.max_shift = 0.2 * 28
         self.create_CG_test = True
-        self.image_size = [130, 200]
+        self.image_size = [1, 130, 200]
         self.ngenerate = 5 if 5 < self.num_chars_per_image else self.ngenerate
         self.nsamples_train = 20000
         self.nsamples_test = 2000
@@ -284,7 +313,7 @@ class FashionMnistParams(GenericDatasetParams):
         self.min_shift = 2.0
         self.max_shift = 0.2 * 28
         self.create_CG_test = False
-        self.image_size = [112, 130]
+        self.image_size = [1, 112, 130]
         self.nsamples_train = 25000
         self.nsamples_test = 2000
         self.nsamples_val = 2000
@@ -308,11 +337,37 @@ class OmniglotParams(GenericDatasetParams):
         self.min_shift = 2.0
         self.max_shift = 0.2 * 28
         self.create_CG_test = False
-        self.image_size = [55, 200]
+        self.image_size = [1, 55, 200]
         self.nsamples_train = 20000
         self.nsamples_test = 2000
         self.nsamples_val = 2000
         self.raw_data_set = Omniglot_data_set(download_dir=self.Data_path, language_list=language_list)
+
+
+class Cifar10Params(GenericDatasetParams):
+    """
+    Here we define the Omniglot data-set specification.
+    """
+
+    def __init__(self, ds_type: DsType, num_cols: int, num_rows: int):
+        """
+        Args:
+            num_cols: The number of columns.
+            num_rows: The number of rows
+        """
+        super(Cifar10Params, self).__init__(ds_type=ds_type, num_cols=num_cols, num_rows=num_rows)
+        self.min_scale = 1
+        self.max_scale = 1
+        self.min_shift = 0
+        self.max_shift = 0
+        self.create_CG_test = False
+        self.letter_size = 32
+        self.image_size = [3, 32 * num_rows, 32 * num_cols]
+        self.nsamples_train = 20000
+        self.nsamples_test = 2000
+        self.nsamples_val = 2000
+        self.raw_data_set = Cifar10_data_set(download_dir=self.Data_path)
+        self.augment = False
 
 
 class UnifiedDataSetType:
@@ -320,7 +375,7 @@ class UnifiedDataSetType:
     This class contains all data-set objects, according to the data-set type.
     """
 
-    def __init__(self, ds_type: DsType, num_cols: int, num_rows: int, language_list: Union[list, None]):
+    def __init__(self, ds_type: DsType, num_cols: int, num_rows: int, language_list: Optional[list]):
         """
         Supports all datasets.
         Given dataset type we create the desired data-set specification.
@@ -337,6 +392,8 @@ class UnifiedDataSetType:
         if ds_type is DsType.Omniglot:
             self.ds_obj = OmniglotParams(ds_type=ds_type, num_cols=num_cols, num_rows=num_rows,
                                          language_list=language_list)
+        if ds_type is DsType.cifar10:
+            self.ds_obj = Cifar10Params(ds_type=ds_type, num_cols=num_cols, num_rows=num_rows)
 
 
 class CharInfo:
@@ -345,37 +402,46 @@ class CharInfo:
     contains the image, scale, shift, coordinates.
     """
 
-    def __init__(self, parser: argparse, raw_dataset: General_raw_data, prng: random, sample_id: int,
+    def __init__(self, opts: argparse,ds_type:str, raw_dataset: General_raw_data, prng: random, sample_id: int,
                  sample_chars: list):
         """
         Args:
-            parser: The option opts.
+            opts: The option opts.
             raw_dataset: The raw image data-set.
             prng: The random generator.
             sample_id: The sample id.
             sample_chars: The sampled characters list
         """
-        min_scale = parser.min_scale
-        max_scale = parser.max_scale
-        min_shift = parser.min_shift
-        max_shift = parser.max_shift
+        self.ds_type = ds_type
+        min_scale = opts.min_scale
+        max_scale = opts.max_scale
+        min_shift = opts.min_shift
+        max_shift = opts.max_shift
         self.scale = prng.rand() * (max_scale - min_scale) + min_scale
-        letter_size = parser.letter_size
-        new_size = int(self.scale * parser.letter_size)
+        letter_size = opts.letter_size
+        new_size = int(self.scale * opts.letter_size)
         shift = prng.rand(2) * (max_shift - min_shift) + min_shift
         y, x = shift.astype(np.int)
-        start_row, start_col = np.unravel_index(indices=sample_id, shape=[parser.num_rows, parser.num_cols])
-        c = start_col + 0.5  # start in the middle of the column.
-        r = start_row + 0.1  # Start in the 0.1 of the row.
-        image_height, image_width = parser.image_size  # The desired image dimension.
-        stx = int(c * parser.letter_size + x)
+        start_row, start_col = np.unravel_index(indices=sample_id, shape=[opts.num_rows, opts.num_cols])
+        if opts.ds_type is DsType.cifar10:
+            c = start_col  # start in the middle of the column.
+            r = start_row  # Start in the 0.1 of the row.
+        else:
+            c = start_col + 0.5  # start in the middle of the column.
+            r = start_row + 0.1  # Start in the 0.1 of the row.
+        col, image_height, image_width = opts.image_size  # The desired image dimension.
+        stx = int(c * opts.letter_size + x)
         stx = max(0, stx)  # Ensure it's non-negative.
         stx = min(stx, image_width - new_size)
-        sty = int(r * parser.letter_size + y)
+        sty = int(r * opts.letter_size + y)
         sty = max(0, sty)
         sty = min(sty, image_height - new_size)
         num_examples_per_character = raw_dataset.num_examples_per_character
         self.label = sample_chars[sample_id]
+       # if ds_type == 'train':
+      #      num_examples_per_character = raw_dataset.num_examples_per_character_train
+     #   else:
+      #      num_examples_per_character = raw_dataset.num_examples_per_character_test
         self.label_id = prng.randint(0, num_examples_per_character)  # Choose a specific character image.
         # The index in the data-loader.
         self.img_id = num_examples_per_character * self.label + self.label_id
@@ -384,11 +450,12 @@ class CharInfo:
         self.location_x = stx
         self.nclasses = raw_dataset.nclasses
         self.location_y = sty
-        self.edge_to_the_right = start_col == parser.num_cols - 1 or sample_id == parser.num_characters_per_sample - 1
+        self.edge_to_the_right = start_col == opts.num_cols - 1 or sample_id == opts.num_characters_per_sample - 1
         # Scaling character and getting the desired location to plant the character.
         h, w = new_size, new_size
-        sz = (1, h, w)
-        self.img = skimage.transform.resize(self.img, sz, mode='constant')  # Apply the resize transforms.
+        sz = (col, h, w)
+        if opts.ds_type is not DsType.cifar10:
+            self.img = skimage.transform.resize(self.img, sz, mode='constant')  # Apply the resize transforms.
         self.stx = self.location_x
         self.end_x = stx + w
         self.sty = self.location_y
@@ -401,11 +468,11 @@ class Sample:
     the query part id.
     """
 
-    def __init__(self, parser: argparse, query_part_id: int, adj_type: int, chars: list[CharInfo], sample_id: int):
+    def __init__(self, opts: argparse, query_part_id: int, adj_type: int, chars: list[CharInfo], sample_id: int):
         """
 
         Args:
-            parser: The opts.
+            opts: The opts.
             query_part_id: The index we query about.
             adj_type: The task we query about.
             chars: The list of all characters in the sample.
@@ -416,8 +483,8 @@ class Sample:
         self.direction_query = adj_type  # The task I query about.
         self.chars: list[CharInfo] = chars  # All character objects.
         self.query_coord = np.unravel_index(query_part_id,
-                                            [parser.num_rows, parser.num_cols])  # Getting the place we query about.
-        self.image = np.zeros((1, *parser.image_size),
+                                            [opts.num_rows, opts.num_cols])  # Getting the place we query about.
+        self.image = np.zeros(opts.image_size,
                               dtype=np.float32)  # Initialize with zeros, will be updated in create_image_matrix.
         self.label_existence = Get_label_existence(chars, chars[0].nclasses)  # The label existence.
         self.label_ordered = Get_label_ordered(chars)  # The label ordered.

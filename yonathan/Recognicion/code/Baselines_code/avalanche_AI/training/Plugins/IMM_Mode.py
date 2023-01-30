@@ -6,15 +6,14 @@ uses the EWC importances.
 """
 import argparse
 import sys
-from typing import Union
+from typing import Optional
 
 import torch
 import torch.nn as nn
-from avalanche.training.templates.supervised import SupervisedTemplate
-from avalanche.training.templates.supervised import SupervisedTemplate as Regularization_strategy
-
 from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
 from Baselines_code.baselines_utils import compute_quadratic_loss, compute_fisher_information_matrix
+from avalanche.training.templates.supervised import SupervisedTemplate
+from avalanche.training.templates.supervised import SupervisedTemplate as Regularization_strategy
 from training.Data.Data_params import RegType
 from training.Data.Structs import inputs_to_struct
 
@@ -27,7 +26,7 @@ class MyIMM_Mode(Base_plugin):
     Stores for each parameter its importance.
     """
 
-    def __init__(self, opts: argparse, prev_checkpoint: Union[dict, None] = None, load_from=None):
+    def __init__(self, opts: argparse, prev_checkpoint: Optional[dict], load_from=None):
         """
         Args:
             opts: The model opts.

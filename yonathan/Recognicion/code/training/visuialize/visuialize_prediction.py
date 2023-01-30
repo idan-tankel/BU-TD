@@ -8,7 +8,6 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import torch.nn as nn
-
 from Data_Creation.src.Create_dataset_classes import DsType  # Import the Data_Creation set types.
 from training.Data.Data_params import Flag
 from training.Data.Get_dataset import get_dataset_for_spatial_relations

@@ -8,18 +8,17 @@ from typing import Type
 
 import torch
 import torch.nn as nn
+from ...Data_Creation.src.Create_dataset_classes import DsType  # Import the Data_Creation set types.
+from Data_params import Flag, AllDataSetOptions
+from Structs import inputs_to_struct, outs_to_struct
+from ..Metrics.Loss import UnifiedCriterion
+from ..Modules.Batch_norm import BatchNorm
+from ..Modules.Model_Blocks import BasicBlockTD, BasicBlockBU, BasicBlockBUShared
+from ..Modules.Models import BUTDModel, ResNet
 
-from Data_Creation.src.Create_dataset_classes import DsType  # Import the Data_Creation set types.
-from training.Data.Data_params import Flag, AllDataSetOptions
-from training.Data.Structs import inputs_to_struct, outs_to_struct
-from training.Metrics.Loss import UnifiedCriterion
-from training.Modules.Batch_norm import BatchNorm
-from training.Modules.Model_Blocks import BasicBlockTD, BasicBlockBU, BasicBlockBUShared
-from training.Modules.Models import BUTDModel, ResNet
 
-
-def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDModel,
-              model_flag: Flag = Flag.NOFLAG, ds_type: DsType = DsType.Emnist):
+def GetParser(task_idx: int = 0, model_type: Type[Union[BUTDModel, ResNet]] = BUTDModel,
+              model_flag: Flag = Flag.CL, ds_type: DsType = DsType.Emnist):
     """
     Args:
         task_idx: The task index.
@@ -44,16 +43,16 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
     opts.add_argument('--ds_type', default=ds_type, type=DsType, help='Flag that defines the data-set type.')
     opts.add_argument('--model_flag', default=model_flag, type=Flag, help='Flag that defines the model type.')
     # Optimization arguments.
-    opts.add_argument('--wd', default=0.00001, type=float, help='The weight decay of the Adam optimizer.')
+    opts.add_argument('--wd', default=1e-5, type=float, help='The weight decay of the Adam optimizer.')
     opts.add_argument('--SGD', default=False, type=bool, help='Whether to use SGD or Adam optimizer.')
-    opts.add_argument('--initial_lr', default=0.0001, type=float, help='Base lr for the SGD optimizer.')
+    opts.add_argument('--initial_lr', default=0.01, type=float, help='Base lr for the SGD optimizer.')
     opts.add_argument('--cycle_lr', default=True, type=bool, help='Whether to cycle the lr.')
     opts.add_argument('--base_lr', default=0.0002, type=float, help='Base lr of the cyclic scheduler.')
     opts.add_argument('--use_embedding', default=True, type=bool, help='')
     opts.add_argument('--max_lr', default=0.002, type=float,
                       help='Max lr of the cyclic scheduler before the lr returns to the base_lr.')
     opts.add_argument('--momentum', default=0.9, type=float, help='Momentum of the optimizer.')
-    opts.add_argument('--bs', default=10, type=int, help='The training batch size.')
+    opts.add_argument('--bs', default=64, type=int, help='The training batch size.')
     opts.add_argument('--EPOCHS', default=3, type=int, help='Number of epochs in the training.')
     # Model architecture arguments.
     opts.add_argument('--model_type', default=model_type, type=DsType, help='The model type BUTD or ResNet.')
@@ -69,9 +68,11 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
     opts.add_argument('--use_lateral_tdbu', default=True, type=bool,
                       help='Whether to use the lateral connection from TD to BU2')
     opts.add_argument('--read_argument', default=True)
-    opts.add_argument('--nfilters', default=[32, 32, 32, 48], type=list, help='The ResNet filters')
-    opts.add_argument('--strides', default=[2, 2, 1, 2], type=list, help='The ResNet strides')
-    opts.add_argument('--ks', default=[7, 3, 3, 3], type=list, help='The ResNet kernel sizes')
+    opts.add_argument('--nfilters', default=[32, 48, 64, 64], type=list, help='The ResNet filters')
+    opts.add_argument('--depthwise_separable', default=False)
+    opts.add_argument('--strides', default=[1, 1, 2, 2], type=list, help='The ResNet strides')
+    opts.add_argument('--ks', default=[3, 3, 3], type=list, help='The ResNet kernel sizes')
+    opts.add_argument('--pad', default=[1, 1, 1, 1])
     opts.add_argument('--ns', default=[1, 1, 1], type=list, help='Number of blocks per layer')
     opts.add_argument('--epoch_dictionary', default=Data_specification.data_obj.epoch_dictionary, type=list,
                       help='The sizes of the task-head classes')
@@ -81,7 +82,7 @@ def GetParser(task_idx: int = 0, model_type: Union[BUTDModel, ResNet] = BUTDMode
                       help='Number of tasks the model should solve')
     opts.add_argument('--ndirections', default=Data_specification.data_obj.ndirections, type=int,
                       help='Number of directions the model should handle')
-    opts.add_argument('--inshape', default=(3, *Data_specification.data_obj.image_size), type=tuple,
+    opts.add_argument('--inshape', default=Data_specification.data_obj.image_size, type=tuple,
                       help='The input image shape, may be override in get_dataset')
     opts.add_argument('--num_heads', default=Data_specification.data_obj.num_heads, type=list,
                       help='The number of headed for each task, direction')

@@ -6,8 +6,7 @@ import argparse
 import torch
 import torch.nn as nn
 from torch import Tensor
-
-from training.Utils import flag_to_idx
+from ..Utils import flag_to_idx
 
 
 class Depthwise_separable_conv(nn.Module):
@@ -47,24 +46,33 @@ class Depthwise_separable_conv(nn.Module):
         return out
 
 
-def conv3x3(in_channels: int, out_channels: int, stride: int = 1, bias=False) -> nn.Module:
+def conv3x3(in_channels: int, out_channels: int, kernel_size: int = 3, stride: int = 1, bias=False, depth_separable=
+True, padding=1) -> nn.Module:
     """
     Create specific version of Depthwise_separable_conv with kernel equal 3.
     Args:
         in_channels: In channels of the input tensor
         out_channels: Out channels of the output tensor.
+        kernel_size: The kernel size.
         stride: The stride.
         bias: Whether to use the bias.
+        depth_separable: Whether to use the more efficient version.
+        padding: What padding to use.
 
     Returns: Module that performs the conv3x3.
 
     """
+    if depth_separable:
+        return Depthwise_separable_conv(channels_in=in_channels, channels_out=out_channels, kernel_size=kernel_size,
+                                        stride=stride,
+                                        bias=bias, padding=padding)
+    else:
+        return nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=stride,
+                         bias=bias, padding=padding)
 
-    return Depthwise_separable_conv(channels_in=in_channels, channels_out=out_channels, kernel_size=3, stride=stride,
-                                    bias=bias)
 
-
-def conv3x3up(in_channels: int, out_channels: int, size: tuple, upsample=False) -> nn.Module:
+def conv3x3up(in_channels: int, out_channels: int, size: tuple, upsample=False, depth_separable=True,
+              padding=1) -> nn.Module:
     """
     Upsampling version of Conv3x3.
     Args:
@@ -76,7 +84,10 @@ def conv3x3up(in_channels: int, out_channels: int, size: tuple, upsample=False) 
     Returns: Module that upsample the tensor.
 
     """
-    layer = conv3x3(in_channels=in_channels, out_channels=out_channels)  # Changing the number of channels.
+    layer = conv3x3(in_channels=in_channels, out_channels=out_channels, depth_separable=depth_separable,
+                    padding=padding)  #
+    # Changing the number of
+    # channels.
     if upsample:  # Adding upsample layer.
         layer = nn.Sequential(nn.Upsample(size=size, mode='bilinear', align_corners=False),
                               layer)  # Upsample the inner dimensions of the tensor.

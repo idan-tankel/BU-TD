@@ -5,15 +5,14 @@ Output distributions KL divergence.
 """
 import argparse
 import sys
-from typing import Union
+from typing import Optional
 
 import torch
 import torch.nn as nn
-from torch import Tensor
-
 from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
 from Baselines_code.baselines_utils import construct_flag
 from Data_Creation.src.Create_dataset_classes import DsType
+from torch import Tensor
 from training.Data.Data_params import RegType
 from training.Data.Structs import inputs_to_struct, outs_to_struct
 from training.Utils import compose_Flag
@@ -32,7 +31,7 @@ class LwF(Base_plugin):
     When used with multi-headed models, all heads are distilled.
     """
 
-    def __init__(self, opts: argparse, prev_model: Union[dict, None] = None):
+    def __init__(self, opts: argparse, prev_model: Optional[dict] = None):
         """
         Args:
             opts: The model opts.

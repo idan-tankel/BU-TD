@@ -6,20 +6,19 @@ import os
 import pickle
 import sys
 from pathlib import Path
-from typing import Union
+from typing import Optional
 
 from torch.utils.data import DataLoader
+from Data_params import Flag
+from Structs import Task_to_struct
 
-from training.Data.Data_params import Flag
-from training.Data.Structs import Task_to_struct
-
-sys.path.append(os.path.join(Path(__file__).parents[2], 'Data_Creation/src'))
+sys.path.append(os.path.join(Path(__file__).parents[2], 'Data_Creation/'))
 
 
 # Return the datasets and dataloaders.
 
 def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, task: list[Task_to_struct],
-                                      data: Union[None, type] = None) -> dict:
+                                      data: Optional[type] = None) -> dict:
     """
     Getting the train,test,val(if exists) datasets.
     Args:
@@ -33,12 +32,12 @@ def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, task: lis
     Data_loader_dict = {}
     # Import 'Non-guided' dataset.
     if opts.model_flag is Flag.NOFLAG:
-        from training.Data.Datasets import DatasetNonGuided as dataset
+        from Datasets import DatasetNonGuided as dataset
     # Import 'guided' dataset.
     elif opts.model_flag is Flag.CL or opts.model_flag is Flag.Read_argument:
-        from training.Data.Datasets import DatasetGuidedSingleTask as dataset
+        from Datasets import DatasetGuidedSingleTask as dataset
     elif opts.model_flag is Flag.TD:
-        from training.Data.Datasets import DatasetGuidedInterleaved as dataset
+        from Datasets import DatasetGuidedInterleaved as dataset
     else:
         raise Exception("You must implement a dataset object to support that model type.")
     if data is not None:

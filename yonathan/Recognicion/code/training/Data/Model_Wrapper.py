@@ -13,11 +13,10 @@ from pytorch_lightning import LightningModule
 from torch import Tensor
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
-
-from training.Data.Checkpoints import CheckpointSaver
-from training.Data.Data_params import Flag, DsType
-from training.Modules.Batch_norm import store_running_stats
-from training.Utils import create_optimizer_and_scheduler, preprocess
+from Checkpoints import CheckpointSaver
+from Data_params import Flag, DsType
+from ..Modules.Batch_norm import store_running_stats
+from ..Utils import create_optimizer_and_scheduler, preprocess
 
 
 # Define the model wrapper class.

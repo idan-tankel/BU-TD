@@ -3,16 +3,15 @@ Here we define and perform  a composition of tasks sequentially as BU-TD model a
 """
 import os
 from pathlib import Path
-from typing import Union
+from typing import Optional
 
 from torch.utils.data import DataLoader
-
 from training.Data.Get_dataset import get_dataset_for_spatial_relations
 from training.Data.Parser import GetParser
 from training.Data.Structs import Task_to_struct
 from training.Modules.Create_Models import create_model
 from training.Modules.Models import *
-from training.Utils import preprocess, tuple_direction_to_index, load_model
+from training.Utils import preprocess, tuple_direction_to_index
 
 
 class ComposeModel(nn.Module):
@@ -46,7 +45,7 @@ class ComposeModel(nn.Module):
         prediction = prediction.classifier.argmax(dim=1)
         return prediction
 
-    def Create_new_flag(self, prediction: Union[Tensor, None], direction: tuple, char: Union[Tensor, None],
+    def Create_new_flag(self, prediction: Optional[Tensor], direction: tuple, char: Optional[Tensor],
                         direction_id: int) -> Tensor:
         """
         Create the new flag.
@@ -89,7 +88,7 @@ class ComposeModel(nn.Module):
         prediction = None
         for direction_idx, direction in enumerate(directions):
             # TODO - THROW AWAY.
-            #            load_model(model, parser.results_dir,
+            #            load_model(model, opts.results_dir,
             #             f'Model_{direction}_single_base/BUTDModel_best_direction=[{direction}].pt')
 
             if direction_idx == 0:
@@ -145,7 +144,7 @@ ds_type = DsType.Fashionmnist
 
 parser = GetParser(model_flag=Flag.CL, ds_type=ds_type)
 model: BUTDModel = create_model(parser)
-# load_model(model, parser.results_dir, 'Model_(1, 0)_single_base/BUTDModel_best_direction=[(1, 0)].pt')
+# load_model(model, opts.results_dir, 'Model_(1, 0)_single_base/BUTDModel_best_direction=[(1, 0)].pt')
 comp_model = ComposeModel(opts=parser, butd_model=model)
 project_path = Path(__file__).parents[3]
 data_path = os.path.join(project_path, f'data/{str(ds_type)}/samples/(3,3)_Image_Matrix')

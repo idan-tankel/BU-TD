@@ -12,7 +12,6 @@ from avalanche.evaluation.metrics.accuracy import Accuracy
 from avalanche.evaluation.metrics.mean import Mean
 from avalanche.training.templates.supervised import SupervisedTemplate
 from torch import Tensor
-
 from training.Data.Data_params import Flag
 from training.Data.Structs import inputs_to_struct, outs_to_struct
 from training.Metrics.Accuracy import multi_label_accuracy_weighted, multi_label_accuracy

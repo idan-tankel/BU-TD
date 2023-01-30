@@ -4,19 +4,18 @@ Support backward, penalty, and model saving.
 """
 import argparse
 import copy
-from typing import Union
+from typing import Optional
 
 import torch.nn as nn
+from Baselines_code.baselines_utils import RegType
 from avalanche.training.plugins.strategy_plugin import SupervisedPlugin
 from avalanche.training.templates.supervised import SupervisedTemplate as Regularization_strategy
+from avalanche.training.utils import freeze_everything
 from torch import Tensor
-
-from Baselines_code.baselines_utils import RegType
 from training.Data.Get_dataset import get_dataset_for_spatial_relations
 from training.Data.Structs import Task_to_struct
 from training.Data.Structs import inputs_to_struct
 from training.Modules.Create_Models import create_model
-from avalanche.training.utils import freeze_everything
 
 
 class Base_plugin(SupervisedPlugin):
@@ -52,7 +51,7 @@ class Base_plugin(SupervisedPlugin):
         """
         return self.reg_factor * reg_loss + (1 - self.reg_factor) * ce_loss
 
-    def penalty(self, model: nn.Module, mb_x: inputs_to_struct, **kwargs: Union[dict, None]):
+    def penalty(self, model: nn.Module, mb_x: inputs_to_struct, **kwargs: Optional[dict]):
         """
         The penalty.
         Args:
@@ -62,7 +61,7 @@ class Base_plugin(SupervisedPlugin):
         """
         raise NotImplementedError
 
-    def before_backward(self, strategy: Regularization_strategy, **kwargs: Union[dict, None]) -> None:
+    def before_backward(self, strategy: Regularization_strategy, **kwargs: Optional[dict]) -> None:
         """
         Summing all losses together.
         Args:

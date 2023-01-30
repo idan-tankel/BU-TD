@@ -9,13 +9,12 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch import Tensor
-
-from training.Data.Data_params import Flag, DsType
-from training.Data.Structs import inputs_to_struct, outs_to_struct
-from training.Modules.Heads import MultiTaskHead, OccurrenceHead
-from training.Modules.Model_Blocks import BUInitialBlock, init_module_weights, InitialEmbeddingBlock
-from training.Modules.Module_Blocks import Depthwise_separable_conv, Modulation_and_Lat
-from training.Utils import get_laterals, tuple_direction_to_index
+from ..Data.Data_params import Flag, DsType
+from ..Data.Structs import inputs_to_struct, outs_to_struct
+from ..Modules.Heads import MultiTaskHead, OccurrenceHead
+from ..Modules.Model_Blocks import BUInitialBlock, init_module_weights, InitialEmbeddingBlock
+from ..Modules.Module_Blocks import Modulation_and_Lat, conv3x3
+from ..Utils import get_laterals, tuple_direction_to_index
 
 
 class BUStreamShared(nn.Module):
@@ -34,9 +33,11 @@ class BUStreamShared(nn.Module):
         self.opts = opts  # The model options.
         self.block = opts.bu_shared_block_type  # The block type.
         Model_inshape = np.array(opts.inshape)  # The image resolution.
-        self.conv1 = Depthwise_separable_conv(channels_in=Model_inshape[0], channels_out=opts.nfilters[0],
-                                              kernel_size=7, stride=opts.strides[0],
-                                              padding=3)  # The first conv layer as in ResNet.
+        self.conv1 = conv3x3(in_channels=Model_inshape[0], out_channels=opts.nfilters[0],
+                             kernel_size=opts.ks[0], stride=opts.strides[0],
+                             padding=opts.pad[0], depth_separable=opts.depthwise_separable)  # The
+        # first
+        # conv layer as in ResNet.
         # The first shape after Conv1.
         inshape = np.array([opts.nfilters[0], np.int(np.ceil(Model_inshape[1] / opts.strides[0])),
                             np.int(np.ceil(Model_inshape[2] / opts.strides[0]))])
@@ -412,6 +413,9 @@ class BUTDModel(nn.Module):
         self.trained_tasks.append(task)
 
     def feature_extractor(self):
+        """
+        Returns: The feature extractor params.
+        """
         return nn.ModuleList([self.bumodel1, self.bumodel2, self.tdmodel])
 
     def get_specific_head(self, task_id: int, direction_tuple: tuple[int, int]) -> list[nn.Parameter]:

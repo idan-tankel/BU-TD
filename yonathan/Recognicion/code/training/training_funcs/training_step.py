@@ -7,7 +7,6 @@ from pathlib import Path
 import pytorch_lightning as pl
 import torch.nn.modules as Module
 from pytorch_lightning.loggers import WandbLogger
-
 from training.Data.Checkpoints import CheckpointSaver
 from training.Data.Get_dataset import get_dataset_for_spatial_relations
 from training.Data.Model_Wrapper import ModelWrapped
@@ -39,7 +38,7 @@ def Get_checkpoint_and_logger(opts: argparse, ds_type, task: list[Task_to_struct
     # The checkpoint-saver.
     Checkpoint_saver = CheckpointSaver(
         dirpath=os.path.join(results_dir,
-                             f'Model_use_reset_{str(task[0].direction)}_wd_{str(opts.wd)}_base_lr_'
+                             f'Model_seperate_train_test_{str(task[0].direction)}_wd_{str(opts.wd)}_base_lr_'
                              f'{opts.base_lr}_max_lr_{opts.max_lr}_'
                              f'epoch_{epoch}_option_bs_{opts.bs}_use_emb_{opts.use_embedding}_ns_{opts.ns}_nfilters_'
                              f'{opts.nfilters}_initial_tasks_{opts.initial_directions[0].unified_task}'))
@@ -66,7 +65,7 @@ def Get_sample_path(project_path: str, ds_type: DsType, task: list[Task_to_struc
     else:
         image_tuple = "(1,6)"
     # The file format.
-    data_path = os.path.join(project_path, f'data/{str(ds_type)}/samples/{image_tuple}_Image_Matrix')
+    data_path = os.path.join(project_path, f'data/{str(ds_type)}/samples/(3,3)_Image_Matrix_train')
     if ds_type is DsType.Omniglot:
         data_path += f"{task[0].task}"
     return data_path
@@ -97,6 +96,13 @@ def train_step(opts: argparse, model: Module, training_flag: Training_flag, task
                                  direction_tuple=task[0].direction,
                                  task_id=task[0].task,
                                  nbatches_train=len(DataLoaders['train_dl']), train_ds=DataLoaders['train_ds'])
+    load = False
+    if load:
+        wrapped_model.load_model(model_path='Model_seperate_train_test_(1, 0)_wd_1e-05_base_lr_0.0002_max_lr_0.002_epoch_0_option_bs_64_use_emb'
+                                            '_True_ns_[1, 1, 1]_nfilters_[64, 96, 128, 256]_initial_tasks_(0, (1, '
+                                            '0))/BUTDModel_epoch9.pt')
+        acc =  wrapped_model.Accuracy(DataLoaders['train_dl'])
+        print(acc)
     # Train the model.
     trainer.fit(wrapped_model, train_dataloaders=DataLoaders['train_dl'], val_dataloaders=DataLoaders['test_dl'])
     # Return the trained model, and the data-loaders.

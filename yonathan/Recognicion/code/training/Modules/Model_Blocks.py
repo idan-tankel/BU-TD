@@ -2,19 +2,16 @@
 Here we define the Basic BU, TD, BU shared blocks.
 """
 import argparse
-from typing import Iterator, Union
+from typing import Iterator, Optional
 
 import numpy as np
 import torch
 import torch.nn as nn
 from torch import Tensor
-
-from training.Data.Data_params import Flag
-from training.Modules.Module_Blocks import conv3x3, conv1x1, conv3x3up, \
+from ..Data.Data_params import Flag
+from ..Modules.Module_Blocks import conv3x3, conv1x1, conv3x3up, \
     Modulation_and_Lat, Modulation
-from training.Utils import compose_Flag
-from training.Utils import flag_to_idx
-from training.Utils import get_laterals
+from ..Utils import compose_Flag, flag_to_idx, get_laterals
 
 
 # Here we define the Basic BU, TD, BU shared blocks.
@@ -39,9 +36,13 @@ class BasicBlockBUShared(nn.Module):
         self.in_channels = in_channels  # The input channel dimension.
         self.out_channels = out_channels  # The output channel dimension.
         self.use_lateral = opts.use_lateral_tdbu  # Whether to create the BU -> TD laterals.
-        self.conv1 = conv3x3(in_channels=in_channels, out_channels=out_channels,
-                             stride=stride)  # changes the number of channels and the spatial shape.
-        self.conv2 = conv3x3(in_channels=out_channels, out_channels=out_channels)  # preserves the tensor shape.
+        self.conv1 = conv3x3(in_channels=in_channels, out_channels=out_channels, stride=stride,
+                             depth_separable=opts.depthwise_separable)  # changes the
+        # number of
+        # channels and the
+        # spatial shape.
+        self.conv2 = conv3x3(in_channels=out_channels, out_channels=out_channels, depth_separable=
+        opts.depthwise_separable)  # preserves the tensor shape.
         self.downsample = None
         if stride != 1 or in_channels != out_channels * BasicBlockBUShared.expansion:
             # performs downsmaple on the lateral connection to match the shape after conv1.
@@ -83,7 +84,7 @@ class BUInitialBlock(nn.Module):
                                                          nfilters=opts.nfilters[
                                                              0])  # Skip connection from the end of the TD stream.
 
-    def forward(self, x: Tensor, flags, laterals_in: Union[list, None]) -> Tensor:
+    def forward(self, x: Tensor, flags, laterals_in: Optional[list]) -> Tensor:
         """
         Args:
             x: The images.
@@ -108,7 +109,7 @@ class BasicBlockBU(nn.Module):
     """
 
     def __init__(self, opts: argparse, shared: nn.Module, block_inshapes: Tensor, is_bu2: bool,
-                 task_embedding: Union[list, None] = None) -> None:
+                 task_embedding: Optional[list]) -> None:
         """
         Args:
             opts: The model options.
@@ -183,7 +184,7 @@ class BasicBlockBU(nn.Module):
             x = self.lat1(x=x, flags=flags, lateral=lateral1_in)  # Perform first lateral skip connection.
         laterals_out.append(x)
         inp = x  # Save the inp for the skip to the end of the block
-        x = self.conv_block1[0](x=x)  # Perform first Conv Block.
+        x = self.conv_block1[0](x)  # Perform first Conv Block.
         x = self.conv_block1[1](inputs=x, flags=flags)
         x = self.conv_block1[2](input=x)
         direction_flag, _, _ = compose_Flag(opts=self.opts, flags=flags)  # Get the task flag.
@@ -195,7 +196,7 @@ class BasicBlockBU(nn.Module):
             x = self.lat2(x=x, flags=flags, lateral=lateral2_in)  # Perform second lateral skip connection.
 
         laterals_out.append(x)
-        x = self.conv_block2[0](x=x)  # Perform second Conv Block.
+        x = self.conv_block2[0](x)  # Perform second Conv Block.
         x = self.conv_block2[1](inputs=x, flags=flags)
         x = self.conv_block2[2](input=x)
         if self.use_emb:  # Perform the second task embedding if needed.
@@ -311,11 +312,13 @@ class BasicBlockTD(nn.Module):
             self.lat1 = Modulation_and_Lat(opts=opts, nfilters=in_channels)  # The first lateral connection.
             self.lat2 = Modulation_and_Lat(opts=opts, nfilters=in_channels)  # The second lateral connection.
             self.lat3 = Modulation_and_Lat(opts=opts, nfilters=out_channels)  # The third lateral connection.
-        self.conv_block1 = nn.Sequential(conv3x3(in_channels=in_channels, out_channels=in_channels),
+        self.conv_block1 = nn.Sequential(conv3x3(in_channels=in_channels, out_channels=in_channels, depth_separable=
+        opts.depthwise_separable),
                                          norm_layer(opts=opts, num_channels=in_channels),
                                          activation_fun())
         self.conv_block2 = nn.Sequential(
-            conv3x3up(in_channels=in_channels, out_channels=out_channels, size=size, upsample=stride > 1),
+            conv3x3up(in_channels=in_channels, out_channels=out_channels, size=size, upsample=stride > 1,
+                      depth_separable=opts.depthwise_separable),
             norm_layer(opts=opts, num_channels=out_channels))
         self.relu3 = activation_fun()  # The third AF.
         out_channels *= BasicBlockTD.expansion
@@ -350,7 +353,7 @@ class BasicBlockTD(nn.Module):
             x = self.lat1(x=x, flags=flags, lateral=lateral1_in)  # perform the first lateral connection.
         laterals_out.append(x)
         inp = x  # store the input from the skip to the end of the block.
-        x = self.conv_block1[0](x=x)  # Perform the first conv block.
+        x = self.conv_block1[0](x)  # Perform the first conv block.
         x = self.conv_block1[1](inputs=x, flags=flags)
         x = self.conv_block1[2](input=x)
         if laterals is not None:

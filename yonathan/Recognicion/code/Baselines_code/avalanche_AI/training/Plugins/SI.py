@@ -7,14 +7,13 @@ quadratic loss.
 import argparse
 import copy
 import sys
-from typing import Union
+from typing import Optional
 
 import torch
 import torch.nn as nn
-from avalanche.training.templates.supervised import SupervisedTemplate
-
 from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
 from Baselines_code.baselines_utils import compute_quadratic_loss
+from avalanche.training.templates.supervised import SupervisedTemplate
 from training.Data.Data_params import RegType
 from training.Data.Structs import inputs_to_struct
 
@@ -27,7 +26,7 @@ class SI(Base_plugin):
     Stores for each parameter its importance.
     """
 
-    def __init__(self, opts: argparse, prev_checkpoint: Union[dict, None] = None, eps=1e-7):
+    def __init__(self, opts: argparse, prev_checkpoint: Optional[dict], eps=1e-7):
         """
         Args:
             opts: The model opts.

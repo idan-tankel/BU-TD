@@ -5,13 +5,12 @@ The L2 feature distance.
 """
 import argparse
 import sys
-from typing import Union
+from typing import Optional
 
 import torch
 import torch.nn as nn
-from torch import Tensor
-
 from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
+from torch import Tensor
 from training.Data.Data_params import RegType
 from training.Data.Structs import inputs_to_struct
 
@@ -32,7 +31,7 @@ class LFL(Base_plugin):
     This plugin does not use task identities.
     """
 
-    def __init__(self, opts: argparse, prev_checkpoint: Union[dict, None] = None):
+    def __init__(self, opts: argparse, prev_checkpoint: Optional[dict]):
         """
         Create LFL plugin, if prev_model is not None, we copy its parameters.
         Args:

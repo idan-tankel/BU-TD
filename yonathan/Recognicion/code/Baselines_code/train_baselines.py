@@ -13,11 +13,10 @@ from Baselines_code.baselines_utils import Get_updated_opts, Get_samples_data
 from training.Data.Structs import Task_to_struct
 from training.Utils import *
 from baselines_utils import load_model
-from typing import Union
 from training.Modules.Models import *
 
 
-def main(reg_type: Union[RegType, None], ds_type: DsType, new_task, load):
+def main(reg_type: RegType, ds_type: DsType, new_task, load):
     """
     Args:
         reg_type: The regularization type.

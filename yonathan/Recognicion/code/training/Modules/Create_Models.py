@@ -4,7 +4,7 @@ Here we create the model type according to model type.
 import argparse
 from typing import Union
 
-from training.Modules.Models import ResNet, BUTDModel
+from ..Modules.Models import ResNet, BUTDModel
 
 
 def create_model(opts: argparse) -> Union[ResNet, BUTDModel]:

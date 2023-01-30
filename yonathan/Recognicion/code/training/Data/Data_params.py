@@ -7,15 +7,17 @@ import os.path
 from enum import Enum, auto
 from pathlib import Path
 from typing import Callable
-from typing import Union
-
+from typing import Optional
+import sys
 import numpy as np
-
-from Data_Creation.src.Create_dataset_classes import DsType  # Import the Data_Creation set types.
-from training.Data.Structs import Task_to_struct
-from training.Metrics.Accuracy import multi_label_accuracy, multi_label_accuracy_weighted
-from training.Metrics.Loss import multi_label_loss_weighted, multi_label_loss
-from training.Utils import get_omniglot_dictionary, tuple_direction_to_index
+sys.path.append(os.path.join(Path(__file__).parents[2], 'Data_Creation/'))
+from Data_Creation.src.Create_dataset_classes import DsType
+#from ...D
+#from ...Data_Creation.src.Create_dataset_classes import DsType  # Import the Data_Creation set types.
+from .Structs import Task_to_struct
+from ..Metrics.Accuracy import multi_label_accuracy, multi_label_accuracy_weighted
+from ..Metrics.Loss import multi_label_loss_weighted, multi_label_loss
+from ..Utils import get_omniglot_dictionary, tuple_direction_to_index
 
 
 # Define the Flag Enums, and Dataset specification and baseline methods.
@@ -113,7 +115,7 @@ class EmnistDataset(GenericDataParams):
 
         """
         super(EmnistDataset, self).__init__(flag_at=flag_at, ds_type=DsType.Emnist, num_x_axis=2, num_y_axis=2)
-        self.image_size = [130, 200]  # The Emnist image size.
+        self.image_size = [3, 130, 200]  # The Emnist image size.
         # The initial indexes.
         self.initial_directions = [Task_to_struct(task=0, direction=(1, 0))]
         initial_directions = [
@@ -144,10 +146,40 @@ class FashionmnistDataset(GenericDataParams):
         super(FashionmnistDataset, self).__init__(flag_at=flag_at, ds_type=DsType.Fashionmnist)
         self.nclasses = {i: 10 for i in
                          range(self.ndirections)}  # The same as Emnist, just we have just 10 classes in the dataset.
-        self.image_size = [112, 130]  # The FashionMnist image size.
+        self.image_size = [3, 112, 130]  # The FashionMnist image size.
         self.epoch_dictionary = {(0, (1, 0)): 60, (0, (-1, 0)): 30, (0, (0, 1)): 30, (0, (0, -1)): 30}
         self.new_tasks = [[Task_to_struct(task=0, direction=(-1, 0))], [Task_to_struct(task=0, direction=(0, 1))],
                           [Task_to_struct(task=0, direction=(0, -1))]]
+
+
+class Cifar10Dataset(GenericDataParams):
+    """
+    The Emnist dataset specification.
+    """
+
+    def __init__(self, flag_at: Flag):
+        """
+        Args:
+            flag_at: The model flag.
+
+        """
+        super(Cifar10Dataset, self).__init__(flag_at=flag_at, ds_type=DsType.cifar10, num_x_axis=2, num_y_axis=2)
+        self.image_size = [3, 96, 96]  # The Emnist image size.
+        self.nclasses = {i: 10 for i in
+                         range(self.ndirections)}  # The same as Emnist, just we have just 10 classes in the dataset.
+        # The initial indexes.
+        self.initial_directions = [Task_to_struct(task=0, direction=(1, 0))]
+        initial_directions = [
+            tuple_direction_to_index(num_x_axis=self.num_x_axis, num_y_axis=self.num_y_axis, direction=task.direction,
+                                     ndirections=self.ndirections)[0]
+            for task in self.initial_directions]
+        # The number of heads.
+        self.num_heads = [1 if direction not in initial_directions else len(self.initial_directions) for direction in
+                          range(self.ndirections)]
+        self.new_tasks = [[Task_to_struct(task=0, direction=(-1, 0))], [Task_to_struct(task=0, direction=(0, 1))],
+                          [Task_to_struct(task=0, direction=(0, -1))]]
+        # To have better accuracy as in the paper you may increase the number of epochs.
+        self.epoch_dictionary = {(0, (1, 0)): 70, (0, (-1, 0)): 30, (0, (0, 1)): 30, (0, (0, -1)): 30}
 
 
 class OmniglotDataset(GenericDataParams):
@@ -168,7 +200,7 @@ class OmniglotDataset(GenericDataParams):
         self.initial_tasks = initial_tasks  # The number of languages we want to use.
         self.ntasks = 51  # We have 51 tasks.
         self.use_bu1_loss = False  # As there are many classes we don't use the bu1 loss.
-        self.image_size = [55, 200]  # The Omniglot image size.
+        self.image_size = [3, 55, 200]  # The Omniglot image size.
         raw_data_path = os.path.join(self.project_path, 'data/Omniglot/RAW/omniglot-py/Unified')  # The raw data path.
         self.nclasses = get_omniglot_dictionary(self.initial_tasks,
                                                 raw_data_path)  # Computing for each language its number of characters.
@@ -201,7 +233,7 @@ class AllDataSetOptions:
     """
 
     def __init__(self, ds_type: DsType, flag_at: Flag,
-                 initial_task_for_omniglot_only: Union[int, None] = None):
+                 initial_task_for_omniglot_only: Optional[int]):
         """
         Given dataset type returns its associate Dataset specification.
         Args:
@@ -218,3 +250,5 @@ class AllDataSetOptions:
         if ds_type is DsType.Omniglot:
             self.data_obj = OmniglotDataset(flag_at=flag_at,
                                             initial_tasks=initial_task_for_omniglot_only)  # Omniglot.
+        if ds_type is DsType.cifar10:
+            self.data_obj = Cifar10Dataset(flag_at=flag_at)

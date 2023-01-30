@@ -5,16 +5,15 @@ And regularizes by quadratic loss.
 """
 import argparse
 import sys
-from typing import Union
+from typing import Optional
 
 import torch
 import torch.nn as nn
+from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
+from Baselines_code.baselines_utils import compute_quadratic_loss, compute_fisher_information_matrix, RegType
 from avalanche.training.templates.supervised import SupervisedTemplate as Regularization_strategy
 from torch import Tensor
 from torch.utils.data import DataLoader
-
-from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
-from Baselines_code.baselines_utils import compute_quadratic_loss, compute_fisher_information_matrix, RegType
 
 sys.path.append(r'/')
 
@@ -25,8 +24,8 @@ class EWC(Base_plugin):
     Stores for each parameter its importance.
     """
 
-    def __init__(self, opts: argparse, prev_checkpoint: Union[None, dict] = None,
-                 load_from: Union[str, None] = None):
+    def __init__(self, opts: argparse, prev_checkpoint: Optional[dict] = None,
+                 load_from: Optional[str] = None):
         """
         Args:
             opts: The model opts.

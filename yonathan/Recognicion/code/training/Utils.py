@@ -7,9 +7,8 @@ from typing import Iterator, Optional
 
 import torch
 import torch.optim as optim
-from torch import Tensor
-
 from Data_Creation.src.Create_dataset_classes import Sample
+from torch import Tensor
 
 
 def folder_size(path: str) -> int:
@@ -136,7 +135,7 @@ def create_optimizer_and_scheduler(opts: argparse, learned_params: list, nbatche
                                                 step_size_up=nbatches // 2,
                                                 cycle_momentum=False)
     else:
-        scheduler = optim.lr_scheduler.StepLR(optimizer=optimizer, step_size=nbatches, gamma=0.9)
+        scheduler = optim.lr_scheduler.MultiStepLR(optimizer=optimizer, milestones=[100,150],last_epoch=-1)
 
     return optimizer, scheduler
 
