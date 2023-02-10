@@ -42,3 +42,26 @@ wandb*
 lightning_logs*
 .vscode/launch.json
 .vscode/launch.json
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# data folders
+persons/data/avatars/samples/
+persons/data/results/
+emnist/data/emnist/emnist_raw/
+emnist/data/emnist/samples/
+emnist/data/results/
+*.pkl

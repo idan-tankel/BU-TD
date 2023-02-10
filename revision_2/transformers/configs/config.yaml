@@ -1,0 +1,93 @@
+runningSpecification:
+  isToFit: True
+  interactiveSession: False
+  taskName: "instructions"
+  #  taskName: "right_of_instructions"
+  #  taskName: "right_of"
+  model:
+    transformerModelName: 'pit'
+    transformerModelImplementation: 'pit_ti_224'
+    #    transformerModelName: 'vit_base_patch16_224'
+    transformerModelInputShape: [ 3, 224, 224 ]
+    numberOfHeads: 6
+    datasetToUse: 'emnist'
+    train: True
+    inference: False
+    isParallel: False # If true - should use different folders - should save it with time executed
+    trainingOptionsConfig:
+      optimizerName: Adam
+      initialLr: 0.00001318
+      momentum: 0.9
+      weightDecay: 0.0001
+      scaleBatchSize: 1
+      numEpochs: 200
+      numEpochsPretrain: 10
+      checkpointsPerEpoch: 1
+      distributed: False
+    modelSpecifications:
+      dim: 1024
+      depth: 6
+      heads: 16
+      mlpDim: 2048
+      dropout: 0.1
+      embDropout: 0.1
+
+  running:
+    batchSize: 256 # TODO - play with the batch size to ge faster training
+    #    batchSize: 128 # TODO - play with the batch size to ge faster training
+    numWorkers: 8
+    ndirections: 2
+    nsamplesTrain: 200000
+    nsamplesTest: 2000
+    nsamplesVal: 2000
+    isLoadModel: True
+    numberBatchesReport: 10
+    saveModelEveryNEpochs: 100
+    locationToSaveModel: 'data/results'
+    nsamplesTrainQuick: 100
+    nsamplesTestQuick: 100
+    nsamplesValQuick: 100
+    isTestingCode: False
+
+#    shape:
+#      emnist:
+#        LETTER_SIZE = 28
+#        totalBins = 8
+
+
+datasetsSpecs:
+  emnist:
+    baseSamplesDir: "/data/emnist/samples/6_sufficient"
+    nclassesExistence: 47
+    datasetFunctionName: 'EMNISTAdjDatasetNew'
+    inshape: [ 3, 112, 224 ]
+    mean: [ 16.9761, 16.9761, 16.9761 ]
+    std: [ 30.6994, 30.6994, 30.6994 ]
+
+  persons:
+    baseSamplesDir: "/data/avatars/samples/sufficient"
+    nclassesExistence: 47
+    datasetFunctionName: 'AvatarDetailsDatasetRawNew'
+    inshape: [ 3, 112, 224 ] # TODO - calculate
+
+
+savedModelSpecifications:
+  bestModelSavedName: 'best_model'
+  checkpoint: 'checkpoint'
+  currentModelSavedName: 'current_model_'
+  fileExtension: '.pt'
+  checkpointExtension: '.ckpt'
+  locationToSaveModel: 'data/results'
+  isParallel: False
+  isForceCreateModel: False
+  directoryToSaveOutput: 'output'
+  savedWeightsName: 'saved_weights'
+
+growingDataSets:
+  isGrowingDataSets: False
+  locationToSaveOutput: 'growing_dataset' # This in 'locationToSaveModel' , the name will be index(1,2,3...) + size
+  numberOfHops: 30 # Number of hops to take between startDatasetsSize too nsamplesTrain
+  startDatasetsSize: 100
+  nameSaveModels: 'growing_model_'
+
+projectName: 'transformers'
