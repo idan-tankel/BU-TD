@@ -8,17 +8,16 @@ RunningSpecs:
   backbone: CCT # (currently Supported BU_Attention, CCT) the backbone to use. Defined as (`supp.Dataset_and_model_type_specifications.backbone`)
   flag_size:
   isFit: True
-  processed_data: '6_extended' # The name of the model data directory
+  processed_data: '6_extended' # The name of the model result directory
   
 
 Datasets:
-  dataset: Emnist # (supp.Dataset_and_model_type_specifications.DsType) the name of the dataset to use. Supported: 'Emnist,FashionMnist,Omniglot,Cifar10,Cifar100'
+  dataset: Food101 # (supp.Dataset_and_model_type_specifications.DsType) the name of the dataset to use. Supported: 'Emnist,FashionMnist,Omniglot,Cifar10,Cifar100'
   dummyds: False
-  download: False # if so, download the dataset right away
-  dataset_local_folder_name: ../data
-  obj_per_row: 6
+  download: True
+  dataset_local_folder_name: Food101
+  obj_per_row: 1
   obj_per_column: 1
-
 
 Logging:
   ENABLE_LOGGING: True
@@ -52,12 +51,13 @@ Losses:
 Models:
   features: "all"
   num_heads: "only_features"
-  inshape: [3, 32, 32] # `[int,int,int]` the spahe of the incoming data. The inshape being a list rather than a tuple 
+  inshape: [3, 224, 224] # `[int,int,int]` the spahe of the incoming data. The inshape being a list rather than a tuple 
   # is simpler, since a YAML formatter would treat the tuple as a string, and accessing the elements of the tuple would just concat the string '('.
   image_size: 224 # int, the size of the image to be used in the model
   num_channels: 3
-  num_classes: 48 # the number of classes within the dataset TOOD
-  number_of_linear_heads: 6 # each linear head correspond to a class in the MultiHeadAttention
+  num_classes: 101 # the number of classes within the dataset TOOD
+  number_of_linear_heads: 1 # each linear head correspond to a class in the MultiHeadAttention
+  depth: 3 # (`int`) the depth of the model
   strides: [2, 2, 1, 2]
   nfilters: [128,1000] # For CCT
   ns: [0, 1, 1, 1] # the number of blocks in 
@@ -71,8 +71,8 @@ Models:
   orig_relus: False # ('bool') use the original relu activation function in certain places
   norm_layer: BatchNorm # (`nn.Module`) one of the supported normalization layers
   # Notice! this option affected also from training / dataset requirements
-  ntasks: 6 # (`int`) the number of tasks to train on. Will determine the number of heads in the model
-  pretrained_model_name:    # (`str`) the url to the pretrained model in huggingface.co
+  ntasks: 1 # (`int`) the number of tasks to train on. Will determine the number of heads in the model
+  pretrained_model_name:  local/food_101_45.ckpt  # (`str`) the url to the pretrained model in huggingface.co
   #  another option to use 
   
 
@@ -82,20 +82,21 @@ Models:
 
 
 Training:
+  task: vanilla_training
   batch_size: !!int 10 # batch size (int)
-  num_workers: 48
+  num_workers: 10 # number of workers for the dataloader
   epochs: 200
   momentum: 0.9 # (`float`) Momentum of the Adam optimizer
   wd: 0.001 #(`float`) The weight decay of the Adam optimizer
-  lr: 1e-2 # (`float`)the initial learning rate # TODO support in also multiplication
+  lr: 1e-4 # (`float`)the initial learning rate # TODO support in also multiplication
   max_lr: 0.002  # (`float`) the maximum learning rate
   distributed: False # whether to use distributed data within training - accross some GPUs using DistributedSampler of torch
   cycle_lr: True # (`bool`) whether to cycle the learning rate
   base_lr: 0.0005 # (`float`) the base learning rate for the cyclic_adam_optimizer, if used
   optimizer: Adam  # (`str`) the optimizer to use. ['Adam','SGD']
   # checkpoints and saving options
-  load_existing_path: True # (`bool`) whether to load an existing model from the path specified in `path_loading`. Default to false
-  path_loading: "/home/idanta/data/emnist/checkpoints/epoch=192-step=1930000.ckpt" # (`str`) the path to load an existing model, pretrained (should be a .pt file)
+  load_existing_path: False # (`bool`) whether to load an existing model from the path specified in `path_loading`. Default to false
+  path_loading: ../data/emnist/checkpoints/epoch=2-step=4689.ckpt # (`str`) the path to load an existing model, pretrained (should be a .pt file)
   # furthermore, the path should contain model with the same structure, since this is a checkpoint
   save_model: True # (`bool`) whether to save the model
   epoch_save_idx: accuracy # (`str`) the metric to use for saving the model

@@ -14,6 +14,7 @@ RunningSpecs:
 Datasets:
   dataset: Emnist # (supp.Dataset_and_model_type_specifications.DsType) the name of the dataset to use. Supported: 'Emnist,FashionMnist,Omniglot,Cifar10,Cifar100'
   dummyds: False
+  download: !!bool True
 
 Logging:
   ENABLE_LOGGING: True

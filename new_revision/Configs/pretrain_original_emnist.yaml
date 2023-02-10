@@ -8,7 +8,7 @@ RunningSpecs:
   backbone: CCT # (currently Supported BU_Attention, CCT) the backbone to use. Defined as (`supp.Dataset_and_model_type_specifications.backbone`)
   flag_size:
   isFit: True
-  processed_data: '1_extended' # The name of the model data directory
+  processed_data: '1_extended_testing' # The name of the model data directory
   
 
 Datasets:
@@ -55,23 +55,23 @@ Models:
   inshape: [3, 32, 32] # `[int,int,int]` the spahe of the incoming data. The inshape being a list rather than a tuple is simpler, since a YAML formatter would treat the tuple as a string, and accessing the elements of the tuple would just concat the string '('.
   image_size: 32 # int, the size of the image to be used in the model
   num_channels: 3
-  num_classes: 48 # the number of classes within the dataset TOOD
-  number_of_linear_heads: 3 # each linear head correspond to a class in the MultiHeadAttention
   depth: 3
+  num_attention_heads: 2 # (`int`) the number of attention heads in the MultiHeadAttention
+  num_classes: 48 # the number of classes within the dataset TOOD
+  number_of_linear_heads: 1 # each linear head correspond to a class in the MultiHeadAttention
+  ntaskhead_fc: 1 # get out only 1 task!
   strides: [2, 2, 1, 2]
   nfilters: [128,1000] # For CCT
   ns: [0, 1, 1, 1] # the number of blocks in 
   ks: [7, 3, 3, 3] # kernel size 
-  num_attention_heads: 2 # (`int`) the number of attention heads in the MultiHeadAttention
-  ntaskhead_fc: 1 # get out only 1 task!
   use_lateral_tdbu: True  # ('bool') use lateral connections in the TDBU
   use_lateral_butd: True # ('bool') use lateral connections in the TDBU
   # these 2 booleans are connected to the Losses section
+  ntasks: 6 # (`int`) the number of tasks to train on. Will determine the number of heads in the model
   use_final_conv: False
   orig_relus: False # ('bool') use the original relu activation function in certain places
   norm_layer: BatchNorm # (`nn.Module`) one of the supported normalization layers
   # Notice! this option affected also from training / dataset requirements
-  ntasks: 6 # (`int`) the number of tasks to train on. Will determine the number of heads in the model
   pretrained_model_name:   # (`str`) the url to the pretrained model in huggingface.co
 
 
@@ -80,11 +80,13 @@ Models:
 
 
 Training:
+  task: multi_label_classification
   batch_size: 10 # batch size (int)
   num_workers: 48
   epochs: 200
   momentum: 0.9 # (`float`) Momentum of the Adam optimizer
-  wd: 0.001 #(`float`) The weight decay of the Adam optimizer
+  # scheduler = optim.lr_scheduler.CyclicLR(optimizer, base_lr = 0.0001, max_lr = 0.002, step_size_up=nbatches_train//2, step_size_down=None, mode='triangular', gamma=1.0, scale_fn=None, scale_mode='cycle', cycle_momentum=False, last_epoch=-1)
+  wd: 0.0001 #(`float`) The weight decay of the Adam optimizer
   lr: 1e-3 # (`float`)the initial learning rate # TODO support in also multiplication
   max_lr: 0.002  # (`float`) the maximum learning rate
   distributed: False # whether to use distributed data within training - accross some GPUs using DistributedSampler of torch
@@ -92,8 +94,8 @@ Training:
   base_lr: 0.0001 # (`float`) the base learning rate for the cyclic_adam_optimizer, if used
   optimizer: Adam  # (`str`) the optimizer to use. ['Adam','SGD']
   # checkpoints and saving options
-  load_existing_path: False # (`bool`) whether to load an existing model from the path specified in `path_loading`. Default to false
-  path_loading: "/home/idanta/data/emnist/checkpoints/epoch=192-step=1930000.ckpt" # (`str`) the path to load an existing model, pretrained (should be a .pt file)
+  load_existing_path: True # (`bool`) whether to load an existing model from the path specified in `path_loading`. Default to false
+  path_loading: "/home/idanta/data/emnist/checkpoints/good/epoch=14-step=150000.ckpt" # (`str`) the path to load an existing model, pretrained (should be a .pt file)
   # furthermore, the path should contain model with the same structure, since this is a checkpoint
   save_model: True # (`bool`) whether to save the model
   epoch_save_idx: accuracy # (`str`) the metric to use for saving the model

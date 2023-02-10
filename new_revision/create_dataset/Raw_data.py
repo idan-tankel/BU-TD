@@ -1,5 +1,5 @@
 import os
-
+from Create_dataset_classes import DsType
 import numpy as np
 import skimage.io
 import torch.utils.data as data
@@ -7,7 +7,7 @@ import torchvision
 from torchvision import transforms
 
 
-def Get_raw_data(download_dir: str, dataset: str, language_list, raw_data_source) -> tuple:
+def Get_raw_data(download_dir: str, dataset: DsType, language_list, raw_data_source) -> tuple:
     """
     Args:
         download_dir: The directory to download the raw data into.
@@ -102,7 +102,7 @@ def Get_raw_data(download_dir: str, dataset: str, language_list, raw_data_source
 
 
 class DataSet(data.Dataset):
-    def __init__(self, parser, data_dir: str, dataset: str, language_list: list, raw_data_source: str):
+    def __init__(self, parser, data_dir: str, dataset: DsType, language_list: list, raw_data_source: str):
         """
         Args:
             parser: The data-set options.

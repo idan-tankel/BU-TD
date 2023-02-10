@@ -23,6 +23,7 @@ class ModelWrapper(
     def __init__(self, model, config):
         super().__init__()
         # self.loss = nn.CrossEntropyLoss()
+        self.task = config.Training.task
         model.to(device("cuda") if cuda.is_available() else device("cpu"))
         if hasattr(config, 'Models'):
             config = config.Models
@@ -31,17 +32,29 @@ class ModelWrapper(
             nn.Unflatten(
                 1, (config.num_classes, config.number_of_linear_heads)),
         )
+        # this is basically a respahe but wanted the operation as a layer
         self.model = model
 
     def training_step(self, batch, batch_index):
-        x, y = batch['img'], batch['label_task']
+        # self.model.train()
+        if self.task == "multi_label_classification":
+            x, y = batch['img'], batch['label_all']
+            batch_size = y.shape[0]
+            y = y.reshape(batch_size,1) 
+            # for CE loss, we will fold up the other dimention if the examples are grid
+        elif self.task == "vanilla_training":
+            x,y = batch
+            
+        else:
+            x, y = batch['img'], batch['label_task'].gather(index=batch['label_all'].squeeze(1),dim=1)
+            y.squeeze_()
         x_hat = self.model(x)
-        y.squeeze_()
         y.to(device("cuda") if cuda.is_available() else device("cpu"))
-        label_task_by_existence = batch['label_task'].gather(index=batch['label_all'].squeeze(1),dim=1)
-        loss = nn.CrossEntropyLoss(reduction='mean')(x_hat.logits, label_task_by_existence)
+        x_hat.logits.squeeze_()
+        y.squeeze_()
+        loss = nn.CrossEntropyLoss(reduction='mean')(x_hat.logits, y)
+        acc = 1 - (x_hat.logits.argmax(dim=1) - y).count_nonzero() / y.numel()
         pred = x_hat.logits.argmax(dim=1)
-        acc = 1 - (x_hat.logits.argmax(dim=1) - label_task_by_existence).count_nonzero() / label_task_by_existence.numel()
         non_naive_ratio = (pred != 47).sum() / pred.numel()
         self.log('train_loss', loss, on_step=True, on_epoch=True, logger=True)
         self.log('train_acc', acc, on_step=True, on_epoch=True, logger=True)
@@ -61,16 +74,23 @@ class ModelWrapper(
         """
         self.model.eval()
         with no_grad():
-            x, y = batch['img'], batch['label_task']
+            if self.task == "multi_label_classification":
+                x, y = batch['img'], batch['label_all']
+                batch_size = y.shape[0]
+                y = y.reshape(batch_size,1) 
+                # for CE loss, we will fold up the other dimention if the examples are grid
+            elif self.task == "vanilla_training":
+                x,y = batch
+            else:
+                x, y = batch['img'], batch['label_task'].gather(index=batch['label_all'].squeeze(1),dim=1)
+                y.squeeze_()
             x_hat = self.model(x)
-            y.squeeze_()
             y.to(device("cuda") if cuda.is_available() else device("cpu"))
-            z = y * batch['label_existence']
-            label_task_by_existence = batch['label_task'].gather(index=batch['label_all'].squeeze(1),dim=1)
-            loss = nn.CrossEntropyLoss(reduction='mean')(x_hat.logits, label_task_by_existence)
+
+            loss = nn.CrossEntropyLoss(reduction='mean')(x_hat.logits.squeeze(), y.squeeze())
             pred = x_hat.logits.argmax(dim=1)
             acc = 1 - (pred -
-                       label_task_by_existence).count_nonzero() / label_task_by_existence.numel()
+                       y).count_nonzero() / y.numel()
             # this is the distance from the naive classifier - classifing all to the most common class - edge case
             # 47 is the enumeration of the N.A class
             non_naive_ratio = (pred != 47).sum() / pred.numel()
@@ -81,8 +101,20 @@ class ModelWrapper(
         return loss
 
     def configure_optimizers(self):
+        batch_size = 10
         optimizer = Adam(self.parameters(), lr=1e-3)
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min')
+        scheduler = torch.optim.lr_scheduler.CyclicLR(
+            optimizer=optimizer,
+            base_lr = 0.0001,
+            max_lr = 0.002,
+            step_size_up=batch_size//2,
+            step_size_down=None,
+            mode='triangular',
+            gamma=1.0,
+            scale_fn=None,
+            scale_mode='cycle',
+            cycle_momentum=False,
+            last_epoch=-1)
         monitor = 'val_loss'
         return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": monitor}
 

@@ -1,4 +1,4 @@
-from parser import Get_parser
+
 import Create_dataset_classes
 import Create_dataset_funcs
 from Raw_data import DataSet
@@ -7,17 +7,15 @@ from types import SimpleNamespace
 import git
 
 
-def main(ds_type: DataSet, language_list=None, nchars_per_row=6, num_rows_in_the_image=1) -> None:
+def main(ds_type: Create_dataset_classes.DsType, language_list = None, nchars_per_row=6, num_rows_in_the_image=1) -> None:
     """
     Args:
         parser: The dataset options.
         raw_data_set: The raw dataset.
         ds_type: The dataset type.
-        language_list: The language list.
+        language_list: The language list (for omniglot dataset - indices for the languages)
 
     """
-    parser = Get_parser(ds_type, nchars_per_row=nchars_per_row,
-                        num_rows_in_the_image=num_rows_in_the_image)
     parser = get_create_config()
     raw_data_set = DataSet(parser, data_dir='/home/idanta/data/' + ds_type.from_enum_to_str(),  dataset=ds_type,
                            raw_data_source=parser.path_data_raw,  language_list=language_list)  # Getting the raw data.
@@ -64,5 +62,3 @@ def get_create_config():
 
 if __name__ == '__main__':
     main_emnist(1, 1)
-
-

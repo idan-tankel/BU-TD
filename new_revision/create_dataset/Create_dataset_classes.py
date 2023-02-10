@@ -9,10 +9,10 @@ from imgaug import augmenters as iaa
 class DsType(Enum):
     Emnist = auto()
     Kmnist = auto()
-    Omniglot =auto()
-    Fashionmist =auto()
+    Omniglot = auto()
+    Fashionmist = auto()
 
-    def from_enum_to_str(self):
+    def from_enum_to_str(self) -> str:
         if self == DsType.Emnist:
             return "emnist"
         if self == DsType.Kmnist:
@@ -21,9 +21,14 @@ class DsType(Enum):
             return "omniglot"
         if self == DsType.Fashionmist:
             return "fashionmnist"
+        else:
+            print(f"Dataset {type(self)} Is not Supported by DsType class")
+            raise ValueError
+            
+
 
 class DatasetParams:
-    def __init__(self,ds_type:DsType):
+    def __init__(self, ds_type: DsType):
         """
         Args:
             flag_at: The model flag.
@@ -34,14 +39,15 @@ class DatasetParams:
         self.generelize = None
         self.use_only_valid_classes = None
 
+
 class EmnistParams:
-    def __init__(self,ds_type:DsType):
+    def __init__(self, ds_type: DsType):
         super(EmnistParams, self).__init__(ds_type)
         self.minscale = 0.9
-      
+
 
 class Sample:
-    #Class containing all information about the sample, including the image, the flags, the label task.
+    # Class containing all information about the sample, including the image, the flags, the label task.
     def __init__(self, image, sample_id, label_existence, label_ordered, query_part_id, label_task, flag, is_train):
         """
         #Class containing all information about the sample, including the image, the flags, the label task.
@@ -64,8 +70,9 @@ class Sample:
         self.flag = flag
         self.is_train = is_train
 
+
 class ExampleClass:
-    def __init__(self,sampled_chars:list,query_part_id:int,adj_type:int,chars:list):
+    def __init__(self, sampled_chars: list, query_part_id: int, adj_type: int, chars: list):
         """
         Args:
             sampled_chars: The sampled characters
@@ -78,11 +85,13 @@ class ExampleClass:
         self.adj_type = adj_type
         self.chars = chars
 
+
 class DataAugmentClass:
     """
     class performing the augmentation.
     """
-    def __init__(self, seed:int):
+
+    def __init__(self, seed: int):
         """
         Args:
             seed: The seed for the generation.
@@ -91,8 +100,10 @@ class DataAugmentClass:
         color_add_range = int(0.15 * 255)
         rotate_deg = 10
         # translate by -20 to +20 percent (per axis))
-        self.aug = iaa.Sequential([iaa.Affine(translate_percent={"x": (-0.03, 0.03), "y": (-0.1, 0.1)},  rotate=(-rotate_deg, rotate_deg), mode='edge', name='affine'), ], random_state=0)
-        self.aug.append(iaa.Add((-color_add_range, color_add_range)))  # only for the image not the segmentation
+        self.aug = iaa.Sequential([iaa.Affine(translate_percent={
+                                  "x": (-0.03, 0.03), "y": (-0.1, 0.1)},  rotate=(-rotate_deg, rotate_deg), mode='edge', name='affine'), ], random_state=0)
+        # only for the image not the segmentation
+        self.aug.append(iaa.Add((-color_add_range, color_add_range)))
         self.aug_seed = seed
 
     def __call__(self, image):
@@ -112,7 +123,7 @@ class DataAugmentClass:
 
 
 class CharInfo:
-    def __init__(self,parser:argparse, prng:random,label_ids:list,samplei:int,sample_chars:int ):
+    def __init__(self, parser: argparse, prng: random, label_ids: list, samplei: int, sample_chars: int):
         """
         Args:
             parser: The options parser.
@@ -131,10 +142,11 @@ class CharInfo:
         new_size = int(scale * parser.letter_size)
         shift = prng.rand(2) * (maxshift - minshift) + minshift
         y, x = shift.astype(np.int)
-        origr, origc = np.unravel_index(samplei, [parser.num_rows_in_the_image, parser.nchars_per_row])
+        origr, origc = np.unravel_index(
+            samplei, [parser.num_rows_in_the_image, parser.nchars_per_row])
         c = origc + 1  # start from column 1 instead of 0
         r = origr + 1
-        _ , imageh , imagew = parser.image_size
+        _, imageh, imagew = parser.image_size
         stx = c * parser.letter_size + x
         stx = max(0, stx)
         stx = min(stx, imagew - new_size)
@@ -148,9 +160,11 @@ class CharInfo:
         self.scale = scale
         self.location_x = stx
         self.location_y = sty
-        self.edge_to_the_right = origc == parser.nchars_per_row - 1 or samplei == parser.num_characters_per_sample - 1
+        self.edge_to_the_right = origc == parser.nchars_per_row - \
+            1 or samplei == parser.num_characters_per_sample - 1
+
 
 class MetaData:
-    def __init__(self,parser, nsampes_per_data_type_dict):
+    def __init__(self, parser, nsampes_per_data_type_dict):
         self.nsamples_dict = nsampes_per_data_type_dict
         self.parser = parser

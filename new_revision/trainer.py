@@ -1,5 +1,7 @@
 import pytorch_lightning as pl
 from torch import load
+from torch import tensor,int8
+import wandb
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pathlib import Path
@@ -16,17 +18,17 @@ import argparse
 import os
 parser = argparse.ArgumentParser(description="conf file path to run net")
 parser.add_argument('-f', '--file') 
-git_repo = git.Repo(os.getcwd(), search_parent_directories=True)
+git_repo = git.Repo(__file__, search_parent_directories=True)
 git_root = Path(git_repo.working_dir)
 results_dir = rf"{git_root.parent}/data/emnist/results"
 os.makedirs(results_dir, exist_ok=True)
 data_dir = Path(rf"{git_root.parent}/data")
 os.makedirs(data_dir, exist_ok=True)
-checkpoints_dir = rf"{git_root.parent}/data/emnist/checkpoints/good"
+checkpoints_dir = rf"{git_root.parent}/data/emnist/checkpoints"
 os.makedirs(results_dir, exist_ok=True)
 args = parser.parse_args()
 try:
-    file = args.config
+    file = args.file
 except AttributeError:
     file =  "small_vit.yaml"
 
@@ -35,14 +37,32 @@ global_config = Config(experiment_filename=file)
 # transform = [transforms.ToTensor()]
 
 
-####################### Dataset loading ########################
-transform= None
-compatibility_dataset = DatasetAllDataSetTypesAll(root=rf'/home/idanta/data/{global_config.RunningSpecs.processed_data}/train/', opts=global_config,  direction=1,
-                                                  is_train=True, obj_per_row=global_config.Datasets.obj_per_row, obj_per_col=global_config.Datasets.obj_per_column, split=False,nexamples=100000,transforms=transform)
-# TODO change this to the new dataset registry, based on detectron2 ideas
+####################### Dataset Downloader #####################
+if global_config.Datasets.download:
+    # verify the target folder is there
+    assert global_config.Datasets.obj_per_row == global_config.Datasets.obj_per_column == 1, "Direct download using this tool is not supported. Use the `Create_dataset.py`"
+    transform = transforms.Compose([transforms.ToTensor(),transforms.Resize((global_config.Models.image_size,global_config.Models.image_size))])
+    dataset_class = getattr(datasets,global_config.Datasets.dataset)
+    train_dataset = dataset_class(root=rf'../data',download=global_config.Datasets.download,transform=transform,split='train')
+    test_dataset = dataset_class(root=rf'../data',download=global_config.Datasets.download,transform=transform,split='test')
 
-compatibility_dl = DataLoader(compatibility_dataset, batch_size=global_config.Training.batch_size,
-                              num_workers=global_config.Training.num_workers)
+    train_dataloader = DataLoader(train_dataset, batch_size=global_config.Training.batch_size,num_workers=global_config.Training.num_workers,shuffle=True)
+    test_dataloader = DataLoader(test_dataset, batch_size=global_config.Training.batch_size,num_workers=global_config.Training.num_workers) # for now, no split TBD TODO
+
+    
+
+else:
+    transform= None
+    train_dataset = DatasetAllDataSetTypesAll(root=rf'/home/idanta/data/{global_config.RunningSpecs.processed_data}/train/', opts=global_config,  direction=1,
+                                                    is_train=True, obj_per_row=global_config.Datasets.obj_per_row, obj_per_col=global_config.Datasets.obj_per_column, split=False,nexamples=100000,transforms=transform)
+    # TODO change this to the new dataset registry, based on detectron2 ideas
+
+    train_dataloader = test_dataloader = DataLoader(train_dataset, batch_size=global_config.Training.batch_size,
+                                num_workers=global_config.Training.num_workers)
+
+
+
+######################### wandb integration #######################
 wandb_logger = WandbLogger(project="BU_TD",
                            job_type='train', log_model=True, save_dir=results_dir)
 wandb_checkpoints = ModelCheckpoint(
@@ -69,7 +89,7 @@ else:
     )
 model = ModelWrapper(model=model, config=global_config)
 if "local" in str(global_config.Models.pretrained_model_name): #load from huggingface
-    old_model = load(f"{checkpoints_dir}/{global_config.Models.pretrained_model_name.split('/')[-1]}")
+    old_model = load(os.path.join(checkpoints_dir,"good",global_config.Models.pretrained_model_name.split('/')[-1]))
     # load only the vit part from the model
     model.model.vit._load_from_state_dict(state_dict=old_model['state_dict'],prefix='model.vit.',strict=True,missing_keys=[],unexpected_keys=[],error_msgs=[],local_metadata={})
 
@@ -83,5 +103,6 @@ trainer_ckpt = global_config.Training.path_loading if global_config.Training.loa
 if global_config.Training.load_existing_path:
     model.load_state_dict(load(global_config.Training.path_loading)["state_dict"])
 # if the training has a previous checkpoint (differs from loading only model weights - this is also training params and epoch)
-trainer.fit(model=model, train_dataloaders=compatibility_dl,
-            val_dataloaders=compatibility_dl,ckpt_path=trainer_ckpt)
+wandb.save(file)
+trainer.fit(model=model, train_dataloaders=train_dataloader,
+            val_dataloaders=test_dataloader,ckpt_path=trainer_ckpt)

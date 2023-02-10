@@ -51,7 +51,6 @@ def Generate_raw_examples(parser: ArgumentParser, image_ids: list, k: int, ds_ty
     Here we just choose the characters and there label_id (A specific character of all characters with the same label).
     Args:
         parser: The dataset parser.
-        image_ids: The image ids.
         k: The seed for each dataset.
         ds_type: The data-set type.
         cur_nexamples: The number of characters to generate.
@@ -83,11 +82,6 @@ def Generate_raw_examples(parser: ArgumentParser, image_ids: list, k: int, ds_ty
             label_id = prng.randint(0, data_set.num_examples_per_character)
             image_id.append(label_id)
             label_ids.append(label_id)
-        image_id_hash = str(image_id)
-        # TODO bug here
-        if image_id_hash in image_ids:
-            continue
-        image_ids.add(image_id_hash)
         chars = []  # The augmented characters.
         # For each chosen character, we augment it and transform it.
         for samplei in range(num_chars_per_image):
@@ -483,6 +477,7 @@ def create_examples_per_sample(parser: ArgumentParser, prng: random, ds_type: st
         for query_part_id in query_part_ids:
             example = ExampleClass(
                 sample_chars, query_part_id, adj_type, chars)
+            assert example is not None
             examples.append(example)
 
 
@@ -578,12 +573,15 @@ def create_samples(parser: SimpleNamespace, ds_type, raw_data_set: DataSet, lang
 
     num_samples_per_data_type_dict = {}
     # Iterating over all dataset types and generating raw examples for each and then generating samples.
-prob    for k, (ds_type, cur_nexamples) in enumerate(zip(ds_types, nexamples_vec)):
+    for k, (ds_type, cur_nexamples) in enumerate(zip(ds_types, nexamples_vec)):
 
         examples = Generate_raw_examples(
             parser, image_ids, k, ds_type, cur_nexamples, valid_pairs, valid_classes, CG_chars_list, raw_data_set)
         assert examples is not None and len(
             examples) > 0, "no examples created"
+        if cur_nexamples != len(examples):
+            print("could not create the whole number of examples needed for some reason")
+            raise Exception
         cur_nexamples = len(examples)
         num_samples_per_data_type_dict[ds_type] = cur_nexamples
         # print the number of sampled examples.
