@@ -34,6 +34,7 @@ class ModelWrapper(
         )
         # this is basically a respahe but wanted the operation as a layer
         self.model = model
+        self.num_tasks = 4
 
     def training_step(self, batch, batch_index):
         # self.model.train()
@@ -44,7 +45,13 @@ class ModelWrapper(
             # for CE loss, we will fold up the other dimention if the examples are grid
         elif self.task == "vanilla_training":
             x,y = batch
-            
+        
+        elif self.task == "guided":
+            x, y,flag = batch['img'], batch['label_task'].gather(index=batch['label_all'].squeeze(1),dim=1),batch['flag']
+            task_encoding = flag[:,0:self.num_tasks]
+            argument_encoding = flag[:,self.num_tasks:]
+            y.squeeze_()
+
         else:
             x, y = batch['img'], batch['label_task'].gather(index=batch['label_all'].squeeze(1),dim=1)
             y.squeeze_()
