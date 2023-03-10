@@ -9,11 +9,12 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch import Tensor
+
 from ..Data.Data_params import Flag, DsType
 from ..Data.Structs import inputs_to_struct, outs_to_struct
 from ..Modules.Heads import MultiTaskHead, OccurrenceHead
-from ..Modules.Model_Blocks import BUInitialBlock, init_module_weights, InitialEmbeddingBlock
-from ..Modules.Module_Blocks import Modulation_and_Lat, conv3x3
+from ..Modules.Blocks import BUInitialBlock, init_module_weights, InitialEmbeddingBlock, Modulation_and_Lat, \
+    conv3x3
 from ..Utils import get_laterals, tuple_direction_to_index
 
 
@@ -32,11 +33,11 @@ class BUStreamShared(nn.Module):
         super(BUStreamShared, self).__init__()
         self.opts = opts  # The model options.
         self.block = opts.bu_shared_block_type  # The block type.
-        Model_inshape = np.array(opts.inshape)  # The image resolution.
+        Model_inshape = np.array(opts.data_obj.image_size)  # The image resolution.
         self.conv1 = conv3x3(in_channels=Model_inshape[0], out_channels=opts.nfilters[0],
                              kernel_size=opts.ks[0], stride=opts.strides[0],
-                             padding=opts.pad[0], depth_separable=opts.depthwise_separable)  # The
-        # first
+                             padding=opts.pad[0])  #
+        # The first
         # conv layer as in ResNet.
         # The first shape after Conv1.
         inshape = np.array([opts.nfilters[0], np.int(np.ceil(Model_inshape[1] / opts.strides[0])),
@@ -44,19 +45,25 @@ class BUStreamShared(nn.Module):
         self.inshapes = [inshape]  # list that should contain all layer output shapes.
         self.alllayers = []  # All layers list.
         inplanes = opts.nfilters[0]
-        for k in range(len(opts.ns)):  # For each stride create layer of Blocks.
-            nblocks = opts.ns[k]  # The number of blocks in the layer.
+        for k in range(len(opts.num_blocks)):  # For each stride create layer of Blocks.
+            nblocks = opts.num_blocks[k]  # The number of blocks in the layer.
             stride = opts.strides[k + 1]  # The stride.
             filters = opts.nfilters[k + 1]  # The number of filters transforms to.
+            padding = opts.pad[k + 1]
+            kernel_size = opts.ks[k + 1]
             self.alllayers.append(
-                self._make_layer(inplanes=inplanes, planes=filters, nblocks=nblocks, stride=stride))  # Making a layer.
+                self._make_layer(inplanes=inplanes, planes=filters, nblocks=nblocks, stride=stride, padding=padding,
+                                 kernel_size=kernel_size))  #
+            # Making a
+            # layer.
             # Compute the output shape of the layer.
             inshape = np.array([filters, np.int(np.ceil(inshape[1] / stride)),
                                 np.int(np.ceil(inshape[2] / stride))])
             self.inshapes.append(inshape)  # Add the shape to the shapes list.
             inplanes = filters  # Update the future inplanes to be the current filters.
 
-    def _make_layer(self, inplanes: int, planes: int, nblocks: int, stride: int) -> list[nn.Module]:
+    def _make_layer(self, inplanes: int, planes: int, nblocks: int, stride: int, kernel_size: int, padding: int) \
+            -> list[nn.Module]:
         """
         Args:
             inplanes: Channels_in of the layer.
@@ -68,12 +75,17 @@ class BUStreamShared(nn.Module):
         """
         planes = planes * self.block.expansion
         layers = [
-            self.block(opts=self.opts, in_channels=inplanes, out_channels=planes, stride=stride)]  # Create a block.
+            self.block(opts=self.opts, in_channels=inplanes, out_channels=planes, stride=stride,
+                       kernel_size=kernel_size, padding=padding)]
+        # Create a
+        # block.
         for idx in range(0, nblocks - 1):  # Add nblocks - 1 preserving blocks.
-            layers.append(self.block(opts=self.opts, in_channels=planes, out_channels=planes, stride=1))
+            layers.append(self.block(opts=self.opts, in_channels=planes, out_channels=planes, stride=1,
+                                     kernel_size=kernel_size, padding=padding))
         return layers
 
 
+# TODO - DELETE THIS.
 class BUModel(nn.Module):
     """
     Equivalent to Pure ResNet.
@@ -115,7 +127,7 @@ class BUStream(nn.Module):
         super(BUStream, self).__init__()
         self.opts = opts  # Save the model opts.
         self.block = opts.bu_block_type  # The basic block type.
-        self.task_embedding = [[] for _ in range(opts.ndirections)]  # List should contain the task
+        self.task_embedding = [[] for _ in range(opts.data_obj.ndirections)]  # List should contain the task
         # embedding.
         self.inshapes = shared.inshapes  # The output shape of all layers.
         self.use_lateral = opts.use_lateral_tdbu  # Whether to use the TD -> BU2 laterals.
@@ -152,19 +164,20 @@ class BUStream(nn.Module):
             layers.append(layer)  # Add the layer.
         return layers
 
-    def forward(self, inputs: list[Tensor, Tensor, Tensor]) -> tuple[Tensor, list[list[Tensor]]]:
+    def forward(self, inputs: list[inputs_to_struct, Tensor]) -> tuple[Tensor, list[list[Tensor]]]:
         """
         The forward includes processing the input and inserting the lateral connections.
         Args:
-            inputs: The input, the flags, the lateral connection from TD network.
+            inputs: The input, the samples, the lateral connection from TD network.
 
         Returns: The model output + The lateral connections.
 
         """
         # The input is the image, the flag and the lateral connections from the previous stream(if exist).
-        x, flags, laterals_in = inputs
+        samples, laterals_in = inputs
+        x = samples.image
         laterals_out: list[list[Tensor]] = []  # The laterals for the second stream.
-        x: Tensor = self.InitialBlock(x, flags, laterals_in)  # Compute the initial block in ResNet.
+        x: Tensor = self.InitialBlock(x, samples, laterals_in)  # Compute the initial block in ResNet.
         laterals_out.append([x])
         for layer_id, layer in enumerate(self.alllayers):
             layer_lats_out: list[Tensor] = []  # The lateral connections for the next stream.
@@ -173,7 +186,7 @@ class BUStream(nn.Module):
                 # Get the laterals associate with the layer, block_id(if exist).
                 cur_lat_in = get_laterals(laterals=laterals_in, layer_id=lateral_layer_id,
                                           block_id=block_id)
-                x, block_lats_out = block(x=x, flags=flags,
+                x, block_lats_out = block(x=x, samples=samples,
                                           laterals_in=cur_lat_in)  # Compute the block with the lateral connection.
                 layer_lats_out.append(block_lats_out)
             laterals_out.append(layer_lats_out)
@@ -181,7 +194,8 @@ class BUStream(nn.Module):
         lateral_in: Tensor = get_laterals(laterals=laterals_in,
                                           layer_id=len(self.alllayers) + 1)  # The last lateral connection.
         if self.use_lateral and lateral_in is not None:
-            x: Tensor = self.top_lat(x=x, flags=flags, lateral=lateral_in)  # last lateral connection before the end.
+            x: Tensor = self.top_lat(x=x, samples=samples, lateral=lateral_in)  # last lateral connection before the
+            # end.
         laterals_out.append([x])  # Add to laterals.
         x = x.squeeze()  # Squeeze to be a vector.
         return x, laterals_out
@@ -203,7 +217,7 @@ class TDModel(nn.Module):
         self.opts = opts  # Save the opts.
         self.block = opts.td_block_type  # The block type
         self.use_lateral = opts.use_lateral_butd  # Whether to use the BU1 -> TD laterals.
-        self.ntasks = opts.ntasks  # The number of tasks
+        self.ntasks = opts.data_obj.ntasks  # The number of tasks
         self.inshapes = bu_inshapes  # The model layers output.
         self.argument_embedding = [[] for _ in range(self.ntasks)]
         # Only in Omniglot we have several tasks, with different argument embeddings.
@@ -220,12 +234,16 @@ class TDModel(nn.Module):
         # List contain all layers.
         self.alllayers = nn.ModuleList()
         # Create layers.
-        for k in range(len(opts.ns) - 1, -1, -1):
-            nblocks = opts.ns[k]  # The number of blocks in the layer.
+        for k in range(len(opts.num_blocks) - 1, -1, -1):
+            nblocks = opts.num_blocks[k]  # The number of blocks in the layer.
             stride = opts.strides[k + 1]  # The current stride.
             filters = opts.nfilters[k]  # The number of filters.
+            kernel_size = opts.ks[k + 1]
+            padding = opts.pad[k + 1]
             self.alllayers.append(self._make_layer(inplanes=inshape, planes=filters, num_blocks=nblocks, stride=stride,
-                                                   index=k))  # Create the exact opposite layers of the BU1 stream.
+                                                   index=k, kernel_size=kernel_size, padding=padding))
+            # Create the exact opposite
+            # layers of the BU1 stream.
             inshape = filters  # The current output filters, is the next layer input filter.
         # The last lateral connection
         if self.use_lateral:
@@ -236,7 +254,8 @@ class TDModel(nn.Module):
                 self.argument_embedding[j].extend(self.InitialTaskEmbedding.top_td_arg_emb[j].parameters())
         init_module_weights(modules=self.modules())  # Initialize the weights.
 
-    def _make_layer(self, inplanes: int, planes: int, num_blocks: int, stride: int = 1, index: int = 0):
+    def _make_layer(self, inplanes: int, planes: int, num_blocks: int, kernel_size, padding, stride: int = 1,
+                    index: int = 0):
         """
         Args:
             inplanes: The input filters.
@@ -252,15 +271,16 @@ class TDModel(nn.Module):
         block_inshape = self.inshapes[index]
         for i in range(num_blocks - 1):  # Create shape preserving blocks.
             newblock = self.block(opts=self.opts, in_channels=inplanes, out_channels=inplanes, stride=1,
-                                  block_inshape=block_inshape, index=i)
+                                  block_inshape=block_inshape, index=i, kernel_size=kernel_size, padding=padding)
             layers.append(newblock)
         newblock = self.block(opts=self.opts, in_channels=inplanes, out_channels=planes, stride=stride,
                               block_inshape=block_inshape,
-                              index=num_blocks - 1)  # Create upsampling block.
+                              index=num_blocks - 1, kernel_size=kernel_size,
+                              padding=padding)  # Create upsampling block.
         layers.append(newblock)
         return layers
 
-    def forward(self, inputs: tuple[Tensor, Tensor, Tensor]) -> list[Tensor, list[list[Tensor]]]:
+    def forward(self, inputs: tuple[Tensor, inputs_to_struct, Tensor]) -> list[Tensor, list[list[Tensor]]]:
         """
         Args: inputs: The output from the BU1 stream, flag the task+arg flag , laterals_in, the laterals
         from the BU1 stream.
@@ -268,10 +288,11 @@ class TDModel(nn.Module):
         Returns: The TD output, lateral connections for BU2.
 
         """
-        bu_out, flags, laterals_in = inputs
+        bu_out, samples, laterals_in = inputs
+        flags = samples.char_flags
         laterals_out = []
         if self.use_initial_emb:
-            x = self.InitialTaskEmbedding(bu_out=bu_out, flags=flags)  # Compute the initial task
+            x = self.InitialTaskEmbedding(bu_out=bu_out, samples=samples)  # Compute the initial task
             # embedding.
         else:
             x = bu_out
@@ -288,13 +309,13 @@ class TDModel(nn.Module):
                                                   block_id=block_id_rev)[
                                      ::-1]  # Inverting the laterals to match the desired shape.
                 # Compute the block output using x, and the lateral connections.
-                x, block_lats_out = block(x=x, flags=flags, laterals=reverse_cur_lat_in)
+                x, block_lats_out = block(x=x, samples = samples, laterals=reverse_cur_lat_in)
                 layer_lats_out.append(block_lats_out)  # Add the lateral output for the next stream.
             reverse_layer_lats_out = layer_lats_out[::-1]  # Reverse to match the shape for the next stream.
             laterals_out.append(reverse_layer_lats_out)  # Add all the layer's laterals.
         lateral_in = reverse_laterals_in[-1][0] if use_lateral else None
         if lateral_in is not None:
-            x = self.bot_lat(x=x, flags=flags, lateral=lateral_in)  # Apply last lateral connection.
+            x = self.bot_lat(x=x, samples = samples, lateral=lateral_in)  # Apply last lateral connection.
         laterals_out.append([x])
         outs = [x, laterals_out[::-1]]  # Return the stream output and the lateral connections.
         return outs
@@ -316,7 +337,7 @@ class BUTDModel(nn.Module):
         super(BUTDModel, self).__init__()
         self.opts = opts  # Save the model opts.
         self.model_flag = opts.model_flag  # The model type
-        self.use_bu1_loss = opts.use_bu1_loss  # Whether to use the Occurrence loss.
+        self.use_bu1_loss = opts.data_obj.use_bu1_loss  # Whether to use the Occurrence loss.
         self.use_lateral_butd = opts.use_lateral_butd  # Whether to use the BU1 -> TD laterals.
         # Whether to use the TD -> BU2 laterals.
         self.use_lateral_tdbu = opts.use_lateral_tdbu and opts.model_flag is not Flag.NOFLAG
@@ -336,7 +357,7 @@ class BUTDModel(nn.Module):
             bu_shared2 = BUStreamShared(opts=opts)  # Create new shared part.
         self.bumodel2 = BUStream(opts=opts, shared=bu_shared2, is_bu2=True)  # The BU2 stream.
         # To save the taskhead parameters.
-        self.transfer_learning = [[[] for _ in range(opts.ndirections)] for _ in range(opts.ntasks)]
+        self.transfer_learning = [[[] for _ in range(opts.data_obj.ndirections)] for _ in range(opts.data_obj.ntasks)]
         # The task-head to transforms to the number of classes.
         self.Head = MultiTaskHead(opts=opts,
                                   transfer_learning_params=self.transfer_learning)
@@ -355,37 +376,35 @@ class BUTDModel(nn.Module):
         Returns: The output from all streams.
 
         """
-        images = samples.image
-        flags = samples.flags
-        # The input to the BU1 stream is just the images and the flags.
-        bu1_model_inputs = [images, flags, None]
+        # The input to the BU1 stream is just the images and the samples.
+        bu1_model_inputs = [samples, None]
         bu_out, bu_laterals_out = self.bumodel1(inputs=bu1_model_inputs)
         # If true we add it to the outputs, and apply loss on it.
         if self.use_bu1_loss:
             occurrence_out = self.occhead(bu_out=bu_out)  # Compute the occurrence head output.
         else:
             occurrence_out = None
-        td_model_inputs = [bu_out, flags]
+        td_model_inputs = [bu_out, samples]
         # Add the BU1 lateral connections to the TD inputs,
         if self.use_lateral_butd:
             td_model_inputs += [bu_laterals_out]
         else:
             td_model_inputs += [None]
-        # The input to the TD stream is the bu_out, flags, the lateral connections.
+        # The input to the TD stream is the bu_out, samples, the lateral connections.
         if self.model_flag is not Flag.NOFLAG:
             td_outs = self.tdmodel(inputs=td_model_inputs)
             _, td_laterals_out = td_outs
         else:
             td_laterals_out = None
-        bu2_model_inputs = [images, flags]
+        bu2_model_inputs = [samples]
         if self.use_lateral_tdbu:
             bu2_model_inputs += [td_laterals_out]
         else:
             bu2_model_inputs += [None]
-        # The input to the BU2 stream is the images, flags, the lateral connections.
+        # The input to the BU2 stream is the images, samples, the lateral connections.
         bu2_out, bu2_laterals_out = self.bumodel2(inputs=bu2_model_inputs)
-        head_input = [bu2_out, flags]
-        # The input to the head is the flags, and BU2 output.
+        head_input = [bu2_out, samples]
+        # The input to the head is the samples, and BU2 output.
         task_out = self.Head(inputs=head_input)  # Compute the classification layer.
         outs = [occurrence_out, bu_out, bu2_out, task_out]
         return outs  # Return all the outputs from all streams.
@@ -414,7 +433,9 @@ class BUTDModel(nn.Module):
 
     def feature_extractor(self):
         """
-        Returns: The feature extractor params.
+        Return the non-classifier parameters.
+        Returns:
+
         """
         return nn.ModuleList([self.bumodel1, self.bumodel2, self.tdmodel])
 
@@ -435,7 +456,7 @@ class BUTDModel(nn.Module):
         learned_params = list(set(learned_params))
         direction_id, _ = tuple_direction_to_index(num_x_axis=self.opts.num_x_axis, num_y_axis=self.opts.num_y_axis,
                                                    direction=direction_tuple, ndirections=self.opts.ndirections,
-                                                   task_id=task_id)
+                                                   language_idx=task_id)
         learned_params.extend(self.transfer_learning[task_id][direction_id])
         return learned_params
 
@@ -461,9 +482,6 @@ class ResNet(nn.Module):
         # parameters.
         self.classifier: nn.Module = MultiTaskHead(opts=opts, transfer_learning_params=self.TL)  # The classifier head.
         self.trained_tasks: list = list()
-        self.read_argument = opts.model_flag is Flag.Read_argument
-        if self.read_argument:
-            self.Argument_Reader = InitialEmbeddingBlock(opts=opts)
 
     def forward(self, samples: inputs_to_struct) -> list[None, None, Tensor, Tensor]:
         """
@@ -474,11 +492,8 @@ class ResNet(nn.Module):
         Returns: Compute the features and the classification head.
 
         """
-        flags = samples.flags  # The flag.
-        bu_out, _ = self.feature_extractor([samples.image, flags, None])  # Compute the features.
-        if self.read_argument:
-            bu_out = self.Argument_Reader(bu_out, flags).squeeze()
-        task_out = self.classifier(inputs=(bu_out, flags))  # The classifier.
+        bu_out, _ = self.feature_extractor((samples, None))  # Compute the features.
+        task_out = self.classifier(inputs=(bu_out, samples))  # The classifier.
         return [None, None, bu_out, task_out]
 
     def forward_and_out_to_struct(self, inputs: inputs_to_struct) -> outs_to_struct:
@@ -516,6 +531,6 @@ class ResNet(nn.Module):
         learned_params.extend(self.feature_extractor.parameters())
         direction_id, _ = tuple_direction_to_index(num_x_axis=self.opts.num_x_axis, num_y_axis=self.opts.num_y_axis,
                                                    direction=direction_tuple, ndirections=self.opts.ndirections,
-                                                   task_id=task_id)
+                                                   language_idx=task_id)
         learned_params.extend(self.TL[task_id][direction_id])
         return learned_params

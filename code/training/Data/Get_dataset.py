@@ -6,19 +6,19 @@ import os
 import pickle
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Union, Tuple
 
 from torch.utils.data import DataLoader
-from Data_params import Flag
-from Structs import Task_to_struct
 
-sys.path.append(os.path.join(Path(__file__).parents[2], 'Data_Creation/'))
+from .Data_params import Flag
+
+sys.path.append(os.path.join(Path(__file__).parents[2], 'Data_Creation/src'))
 
 
 # Return the datasets and dataloaders.
 
-def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, task: list[Task_to_struct],
-                                      data: Optional[type] = None) -> dict:
+def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, task: Tuple[int, Tuple],
+                                      data: Union[None, type] = None) -> dict:
     """
     Getting the train,test,val(if exists) datasets.
     Args:
@@ -32,12 +32,10 @@ def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, task: lis
     Data_loader_dict = {}
     # Import 'Non-guided' dataset.
     if opts.model_flag is Flag.NOFLAG:
-        from Datasets import DatasetNonGuided as dataset
+        from ..Data.Datasets import DatasetNonGuided as dataset
     # Import 'guided' dataset.
     elif opts.model_flag is Flag.CL or opts.model_flag is Flag.Read_argument:
-        from Datasets import DatasetGuidedSingleTask as dataset
-    elif opts.model_flag is Flag.TD:
-        from Datasets import DatasetGuidedInterleaved as dataset
+        from ..Data.Datasets import DatasetGuidedSingleTask as dataset
     else:
         raise Exception("You must implement a dataset object to support that model type.")
     if data is not None:
@@ -47,25 +45,20 @@ def get_dataset_for_spatial_relations(opts: argparse, data_fname: str, task: lis
     # Opening the conf file and retrieve number of samples, img shape, number of objects per image.
     with open(path_fname, "rb") as new_data_file:
         MetaData = pickle.load(new_data_file)
-    # TODO - GET RID OF THIS, THIS IS AN INTEGRATION SOLUTION ONLY.
-    try:
-        image_size = MetaData.parser.image_size  # Get the image size.
-        opts.inshape = (3, *image_size)  # Updating the image size according to the actual data.
-        obj_per_row = MetaData.parser.num_cols  # Getting the number of chars per row.
-        obj_per_col = MetaData.parser.num_rows  # Getting the number of chars per col.
-    except AttributeError:
-        image_size = MetaData.image_size  # Get the image size.
-        opts.inshape = (3, *image_size)  # Updating the image size according to the actual data.
-        obj_per_row = MetaData.num_cols  # Getting the number of chars per row.
-        obj_per_col = MetaData.num_rows  # Getting the number of chars per col.
+    image_size = MetaData.parser.image_size  # Get the image size.
+    opts.inshape = (3, *image_size)  # Updating the image size according to the actual data.
+    obj_per_row = MetaData.parser.num_cols  # Getting the number of chars per row.
+    obj_per_col = MetaData.parser.num_rows  # Getting the number of chars per col.
 
     nsamples_train = MetaData.nsamples_dict['train']  # Getting the number of train samples.
     nsamples_test = MetaData.nsamples_dict['test']  # Getting the number of test samples.
-    # if there is no validation set, then the number of samples in the validation set is 0.
     try:
         nsamples_val = MetaData.nsamples_dict['val']  # Getting the number of validation(CG test) samples.
     except KeyError:
         nsamples_val = 0
+
+    # if there is no validation set, then the number of samples in the validation set is 0.
+
     # Create train dataset.
     train_ds = dataset(root=os.path.join(data_fname, 'train'), opts=opts, task_struct=task,
                        nexamples=nsamples_train, obj_per_row=obj_per_row, obj_per_col=obj_per_col)

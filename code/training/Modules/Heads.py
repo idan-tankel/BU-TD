@@ -2,13 +2,15 @@
 Here we define the heads, including single head, multi head and occurrence head.
 """
 import argparse
-from typing import Optional
+from typing import Union, Tuple, Optional
 
 import torch
 import torch.nn as nn
 from torch import Tensor
+
 from ..Data.Data_params import Flag
-from ..Utils import create_single_one_hot, Get_task_and_direction
+from ..Utils import tuple_to_direction
+from ..Data.Structs import inputs_to_struct
 
 
 # Here we define the task-head modules.
@@ -51,7 +53,7 @@ class HeadSingleTask(nn.Module):
     if model flag is NOFLAG we allocate subhead for each character.
     """
 
-    def __init__(self, opts: argparse, nclasses: int, num_heads: int = 1):
+    def __init__(self, opts: argparse, nclasses: int):
         """
         Args:
             opts: The model options.
@@ -63,7 +65,7 @@ class HeadSingleTask(nn.Module):
         # If The model flag is NOFLAG we allocate for each character a head o.w. according
         # to the nclasses.
         num_head = nclasses if opts.model_flag is Flag.NOFLAG \
-            else num_heads
+            else 1
 
         infilters = opts.nfilters[-1]  # The input size from the end of the BU2 stream.
         self.layers = nn.ModuleList([HeadMultiClass(infilters, nclasses, num_head)])
@@ -78,7 +80,7 @@ class HeadSingleTask(nn.Module):
         """
         x = inputs.squeeze()  # Squeeze the input.
         outs = [layer(x) for layer in self.layers]  # Compute all task-head outputs for all layers.
-        return torch.stack(tensors=outs, dim=-1)  # stacks all tensor into one tensor
+        return torch.stack(tensors=outs, dim=-1).squeeze() # stacks all tensor into one tensor
 
 
 class MultiTaskHead(nn.Module):
@@ -86,7 +88,7 @@ class MultiTaskHead(nn.Module):
     # Create task-head per task, task.
     """
 
-    def __init__(self, opts: argparse, transfer_learning_params: Optional[list]):
+    def __init__(self, opts: argparse, transfer_learning_params: Optional[list] = None):
         """
         Multi head task-head allocating for each task and task a single
         task head. Args: opts: The model options. transfer_learning_params: list containing the
@@ -94,26 +96,25 @@ class MultiTaskHead(nn.Module):
         """
         super(MultiTaskHead, self).__init__()
         self.opts = opts  # The options.
-        self.ntasks = opts.ntasks  # The number of tasks.
-        self.ndirections = opts.ndirections  # The number of directions.
-        self.num_heads = opts.num_heads  # The number of heads.
-        self.num_classes = opts.nclasses  # The number of classes for each task to create the head
+        self.ntasks = opts.data_obj.ntasks  # The number of tasks.
+        self.ndirections = opts.data_obj.ndirections  # The number of directions.
+        self.num_classes = opts.data_obj.nclasses  # The number of classes for each task to create the head
         # according to.
         self.ds_type = self.opts.ds_type  # The data-set type.
         self.taskhead = nn.ModuleList()
         task_head = nn.ModuleList()
         # For each task, task create its task-head according to num_classes.
+
         for i in range(self.ntasks):
             for j in range(self.ndirections):
-                layer = HeadSingleTask(opts=opts, nclasses=self.num_classes[i],
-                                       num_heads=self.num_heads[j])  # create a taskhead.
+                layer = HeadSingleTask(opts=opts, nclasses=self.num_classes[i])  # create a taskhead.
                 task_head.append(layer)
                 if transfer_learning_params is not None:
                     transfer_learning_params[i][j].extend(layer.parameters())  # Storing the taskhead params.
             self.taskhead.append(task_head)
             task_head = nn.ModuleList()
 
-    def forward(self, inputs: Tensor) -> Tensor:
+    def forward(self, inputs: Tuple[Tensor, inputs_to_struct]) -> Tensor:
         """
         Args:
             inputs: The output from BU2, and the flag.
@@ -121,22 +122,12 @@ class MultiTaskHead(nn.Module):
         Returns: A tensor in the desired shape.
 
         """
-        (bu2_out, flag) = inputs
+        (bu2_out, samples) = inputs
         # In train mode we train only one head.
-        if self.training or True:
-            direction_id, task_id = Get_task_and_direction(opts=self.opts, flags=flag)  # Get the task id.
-            task_out = self.taskhead[task_id][direction_id](bu2_out)  # apply the appropriate task-head.
-        # print(task_out.shape)
-        # Otherwise, we test all heads and choose the desired by the task flag.
-        else:
-            outputs = []  # All outputs list.
-            for layer in self.taskhead:  # For each task head we compute the output.
-                layer_out = layer(bu2_out)
-                outputs.append(layer_out)
-            outs = torch.stack(tensors=outputs, dim=1)  # Sum to have single prediction per task.
-            task_flag = create_single_one_hot(opts=self.opts, flags=flag)
-            task_out = torch.einsum('ijkl,ij->ikl', outs, task_flag)  # Multiply the flag and the output.
-        task_out = task_out.squeeze()
+        direction_id = samples.direction_idx[0]
+        task_id = samples.language_index[0]
+        task_out = self.taskhead[task_id][direction_id](bu2_out)  # apply the appropriate task-head.
+
         return task_out
 
 
@@ -152,7 +143,7 @@ class OccurrenceHead(nn.Module):
             opts: The model options.
         """
         super(OccurrenceHead, self).__init__()
-        filters = opts.nclasses[0]  # The number of binary classifiers needed to recognize all characters.
+        filters = opts.data_obj.nclasses[0]  # The number of binary classifiers needed to recognize all characters.
         infilters = opts.nfilters[-1]  # Output shape from the end of the BU1 stream.
         self.occurrence_transform = nn.Linear(in_features=infilters, out_features=filters)  # The linear transformation.
 

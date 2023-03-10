@@ -2,9 +2,8 @@
 Here we define the datasets, including guided and non-guided.
 """
 import argparse
-import os
 import pickle
-from typing import Optional
+from typing import Union, Tuple, Any
 
 import torch
 import torchvision.transforms
@@ -12,8 +11,8 @@ import torchvision.transforms as T
 from PIL import Image
 from torch import Tensor
 from torch.utils.data import Dataset
-from Structs import Task_to_struct
-from ..Utils import tuple_direction_to_index, struct_to_input
+from ..Utils import struct_to_input, tuple_direction_to_index
+import os
 
 
 class DataSetBase(Dataset):
@@ -22,8 +21,8 @@ class DataSetBase(Dataset):
     Supports initialization and get item methods(not used).
     """
 
-    def __init__(self, root: str, nclasses: int, ndirections: int, is_train: bool,
-                 nexamples: Optional[int], obj_per_row: int = 6, obj_per_col: int = 1):
+    def __init__(self, root: str, nclasses: int, ndirections: int, is_train: bool, ntasks: int,
+                 nexamples: Union[int, None] = None, obj_per_row: int = 6, obj_per_col: int = 1):
         """
         Args:
             root: The root to the data.
@@ -35,12 +34,12 @@ class DataSetBase(Dataset):
         """
         self.root: str = root  # The path to the data.
         self.nclasses: int = nclasses  # The number of classes.
+        self.ntasks = ntasks
         self.ndirections: int = ndirections  # The number of directions.
         self.is_train: bool = is_train  # Is this a training set.
         self.nexamples: int = nexamples  # The number of examples.
         self.obj_per_row: int = obj_per_row  # The number of rows.
         self.obj_per_col: int = obj_per_col  # The number of columns.
-        #    self.nexamples = 50
         self.targets = [0 for _ in range(self.nexamples)]  # Used only for Avalanche_AI.
         self.split_size: int = 1000  # The split size we created the dataset according to.
         self.edge_class: Tensor = torch.tensor(nclasses)  # The edge class.
@@ -73,31 +72,28 @@ class DataSetBase(Dataset):
             raw_sample = pickle.load(new_data_file)
         return raw_sample
 
-    def Compute_label_task(self, r: int, c: int, label_all: Tensor, direction_list: list[tuple]) -> Tensor:
+    def Compute_label_task(self, r: int, c: int, label_all: Tensor, direction: Tensor) -> Tensor:
         """
         Args:
             r: The row index.
             c: The column index.
             label_all: The label_all
-            direction_list: The direction list.
+            direction: The direction list.
 
         Returns: The label task.
 
         """
-        labels_task = []
-        for direction in direction_list:
-            direction_x, direction_y = direction
-            # If the target not in the Border.
-            if 0 <= r + direction_y <= self.obj_per_col - 1 and 0 <= c + direction_x <= self.obj_per_row - 1:
-                label_task = label_all[r + direction_y, c + direction_x]
-            # Otherwise the target is 'border'.
-            else:
-                label_task = self.edge_class
-            labels_task.append(label_task)
-        labels_task = torch.tensor(labels_task)
-        return labels_task
+        direction_x, direction_y = direction
+        # If the target not in the Border.
+        if 0 <= r + direction_y <= self.obj_per_col - 1 and 0 <= c + direction_x <= self.obj_per_row - 1:
+            label_task = label_all[r + direction_y, c + direction_x]
+        # Otherwise the target is 'border'.
+        else:
+            label_task = self.edge_class
 
-    def __getitem__(self, index: int):
+        return label_task
+
+    def __getitem__(self, index: int) -> tuple[Any, Any, Tensor, Tensor, Any, Any, Any, int]:
         root = self.get_root_by_index(index=index)  # The path to the sample.
         fname = os.path.join(root, '%d_img.jpg' % index)
         # Opening the image and converting to Tensor
@@ -113,8 +109,8 @@ class DataSetBase(Dataset):
         # Getting the task embedding, telling which task we are solving now.
         # For emnist, fashion this is always 0 but for Omniglot it tells which language we use.
         # Getting the character embedding, which character we query about.
-        char_type_one = torch.nn.functional.one_hot(char, self.nclasses)
-        # Concatenating all three flags into one flag.
+        char_type_one = torch.nn.functional.one_hot(char, self.nclasses).float()
+        # Concatenating all three samples into one flag.
         sample_direction = sample.direction_query
         # If the task is part of the initial tasks, we solve all initial tasks together.
         return img, char_type_one, label_all, label_existence, r, c, sample_direction, index
@@ -132,7 +128,7 @@ class DatasetGuidedSingleTask(DataSetBase):
     The guided dataset, returning query with argument.
     """
 
-    def __init__(self, root: str, opts: argparse, nexamples: int, task_struct: list[Task_to_struct],
+    def __init__(self, root: str, opts: argparse, nexamples: int, task_struct: Tuple[int, Tuple],
                  is_train=True, obj_per_row: int = 6, obj_per_col: int = 1):
         """
 
@@ -143,25 +139,24 @@ class DatasetGuidedSingleTask(DataSetBase):
             obj_per_row: Number of objects per row.
             obj_per_col: Number of objects per column.
         """
-        task_idx = task_struct[0].task
-        n = len(task_struct)
-        self.tuple_direction = [task_struct[i].direction for i in range(n)]
-
-        super(DatasetGuidedSingleTask, self).__init__(ndirections=opts.ndirections,
-                                                      nclasses=opts.nclasses[task_idx], root=root,
+        super(DatasetGuidedSingleTask, self).__init__(ndirections=opts.data_obj.ndirections,
+                                                      nclasses=opts.data_obj.nclasses[task_struct[0]], root=root,
                                                       nexamples=nexamples, is_train=is_train,
-                                                      obj_per_col=obj_per_col, obj_per_row=obj_per_row)
-        self.ntasks = opts.ntasks
+                                                      obj_per_col=obj_per_col, obj_per_row=obj_per_row,
+                                                      ntasks=opts.data_obj.ntasks)
+        self.opts = opts
         # The task index(not tuple).
         self.ds_type = opts.ds_type
-        self.direction, _ = tuple_direction_to_index(num_x_axis=opts.num_x_axis, num_y_axis=opts.num_y_axis,
-                                                     direction=self.tuple_direction[0],
-                                                     ndirections=opts.ndirections, task_id=task_idx)
-        self.task_idx = torch.tensor(task_idx)  # The task id.
+        self.direction_tuple = torch.tensor(task_struct[-1])
+        self.language_idx = torch.tensor(task_struct[0])  # The task id.
         self.edge_class = torch.tensor(self.nclasses)  # The 'border' class.
-        self.transform = torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        self.transform = torchvision.transforms.Resize((128, 128))
+        self.direction_idx, self.task_idx = tuple_direction_to_index(num_x_axis=self.opts.data_obj.num_x_axis,
+                                             num_y_axis=self.opts.data_obj.num_y_axis,
+                                             language_idx=self.language_idx,
+                                             direction=self.direction_tuple, ndirections=self.opts.data_obj.ndirections)
 
-    def __getitem__(self, index: int) -> tuple[Tensor, Tensor, Tensor, Tensor, Tensor, Tensor]:
+    def __getitem__(self, index: int) -> tuple[Any, Tensor, Tensor, Tensor, Any, Tensor, Tensor]:
         """
         Args:
             index: sample index.
@@ -170,76 +165,18 @@ class DatasetGuidedSingleTask(DataSetBase):
 
         """
         # Getting root to the sample
-        img, char_type_one, label_all, label_existence, r, c, _, sample_id = super(DatasetGuidedSingleTask,
-                                                                                   self).__getitem__(
-            index=index)
+        img, char_type_one, label_all, label_existence, r, c, _, sample_id = \
+            super(DatasetGuidedSingleTask, self).__getitem__(index=index)
         img = self.transform(img)
-        task_type_ohe = torch.nn.functional.one_hot(self.task_idx, self.ntasks)
-        # Getting the task embedding, telling which task we solve now.
-        direction_type_ohe = torch.nn.functional.one_hot(self.direction, self.ndirections)
-        # Getting the character embedding, which character we query about.
-        # Concatenating all three flags into one flag.
-        flag = torch.concat([direction_type_ohe, task_type_ohe, char_type_one], dim=0).float()
-        # If the task is part of the initial tasks, we solve all initial tasks together.
-        label_task = self.Compute_label_task(r=r, c=c, label_all=label_all, direction_list=self.tuple_direction)
-        return img, label_task, flag, label_all, label_existence, sample_id
-
-
-class DatasetGuidedInterleaved(DataSetBase):
-    """
-    Guided Dataset.
-    The guided dataset, returning query with argument.
-    """
-
-    def __init__(self, root: str, opts: argparse, nexamples: int, task_idx: int = 0,
-                 is_train=True, obj_per_row: int = 6, obj_per_col: int = 1):
-        """
-
-        Args:
-            root: Path to the data.
-            opts: The model options.
-            nexamples: The number of examples.
-            task_idx: The language index.
-            obj_per_row: Number of objects per row.
-            obj_per_col: Number of objects per column.
-        """
-
-        super(DataSetBase, self).__init__(ndirections=opts.ndirections,
-                                          nclasses=opts.nclasses[task_idx], root=root,
-                                          nexamples=nexamples, is_train=is_train)
-        self.ntasks = opts.ntasks
-        # The task index(not tuple).
-        self.ds_type = opts.ds_type
-        self.obj_per_row = obj_per_row  # Number of row.
-        self.obj_per_col = obj_per_col  # Number of columns.
-        self.task_idx = torch.tensor(task_idx)  # The task id.
-        self.edge_class = torch.tensor(self.nclasses)  # The 'border' class.
-
-    def __getitem__(self, index: int) -> tuple[Tensor, Tensor, Tensor, Tensor, Tensor]:
-        """
-        Args:
-            index: sample index.
-
-        Returns: img, label_task, flag, label_all, label_existence.
-
-        """
-        # Getting root to the sample
-        img, char_type_one, label_all, label_existence, r, c, sample_direction = \
-            super(DatasetGuidedInterleaved, self).__getitem__(index=index)
-        task_type_ohe = torch.nn.functional.one_hot(self.task_idx, self.ntasks)
-        # Getting the task embedding, telling which task we solve now.
-        direction_type_ohe = torch.nn.functional.one_hot(sample_direction, self.ndirections)
-        # Getting the character embedding, which character we query about.
-        # Concatenating all three flags into one flag.
-        flag = torch.concat([direction_type_ohe, task_type_ohe, char_type_one], dim=0).float()
-        # If the task is part of the initial tasks, we solve all initial tasks together.
-        label_task = self.Compute_label_task(r=r, c=c, label_all=label_all, direction_list=[sample_direction])
-        return img, label_task, flag, label_all, label_existence
+        label_task = self.Compute_label_task(r=r, c=c, label_all=label_all, direction=self.direction_tuple)
+        return img, label_all, label_existence, label_task, char_type_one, self.direction_tuple, self.direction_idx, \
+            self.language_idx, self.task_idx
 
 
 class DatasetNonGuided(DatasetGuidedSingleTask):
     """
     Non-Guided Dataset.
+    Needed for baselines.
     Returning for each character its adjacent character.
     """
 
@@ -254,17 +191,17 @@ class DatasetNonGuided(DatasetGuidedSingleTask):
         Returns: The label task.
         """
 
-        label_adj_all = self.nclasses * torch.ones(size=(self.nclasses, len(self.tuple_direction)), dtype=torch.long)
+        label_adj_all = self.nclasses * torch.ones(size=(self.nclasses,), dtype=torch.long)
         for r, row in enumerate(label_all):  # Iterating over all rows.
             for c, char in enumerate(row):  # Iterating over all character in the row.
                 # Compute the label task.
                 res = self.Compute_label_task(r=r, c=c, label_all=label_all,
-                                              direction_list=self.tuple_direction)
+                                              direction=self.direction)
                 label_adj_all[char] = res  # assign to the character.
 
         return label_adj_all
 
-    def __getitem__(self, index: int) -> tuple[Tensor, Tensor, Tensor, Tensor, Tensor, Tensor]:
+    def __getitem__(self, index: int) -> tuple[Any, Any, Any, Tensor, Any, Tensor, Tensor]:
         """
         Getting the sample with the 'return all' label task.
         Args:
@@ -273,10 +210,9 @@ class DatasetNonGuided(DatasetGuidedSingleTask):
         Returns: The sample data.
 
         """
-        img, label_task, flag, label_all, label_existence, sample_id = super(DatasetNonGuided, self).__getitem__(
-            index=index)
+        img, label_all, label_existence, label_task, char_type_one, direction, task_idx = \
+            super(DatasetNonGuided, self).__getitem__(index=index)
         # The same get item.
         # Change the label task to return all adjacent characters.
         label_task = self.Get_label_task_all(label_all=label_all)
-        label_existence = label_existence.repeat((len(self.tuple_direction), 1, 1))
-        return img, label_task, flag, label_all, label_existence, sample_id
+        return img, label_all, label_existence, label_task, char_type_one, self.direction, self.task_idx

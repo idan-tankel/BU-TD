@@ -7,13 +7,14 @@ quadratic loss.
 import argparse
 import copy
 import sys
-from typing import Optional
+from typing import Union, Optional
 
 import torch
 import torch.nn as nn
+from avalanche.training.templates.supervised import SupervisedTemplate
+
 from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
 from Baselines_code.baselines_utils import compute_quadratic_loss
-from avalanche.training.templates.supervised import SupervisedTemplate
 from training.Data.Data_params import RegType
 from training.Data.Structs import inputs_to_struct
 

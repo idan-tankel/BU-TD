@@ -15,8 +15,8 @@ from training.Data.Parser import GetParser
 from training.Data.Structs import Task_to_struct, inputs_to_struct
 from training.Modules.Create_Models import create_model
 from training.Utils import preprocess, compose_Flag
-from training.visuialize.visuaialize_utils import From_id_to_class_Fashion_MNIST, From_id_to_class_EMNIST, title, \
-    pause_image
+from visuaialize_utils import From_id_to_class_Fashion_MNIST, From_id_to_class_EMNIST, title, \
+    pause_image, CUB_dict
 
 
 class Visualize:
@@ -30,9 +30,14 @@ class Visualize:
         # opts.Data_specific_path
         path = os.path.join(opts.project_path, 'data/Emnist/RAW/emnist-balanced-mapping.txt')
         self.ds_type = opts.ds_type
-        self.cl2let = From_id_to_class_EMNIST(
-            mapping_fname=path) if self.ds_type is DsType.Emnist else From_id_to_class_Fashion_MNIST()  # The
+        if self.ds_type is DsType.Emnist:
+            self.cl2let = From_id_to_class_EMNIST(
+                mapping_fname=path)
+        elif self.ds_type is DsType.Fashionmnist:
+            self.cl2let = From_id_to_class_Fashion_MNIST()  # The
         # dictionary.
+        elif self.ds_type is DsType.CUB200:
+            self.cl2let = CUB_dict()
 
     def __call__(self, direction: tuple, batch_id: int = 0) -> None:
         """
@@ -55,10 +60,11 @@ class Visualize:
         samples = inputs_to_struct(inputs)  # From input to struct.
         outs = model.forward_and_out_to_struct(samples)  # Getting model outs and make struct.
         images = samples.image  # Getting the images.
+        images = 255 * images
         images = images.cpu().numpy().astype(np.uint8)  # Moving to the cpu, and transforming to numpy.
         images = images.transpose(0, 2, 3, 1)  # Transpose to have the appropriate dimensions for an image.
         fig = plt.figure(figsize=(7, 7))  # Defining the plot.
-        flags = samples.flags  # The flags.
+        flags = samples.flags  # The samples.
         # Compose to the argument flag.
         _, _, arg_flag = compose_Flag(opts=parser, flags=flags)
         gt_vals = samples.label_task  # The GT.
@@ -96,8 +102,11 @@ class Visualize:
                 plt.text(s=text, x=-100, y=350, color='red')
 
             else:
+                print(gt_vals[k].item())
                 gt_val = self.cl2let[gt_vals[k].item()]  # Current sample.
-                pred_val = self.cl2let[pred_vals[k].item()]  # Current prediction.
+                #    print(outs.classifier.shape)
+                #    pred_val = self.cl2let[pred_vals[k].item()]  # Current prediction.
+                pred_val = 0
                 if gt_val == pred_val:
                     font = {'color': 'blue'}  # If the prediction is correct the color is blue.
                 else:
@@ -114,7 +123,7 @@ class Visualize:
             pause_image()
 
 
-parser = GetParser(model_flag=Flag.CL)
+parser = GetParser(ds_type=DsType.CUB200)
 model = create_model(parser)
 project_path = Path(__file__).parents[2]
 vis = Visualize(opts=parser, model=model)

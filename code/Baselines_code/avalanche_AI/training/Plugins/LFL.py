@@ -5,12 +5,13 @@ The L2 feature distance.
 """
 import argparse
 import sys
-from typing import Optional
+from typing import Union, Optional
 
 import torch
 import torch.nn as nn
-from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
 from torch import Tensor
+
+from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
 from training.Data.Data_params import RegType
 from training.Data.Structs import inputs_to_struct
 

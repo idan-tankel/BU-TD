@@ -4,6 +4,7 @@ Here we define the loss function, including multi label and weighted loss for ba
 import argparse
 
 import torch.nn as nn
+
 from ..Data.Structs import inputs_to_struct, outs_to_struct
 
 CE = nn.CrossEntropyLoss(reduction='none')
@@ -58,11 +59,11 @@ def UnifiedCriterion(opts: argparse, samples: inputs_to_struct, outs: outs_to_st
 
     """
     loss = 0.0  # The general loss.
-    if opts.use_bu1_loss:  # If we use BU1 loss.
+    if opts.data_obj.use_bu1_loss:  # If we use BU1 loss.
         loss_occ = opts.bu1_loss(input=outs.occurrence_out,
                                  target=samples.label_existence)  # compute the binary existence classification loss
         loss += loss_occ  # Add the occurrence loss.
 
-    loss_task = opts.bu2_loss(samples=samples, outs=outs)  # Compute the BU2 loss.
+    loss_task = opts.data_obj.bu2_loss(samples=samples, outs=outs)  # Compute the BU2 loss.
     loss += loss_task
     return loss

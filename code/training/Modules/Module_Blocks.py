@@ -5,49 +5,14 @@ import argparse
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch import Tensor
-from ..Utils import flag_to_idx
+from ..Data.Structs import inputs_to_struct
+from ..Utils import Expand, tuple_direction_to_index
+from .Batch_norm import BatchNorm
 
-
-class Depthwise_separable_conv(nn.Module):
-    """
-    More efficient version of Conv.
-    """
-
-    def __init__(self, channels_in: int, channels_out: int, kernel_size: int, stride: int = 1, padding: int = 1,
-                 bias: bool = False):
-        """
-        Args:
-            channels_in: In channels of the input tensor.
-            channels_out: Out channels of the input tensor.
-            kernel_size: The kernel size.
-            stride: The stride.
-            padding: The padding.
-            bias: Whether to use bias.
-        """
-        super(Depthwise_separable_conv, self).__init__()
-        self.depthwise = nn.Conv2d(in_channels=channels_in, out_channels=channels_in, kernel_size=kernel_size,
-                                   stride=stride, padding=padding,
-                                   groups=channels_in,
-                                   bias=bias)  # Preserves the number of channels but may downsample by stride.
-        self.pointwise = nn.Conv2d(in_channels=channels_in, out_channels=channels_out, kernel_size=(1, 1),
-                                   bias=bias)  # Preserves the inner channels but may change the number of channels.
-
-    def forward(self, x: Tensor) -> Tensor:
-        """
-        Args:
-            x: Input tensor to the Conv.
-
-        Returns: Output tensor from the conv.
-
-        """
-        out = self.depthwise(x)  # Downsample the tensor.
-        out = self.pointwise(out)  # Change the number of channels if needed.
-        return out
-
-
-def conv3x3(in_channels: int, out_channels: int, kernel_size: int = 3, stride: int = 1, bias=False, depth_separable=
-True, padding=1) -> nn.Module:
+def conv3x3(in_channels: int, out_channels: int, kernel_size: int = 3, stride: int = 1, bias=False,
+            padding=1) -> nn.Module:
     """
     Create specific version of Depthwise_separable_conv with kernel equal 3.
     Args:
@@ -56,36 +21,33 @@ True, padding=1) -> nn.Module:
         kernel_size: The kernel size.
         stride: The stride.
         bias: Whether to use the bias.
-        depth_separable: Whether to use the more efficient version.
-        padding: What padding to use.
+        padding: The padding
+
 
     Returns: Module that performs the conv3x3.
 
     """
-    if depth_separable:
-        return Depthwise_separable_conv(channels_in=in_channels, channels_out=out_channels, kernel_size=kernel_size,
-                                        stride=stride,
-                                        bias=bias, padding=padding)
-    else:
-        return nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=stride,
-                         bias=bias, padding=padding)
+    return nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride,
+                     bias=bias, padding=padding)
 
 
-def conv3x3up(in_channels: int, out_channels: int, size: tuple, upsample=False, depth_separable=True,
+def conv3x3up(in_channels: int, out_channels: int, size: tuple, kernel_size: int, upsample=False,
               padding=1) -> nn.Module:
     """
     Upsampling version of Conv3x3.
     Args:
         in_channels: The number of channels in the input. out_channels < in_channels
         out_channels: The number of channels in the output. out_channels < in_channels
+        kernel_size: The kernel size.
         size: The size to upsample to.
         upsample: Whether to upsample.
+        padding: The padding.
 
     Returns: Module that upsample the tensor.
 
     """
-    layer = conv3x3(in_channels=in_channels, out_channels=out_channels, depth_separable=depth_separable,
-                    padding=padding)  #
+    layer = conv3x3(in_channels=in_channels, out_channels=out_channels,
+                    padding=padding, kernel_size=kernel_size)  #
     # Changing the number of
     # channels.
     if upsample:  # Adding upsample layer.
@@ -124,70 +86,78 @@ class Modulation_and_Lat(nn.Module):
         """
         super(Modulation_and_Lat, self).__init__()
         shape = [nfilters, 1, 1]
+        self.relu = nn.ReLU(inplace=True)
         self.side = nn.Parameter(
             torch.Tensor(*shape))  # creates the learnable parameter of shape [nchannels, 1, 1] according to nchannels.
-        self.norm_and_relu = nn.Sequential(opts.norm_layer(opts, nfilters), opts.activation_fun())
-        self.relu = opts.activation_fun()  # activation_fun after the skip connection
+        self.norm1 = BatchNorm(opts, nfilters)
 
-    def forward(self, x: Tensor, flags: Tensor, lateral: Tensor) -> Tensor:
+    def forward(self, x: Tensor, samples: Tensor, lateral: Tensor) -> Tensor:
         """
         Args:
             x: The model input.
-            flags: The flags, needed for BN.
+            flags: The samples, needed for BN.
             lateral: The previous stream lateral connection, of the same shape.
 
         Returns: The output after the lateral connection.
 
         """
         side_val = lateral * self.side  # channel-modulation(CM)
-        side_val = self.norm_and_relu[0](inputs=side_val, flags=flags)
-        side_val = self.norm_and_relu[1](input=side_val)
+        side_val = self.norm1(inputs=side_val, samples = samples)
+        side_val = self.relu(input=side_val)
         x = x + side_val  # The lateral skip connection
         x = self.relu(x)  # Activation_fun after the skip connection
         return x
 
-
-class Modulation(nn.Module):
+class conv_with_modulation(nn.Module):
     """
-    Modulation layer.
-    Create Channel or Column modulation layer.
-    The main idea of the paper allowing continual learning without forgetting.
+    Create specific version of Depthwise_separable_conv with kernel equal 3.
+    Args:
+        in_channels: In channels of the input tensor
+        out_channels: Out channels of the output tensor.
+        kernel_size: The kernel size.
+        stride: The stride.
+        bias: Whether to use the bias.
+        padding: The padding
+
+
+    Returns: Module that performs the conv3x3.
+
     """
+    def __init__(self,opts:argparse,conv_layer:nn.Module,task_embedding:list,create_modulation:bool):
+        super(conv_with_modulation, self).__init__()
+        self.opts = opts
+        self.create_modulation = create_modulation
+        self.ntasks = opts.data_obj.ndirections
+        self.modulate_weights = opts.weight_modulation
+        self.layer: nn.Conv2d = conv_layer
+        (c_in, c_out, k1, k2) = self.layer.weight.shape
+        (mod1, mod2, mod3, mod4) = opts.weight_modulation_factor
+        self.modulation_factor = opts.weight_modulation_factor
+        size = (c_in // mod1, c_out // mod2, k1 // mod3, k2 // mod4)
+        if create_modulation:
+            self.modulation = nn.ParameterList()
+            for i in range(self.ntasks):
+                layer = nn.Parameter(torch.Tensor(*size), requires_grad=True)
+                self.modulation.append(layer)
+                task_embedding[i].append(layer)
 
-    def __init__(self, opts: argparse, shape: list, column_modulation: bool, task_embedding: list):
-        """
-
-        Args:
-            opts: The model options.
-            shape: The shape to create the model according to.
-            column_modulation: Whether to create pixel/channel modulation.
-        """
-        super(Modulation, self).__init__()
-        self.opts = opts  # Store the model opts.
-        self.modulations = nn.ParameterList()  # Module list containing modulation for all directions.
-        if column_modulation:
-            size = [1, *shape]  # If pixel modulation matches the inner spatial of the input
-        else:
-            size = [shape, 1, 1]  # If channel modulation matches the number of channels
-        for i in range(opts.ndirections):  # allocating for every task its task embedding
-            layer = nn.Parameter(torch.Tensor(*size))  # The task embedding.
-            task_embedding[i].append(layer)  # Add to the learnable parameters.
-            self.modulations.append(layer)  # Add to the modulation list.
-
-    def forward(self, x: Tensor, flags: Tensor) -> Tensor:
+    def forward(self, x: Tensor, samples: inputs_to_struct) -> Tensor:
         """
         perform the channel/pixel modulation.
         Args:
             x: Torch of shape [B,C,H,W] to modulate.
-            flags: torch of shape [B,S].
+            samples: The samples.
 
         Returns: Torch of shape [B,C,H,W], the modulated tensor.
 
         """
-        direction_id = flag_to_idx(flags=flags)  # Compute the index of the one-hot.
-        #  print(direction_id)
-        # direction_id = 11
-        direction_id = 5
-        task_emb = self.modulations[direction_id]  # compute the task embedding according to the direction_idx.
-        output = x * (1 - task_emb)  # perform the modulation.
+        weights = self.layer.weight
+        if self.modulate_weights and self.create_modulation:
+            task = samples.direction_idx[0]
+            task_emb = self.modulation[task]  # compute the task embedding according to the direction_idx.
+            task_emb = Expand(task_emb, shapes=self.modulation_factor)
+            weights = task_emb * weights
+        output = F.conv2d(input=x, weight=weights, stride=self.layer.stride,
+                          padding=self.layer.padding, dilation=self.layer.dilation, groups=self.layer.groups)
         return output
+

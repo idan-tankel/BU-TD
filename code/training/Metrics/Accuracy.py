@@ -7,6 +7,7 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 from torch.utils.data import DataLoader
+
 from ..Data.Structs import inputs_to_struct, outs_to_struct
 from ..Utils import preprocess
 
@@ -79,7 +80,7 @@ def accuracy(opts: argparse, model: nn.Module, test_data_loader: DataLoader) -> 
     """
     model.eval()
     model = model.cuda()
-    num_correct_preds: Tensor = torch.tensor(0.0)
+    num_correct_preds: Tensor = torch.tensor(0.0).to(opts.device)
     for inputs in test_data_loader:  # Running over all samples.
         inputs = preprocess(inputs=inputs, device='cuda')  # Move to the cuda.
         samples = opts.inputs_to_struct(inputs=inputs)  # Make it a struct.

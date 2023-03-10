@@ -7,16 +7,20 @@ from pathlib import Path
 import pytorch_lightning as pl
 import torch.nn.modules as Module
 from pytorch_lightning.loggers import WandbLogger
-from training.Data.Checkpoints import CheckpointSaver
-from training.Data.Get_dataset import get_dataset_for_spatial_relations
-from training.Data.Model_Wrapper import ModelWrapped
-from training.Data.Structs import Task_to_struct
-from training.Data.Structs import Training_flag
-from training.Metrics.Accuracy import accuracy
-from training.Modules.Models import *
+from ..Data.Checkpoints import CheckpointSaver
+from ..Data.Get_dataset import get_dataset_for_spatial_relations
+from ..Data.Model_Wrapper import ModelWrapped
+from typing import Tuple
+from ..Data.Structs import Training_flag
+from ..Metrics.Accuracy import accuracy
+import torch.nn as nn
+from ..Utils import load_pretrained_model, num_params
+import argparse
+from Data_Creation.src.Create_dataset_classes import DsType
+import torch
 
 
-def Get_checkpoint_and_logger(opts: argparse, ds_type, task: list[Task_to_struct], epoch: int = 0) -> \
+def Get_checkpoint_and_logger(opts: argparse, ds_type, task: Tuple[int, Tuple]) -> \
         tuple[CheckpointSaver, WandbLogger, str]:
     """
     Get the checkpoint and logger.
@@ -32,22 +36,23 @@ def Get_checkpoint_and_logger(opts: argparse, ds_type, task: list[Task_to_struct
     # The project path.
     project_path = str(Path(__file__).parents[3])
     # Results dir.
-    results_dir = opts.results_dir
+    results_dir = opts.data_obj.results_dir
     # The sample path.
     sample_path = Get_sample_path(project_path=project_path, ds_type=ds_type, task=task)
     # The checkpoint-saver.
     Checkpoint_saver = CheckpointSaver(
         dirpath=os.path.join(results_dir,
-                             f'Model_seperate_train_test_{str(task[0].direction)}_wd_{str(opts.wd)}_base_lr_'
-                             f'{opts.base_lr}_max_lr_{opts.max_lr}_'
-                             f'epoch_{epoch}_option_bs_{opts.bs}_use_emb_{opts.use_embedding}_ns_{opts.ns}_nfilters_'
-                             f'{opts.nfilters}_initial_tasks_{opts.initial_directions[0].unified_task}'))
+                             f'Direction_{str(task[-1])}_Task_{str(task[0])}_wd_{str(opts.wd)}_initial_lr_'
+                             f'{opts.initial_lr}_mod_{opts.weight_modulation_factor}'
+                             f'_option_bs_{opts.bs}_num_blocks'
+                             f'_{opts.num_blocks}_nfilters_'
+                             f'{opts.nfilters}_gamma_{opts.gamma}'))
     #  Wandb logger.
-    wandb_logger = WandbLogger(project="Training_Continual_Learning", save_dir=results_dir)
+    wandb_logger = WandbLogger(project="Training_Continual_Learning", name='', save_dir=results_dir, job_type='train')
     return Checkpoint_saver, wandb_logger, sample_path
 
 
-def Get_sample_path(project_path: str, ds_type: DsType, task: list[Task_to_struct]) -> str:
+def Get_sample_path(project_path: str, ds_type: DsType, task: Tuple[int, Tuple]) -> str:
     """
     Get the sample path of the data-set type.
     Args:
@@ -65,13 +70,13 @@ def Get_sample_path(project_path: str, ds_type: DsType, task: list[Task_to_struc
     else:
         image_tuple = "(1,6)"
     # The file format.
-    data_path = os.path.join(project_path, f'data/{str(ds_type)}/samples/(3,3)_Image_Matrix_train')
+    data_path = os.path.join(project_path, f'data/{str(ds_type)}/samples/{image_tuple}_Image_Matrix')
     if ds_type is DsType.Omniglot:
-        data_path += f"{task[0].task}"
+        data_path += f"{task[0]}"
     return data_path
 
 
-def train_step(opts: argparse, model: Module, training_flag: Training_flag, task: list[Task_to_struct],
+def train_step(opts: argparse, model: Module, training_flag: Training_flag, task: Tuple[int, Tuple],
                ds_type, epochs: int) -> tuple[Module, dict]:
     """
     Train step
@@ -88,21 +93,24 @@ def train_step(opts: argparse, model: Module, training_flag: Training_flag, task
     # The trainer.
     trainer = pl.Trainer(max_epochs=epochs, logger=wandb_logger, accelerator='gpu')
     # Get the learned-params according to the training-flag.
-    learned_params = training_flag.Get_learned_params(model, task_idx=task[0].task, direction=task[0].direction)
+    learned_params = training_flag.Get_learned_params(model, task_idx=task[0], direction=task[-1])
     # The data dictionary.
     DataLoaders = get_dataset_for_spatial_relations(opts, sample_path, task=task)
     # The wrapped model.
     wrapped_model = ModelWrapped(opts, model, learned_params, check_point=Checkpoint_saver,
-                                 direction_tuple=task[0].direction,
-                                 task_id=task[0].task,
+                                 direction_tuple=task[0 - 1],
+                                 task_id=task[0],
                                  nbatches_train=len(DataLoaders['train_dl']), train_ds=DataLoaders['train_ds'])
     load = False
     if load:
-        wrapped_model.load_model(model_path='Model_seperate_train_test_(1, 0)_wd_1e-05_base_lr_0.0002_max_lr_0.002_epoch_0_option_bs_64_use_emb'
-                                            '_True_ns_[1, 1, 1]_nfilters_[64, 96, 128, 256]_initial_tasks_(0, (1, '
-                                            '0))/BUTDModel_epoch9.pt')
-        acc =  wrapped_model.Accuracy(DataLoaders['train_dl'])
-        print(acc)
+        #  wrapped_model.load_model(
+        model_path = 'Right/BUTDModel_epoch58.pt'
+        model_path = os.path.join(opts.data_obj.results_dir, model_path)
+        checkpoint = torch.load(model_path)  # Loading the saved data.
+        checkpoint = load_pretrained_model(model=model, model_state_dict=checkpoint['model_state_dict'])
+        model.load_state_dict(checkpoint)  # Loading the saved weights.
+        # acc = wrapped_model.Accuracy(DataLoaders['test_dl'])
+
     # Train the model.
     trainer.fit(wrapped_model, train_dataloaders=DataLoaders['train_dl'], val_dataloaders=DataLoaders['test_dl'])
     # Return the trained model, and the data-loaders.

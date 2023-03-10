@@ -60,6 +60,25 @@ def From_id_to_class_Fashion_MNIST():
     cl2let[10] = 'Border'
     return cl2let
 
+def CUB_dict():
+    cl2let = dict()
+    cl2let[0] = 'blue'
+    cl2let[1] = 'brown'
+    cl2let[2] = 'iridescent'
+    cl2let[3] = ':purple'
+    cl2let[4] = 'rufous'
+    cl2let[5] = 'grey'
+    cl2let[6] = 'yellow'
+    cl2let[7] = 'olive'
+    cl2let[8] = 'green'
+    cl2let[9] = 'pink'
+    cl2let[10] = 'orange'
+    cl2let[11] = 'black'
+    cl2let[12] = 'white'
+    cl2let[13] = 'red'
+    cl2let[14] = 'buff'
+    cl2let[15] = 'None'
+    return cl2let
 
 def From_id_to_class_EMNIST(mapping_fname: str) -> dict:
     """

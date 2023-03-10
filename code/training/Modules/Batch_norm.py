@@ -6,8 +6,10 @@ import argparse
 import torch
 import torch.nn as nn
 from torch import Tensor
+
 from ..Data.Data_params import Flag
-from ..Utils import tuple_direction_to_index, create_single_one_hot
+from ..Data.Structs import inputs_to_struct
+from ..Utils import tuple_direction_to_index
 
 
 # Batch Norm class.
@@ -30,10 +32,10 @@ class BatchNorm(nn.Module):
         """
         super(BatchNorm, self).__init__()
         self.opts = opts
-        self.ndirections = opts.ndirections
+        self.ndirections = opts.data_obj.ndirections
         device = 'cuda'
-        self.ntasks = opts.ntasks
-        self.save_stats = opts.model_flag is Flag.CL and opts.save_stats  # Save only for the continual learning flag.
+        self.ntasks = opts.data_obj.ntasks
+        self.save_stats = opts.model_flag is Flag.CL  # Save only for the continual learning flag.
         # Creates the norm function.
         if dims == 2:
             self.norm = nn.BatchNorm2d(num_features=num_channels)  # Create 2d BN.
@@ -42,35 +44,33 @@ class BatchNorm(nn.Module):
         # creates list that should store the mean, var for each task and task.
         if self.save_stats or True:
             # The running mean.
-            self.running_mean_list = torch.zeros(opts.ndirections * opts.ntasks, num_channels).to(device)
+            self.running_mean_list = torch.zeros(opts.data_obj.ndirections * opts.data_obj.ntasks, num_channels).to(device)
             # The running variance.
-            self.running_var_list = torch.ones(opts.ndirections * opts.ntasks, num_channels).to(device)
+            self.running_var_list = torch.ones(opts.data_obj.ndirections * opts.data_obj.ntasks, num_channels).to(device)
             # Save the mean, variance.
             self.register_buffer("running_mean",
                                  self.running_mean_list)  # registering to the buffer to make it part of the meta-data.
             self.register_buffer("running_var",
                                  self.running_var_list)  # registering to the buffer to make it part of the meta-data.
 
-    def forward(self, inputs: Tensor, flags: Tensor) -> Tensor:
+    def forward(self, inputs: Tensor, samples: inputs_to_struct) -> Tensor:
         """
         # Applying the norm function on the input.
         Args:
             inputs: Tensor of dim [B,C,H,W].
-            flags: The flag, needed for evaluation on different tasks, having each its own running statistics.
+            samples: The flag, needed for evaluation on different tasks, having each its own running statistics.
 
         Returns: Tensor of dim [B,C,H,W].
 
         """
         # TODO - ADD CHECKING IF NEEDED
-        if self.training or not self.save_stats:
+
+        if (self.training or not self.save_stats):
             return self.norm(input=inputs)  # applying the norm function.
         else:
-            device = inputs.device
-            self.running_mean_list = self.running_mean_list.to(device)
-            self.running_var_list = self.running_var_list.to(device)
-            task_flag = create_single_one_hot(opts=self.opts, flags=flags)
-            running_mean = (task_flag @ self.running_mean_list).unsqueeze(dim=2).unsqueeze(dim=2)
-            running_var = (task_flag @ self.running_var_list).unsqueeze(dim=2).unsqueeze(dim=2)
+            task_id  = samples.task
+            running_mean = (self.running_mean_list[task_id]).unsqueeze(dim=2).unsqueeze(dim=2)
+            running_var = (self.running_var_list[task_id]).unsqueeze(dim=2).unsqueeze(dim=2)
             running_var = running_var if not self.training or self.track_running_stats else None
             running_mean = running_mean if not self.training or self.track_running_stats else None
             return self.batch_norm_with_statistics_per_sample(inputs=inputs, running_mean=running_mean,
@@ -98,7 +98,7 @@ class BatchNorm(nn.Module):
 
     def load_running_stats(self, task_id: int, direction_tuple: tuple[int, int]) -> None:
         """
-        Loads the mean, variance associated with the task_id and the direction_id.
+        Loads the mean, variance associated with the language_idx and the direction_id.
         Args:
             task_id: The task id.
             direction_tuple: The task tuple.
@@ -107,7 +107,7 @@ class BatchNorm(nn.Module):
         _, task_and_direction_idx = tuple_direction_to_index(num_x_axis=self.opts.num_x_axis,
                                                              num_y_axis=self.opts.num_y_axis,
                                                              direction=direction_tuple,
-                                                             ndirections=self.opts.ndirections, task_id=task_id)
+                                                             ndirections=self.opts.ndirections, language_idx=task_id)
         running_mean = self.running_mean_list[task_and_direction_idx, :].detach().clone()  # Copy the running mean.
         running_var = self.running_var_list[task_and_direction_idx, :].detach().clone()  # Copy the running var.
         self.norm.running_mean = running_mean  # Assign the running mean.
@@ -122,10 +122,10 @@ class BatchNorm(nn.Module):
 
         """
         # Get the index to load from.
-        _, task_and_direction_idx = tuple_direction_to_index(num_x_axis=self.opts.num_x_axis,
-                                                             num_y_axis=self.opts.num_y_axis,
+        _, task_and_direction_idx = tuple_direction_to_index(num_x_axis=self.opts.data_obj.num_x_axis,
+                                                             num_y_axis=self.opts.data_obj.num_y_axis,
                                                              direction=direction_tuple,
-                                                             ndirections=self.opts.ndirections, task_id=task_id)
+                                                             ndirections=self.opts.data_obj.ndirections, language_idx=task_id)
         running_mean = self.norm.running_mean.detach().clone()  # Get the index to load from.
         running_var = self.norm.running_var.detach().clone()  # Copy the running var.
         self.running_mean_list[task_and_direction_idx, :] = running_mean  # Store the running mean.
@@ -134,7 +134,7 @@ class BatchNorm(nn.Module):
 
 def store_running_stats(model: nn.Module, task_id: int, direction_id: tuple) -> None:
     """
-    Stores the running_stats of the task_id for each norm_layer.
+    Stores the running_stats of the language_idx for each norm_layer.
     Args:
         model: The model.
         task_id: The task id.
@@ -150,7 +150,7 @@ def store_running_stats(model: nn.Module, task_id: int, direction_id: tuple) -> 
 
 def load_running_stats(model: nn.Module, task_id: int, direction_id: tuple) -> None:
     """
-    Loads the running_stats of the task_id for each norm_layer.
+    Loads the running_stats of the language_idx for each norm_layer.
     Args:
         model: The model.
         task_id: The task id.

@@ -1,14 +1,14 @@
 """
 The main function, creating the dataset according to the desired type.
 """
-from typing import Optional
+from typing import Union
 
 from src.Create_dataset_classes import DsType, UnifiedDataSetType
 from src.Create_dataset_funcs import create_dataset, Save_meta_data_and_code_script
 from src.data_creation_parser import Get_parser
 
 
-def main(language_list: Optional[list], num_chars_per_row: int = 6,
+def main(language_list: Union[list, None] = None, num_chars_per_row: int = 6,
          num_rows_in_the_image: int = 1) -> None:
     """
     The main function calling 'create_dataset'.

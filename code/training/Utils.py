@@ -7,8 +7,9 @@ from typing import Iterator, Optional
 
 import torch
 import torch.optim as optim
-from Data_Creation.src.Create_dataset_classes import Sample
 from torch import Tensor
+import torch.nn as nn
+from Data_Creation.src.Create_dataset_classes import Sample
 
 
 def folder_size(path: str) -> int:
@@ -61,19 +62,6 @@ def get_omniglot_dictionary(num_tasks: int, raw_data_folderpath: str) -> dict:
     return nclasses_New
 
 
-def flag_to_idx(flags: Tensor) -> int:
-    """
-    From Flag get the id in which the flag is non-zero.
-    Args:
-        flags: The One hot flag.
-
-    Returns: The id in which the flag is non-zero.
-
-    """
-    task = torch.argmax(flags, dim=1)[0]  # Finds the non-zero entry in the one-hot vector
-    return task
-
-
 def get_laterals(laterals: list[Tensor], layer_id: int, block_id: int = 0) -> Optional[Tensor]:
     """
     Returns the lateral connections associated with the block in the layer.
@@ -85,14 +73,11 @@ def get_laterals(laterals: list[Tensor], layer_id: int, block_id: int = 0) -> Op
     Returns: All the lateral connections associate with the block(usually 3).
 
     """
-    if laterals is None:  # If BU1, there are no lateral connections.
-        return None
     try:
         # Trying to access that index.
-        layer_lats = laterals[layer_id][block_id]
-    except IndexError:
-        layer_lats = None
-    return layer_lats
+        return laterals[layer_id][block_id]
+    except (IndexError, TypeError):
+        return None
 
 
 def num_params(params: Iterator) -> int:
@@ -125,17 +110,19 @@ def create_optimizer_and_scheduler(opts: argparse, learned_params: list, nbatche
 
     """
 
-    if opts.SGD:
-        optimizer = optim.SGD(params=learned_params, lr=opts.initial_lr, momentum=opts.momentum, weight_decay=opts.wd)
-    else:
-        optimizer = optim.Adam(params=learned_params, lr=opts.base_lr, weight_decay=opts.wd)
+    optimizer = optim.Adam(params=learned_params, lr=opts.initial_lr, weight_decay=opts.wd )
 
-    if opts.cycle_lr:
-        scheduler = optim.lr_scheduler.CyclicLR(optimizer=optimizer, base_lr=opts.base_lr, max_lr=opts.max_lr,
-                                                step_size_up=nbatches // 2,
-                                                cycle_momentum=False)
+    if opts.scheduler_type is optim.lr_scheduler.MultiStepLR:
+        scheduler = optim.lr_scheduler.MultiStepLR(optimizer=optimizer,
+                                                   milestones=[15], gamma=opts.gamma, last_epoch=-1)
+    elif opts.scheduler_type is optim.lr_scheduler.CosineAnnealingLR:
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
+    elif opts.scheduler_type is optim.lr_scheduler.StepLR:
+        scheduler = optim.lr_scheduler.StepLR(optimizer=optimizer, step_size=10, gamma=0.2)
+    elif opts.scheduler_type is optim.lr_scheduler.PolynomialLR:
+        scheduler = optim.lr_scheduler.PolynomialLR(optimizer=optimizer, total_iters=10, power=1.0)
     else:
-        scheduler = optim.lr_scheduler.MultiStepLR(optimizer=optimizer, milestones=[100,150],last_epoch=-1)
+        scheduler = None
 
     return optimizer, scheduler
 
@@ -156,71 +143,37 @@ def preprocess(inputs: list[Tensor], device: str) -> list[Tensor]:
     return inputs
 
 
-def tuple_direction_to_index(num_x_axis: int, num_y_axis: int, direction: tuple, ndirections: int, task_id: int = 0) \
+def tuple_direction_to_index(num_x_axis: int, num_y_axis: int, direction: tuple, ndirections: int, language_idx: int = 0) \
         -> tuple[Tensor, Tensor]:
     """
     Compute given task tuple and task index the task index and
     task index. Args: num_x_axis: The neighbor radios we want to generalize to in the x-axis.
     num_y_axis: The neighbor radios we want to generalize to in the y-axis. direction: The task tuple.
-    ndirections: The number of directions. task_id: The task index.
+    ndirections: The number of directions. language_idx: The task index.
 
     Returns: The direction index and the task index.
 
     """
+    direction_idx = tuple_to_direction(num_y_axis=num_y_axis, num_x_axis=num_x_axis, direction=direction)
+    index_dir = direction_idx + ndirections * language_idx
+    return direction_idx, index_dir
+
+
+def tuple_to_direction(num_x_axis: int, num_y_axis: int, direction: tuple) \
+        -> Tensor:
+    """
+    Tuple of direction to single direction.
+    Args:
+        num_x_axis: The number of x-axis query.
+        num_y_axis: The number of y-axis query.
+        direction: The direction.
+
+    Returns: The single direction id.
+
+    """
     direction_x, direction_y = direction
     index_dir = (num_x_axis + 1) * (direction_x + num_x_axis) + (direction_y + num_y_axis)
-    direction_dir = torch.tensor(index_dir)
-    index_dir = torch.tensor(index_dir + ndirections * task_id)
-    return direction_dir, index_dir
-
-
-def compose_Flag(opts: argparse, flags: Tensor) -> tuple[Tensor, Tensor, Tensor]:
-    """
-    Compose the flag into three flags.
-    Args:
-        opts: The model opts.
-        flags: The flag we desire to compose.
-
-    Returns: The direction, task, arg flags.
-
-    """
-    direction_flag = flags[:, :opts.ndirections]  # The direction vector.
-    task_flag = flags[:, opts.ndirections:opts.ndirections + opts.ntasks]  # The task vector.
-    arg_flag = flags[:, opts.ndirections + opts.ntasks:]  # The argument vector.
-    return direction_flag, task_flag, arg_flag
-
-
-def Flag_to_task(opts: argparse, flags: Tensor) -> int:
-    """
-    Composes the flag and returns the task id.
-    Args:
-        opts: The model opts.
-        flags: The flag
-
-    Returns: The task index.
-
-    """
-    direction_flag, task_flag, _ = compose_Flag(opts=opts, flags=flags)
-    direction_id = flag_to_idx(flags=direction_flag)  # The direction id.
-    task_id = flag_to_idx(flags=task_flag)  # The task id.
-    idx = direction_id + opts.ndirections * task_id  # The task.
-    return idx
-
-
-def Get_task_and_direction(opts: argparse, flags: Tensor) -> tuple[int, int]:
-    """
-    Composes the flag and returns the task id.
-    Args:
-        opts: The model opts.
-        flags: The flag
-
-    Returns: The task index.
-
-    """
-    direction_flag, task_flag, _ = compose_Flag(opts=opts, flags=flags)
-    direction_id = flag_to_idx(flags=direction_flag)  # The direction id.
-    task_id = flag_to_idx(flags=task_flag)  # The task id.
-    return direction_id, task_id
+    return index_dir
 
 
 def struct_to_input(sample: Sample) -> tuple[Tensor, Tensor, Tensor]:
@@ -258,24 +211,35 @@ def load_model(model, results_dir, model_path: str) -> dict:
     return checkpoint
 
 
-def create_single_one_hot(opts, flags: Tensor) -> Tensor:
+def Expand(mod: Tensor, shapes: list) -> Tensor:
     """
-    Given the flag, we compose to direction, task flag and compute the unique task id.
+    Expand the tensor in interleaved manner to match the neuron's shape.
     Args:
-        opts: The model opts.
-        flags: The flags.
+        mod: The modulations.
+        shapes: The shape to multiply each dimension.
 
-    Returns: The task flag.
+    Returns: The expanded modulations.
 
     """
-    # Compute the direction, task flag.
-    direction_flags, task_flag, _ = compose_Flag(opts=opts, flags=flags)
-    # The direction id.
-    direction_id = torch.argmax(direction_flags, dim=1)
-    # The direction id.
-    task_id = torch.argmax(task_flag, dim=1)
-    # The task id.
-    task_index = direction_id + opts.ndirections * task_id
-    # The flag
-    flag = torch.nn.functional.one_hot(task_index, opts.ndirections * opts.ntasks).float()
-    return flag
+    for dim, shape in enumerate(shapes):
+        mod = torch.repeat_interleave(mod, shape, dim=dim)
+    return mod
+
+
+def load_pretrained_model(model: nn.Module, model_state_dict: dict) -> dict:
+    """
+    Load pretrained model without weight modulation.
+    Args:
+        model: The model.
+        model_state_dict: The trained model state dict.
+
+    Returns:
+
+    """
+    checkpoint = dict()
+    for key, val in model.state_dict().items():
+        if 'modulation' in key:
+            checkpoint[key] = val
+        else:
+            checkpoint[key] = model_state_dict[key]
+    return checkpoint

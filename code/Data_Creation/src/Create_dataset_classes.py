@@ -7,7 +7,7 @@ import os
 import random
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import Union
 
 import numpy as np
 import skimage
@@ -37,7 +37,6 @@ class DsType(Enum):
     Emnist = 'Emnist'
     Omniglot = 'Omniglot'
     Fashionmnist = 'Fashionmnist'
-    cifar10 = 'cifar10'
 
     def __str__(self):
         return self.value
@@ -79,11 +78,7 @@ class General_raw_data(Dataset):
         # For each dataset iterate over images, labels into the list.
         for data_set in [train_raw_dataset, test_raw_dataset]:
             for (img, label) in data_set:
-                if self.ds_type is DsType.cifar10:
-                    img = transforms.ToTensor()(img)
-                    Images_arranged[label].append(img)
-                else:
-                    Images_arranged[label].append(np.array(img).reshape(self.shape))
+                Images_arranged[label].append(np.array(img).reshape(self.shape))
         # Make all images in one path.
         Images_arranged = sum(Images_arranged, [])
         # The number of images per single label.
@@ -375,7 +370,7 @@ class UnifiedDataSetType:
     This class contains all data-set objects, according to the data-set type.
     """
 
-    def __init__(self, ds_type: DsType, num_cols: int, num_rows: int, language_list: Optional[list]):
+    def __init__(self, ds_type: DsType, num_cols: int, num_rows: int, language_list: Union[list, None]):
         """
         Supports all datasets.
         Given dataset type we create the desired data-set specification.

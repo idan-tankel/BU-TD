@@ -8,16 +8,16 @@ from typing import Callable
 
 import torch
 import torch.nn as nn
-import torch.optim as optim
 from pytorch_lightning import LightningModule
 from torch import Tensor
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
-from Checkpoints import CheckpointSaver
-from Data_params import Flag, DsType
+
+from .Checkpoints import CheckpointSaver
+from .Data_params import Flag, DsType
 from ..Modules.Batch_norm import store_running_stats
 from ..Utils import create_optimizer_and_scheduler, preprocess
-
+from ..Data.Structs import inputs_to_struct, outs_to_struct
 
 # Define the model wrapper class.
 # Support training and load_model.
@@ -45,9 +45,9 @@ class ModelWrapped(LightningModule):
         self.automatic_optimization = True
         self.need_to_update_running_stats: bool = True
         self.model: nn.Module = model  # The model.
-        self.learned_params: list = learned_params  # The learned parameters.
+        self.learned_params: list[nn.Parameter] = learned_params  # The learned parameters.
         self.loss_fun: Callable = opts.criterion  # The loss criterion.
-        self.accuracy: Callable = opts.task_accuracy  # The Accuracy criterion.
+        self.accuracy: Callable = opts.data_obj.task_accuracy  # The Accuracy criterion.
         self.dev: str = opts.device  # The device.
         self.opts: argparse = opts  # The model options.
         self.check_point: CheckpointSaver = check_point  # The checkpoint saver.
@@ -57,9 +57,21 @@ class ModelWrapped(LightningModule):
         self.store_running_stats: bool = self.opts.model_flag is Flag.CL
         self.ds_type: DsType = self.opts.ds_type
         # Define the optimizer, scheduler.
-        self.optimizer, self.scheduler = create_optimizer_and_scheduler(self.opts, self.learned_params,
-                                                                        self.nbatches_train)
+     #   self.optimizer, self.scheduler = create_optimizer_and_scheduler(self.opts, self.learned_params,
+       #                                                                 self.nbatches_train)
         self.train_ds: Dataset = train_ds  # Our data-set.
+    
+    def configure_optimizers(self):
+        """
+        Returns the optimizer, scheduler.
+        """
+        optimizer, scheduler = create_optimizer_and_scheduler(opts=self.opts, learned_params=self.learned_params,
+                                                              nbatches=self.nbatches_train)
+        if scheduler is not None:
+            scheduler = {'scheduler': scheduler, "interval": "epoch"}  # Update the scheduler each step.
+            return [optimizer], [scheduler]
+        else:
+            return [optimizer]
 
     def training_step(self, batch: list[Tensor], batch_idx: int) -> float:
         """
@@ -73,8 +85,10 @@ class ModelWrapped(LightningModule):
         """
         model = self.model
         model.train()  # Move the model into the train mode.
-        samples = self.opts.inputs_to_struct(inputs=batch)  # Compute the sample struct.
-        outs = model.forward_and_out_to_struct(inputs=samples)  # Compute the model output.
+        samples = inputs_to_struct(inputs=batch)  # Compute the sample struct.
+        outs = model(samples)  # Compute the model output.
+        outs = outs_to_struct(outs)
+      #  print(self.scheduler)
         loss = self.loss_fun(opts=self.opts, samples=samples, outs=outs)  # Compute the loss.
         _, acc = self.accuracy(samples=samples, outs=outs)  # The Accuracy.
         self.log('train_loss', loss, on_step=True, on_epoch=True)  # Update loss.
@@ -97,23 +111,17 @@ class ModelWrapped(LightningModule):
 
         model = self.model
         model.eval()  # Move the model into the evaluation mode.
-        samples = self.opts.inputs_to_struct(inputs=batch)
+        samples = inputs_to_struct(inputs=batch)
         with torch.no_grad():  # Without grad.
-            outs = self.model.forward_and_out_to_struct(inputs=samples)  # Forward and make a struct.
+            outs = self.model(samples)  # Forward and make a struct.
+            outs = outs_to_struct(outs)
             loss = self.loss_fun(opts=self.opts, samples=samples, outs=outs)  # Compute the loss.
             _, acc = self.accuracy(samples=samples, outs=outs)  # Compute the Accuracy.
             self.log('val_loss', loss, on_step=True, on_epoch=True)  # Update the loss.
             self.log('val_acc', acc, on_step=True, on_epoch=True)  # Update the acc.
         return acc, batch[0].size(0)  # Return the Accuracy and number of inputs in the batch.
 
-    def configure_optimizers(self) -> tuple[optim, optim.lr_scheduler]:
-        """
-        Returns the optimizer, scheduler.
-        """
-        optimizer, scheduler = create_optimizer_and_scheduler(opts=self.opts, learned_params=self.learned_params,
-                                                              nbatches=self.nbatches_train)
-        scheduler = {'scheduler': scheduler, "interval": "step"}  # Update the scheduler each step.
-        return [optimizer], [scheduler]
+
 
     def validation_epoch_end(self, outputs: list[tuple]) -> float:
         """
@@ -123,35 +131,15 @@ class ModelWrapped(LightningModule):
         Returns: The overall Accuracy.
 
         """
-        # Set to None for not used parameters in order to avoid moving of not used weights.
-        self.optimizer.zero_grad(set_to_none=True)
         num_successes = sum(outputs[i][0] * outputs[i][1] for i in range(len(outputs)))
         num_images = sum(outputs[i][1] for i in range(len(outputs)))
         acc = num_successes / num_images  # The Accuracy.
         # Update the checkpoint.
         if self.check_point is not None:
             self.check_point(model=self.model, epoch=self.current_epoch, current_test_accuracy=acc,
-                             optimizer=self.optimizer, scheduler=self.scheduler,
                              opts=self.opts)
         print(f"Final accuracy {acc}")
         return acc
-
-    def train_dataloader(self):
-        """
-        We have observed that during training, resting the train dataloader shows much better result
-        for EMNIST, Fashion-MNIST.
-        """
-
-        dataloader = DataLoader(dataset=self.train_ds, batch_size=self.opts.bs, num_workers=self.opts.workers,
-                                shuffle=True, pin_memory=True)
-        return dataloader
-
-    def training_epoch_end(self, outputs: list) -> None:
-        """
-        After each epoch we reset the data-loader for EMNIST, Fashion-MNIST.
-        """
-        if self.ds_type is not DsType.Omniglot:
-            self.train_dataloader()
 
     def Accuracy(self, dl: DataLoader) -> float:
         """

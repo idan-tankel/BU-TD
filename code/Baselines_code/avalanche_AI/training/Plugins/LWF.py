@@ -5,14 +5,15 @@ Output distributions KL divergence.
 """
 import argparse
 import sys
-from typing import Optional
+from typing import Union, Optional
 
 import torch
 import torch.nn as nn
+from torch import Tensor
+
 from Baselines_code.avalanche_AI.training.Plugins.plugins_base import Base_plugin
 from Baselines_code.baselines_utils import construct_flag
 from Data_Creation.src.Create_dataset_classes import DsType
-from torch import Tensor
 from training.Data.Data_params import RegType
 from training.Data.Structs import inputs_to_struct, outs_to_struct
 from training.Utils import compose_Flag
@@ -47,7 +48,7 @@ class LwF(Base_plugin):
         self.prev_tasks = dict()
         if prev_model is not None:
             self.num_exp = 1  # Number of trained experiences is set to 1.
-            # Creating the desired flags for each trained task.
+            # Creating the desired samples for each trained task.
             for i, task in enumerate(self.trained_tasks):
                 (task_id, direction_id) = task  # The task ,task id.
                 flag = construct_flag(opts, task_id, direction_id).to('cuda')  # Construct the flag.

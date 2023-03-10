@@ -5,6 +5,7 @@ import argparse
 
 import torch.nn as nn
 from torch import Tensor
+
 from ..Utils import tuple_direction_to_index
 
 
@@ -18,13 +19,17 @@ class inputs_to_struct:
         Args:
             inputs: The tensor list.
         """
-        img, label_task, flag, label_all, label_existence, index, *rest = inputs
+        img, label_all, label_existence, label_task, char_type_one,direction_tuple, direction_idx, \
+            language_idx, task_idx,  = inputs
         self.image = img  # The image.
         self.label_all = label_all  # The label all.
         self.label_existence = label_existence  # The label existence.
         self.label_task = label_task.squeeze()  # The label task.
-        self.flags = flag  # The flag.
-        self.index = index
+        self.char_flags = char_type_one  # The flag.
+        self.direction_tuple = direction_tuple
+        self.direction_idx = direction_idx
+        self.language_index = language_idx
+        self.task = task_idx
 
 
 class outs_to_struct:
@@ -79,9 +84,10 @@ class Training_flag:
         Returns: The desired parameters.
         """
 
-        direction_idx, idx = tuple_direction_to_index(num_x_axis=self.opts.num_x_axis, num_y_axis=self.opts.num_y_axis,
+        direction_idx, _ = tuple_direction_to_index(num_x_axis=self.opts.data_obj.num_x_axis,
+                                                      num_y_axis=self.opts.data_obj.num_y_axis,
                                                       direction=direction,
-                                                      ndirections=self.opts.ndirections, task_id=task_idx)
+                                                      ndirections=self.opts.data_obj.ndirections, language_idx=task_idx)
         learned_params = []
         if self.train_all_model:
             # Train all model.
@@ -99,19 +105,3 @@ class Training_flag:
             learned_params.extend(model.tdmodel.argument_embedding[task_idx])
 
         return learned_params
-
-
-class Task_to_struct:
-    """
-    Struct to contain the task, direction.
-    """
-
-    def __init__(self, task: int, direction: tuple):
-        """
-        Args:
-            task: The task.
-            direction: The direction.
-        """
-        self.task = task
-        self.direction = direction
-        self.unified_task = (task, direction)

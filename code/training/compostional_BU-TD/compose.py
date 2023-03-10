@@ -3,15 +3,16 @@ Here we define and perform  a composition of tasks sequentially as BU-TD model a
 """
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Union
 
 from torch.utils.data import DataLoader
+
 from training.Data.Get_dataset import get_dataset_for_spatial_relations
 from training.Data.Parser import GetParser
 from training.Data.Structs import Task_to_struct
 from training.Modules.Create_Models import create_model
 from training.Modules.Models import *
-from training.Utils import preprocess, tuple_direction_to_index
+from training.Utils import preprocess, tuple_direction_to_index, load_model
 
 
 class ComposeModel(nn.Module):
@@ -45,7 +46,7 @@ class ComposeModel(nn.Module):
         prediction = prediction.classifier.argmax(dim=1)
         return prediction
 
-    def Create_new_flag(self, prediction: Optional[Tensor], direction: tuple, char: Optional[Tensor],
+    def Create_new_flag(self, prediction: Union[Tensor, None], direction: tuple, char: Union[Tensor, None],
                         direction_id: int) -> Tensor:
         """
         Create the new flag.
@@ -71,7 +72,7 @@ class ComposeModel(nn.Module):
                                                          self.opts.ndirections).cuda()
         # Getting the character embedding, which character we query about.
         char_type_one = torch.nn.functional.one_hot(prediction, self.edge_class) if prediction is not None else char
-        # Concatenating all three flags into one flag.
+        # Concatenating all three samples into one flag.
         flag = torch.concat([direction_type_ohe, task_type_ohe, char_type_one], dim=1).float()
         return flag
 

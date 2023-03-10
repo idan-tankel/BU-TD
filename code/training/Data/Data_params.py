@@ -7,17 +7,14 @@ import os.path
 from enum import Enum, auto
 from pathlib import Path
 from typing import Callable
-from typing import Optional
-import sys
+from typing import Union
+
 import numpy as np
-sys.path.append(os.path.join(Path(__file__).parents[2], 'Data_Creation/'))
-from Data_Creation.src.Create_dataset_classes import DsType
-#from ...D
-#from ...Data_Creation.src.Create_dataset_classes import DsType  # Import the Data_Creation set types.
-from .Structs import Task_to_struct
+# from .Structs import Task_to_struct
 from ..Metrics.Accuracy import multi_label_accuracy, multi_label_accuracy_weighted
 from ..Metrics.Loss import multi_label_loss_weighted, multi_label_loss
-from ..Utils import get_omniglot_dictionary, tuple_direction_to_index
+from ..Utils import get_omniglot_dictionary
+from Data_Creation.src.Create_dataset_classes import DsType  # Import the Data_Creation set types.
 
 
 # Define the Flag Enums, and Dataset specification and baseline methods.
@@ -25,12 +22,10 @@ from ..Utils import get_omniglot_dictionary, tuple_direction_to_index
 
 class Flag(Enum):
     """
-    The possible training flags.
+    The possible training samples.
     """
-    TD = auto()  # Ordinary BU-TD network training.
     NOFLAG = auto()  # Non-guided model, should output for each character its adjacent neighbor.
     CL = auto()  # Continual learning flag, a BU-TD network with allocating task embedding for each task.
-    Read_argument = auto()
 
 
 class RegType(Enum):
@@ -82,14 +77,14 @@ class GenericDataParams:
             else multi_label_accuracy  # The task Accuracy metric according to the flag.
         self.project_path: Path = Path(__file__).parents[3]  # The path to the project.
         # The initial tasks we first train in our experiments, default to right task.
-        self.initial_directions: list[Task_to_struct] = [Task_to_struct(task=0, direction=(1, 0))]
+        self.initial_directions: tuple[int, tuple[int, int]] = (0, (1, 0))
         self.ntasks: int = 1  # The number of tasks, in mnist, Fashionmnist it's 1, for Omniglot 51.
         self.num_x_axis: int = num_x_axis  # Number of directions we want to generalize to in the x-axis.
         self.num_y_axis: int = num_y_axis  # Number of directions we want to generalize to in the y-axis.
         self.ndirections: int = (2 * self.num_x_axis + 1) * (
                 2 * self.num_y_axis + 1)  # The number of directions we query about.
         # The number of classes for each task, 47 for mnist, 10 for fashion and for Omniglot its dictionary.
-        self.nclasses: dict = {i: 47 for i in range(self.ndirections)}
+        self.nclasses: dict = {i: 47 for i in range(self.ntasks)}
         self.results_dir: str = os.path.join(self.project_path,
                                              f'data/{str(ds_type)}/results/')  # The trained model directory.
         self.baselines_dir: str = os.path.join(self.project_path,
@@ -99,7 +94,7 @@ class GenericDataParams:
             else False  # Whether to use the bu1 loss.
         self.num_heads: list = [1 for _ in range(self.ndirections)]
         self.image_size: np.array = None  # The image size, will be defined later.
-        self.new_tasks: list[Task_to_struct]
+        self.new_tasks: list[tuple[int, tuple[int, int]]]
         self.epoch_dictionary: dict
 
 
@@ -115,20 +110,13 @@ class EmnistDataset(GenericDataParams):
 
         """
         super(EmnistDataset, self).__init__(flag_at=flag_at, ds_type=DsType.Emnist, num_x_axis=2, num_y_axis=2)
-        self.image_size = [3, 130, 200]  # The Emnist image size.
-        # The initial indexes.
-        self.initial_directions = [Task_to_struct(task=0, direction=(1, 0))]
-        initial_directions = [
-            tuple_direction_to_index(num_x_axis=self.num_x_axis, num_y_axis=self.num_y_axis, direction=task.direction,
-                                     ndirections=self.ndirections)[0]
-            for task in self.initial_directions]
+        self.image_size = [3, 128, 128]  # The Emnist image size.
         # The number of heads.
-        self.num_heads = [1 if direction not in initial_directions else len(self.initial_directions) for direction in
-                          range(self.ndirections)]
-        self.new_tasks = [[Task_to_struct(task=0, direction=(-1, 0))], [Task_to_struct(task=0, direction=(0, 1))],
-                          [Task_to_struct(task=0, direction=(0, -1))]]
+        self.new_tasks = [(0, (-2, 0)), (0, (0, 1)),
+                          (0, (0, -1))]
         # To have better accuracy as in the paper you may increase the number of epochs.
-        self.epoch_dictionary = {(0, (1, 0)): 70, (0, (-1, 0)): 30, (0, (0, 1)): 30, (0, (0, -1)): 30}
+        self.epoch_dictionary = {(0, (1, 0)): 70, (0, (-2, 0)): 70, (0, (2, 0)): 70, (0, (0, 1)): 30,
+                                 (0, (0, -1)): 30, (0, (-1, 1)): 70, (0, (-1, -1)): 70, (0, (1, -1)): 70}
 
 
 class FashionmnistDataset(GenericDataParams):
@@ -148,38 +136,8 @@ class FashionmnistDataset(GenericDataParams):
                          range(self.ndirections)}  # The same as Emnist, just we have just 10 classes in the dataset.
         self.image_size = [3, 112, 130]  # The FashionMnist image size.
         self.epoch_dictionary = {(0, (1, 0)): 60, (0, (-1, 0)): 30, (0, (0, 1)): 30, (0, (0, -1)): 30}
-        self.new_tasks = [[Task_to_struct(task=0, direction=(-1, 0))], [Task_to_struct(task=0, direction=(0, 1))],
-                          [Task_to_struct(task=0, direction=(0, -1))]]
-
-
-class Cifar10Dataset(GenericDataParams):
-    """
-    The Emnist dataset specification.
-    """
-
-    def __init__(self, flag_at: Flag):
-        """
-        Args:
-            flag_at: The model flag.
-
-        """
-        super(Cifar10Dataset, self).__init__(flag_at=flag_at, ds_type=DsType.cifar10, num_x_axis=2, num_y_axis=2)
-        self.image_size = [3, 96, 96]  # The Emnist image size.
-        self.nclasses = {i: 10 for i in
-                         range(self.ndirections)}  # The same as Emnist, just we have just 10 classes in the dataset.
-        # The initial indexes.
-        self.initial_directions = [Task_to_struct(task=0, direction=(1, 0))]
-        initial_directions = [
-            tuple_direction_to_index(num_x_axis=self.num_x_axis, num_y_axis=self.num_y_axis, direction=task.direction,
-                                     ndirections=self.ndirections)[0]
-            for task in self.initial_directions]
-        # The number of heads.
-        self.num_heads = [1 if direction not in initial_directions else len(self.initial_directions) for direction in
-                          range(self.ndirections)]
-        self.new_tasks = [[Task_to_struct(task=0, direction=(-1, 0))], [Task_to_struct(task=0, direction=(0, 1))],
-                          [Task_to_struct(task=0, direction=(0, -1))]]
-        # To have better accuracy as in the paper you may increase the number of epochs.
-        self.epoch_dictionary = {(0, (1, 0)): 70, (0, (-1, 0)): 30, (0, (0, 1)): 30, (0, (0, -1)): 30}
+        self.new_tasks = [[(0, (-1, 0))], [(0, (0, 1))],
+                          [(0, (0, -1))]]
 
 
 class OmniglotDataset(GenericDataParams):
@@ -206,22 +164,21 @@ class OmniglotDataset(GenericDataParams):
                                                 raw_data_path)  # Computing for each language its number of characters.
         #  self.ndirections = 15
         self.num_heads = [1 for _ in range(self.ndirections)]
-        self.initial_directions = [Task_to_struct(task=50, direction=(1, 0)),
-                                   Task_to_struct(task=50, direction=(-1, 0))]
+        self.initial_directions = [(50, (1, 0))]
         self.epoch_dictionary = {(50, (1, 0)): 70, (50, (-1, 0)): 40, (49, (1, 0)): 15,
                                  (49, (-1, 0)): 15, (43, (1, 0)): 15,
                                  (43, (-1, 0)): 15, (42, (1, 0)): 15, (42, (-1, 0)): 15,
                                  (41, (1, 0)): 15, (41, (-1, 0)): 15,
                                  (40, (1, 0)): 15, (40, (-1, 0)): 15}
 
-        new_tasks_right = [[Task_to_struct(task=49, direction=(1, 0))], [Task_to_struct(task=43, direction=(1, 0))],
-                           [Task_to_struct(task=42, direction=(1, 0))], [Task_to_struct(task=41, direction=(1, 0))],
-                           [Task_to_struct(task=40, direction=(1, 0))]]
+        new_tasks_right = [[(49, (1, 0))], [(43, (1, 0))],
+                           [(42, (1, 0))], [(41, (1, 0))],
+                           [(40, (1, 0))]]
         #
-        new_tasks_left = [[Task_to_struct(task=49, direction=(-1, 0))], [Task_to_struct(task=43, direction=(-1, 0))],
-                          [Task_to_struct(task=42, direction=(-1, 0))], [Task_to_struct(task=41, direction=(-1, 0))],
-                          [Task_to_struct(task=40, direction=(-1, 0))]]
-        self.num_heads = [2 if direction not in self.initial_directions else len(self.initial_directions) for
+        new_tasks_left = [[(49, (-1, 0))], [(43, (-1, 0))],
+                          [(42, (-1, 0))], [(1, (-1, 0))],
+                          [(40, (-1, 0))]]
+        self.num_heads = [1 if direction not in self.initial_directions else len(self.initial_directions) for
                           direction in
                           range(self.ndirections)]
         self.new_tasks = [new_tasks_right, new_tasks_left]
@@ -233,7 +190,7 @@ class AllDataSetOptions:
     """
 
     def __init__(self, ds_type: DsType, flag_at: Flag,
-                 initial_task_for_omniglot_only: Optional[int]):
+                 initial_task_for_omniglot_only: Union[int, None] = None):
         """
         Given dataset type returns its associate Dataset specification.
         Args:
@@ -250,5 +207,26 @@ class AllDataSetOptions:
         if ds_type is DsType.Omniglot:
             self.data_obj = OmniglotDataset(flag_at=flag_at,
                                             initial_tasks=initial_task_for_omniglot_only)  # Omniglot.
-        if ds_type is DsType.cifar10:
-            self.data_obj = Cifar10Dataset(flag_at=flag_at)
+
+
+def DataSetTypeToParams(ds_type: DsType, flag_at: Flag,
+                        initial_task_for_omniglot_only: Union[int, None] = None):
+    """
+    From data-set type to parameters object.
+    Args:
+        ds_type: The data-set type.
+        flag_at: The model flag.
+        initial_task_for_omniglot_only: The initial tasks.
+
+    Returns:
+
+    """
+    if ds_type is DsType.Emnist:
+        return EmnistDataset(flag_at=flag_at)  # Emnist.
+
+    if ds_type is DsType.Fashionmnist:
+        return FashionmnistDataset(flag_at=flag_at)  # Fashionmnist
+
+    if ds_type is DsType.Omniglot:
+        return OmniglotDataset(flag_at=flag_at,
+                               initial_tasks=initial_task_for_omniglot_only)  # Omniglot.
