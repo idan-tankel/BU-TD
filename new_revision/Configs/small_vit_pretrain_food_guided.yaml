@@ -55,7 +55,7 @@ Models:
   image_size: [112,224] # int, the size of the image to be used in the model
   num_channels: 3
   num_classes: 48 # the number of classes within the dataset TOOD
-  number_of_linear_heads: 6 # each linear head correspond to a class in the MultiHeadAttention
+  number_of_linear_heads: 1 # each linear head correspond to a class in the MultiHeadAttention
   depth: 3
   strides: [2, 2, 1, 2] #
   nfilters: [128,1000] # For CCT
@@ -70,7 +70,7 @@ Models:
   orig_relus: False # ('bool') use the original relu activation function in certain places
   norm_layer: BatchNorm # (`nn.Module`) one of the supported normalization layers
   # Notice! this option affected also from training / dataset requirements
-  ntasks: 6 # (`int`) the number of tasks to train on. Will determine the number of heads in the model
+  ntasks: 4 # (`int`) the number of tasks to train on. Will determine the number of heads in the model
   pretrained_model_name: 'local/food_101_47.ckpt'  # (`str`) the url to the pretrained model in huggingface.co
 
 
@@ -87,7 +87,7 @@ Training:
   momentum: 0.9 # (`float`) Momentum of the Adam optimizer
   wd: 0.00001 #(`float`) The weight decay of the Adam optimizer
   lr: 1e-4 # (`float`)the initial learning rate # TODO support in also multiplication
-  max_lr: 0.002  # (`float`) the maximum learning rate
+  max_lr: 4e-3  # (`float`) the maximum learning rate
   distributed: False # whether to use distributed data within training - accross some GPUs using DistributedSampler of torch
   cycle_lr: True # (`bool`) whether to cycle the learning rate
   base_lr: 0.0001 # (`float`) the base learning rate for the cyclic_adam_optimizer, if used

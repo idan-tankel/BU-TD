@@ -6,6 +6,8 @@ from transformers import ViTForImageClassification, ViTConfig
 import torch.nn.functional as F
 from torch.optim import Adam
 from torch import no_grad
+from types import SimpleNamespace
+from .heads import TaskHead
 
 
 class ModelWrapper(
@@ -32,9 +34,14 @@ class ModelWrapper(
             nn.Unflatten(
                 1, (config.num_classes, config.number_of_linear_heads)),
         )
+        # add model - task embedding
+        if self.task == "guided":
+            # modify the embeddings
+            model.vit.embeddings = TaskHead(model.vit.embeddings,config.ntasks)
         # this is basically a respahe but wanted the operation as a layer
         self.model = model
-        self.num_tasks = 4
+        self.num_tasks = config.ntasks
+        self.models_config = config
 
     def training_step(self, batch, batch_index):
         # self.model.train()
@@ -50,12 +57,20 @@ class ModelWrapper(
             x, y,flag = batch['img'], batch['label_task'].gather(index=batch['label_all'].squeeze(1),dim=1),batch['flag']
             task_encoding = flag[:,0:self.num_tasks]
             argument_encoding = flag[:,self.num_tasks:]
+            # calculate the right arguments in order to apply answer (singe direction)
+            # create a mask for directions
+            a = batch["label_task"]*argument_encoding                        
+            y = batch["label_task"][argument_encoding.nonzero(as_tuple=True)]
+            #  see https://discuss.pytorch.org/t/use-torch-nonzero-as-index/33218/2
             y.squeeze_()
 
         else:
             x, y = batch['img'], batch['label_task'].gather(index=batch['label_all'].squeeze(1),dim=1)
             y.squeeze_()
-        x_hat = self.model(x)
+        if self.task == "guided":
+            x_hat = self.model(SimpleNamespace(**{"task":task_encoding,"image":x}))
+        else:
+            x_hat = self.model(x)
         y.to(device("cuda") if cuda.is_available() else device("cpu"))
         x_hat.logits.squeeze_()
         y.squeeze_()
@@ -88,14 +103,31 @@ class ModelWrapper(
                 # for CE loss, we will fold up the other dimention if the examples are grid
             elif self.task == "vanilla_training":
                 x,y = batch
+
+
+            elif self.task == "guided":
+                x, y,flag = batch['img'], batch['label_task'].gather(index=batch['label_all'].squeeze(1),dim=1),batch['flag']
+                # task_encoding = flag[:,0:self.num_tasks]
+                argument_encoding = flag[:,self.num_tasks:]
+                task_encoding = flag[:,0:self.num_tasks]
+                # calculate the right arguments in order to apply answer (singe direction)
+                # create a mask for directions
+                # a = batch["label_task"]*argument_encoding
+                        
+                y = batch["label_task"][argument_encoding.nonzero(as_tuple=True)]
+                #  see https://discuss.pytorch.org/t/use-torch-nonzero-as-index/33218/2
+                y.squeeze_()
             else:
                 x, y = batch['img'], batch['label_task'].gather(index=batch['label_all'].squeeze(1),dim=1)
                 y.squeeze_()
-            x_hat = self.model(x)
+            if self.task == "guided":
+                x_hat = self.model(SimpleNamespace(**{"task":task_encoding,"image":x}))
+            else:
+                x_hat = self.model(x)
             y.to(device("cuda") if cuda.is_available() else device("cpu"))
 
             loss = nn.CrossEntropyLoss(reduction='mean')(x_hat.logits.squeeze(), y.squeeze())
-            pred = x_hat.logits.argmax(dim=1)
+            pred = x_hat.logits.argmax(dim=1).squeeze()
             acc = 1 - (pred -
                        y).count_nonzero() / y.numel()
             # this is the distance from the naive classifier - classifing all to the most common class - edge case
