@@ -101,10 +101,10 @@ def train_step(opts: argparse, model: Module, training_flag: Training_flag, task
                                  direction_tuple=task[0 - 1],
                                  task_id=task[0],
                                  nbatches_train=len(DataLoaders['train_dl']), train_ds=DataLoaders['train_ds'])
-    load = False
+    load = True
     if load:
         #  wrapped_model.load_model(
-        model_path = 'Right/BUTDModel_epoch58.pt'
+        model_path = 'Right/BUTDModel_epoch58_optimum_0.9855000376701355.pt'
         model_path = os.path.join(opts.data_obj.results_dir, model_path)
         checkpoint = torch.load(model_path)  # Loading the saved data.
         checkpoint = load_pretrained_model(model=model, model_state_dict=checkpoint['model_state_dict'])

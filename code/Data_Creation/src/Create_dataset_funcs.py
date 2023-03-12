@@ -187,7 +187,7 @@ def Choose_Chars(opts: argparse, prng: random, valid_pairs: np.array, ds_type: s
     num_characters_per_sample = opts.num_characters_per_sample  # The number of chars
     num_strings_for_CG = opts.num_strings_for_CG  # The number of CG strings
     sample_chars = []
-    is_val = ds_type == 'val'  # If the sample belongs to the CG test.
+    is_val = ds_type == 'val_CG'  # If the sample belongs to the CG test.
     if not is_val:  # If we are not in the CG test.
         found = False
         while not found:  # While we didn't find any valid sequence, we continue.
@@ -278,7 +278,7 @@ def Make_data_dir(opts: argparse, ds_type: DsType, language_list: list) -> tuple
     """
     folder_name = '(%d,%d)_' % (opts.num_rows, opts.num_cols)  # The data set specification.
     if ds_type is DsType.Omniglot:
-        folder_name += 'data_set_matrix' + str(language_list[0])
+        folder_name += 'Testing_data_set_matrix' + str(language_list[0])
     else:
         folder_name += 'Image_Matrix_train'
     Samples_dir = os.path.join(opts.store_folder, folder_name)  # The path we store into.
@@ -324,7 +324,7 @@ def Generate_raw_samples(opts: argparse, raw_dataset: General_raw_data, image_id
         image_id_hash = str(sample_chars)
         # To ensure we have each sequence in train/test at most one we check whether it's in the image_ids.
         # For validation, we know the samples are disjoint as we build it like that.
-        if image_id_hash in image_ids and ds_type != "val":
+        if image_id_hash in image_ids and ds_type != "val_CG":
             continue
         image_ids.add(image_id_hash)
         chars = []  # The chosen characters.
@@ -437,16 +437,19 @@ def create_dataset(opts: argparse, raw_dataset: General_raw_data, ds_type: DsTyp
     nsamples_val = opts.nsamples_val  # The number of validation samples we desire to create.
     storage_dir, _ = Make_data_dir(opts, ds_type, language_list)
     # Get the storage dir for the data and for the conf file.
-    data_set_types = ['test', 'train']  # The dataset types.
-    nsamples_per_data_sets = [nsamples_test, nsamples_train]
+    data_set_types = ['val', 'train']  # The dataset types.
+    nsamples_per_data_sets = [nsamples_val, nsamples_train]
     if generalize:  # if we want also the CG dataset we add its name to the ds_type and the number of needed samples.
         nsamples_per_data_sets.append(nsamples_val)
-        data_set_types.append('val')
+        data_set_types.append('val_CG')
         # Generating valid pairs we can sample from and the CG sequences.
         valid_pairs, CG_chars_list = Get_valid_pairs_for_the_combinatorial_test(opts, nclasses,
                                                                                 valid_classes)
     else:
         valid_pairs, CG_chars_list = None, []
+    if opts.use_train_test_val_split:
+         nsamples_per_data_sets.append(nsamples_test)
+         data_set_types.append('test')
 
     num_samples_per_data_type_dict = {}
     # Iterating over all dataset types and generating raw samples for each and then generating samples.

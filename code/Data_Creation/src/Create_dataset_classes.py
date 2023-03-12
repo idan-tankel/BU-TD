@@ -284,7 +284,7 @@ class EmnistParams(GenericDatasetParams):
         self.image_size = [1, 130, 200]
         self.ngenerate = 5 if 5 < self.num_chars_per_image else self.ngenerate
         self.nsamples_train = 20000
-        self.nsamples_test = 2000
+        self.nsamples_test = 20000
         self.nsamples_val = 2000
         self.raw_data_set = Emnist_raw_data(self.Data_path)
 
@@ -387,8 +387,7 @@ class UnifiedDataSetType:
         if ds_type is DsType.Omniglot:
             self.ds_obj = OmniglotParams(ds_type=ds_type, num_cols=num_cols, num_rows=num_rows,
                                          language_list=language_list)
-        if ds_type is DsType.cifar10:
-            self.ds_obj = Cifar10Params(ds_type=ds_type, num_cols=num_cols, num_rows=num_rows)
+
 
 
 class CharInfo:
@@ -418,12 +417,8 @@ class CharInfo:
         shift = prng.rand(2) * (max_shift - min_shift) + min_shift
         y, x = shift.astype(np.int)
         start_row, start_col = np.unravel_index(indices=sample_id, shape=[opts.num_rows, opts.num_cols])
-        if opts.ds_type is DsType.cifar10:
-            c = start_col  # start in the middle of the column.
-            r = start_row  # Start in the 0.1 of the row.
-        else:
-            c = start_col + 0.5  # start in the middle of the column.
-            r = start_row + 0.1  # Start in the 0.1 of the row.
+        c = start_col + 0.5  # start in the middle of the column.
+        r = start_row + 0.1  # Start in the 0.1 of the row.
         col, image_height, image_width = opts.image_size  # The desired image dimension.
         stx = int(c * opts.letter_size + x)
         stx = max(0, stx)  # Ensure it's non-negative.
@@ -433,10 +428,6 @@ class CharInfo:
         sty = min(sty, image_height - new_size)
         num_examples_per_character = raw_dataset.num_examples_per_character
         self.label = sample_chars[sample_id]
-       # if ds_type == 'train':
-      #      num_examples_per_character = raw_dataset.num_examples_per_character_train
-     #   else:
-      #      num_examples_per_character = raw_dataset.num_examples_per_character_test
         self.label_id = prng.randint(0, num_examples_per_character)  # Choose a specific character image.
         # The index in the data-loader.
         self.img_id = num_examples_per_character * self.label + self.label_id
@@ -449,8 +440,7 @@ class CharInfo:
         # Scaling character and getting the desired location to plant the character.
         h, w = new_size, new_size
         sz = (col, h, w)
-        if opts.ds_type is not DsType.cifar10:
-            self.img = skimage.transform.resize(self.img, sz, mode='constant')  # Apply the resize transforms.
+        self.img = skimage.transform.resize(self.img, sz, mode='constant')  # Apply the resize transforms.
         self.stx = self.location_x
         self.end_x = stx + w
         self.sty = self.location_y

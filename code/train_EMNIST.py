@@ -33,7 +33,7 @@ def train_trajectory(Train_initial=True, Train_New=False):
         Models.append(new_model)
         Data.append(new_data)
     #  new_tasks = opts.new_tasks
-    new_tasks = [(0, (-1,0))]
+    new_tasks = [(0, (0,-2))]
     if Train_New:
         for task in new_tasks:
             # Train head, and task embedding.

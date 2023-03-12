@@ -88,7 +88,6 @@ class ModelWrapped(LightningModule):
         samples = inputs_to_struct(inputs=batch)  # Compute the sample struct.
         outs = model(samples)  # Compute the model output.
         outs = outs_to_struct(outs)
-      #  print(self.scheduler)
         loss = self.loss_fun(opts=self.opts, samples=samples, outs=outs)  # Compute the loss.
         _, acc = self.accuracy(samples=samples, outs=outs)  # The Accuracy.
         self.log('train_loss', loss, on_step=True, on_epoch=True)  # Update loss.
