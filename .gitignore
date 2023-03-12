@@ -40,3 +40,4 @@ data*
 .vscode/settings.json
 # wandb
 wandb/*
+transfer_learning/lightning_logs*
