@@ -12,7 +12,7 @@ from torchvision.models.resnet import conv3x3, conv1x1
 
 import numpy as np
 
-from src.Modules.module_blocks import WeightModulation
+from src.Modules.module_blocks import WeightModulation, MaskWeight
 
 
 class BasicBlock(nn.Module):
@@ -31,8 +31,8 @@ class BasicBlock(nn.Module):
             inshapes: List = None,
             norm_layer: Optional[Callable[..., nn.Module]] = None,
             index: int = 0,
-            modulations: Optional[List] = None
-
+            modulations: Optional[List] = None,
+            mask:Optional[List]
     ) -> None:
         """
          Create basic block with optional modulations.
@@ -53,10 +53,13 @@ class BasicBlock(nn.Module):
         self.stride = stride
         self.weight_modulation = opts.data_set_obj.weight_modulation
         self.conv1 = conv3x3(inplanes, planes, stride)
+        self.mask1 = MaskWeight(self.conv1)
         self.bn1 = norm_layer(planes, ntasks=self.ntasks)
         self.relu = nn.ReLU(inplace=True)
         self.conv2 = conv3x3(planes, planes)
+        self.mask2 = MaskWeight(self.conv2)
         self.bn2 = norm_layer(planes, ntasks=self.ntasks)
+        self.learn_mask = True
         # If we want to modulate the weights.
         if self.weight_modulation:
             self.modulation1 = WeightModulation(opts=opts, layer=self.conv1, modulations=modulations)
@@ -82,6 +85,9 @@ class BasicBlock(nn.Module):
         # If we modulate weight, we modulate and do forward.
         if self.weight_modulation:
             out = self.modulation1(x=out, flags=flags)
+
+        if self.learn_mask:
+            out = self.mask1(out)
         # Else do ordinary forward.
         else:
             out = self.conv1(out)
@@ -91,6 +97,9 @@ class BasicBlock(nn.Module):
         # The same as above.
         if self.weight_modulation:
             out = self.modulation2(x=out, flags=flags)
+
+        if self.learn_mask:
+            out = self.mask2(out)
         else:
             out = self.conv2(out)
 

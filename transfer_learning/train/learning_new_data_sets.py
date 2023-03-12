@@ -48,15 +48,17 @@ def train_classification(task_id: int, load: bool, ds_type: data_set_types,
     learned_params = Get_Learned_Params(model, training_flag, task_id)
     wrapped_model = ModelWrapped(opts=opts, model=model, learned_params=learned_params,
                                  task_id=task_id)
+    '''
     load_model(model=wrapped_model, results_dir='/home/sverkip/data/tran/data/models/CIFAR100/Train_original_resnet'
                                                 f'/Modulation_Training/ResNet32/Adam/New_'
                                                 f'{i}_factor_0.2_wd_0.0_bs_96_lr=_0.1_milestones_[50, 100]_drop_out_rate_0.2_modulation_factor_[4, 4, 1, 1]_channels_[16, 16, 32, 64]modulation_True'
                                                 ,
                model_path='Model_best.ckpt')
+    '''
     # print(wrapped_model.Accuracy(test_dl))
 
     trainer = Define_Trainer(opts, name)
-    # trainer.fit(wrapped_model, train_dataloaders=train_dl, val_dataloaders=val_dl)
+    trainer.fit(wrapped_model, train_dataloaders=train_dl, val_dataloaders=val_dl)
     # trainer.test(wrapped_model, test_dl)
     print(trainer.test(wrapped_model, test_dl,verbose = False)[0]['test_acc_epoch'])
 

@@ -17,6 +17,7 @@ import torch.nn.functional as F
 from src.Utils import Expand
 from src.Modules.Batch_norm import BatchNorm
 
+from torch.nn.parameter import Parameter
 
 class DownSample(nn.Module):
     """
@@ -153,3 +154,38 @@ class LambdaLayer(nn.Module):
 
         """
         return self.lamda(x)
+
+DEFAULT_THRESHOLD = 5e-3
+class Binarizer(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, inputs):
+        outputs = inputs.clone()
+        outputs[inputs.le(DEFAULT_THRESHOLD)] = 0
+        outputs[inputs.gt(DEFAULT_THRESHOLD)] = 1
+        ctx.save_for_backward(outputs)
+        return outputs
+
+    @staticmethod
+    def backward(ctx, *grad_outputs):
+        return grad_outputs
+
+class MaskWeight(nn.Module):
+    def __init__(self,layer:nn.Conv2d):
+        super(MaskWeight, self).__init__()
+        self.weight = layer.weight
+        self.stride = layer.stride
+        self.padding = layer.padding
+        self.dilation = layer.dilation
+        self.groups = layer.groups
+
+        self.mask_real = self.weight.data.new(self.weight.size())
+        mask_scale = 1e-2
+        self.mask_real.fill_(mask_scale)
+        # mask_real is now a trainable parameter.
+        self.mask_real = Parameter(self.mask_real)
+
+    def forward(self, input):
+        Mask = Binarizer.apply(self.mask_real)
+        new_weight = Mask * self.weight
+        return F.conv2d(input, new_weight, None, self.stride,
+                        self.padding, self.dilation, self.groups)
