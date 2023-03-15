@@ -12,7 +12,7 @@ from torchvision.models.resnet import conv3x3, conv1x1
 
 import numpy as np
 
-from src.Modules.module_blocks import WeightModulation, MaskWeight
+from src.Modules.module_blocks import WeightModulation, MaskWeight, conv_with_modulation_and_masking
 
 
 class BasicBlock(nn.Module):
@@ -32,7 +32,7 @@ class BasicBlock(nn.Module):
             norm_layer: Optional[Callable[..., nn.Module]] = None,
             index: int = 0,
             modulations: Optional[List] = None,
-            mask:Optional[List]
+            masks: Optional[List] = None
     ) -> None:
         """
          Create basic block with optional modulations.
@@ -53,23 +53,24 @@ class BasicBlock(nn.Module):
         self.stride = stride
         self.weight_modulation = opts.data_set_obj.weight_modulation
         self.conv1 = conv3x3(inplanes, planes, stride)
-        self.mask1 = MaskWeight(self.conv1)
+        self.modulated_conv1 =  conv_with_modulation_and_masking(opts = opts, conv_layer = self.conv1,
+            task_embedding = modulations, create_modulation = True, create_masks = True, masks = masks)
+
         self.bn1 = norm_layer(planes, ntasks=self.ntasks)
         self.relu = nn.ReLU(inplace=True)
         self.conv2 = conv3x3(planes, planes)
-        self.mask2 = MaskWeight(self.conv2)
+        self.modulated_conv2 = conv_with_modulation_and_masking(opts=opts, conv_layer=self.conv2,
+                                                                task_embedding=modulations, create_modulation=True,
+                                                                create_masks=True, masks=masks)
         self.bn2 = norm_layer(planes, ntasks=self.ntasks)
-        self.learn_mask = True
-        # If we want to modulate the weights.
-        if self.weight_modulation:
-            self.modulation1 = WeightModulation(opts=opts, layer=self.conv1, modulations=modulations)
-            self.modulation2 = WeightModulation(opts=opts, layer=self.conv2, modulations=modulations)
-        # If we want to modulate the neurons.
 
         self.downsample = downsample
+        self.option_B = opts.data_set_obj.option_B
         if self.downsample is not None and opts.data_set_obj.option_B:
-            self.modulation3 = WeightModulation(opts=opts, layer=self.downsample.conv1x1, modulations=modulations)
-        self.modulate_downsample = self.weight_modulation and opts.data_set_obj.option_B
+            self.modulated_conv3 = conv_with_modulation_and_masking(opts = opts, conv_layer = self.downsample.conv1x1,
+            task_embedding = modulations, create_modulation = True, create_masks = True, masks = masks)
+
+        self.modulate_downsample =  opts.data_set_obj.option_B and self.downsample is not None
 
     def forward(self, inputs: Tuple[Tensor, Tensor]) -> Tuple[Tensor, Tensor]:
         """
@@ -83,40 +84,25 @@ class BasicBlock(nn.Module):
         identity, flags = inputs
         out = identity
         # If we modulate weight, we modulate and do forward.
-        if self.weight_modulation:
-            out = self.modulation1(x=out, flags=flags)
 
-        if self.learn_mask:
-            out = self.mask1(out)
-        # Else do ordinary forward.
-        else:
-            out = self.conv1(out)
+        out = self.modulated_conv1(out,flags)
 
         out = self.bn1(out, flags)
         out = self.relu(out)
         # The same as above.
-        if self.weight_modulation:
-            out = self.modulation2(x=out, flags=flags)
-
-        if self.learn_mask:
-            out = self.mask2(out)
-        else:
-            out = self.conv2(out)
+        out = self.modulated_conv2(out,flags)
 
         out = self.bn2(out, flags)
-        if self.downsample is not None and self.modulate_downsample:
-            if self.weight_modulation:
-                identity = self.modulation3(identity, flags)
-                identity = self.downsample.norm(identity, flags)
-            else:
-                identity = self.downsample(identity, flags)
+        if self.modulate_downsample:
+            identity = self.modulation3(identity, flags)
+            identity = self.downsample.norm(identity, flags)
+
         elif self.downsample is not None:
             identity = self.downsample(identity, flags)
         out += identity
         out = self.relu(out)
 
         return out, flags
-
 
 class Bottleneck(nn.Module):
     """

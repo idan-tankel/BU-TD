@@ -33,11 +33,11 @@ def train_trajectory(Train_initial=True, Train_New=False):
         Models.append(new_model)
         Data.append(new_data)
     #  new_tasks = opts.new_tasks
-    new_tasks = [(0, (0,-2))]
+    new_tasks = [(0, (-1,0))]
     if Train_New:
         for task in new_tasks:
             # Train head, and task embedding.
-            training_flag = Training_flag(opts, train_head=True, train_task_embedding=True)
+            training_flag = Training_flag(opts, train_head=True, train_task_embedding=False,train_masks=True)
             epoch = 70 # opts.data_obj.epoch_dictionary[task]
             # The new model, data.
             model, data = train_step(opts=opts, model=model, task=task, training_flag=training_flag, ds_type=ds_type,

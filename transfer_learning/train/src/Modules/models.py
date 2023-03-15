@@ -35,6 +35,7 @@ class ResNet(nn.Module):
         self.ntasks = opts.data_set_obj.ntasks
         self.kernel_size = opts.data_set_obj.ks
         self.modulations = [[] for _ in range(self.ntasks)]
+        self.masks = [[] for _ in range(self.ntasks)]
         self.option_B = opts.data_set_obj.option_B
         self._norm_layer = Batch_Norm_ours_with_saving_stats
         self.image_shape = opts.data_set_obj.image_shape
@@ -70,7 +71,7 @@ class ResNet(nn.Module):
         self.avgpool = nn.AdaptiveAvgPool2d(1)
         self.drop_out = nn.Dropout(self.drop_out)
         self.linear = Head(in_channels=self.channels[-1], heads=self.heads,
-                           modulation=self.modulations, block_expansion=block.expansion)
+                           modulation=self.modulations, block_expansion=block.expansion, mask=self.masks)
         init_module_weights(self.modules())
 
     def _make_layer(self, block: Type[Union[BasicBlock, Bottleneck]], planes: int, blocks: int, stride: int = 1,
@@ -90,7 +91,8 @@ class ResNet(nn.Module):
         layers = [block(self.opts,
                         inplanes=self.inplanes, planes=planes, stride=stride, downsample=downsample,
                         norm_layer=norm_layer, inshapes=shape,
-                        modulations=modulation
+                        modulations=modulation,
+                        masks=self.masks
                         )]
 
         shape = layers[0].shape
@@ -102,7 +104,7 @@ class ResNet(nn.Module):
                           norm_layer=norm_layer,
                           inshapes=shape,
                           index=idx,
-                          modulations=modulation)
+                          modulations=modulation, masks=self.masks)
             layers.append(layer)
 
         return nn.Sequential(*layers)
@@ -251,17 +253,86 @@ class ExpandedSimpleMLP(nn.Module):
         x = nn.functional.linear(x, weight=weight, bias=None)
         return x
 
+
+def ResNet14(opts):
+    """
+    Small ResNet32 model with more blocks but with low number of filters.
+     Args:
+        opts: The model opts.
+
+    Returns: ResNet32 model.
+
+    """
+    return ResNet(opts=opts, block=BasicBlock, num_blocks=[2, 2, 2])
+
+
 def ResNet18(opts):
-    return ResNet(opts =  opts,block = BasicBlock, num_blocks = [2, 2, 2, 2])
+    """
+    Original ResNet18 model.
+    Args:
+        opts: The model opts.
+
+    Returns: ResNet18 model.
+
+    """
+    return ResNet(opts=opts, block=BasicBlock, num_blocks=[2, 2, 2, 2])
+
+
+def ResNet20(opts):
+    """
+    Small ResNet32 model with more blocks but with low number of filters.
+     Args:
+        opts: The model opts.
+
+    Returns: ResNet32 model.
+
+    """
+    return ResNet(opts=opts, block=BasicBlock, num_blocks=[3, 3, 3])
+
 
 def ResNet32(opts):
-    return ResNet(opts =  opts,block = BasicBlock, num_blocks = [5, 5, 5])
+    """
+    Small ResNet32 model with more blocks but with low number of filters.
+     Args:
+        opts: The model opts.
+
+    Returns: ResNet32 model.
+
+    """
+    return ResNet(opts=opts, block=BasicBlock, num_blocks=[5, 5, 5])
+
 
 def ResNet34(opts):
-    return ResNet(opts =  opts,block = BasicBlock, num_blocks = [3, 4, 6, 3])
+    """
+       Original ResNet34 model.
+       Args:
+           opts: The model opts.
+
+       Returns: ResNet34 model.
+
+       """
+    return ResNet(opts=opts, block=BasicBlock, num_blocks=[3, 4, 6, 3])
+
 
 def ResNet50(opts):
+    """
+       Original ResNet50 model.
+       Args:
+           opts: The model opts.
+
+       Returns: ResNet50 model.
+
+       """
     return ResNet(opts=opts, block=Bottleneck, num_blocks=[3, 4, 6, 3])
 
+
 def ResNet101(opts):
+    """
+       Original ResNet101 model.
+       Args:
+           opts: The model opts.
+
+       Returns: ResNet101 model.
+
+       """
     return ResNet(opts=opts, block=Bottleneck, num_blocks=[3, 4, 23, 3])

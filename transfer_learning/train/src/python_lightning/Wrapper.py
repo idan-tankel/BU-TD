@@ -10,9 +10,9 @@ import torch
 import torch.nn as nn
 from pytorch_lightning import LightningModule
 from torch import Tensor
-from torch.utils.data import DataLoader
 from src.Utils import create_optimizer_and_scheduler, preprocess
 from src.Modules.Batch_norm import store_running_stats
+import torchmetrics
 
 
 # Define the model wrapper class.
@@ -31,7 +31,6 @@ class ModelWrapped(LightningModule):
             opts: The model options.
             model: The model.
             learned_params: The parameters we desire to split.
-            check_point: The check point.
             task_id: The task id.
         """
         super(ModelWrapped, self).__init__()
@@ -45,6 +44,7 @@ class ModelWrapped(LightningModule):
         self.task_id: int = task_id  # The task id.
         # Define the optimizer, scheduler.
         self.just_initialized = True
+        self.val_acc = torchmetrics.Accuracy(task='multiclass', num_classes=100)
 
     def configure_optimizers(self):
         """
@@ -77,8 +77,8 @@ class ModelWrapped(LightningModule):
         class_prob = torch.argmax(outs, dim=1)
         acc = torch.eq(class_prob, label).float()  # Compute the Accuracy.
         acc = acc.mean()
-        self.log('train_loss', loss, on_step=True, on_epoch=True)  # Update the loss.
-        self.log('train_acc', acc, on_step=True, on_epoch=True)  # Update the acc.
+        self.log('train_loss', loss, on_step=True, on_epoch=True, sync_dist=True)  # Update the loss.
+        self.log('train_acc', acc, on_step=True, on_epoch=True, sync_dist=True)  # Update the acc.
         if batch_idx == len(self.trainer._data_connector._train_dataloader_source.dataloader()) - 1:
             store_running_stats(model=self.model, task_id=self.task_id)
             print('Done storing running statistics for BN layers')
@@ -94,10 +94,10 @@ class ModelWrapped(LightningModule):
         Returns: The task Accuracy on the batch.
 
         """
-        return self.test_model(batch=batch, mode='val')
+        return self.test_model(batch=batch,batch_id = batch_idx,  mode='val')
 
-    def test_model(self,batch,mode):
-        assert  mode in ['test', 'val']
+    def test_model(self, batch,batch_id, mode):
+        assert mode in ['test', 'val']
         model = self.model
         model.eval()  # Move the model into the evaluation mode.
         images, label, task_id = batch
@@ -106,9 +106,17 @@ class ModelWrapped(LightningModule):
             loss = self.loss_fun(outs, label)  # Compute the loss.
             class_prob = torch.argmax(outs, dim=1)
             acc = torch.eq(class_prob, label).float()  # Compute the Accuracy.
+            self.val_acc.update(class_prob, label)
             acc = acc.mean()
             self.log(f'{mode}_loss', loss, on_step=True, on_epoch=True)  # Update the loss.
             self.log(f'{mode}_acc', acc, on_step=True, on_epoch=True)  # Update the acc.
+        if mode == 'val':
+            num_batches = len(self.trainer._data_connector._val_dataloader_source.dataloader()) - 1
+        else:
+            num_batches = len(self.trainer._data_connector._test_dataloader_source.dataloader()) - 1
+        if batch_id == num_batches:
+            print(self.val_acc.compute())
+            self.val_acc.reset()
         return acc  # Return the Accuracy and number of inputs in the batch.
 
     def test_step(self, batch: List[Tensor], batch_idx: int) -> Tensor:
@@ -121,8 +129,8 @@ class ModelWrapped(LightningModule):
         Returns: The task Accuracy on the batch.
 
         """
-       
-        return self.test_model(batch=batch, mode='test')
+
+        return self.test_model(batch=batch,batch_id=batch_idx, mode='test')
 
     def load_model(self, model_path: str, load_opt_and_sche: bool = False) -> dict:
         """

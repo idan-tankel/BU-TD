@@ -103,10 +103,19 @@ def load_model(model: nn.Module, results_dir: str, model_path: str) -> dict:
     model_path = os.path.join(results_dir, model_path)  # The path to the model.
     checkpoint = torch.load(model_path)  # Loading the saved data.
     for name, param in model.state_dict().items():
-        if 'modulation' in name and name not in checkpoint['state_dict'].keys():
-            checkpoint['state_dict'][name] = param
+        if 'modulated' in name and name not in checkpoint['state_dict'].keys() or 'mask' in name or 'linear' in name\
+                or 'running' in name:
+            if name in model.state_dict().keys():
+                checkpoint['state_dict'][name] = param
+    new_check = {}
+    for name, param in checkpoint['state_dict'].items():
+        new_check[name] = param
+        if name in checkpoint['state_dict'].keys() and name not in model.state_dict().keys():
+            new_check.pop(name)
+        elif name not in model.state_dict().keys():
+            print(name)
 
-    model.load_state_dict(checkpoint['state_dict'])  # Loading the saved weights.
+    model.load_state_dict(new_check)  # Loading the saved weights.
     return checkpoint
 
 
@@ -193,7 +202,7 @@ def Expand(mod: Tensor, shapes: list) -> Tensor:
     Expand the tensor in interleaved manner to match the neuron's shape.
     Args:
         mod: The modulations.
-        shape: The shape to multiply each dimension.
+        shapes: The shape to multiply each dimension.
 
     Returns: The expanded modulations.
 
@@ -201,33 +210,6 @@ def Expand(mod: Tensor, shapes: list) -> Tensor:
     for dim, shape in enumerate(shapes):
         mod = torch.repeat_interleave(mod, shape, dim=dim)
     return mod
-
-
-def Change_opts(opts: argparse) -> None:
-    """
-    Change model opts according to the need.
-    Args:
-        opts: Model options.
-
-    Returns: None
-
-    """
-    layers = opts.data_set_obj.num_blocks
-    if opts.model_type is Model_type.ResNet18:
-        layers = [2, 2, 2, 2]
-    elif opts.model_type is Model_type.ResNet34:
-        layers = [3, 4, 6, 3]
-    elif opts.model_type is Model_type.ResNet50:
-        layers = [3, 4, 6, 3]
-    elif opts.model_type is Model_type.ResNet101:
-        layers = [3, 4, 23, 3]
-    opts.data_set_obj.num_blocks = layers
-    if opts.ModelFlag is ModelFlag.Partial_ResNet:
-        new_channels = [opts.data_set_obj.channels[i] // max(opts.data_set_obj.weight_modulation_factor) for i in
-                        range(len(opts.data_set_obj.channels))]
-        opts.channels = new_channels
-        opts.weight_modulation = False
-
 
 def Get_dataloaders(opts: argparse, task_id: int):
     """
@@ -252,13 +234,16 @@ def Get_dataloaders(opts: argparse, task_id: int):
         seed = torch.Generator().manual_seed(0)
         nsamples_train, nsamples_val = int(np.rint(len(train_ds) * 0.9)), int(np.rint(len(train_ds) * 0.1))
         train_ds, val_ds = data.random_split(train_ds, [nsamples_train, nsamples_val], generator=seed)
-        train_dl = DataLoader(dataset=train_ds, batch_size=opts.data_set_obj.bs, shuffle=True)
+        train_dl = DataLoader(dataset=train_ds, batch_size=opts.data_set_obj.bs, shuffle=True, pin_memory = True)
         val_dl = DataLoader(dataset=val_ds, batch_size=opts.data_set_obj.bs * 2, shuffle=False)
         test_dl = DataLoader(dataset=test_ds, batch_size=opts.data_set_obj.bs * 2, shuffle=False)
     else:
-        train_dl = DataLoader(dataset=train_ds, batch_size=opts.data_set_obj.bs, shuffle=True)
-        val_dl = DataLoader(dataset=test_ds, batch_size=opts.data_set_obj.bs * 2, shuffle=False)
-        test_dl = DataLoader(dataset=test_ds, batch_size=opts.data_set_obj.bs * 2, shuffle=False)
+        train_dl = DataLoader(dataset=train_ds, batch_size=opts.data_set_obj.bs, shuffle=True, pin_memory = True,
+                              num_workers = 2)
+        val_dl = DataLoader(dataset=test_ds, batch_size=opts.data_set_obj.bs * 2, shuffle=False, pin_memory = True,
+                              num_workers = 2)
+        test_dl = DataLoader(dataset=test_ds, batch_size=opts.data_set_obj.bs * 2, shuffle=False, pin_memory = True,
+                              num_workers = 2)
 
     return train_dl, val_dl, test_dl
 
@@ -279,14 +264,14 @@ def Get_Model_path(opts: argparse, ds_type: data_set_types, ModelFlag: ModelFlag
 
     """
     name = f'{str(ds_type)}/{str(ModelFlag)}/{str(training_flag)}/{str(model_type)}/' \
-           f'{str(opts.data_set_obj.optimizer_type)}/'
-    name += f'New_{task_id}_factor_{opts.data_set_obj.factor}_wd_{opts.data_set_obj.wd}_bs_' \
+           f'{str(opts.data_set_obj.optimizer_type)}/Num_tasks_{opts.data_set_obj.ntasks}/Task{task_id}/'
+    name += f'thre_{opts.data_set_obj.threshold}_factor_{opts.data_set_obj.factor}_wd' \
+            f'_{opts.data_set_obj.wd}_bs_' \
             f'{opts.data_set_obj.bs}_lr=' \
             f'_{opts.data_set_obj.initial_lr}_milestones_' \
             f'{opts.data_set_obj.milestones}_drop_out_rate_{opts.data_set_obj.drop_out_rate}_modulation_factor_' \
             f'{opts.data_set_obj.weight_modulation_factor}_channels' \
-            f'_{opts.data_set_obj.channels}' \
-            f'modulation_{opts.data_set_obj.weight_modulation}'
+            f'_{opts.data_set_obj.channels}'
     return name
 
 
@@ -308,6 +293,8 @@ def Get_Learned_Params(model: nn.Module, training_flag: TrainingFlag, task_id: i
         learned_params.extend(model.modulations[task_id])
     if training_flag is TrainingFlag.Classifier_Only:
         learned_params.extend(model.linear.parameters())
+    if training_flag is TrainingFlag.Masks:
+        learned_params.extend(model.masks[task_id])
     return learned_params
 
 
@@ -325,9 +312,11 @@ def Define_Trainer(opts: argparse, name: str) -> pl.Trainer:
     wandbLogger = WandbLogger(project="Affecting conv weight", job_type='train', name=name,
                               save_dir=os.path.join(opts.project_path, 'data/loggers'))
     checkpoint_second = pl.callbacks.ModelCheckpoint(dirpath=
-                                                     os.path.join('/home/sverkip/data/tran/data/models', name),
+                                                     os.path.join(opts.results_dir, name),
                                                      save_top_k=1, mode='max', monitor='val_acc', filename=
                                                      'Model_best')
+    num_devices = 1
     trainer = pl.Trainer(max_epochs=opts.data_set_obj.epochs, accelerator='gpu',
-                         logger=wandbLogger, callbacks=[checkpoint_second])
+                         logger=wandbLogger, callbacks=[checkpoint_second],devices = num_devices,
+                         strategy = 'ddp')
     return trainer

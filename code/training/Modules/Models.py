@@ -128,6 +128,7 @@ class BUStream(nn.Module):
         self.opts = opts  # Save the model opts.
         self.block = opts.bu_block_type  # The basic block type.
         self.task_embedding = [[] for _ in range(opts.data_obj.ndirections)]  # List should contain the task
+        self.masks = [[] for _ in range(opts.data_obj.ndirections)]  # List should contain the task
         # embedding.
         self.inshapes = shared.inshapes  # The output shape of all layers.
         self.use_lateral = opts.use_lateral_tdbu  # Whether to use the TD -> BU2 laterals.
@@ -160,7 +161,7 @@ class BUStream(nn.Module):
             block_inshape = self.inshapes[
                 layer_id + 1]  # The block input shape, needed for the task embedding.
             layer = self.block(opts=self.opts, shared=shared_block, block_inshapes=block_inshape, is_bu2=self.is_bu2,
-                               task_embedding=self.task_embedding)
+                               task_embedding=self.task_embedding, masks = self.masks)
             layers.append(layer)  # Add the layer.
         return layers
 
@@ -363,6 +364,7 @@ class BUTDModel(nn.Module):
                                   transfer_learning_params=self.transfer_learning)
         if self.model_flag is Flag.CL:  # Storing the Task embedding.
             self.TE = self.bumodel2.task_embedding
+            self.masks = self.bumodel2.masks
             # Store the argument embedding.
             if opts.ds_type is DsType.Omniglot:
                 self.argument_embedding = self.tdmodel.argument_embedding

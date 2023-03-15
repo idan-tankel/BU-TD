@@ -108,6 +108,63 @@ class Modulation_and_Lat(nn.Module):
         x = self.relu(x)  # Activation_fun after the skip connection
         return x
 
+
+class Binarizer(torch.autograd.Function):
+    """
+    BinaryRizer object.
+    """
+
+    @staticmethod
+    def forward(ctx, inputs, DEFAULT_THRESHOLD):
+        outputs = inputs.clone()
+        outputs[inputs.le(DEFAULT_THRESHOLD)] = 0
+        outputs[inputs.gt(DEFAULT_THRESHOLD)] = 1
+        ctx.save_for_backward(outputs)
+        return outputs
+
+    @staticmethod
+    def backward(ctx, *grad_outputs):
+        # print(grad_outputs[0].sum())
+        return grad_outputs[0], None
+
+
+class MaskWeight(nn.Module):
+    """
+    Mask weight.
+    """
+
+    def __init__(self, opts: argparse, layer: nn.Conv2d, mask: list):
+        super(MaskWeight, self).__init__()
+        self.weight = layer.weight
+        self.stride = layer.stride
+        self.padding = layer.padding
+        self.dilation = layer.dilation
+        self.groups = layer.groups
+        self.opts = opts
+        self.ntasks = self.opts.data_obj.ntasks
+        self.mask_real = self.weight.data.new(self.weight.size())
+        mask_scale = 1e-2
+        self.mask_real.fill_(mask_scale)
+        # mask_real is now a trainable parameter.
+        self.mask_real = nn.Parameter(self.mask_real)
+        for i in range(self.ntasks):
+            mask[i].append(self.mask_real)
+
+    def forward(self, inputs):
+        """
+        Forward the mask.
+        Args:
+            inputs: The input.
+
+        Returns: The masked conv.
+
+        """
+        Mask = Binarizer.apply(self.mask_real, self.opts.threshold)
+        new_weight = Mask * self.weight
+        return F.conv2d(inputs, new_weight, None, self.stride,
+                        self.padding, self.dilation, self.groups)
+
+
 class conv_with_modulation(nn.Module):
     """
     Create specific version of Depthwise_separable_conv with kernel equal 3.
@@ -123,7 +180,8 @@ class conv_with_modulation(nn.Module):
     Returns: Module that performs the conv3x3.
 
     """
-    def __init__(self,opts:argparse,conv_layer:nn.Module,task_embedding:list,create_modulation:bool):
+    def __init__(self,opts:argparse,conv_layer:nn.Module,task_embedding:list,masks:list,create_modulation:bool,
+                 create_mask:bool):
         super(conv_with_modulation, self).__init__()
         self.opts = opts
         self.create_modulation = create_modulation
@@ -134,12 +192,16 @@ class conv_with_modulation(nn.Module):
         (mod1, mod2, mod3, mod4) = opts.weight_modulation_factor
         self.modulation_factor = opts.weight_modulation_factor
         size = (c_in // mod1, c_out // mod2, k1 // mod3, k2 // mod4)
+        self.create_mask = create_mask
         if create_modulation:
             self.modulation = nn.ParameterList()
             for i in range(self.ntasks):
                 layer = nn.Parameter(torch.Tensor(*size), requires_grad=True)
                 self.modulation.append(layer)
                 task_embedding[i].append(layer)
+
+        if create_mask:
+            self.masks = MaskWeight(layer=conv_layer, opts=opts, mask=masks)
 
     def forward(self, x: Tensor, samples: inputs_to_struct) -> Tensor:
         """
@@ -152,12 +214,15 @@ class conv_with_modulation(nn.Module):
 
         """
         weights = self.layer.weight
-        if self.modulate_weights and self.create_modulation:
-            task = samples.direction_idx[0]
-            task_emb = self.modulation[task]  # compute the task embedding according to the direction_idx.
-            task_emb = Expand(task_emb, shapes=self.modulation_factor)
-            weights = task_emb * weights
-        output = F.conv2d(input=x, weight=weights, stride=self.layer.stride,
-                          padding=self.layer.padding, dilation=self.layer.dilation, groups=self.layer.groups)
+        if not self.create_mask:
+            if self.modulate_weights and self.create_modulation:
+                task = samples.direction_idx[0]
+                task_emb = self.modulation[task]  # compute the task embedding according to the direction_idx.
+                task_emb = Expand(task_emb, shapes=self.modulation_factor)
+                weights = task_emb * weights
+            output = F.conv2d(input=x, weight=weights, stride=self.layer.stride,
+                              padding=self.layer.padding, dilation=self.layer.dilation, groups=self.layer.groups)
+        else:
+            return self.masks(x)
         return output
 

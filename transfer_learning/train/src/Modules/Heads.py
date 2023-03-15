@@ -14,7 +14,8 @@ class Head(nn.Module):
     Supports head per task.
     """
 
-    def __init__(self, in_channels: int, heads: List[int], modulation: List[List[nn.Parameter]], block_expansion: int):
+    def __init__(self, in_channels: int, heads: List[int], modulation: List[List[nn.Parameter]],
+                 mask, block_expansion: int):
         """
         Compute class probabilities.
         Args:
@@ -29,6 +30,7 @@ class Head(nn.Module):
             layer = nn.Linear(in_channels * block_expansion, head)
             Heads.append(layer)
             modulation[index].extend(layer.parameters())
+            mask[index].extend(layer.parameters())
         Heads = nn.ModuleList(Heads)
         self.Head = Heads
 

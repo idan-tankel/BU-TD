@@ -58,7 +58,7 @@ class Training_flag:
 
     def __init__(self, opts: argparse, train_all_model: bool = False, train_arg: bool = False,
                  train_task_embedding: bool = False,
-                 train_head: bool = False):
+                 train_head: bool = False,train_masks = False):
         """
         Args:
             opts: The model options.
@@ -72,6 +72,7 @@ class Training_flag:
         self.task_embedding = train_task_embedding
         self.head_learning = train_head
         self.opts = opts
+        self.masks = train_masks
 
     def Get_learned_params(self, model: nn.Module, task_idx: int, direction: tuple[int, int]):
         """
@@ -103,5 +104,7 @@ class Training_flag:
         if self.train_arg:
             # Train the argument embedding associated with the task.
             learned_params.extend(model.tdmodel.argument_embedding[task_idx])
+        if self.masks:
+            learned_params.extend(model.masks[0])
 
         return learned_params

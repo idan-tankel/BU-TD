@@ -45,11 +45,12 @@ def GetParser(task_idx: int = 0, model_type: Type[Union[BUTDModel, ResNet]] = BU
     opts.add_argument('--ds_type', default=ds_type, type=DsType, help='Flag that defines the data-set type.')
     opts.add_argument('--model_flag', default=model_flag, type=Flag, help='Flag that defines the model type.')
     # Optimization arguments.
-    opts.add_argument('--wd', default=0.0, type=float, help='The weight decay of the Adam optimizer.')
+    opts.add_argument('--wd', default=1e-5, type=float, help='The weight decay of the Adam optimizer.')
     opts.add_argument('--scheduler_type', default=None, type=bool,
                       help='Whether to cycle the lr.')
+    opts.add_argument('--threshold', default=5e-3, type=float, help='The weight decay of the Adam optimizer.')
     opts.add_argument('--gamma', default=0.5, type=float, help='The weight decay of the Adam optimizer.')
-    opts.add_argument('--initial_lr', default=1e-2, type=float, help='Base lr of the cyclic scheduler.')
+    opts.add_argument('--initial_lr', default=1e-3, type=float, help='Base lr of the cyclic scheduler.')
     opts.add_argument('--weight_modulation', default=True, type=bool, help='')
     opts.add_argument('--weight_modulation_factor', default=[4, 4, 1, 1], type=list, help='')
     opts.add_argument('--momentum', default=0.9, type=float, help='Momentum of the optimizer.')

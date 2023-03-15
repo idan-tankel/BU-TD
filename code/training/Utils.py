@@ -238,7 +238,7 @@ def load_pretrained_model(model: nn.Module, model_state_dict: dict) -> dict:
     """
     checkpoint = dict()
     for key, val in model.state_dict().items():
-        if 'modulation' in key:
+        if 'modulation' in key or 'mask' in key:
             checkpoint[key] = val
         else:
             checkpoint[key] = model_state_dict[key]

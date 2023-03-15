@@ -17,8 +17,14 @@ def create_model(opts: argparse, model_type: Model_type) -> Union[ResNet, Simple
     Returns: The model.
 
     """
+
+    if model_type is Model_type.ResNet14:
+        return ResNet14(opts)
+
     if model_type is Model_type.ResNet18:
         return ResNet18(opts)
+    if model_type is Model_type.ResNet20:
+        return ResNet20(opts)
 
     elif model_type is Model_type.ResNet32:
         return ResNet32(opts)

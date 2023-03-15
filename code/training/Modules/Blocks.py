@@ -112,7 +112,7 @@ class BasicBlockBU(nn.Module):
     """
 
     def __init__(self, opts: argparse, shared: nn.Module, block_inshapes: Tensor, is_bu2: bool,
-                 task_embedding: Union[list, None] = None) -> None:
+                 task_embedding: Union[list, None],masks: Union[list, None]) -> None:
         """
         Args:
             opts: The model options.
@@ -132,17 +132,17 @@ class BasicBlockBU(nn.Module):
         self.weight_modulation = opts.weight_modulation and self.is_bu2
 
         self.conv1 = conv_with_modulation(opts = opts,conv_layer = shared.conv1,create_modulation = self.is_bu2,
-                                          task_embedding=task_embedding)
+                                          task_embedding=task_embedding,create_mask=self.is_bu2, masks = masks)
         self.bn1 = BatchNorm(opts, nchannels)
         self.conv2 = conv_with_modulation(opts = opts,conv_layer = shared.conv2,create_modulation = self.is_bu2,
-                                          task_embedding=task_embedding)
+                                          task_embedding=task_embedding,create_mask=self.is_bu2, masks = masks)
         self.bn2 = BatchNorm(opts, nchannels)
 
         self.downsample = shared.downsample
         if shared.downsample is not None:
             # downsample, the skip connection from the beginning of the block if needed.
             self.conv1x1 =conv_with_modulation(opts = opts,conv_layer = shared.downsample,create_modulation = self.is_bu2,
-                                          task_embedding=task_embedding)
+                                          task_embedding=task_embedding,create_mask=self.is_bu2, masks = masks)
             self.last_bn = BatchNorm(opts, nchannels)
 
         if self.use_lateral and is_bu2:
