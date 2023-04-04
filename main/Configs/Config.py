@@ -9,7 +9,7 @@ from supplmentery.Dataset_and_model_type_specification import DsType, Flag,AllOp
 from supplmentery.emnist_dataset import inputs_to_struct
 # from v26.functions.inits import init_model_options
 from supplmentery.batch_norm import BatchNorm
-from supplmentery.loss_and_accuracy import multi_label_loss, UnifiedCriterion, multi_label_accuracy_base
+from supplmentery.loss_and_accuracy import multi_label_loss, multi_label_accuracy_base
 # from supplmentery.emnist_dataset import inputs_to_struct
 
 # from supplmentery.training_functions import create_optimizer_and_sched
@@ -58,7 +58,7 @@ class Config:
         self.model_dir = os.path.join(self.results_dir, self.model_path)
         self.setup_flag()
         self.Data_obj = AllOptions(ds_type=DsType(self.Datasets.dataset), flag_at=Flag(self.RunningSpecs.Flag), ndirections=4)
-        self.task_accuracy = self.Data_obj.data_obj.task_accuracy
+        # self.task_accuracy = self.Data_obj.data_obj.task_accuracy
 
 
     def setup_flag(self) -> None:
@@ -167,7 +167,7 @@ class Losses:
         self.bu2_loss = multi_label_loss
         self.td_loss = nn.MSELoss(reduction='mean')
         self.inputs_to_struct = inputs_to_struct
-        self.loss_fun = UnifiedCriterion
+        # self.loss_fun = UnifiedCriterion
         self.task_accuracy = multi_label_accuracy_base
         # the UnifiedLossFun is a wrapper around the loss functions, and it must be the last one here since it using all the arguments of self
         # since there are not much accuracy functions written here, the multi_label_accuracy_base is hard coded most of the time

@@ -6,9 +6,8 @@ import torch.distributed as dist
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 from supplmentery.emnist_dataset import EMNISTAdjDatasetNew2 as dataset, inputs_to_struct
-from supplmentery.data_functions import preprocess
-from v26.models.WrappedDataLoader import WrappedDataLoader
-from v26.models.DatasetInfo import DatasetInfo
+from .WrappedDataLoader import WrappedDataLoader
+from .DatasetInfo import DatasetInfo
 from Configs.Config import Config
 # from supp.FlagAt import *
 # from supp.training_functions import *
@@ -95,9 +94,11 @@ def get_dataset(direction: int, args: Config, data_fname, batch_size=None):
     args.nbatches_train = nbatches_train
     args.nbatches_test = nbatches_test
     args.nbatches_val = nbatches_val
-    train_dataset = WrappedDataLoader(train_dl, preprocess)
-    test_dataset = WrappedDataLoader(test_dl, preprocess)
-    val_dataset = WrappedDataLoader(val_dl, preprocess)
+    dev = torch.device(
+    "cuda") if torch.cuda.is_available() else torch.device("cpu")
+    train_dataset = WrappedDataLoader(train_dl, device=dev)
+    test_dataset = WrappedDataLoader(test_dl, device=dev)
+    val_dataset = WrappedDataLoader(val_dl, device=dev)
 
     the_train_dataset = DatasetInfo(istrain=True, ds=train_dataset, nbatches=nbatches_train,
                                     name='Train', checkpoints_per_epoch=args.Training.checkpoints_per_epoch)

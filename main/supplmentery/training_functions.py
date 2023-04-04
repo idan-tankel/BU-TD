@@ -8,7 +8,7 @@ import torch
 import shutil
 import argparse
 from Configs.Config import Config
-from v26.models.DatasetInfo import DatasetInfo
+# from v26.models.DatasetInfo import DatasetInfo
 from torch.utils.data import DataLoader
 from torch import nn
 from enum import Enum
@@ -211,7 +211,7 @@ def load_model(opts: argparse, model_path: str, model_latest_fname: str,model: n
     return checkpoint
 
 
-def fit(opts: argparse, the_datasets: list[DatasetInfo],  model:nn.Module,optimizer,scheduler) -> None:
+def fit(opts: argparse, the_datasets,  model:nn.Module,optimizer,scheduler) -> None:
     """
     Fitting the model.
     iterate over the datasets and train (or test) them

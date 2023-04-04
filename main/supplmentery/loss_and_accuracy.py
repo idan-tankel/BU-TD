@@ -1,4 +1,3 @@
-from v26.funcs import preprocess
 from supplmentery.get_model_outs import get_model_outs
 from doctest import Example
 from functools import total_ordering
@@ -186,7 +185,9 @@ def accuracy(opts: object, test_data_loader: DataLoader, model: nn.Module) -> fl
     num_correct_pred, num_samples = (0.0, 0.0)
 
     for inputs in test_data_loader:  # Running over all inputs
-        inputs = preprocess(inputs)  # Move to the cuda.
+        dev = torch.device(
+    "cuda") if torch.cuda.is_available() else torch.device("cpu")
+        inputs = [input.to(dev) for input in inputs]
         num_samples += len(inputs[0])  # Update the number of samples.
         samples = opts.inputs_to_struct(inputs)  # Make it struct.
 
@@ -211,7 +212,9 @@ def accuracy(opts: object, data_loader: DataLoader, model: nn.Module, ntasks: in
     num_correct_pred, num_samples = (0.0, 0.0)
 
     for inputs in data_loader:  # Running over all inputs
-        inputs = preprocess(inputs)  # Move to the cuda.
+        dev = torch.device(
+    "cuda") if torch.cuda.is_available() else torch.device("cpu")
+        inputs = [input.to(dev) for input in inputs]
         num_samples += len(inputs[0])  # Update the number of samples.
         samples = opts.inputs_to_struct(inputs)  # Make it struct.
         samples.label_all
