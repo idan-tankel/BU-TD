@@ -10,7 +10,7 @@ from torchvision import datasets, transforms
 from models.create_model import ModelWrapper
 from torch.utils.data import DataLoader
 from torch import cuda, device
-from Configs.Config import Config
+from Configs.Config import Configk
 from types import SimpleNamespace
 from create_dataset.datasets import DatasetAllDataSetTypesAll
 import git
@@ -24,7 +24,7 @@ results_dir = rf"{git_root.parent}/data/emnist/results"
 os.makedirs(results_dir, exist_ok=True)
 data_dir = Path(rf"{git_root.parent}/data")
 os.makedirs(data_dir, exist_ok=True)
-checkpoints_dir = rf"{git_root.parent}/data/emnist/checkpoints"
+checkpoints_dir = rf"{git_root.parent}/data/checkpoints"
 os.makedirs(results_dir, exist_ok=True)
 args = parser.parse_args()
 try:

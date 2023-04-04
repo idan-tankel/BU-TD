@@ -1,11 +1,13 @@
 # this is an extention to the VitEmbedding class
 from torch import nn
+from torch import cat
 from transformers.models.vit.modeling_vit import ViTEmbeddings
 
 class TaskHead(ViTEmbeddings):
-    def __init__(self,original_embedder,ntasks,hidden_dim=768) -> None:
+    def __init__(self,original_embedder,ntasks,nclasses=47,hidden_dim=768) -> None:
         super().__init__(original_embedder.config)
-        self.task_head = nn.Linear(ntasks, hidden_dim,bias=False)
+        self.task_head = nn.Linear(ntasks, hidden_dim,bias=True)
+        self.argument_head = nn.Linear(nclasses,hidden_dim,bias=True)
     
     # @property
     # def task_head(self):
@@ -23,6 +25,8 @@ class TaskHead(ViTEmbeddings):
         """        
         task_input = dicted_input.task
         image_input = dicted_input.image
+        argument_input = dicted_input.argument
         task_enc = self.task_head(task_input).unsqueeze(1)
+        argument_enc = self.argument_head(argument_input).unsqueeze(1)
         image_enc = super(TaskHead,self).forward(pixel_values = image_input)
-        return image_enc + task_enc
+        return cat((image_enc,argument_enc,task_enc),dim=1)

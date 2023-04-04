@@ -71,7 +71,7 @@ Models:
   norm_layer: BatchNorm # (`nn.Module`) one of the supported normalization layers
   # Notice! this option affected also from training / dataset requirements
   ntasks: 4 # (`int`) the number of tasks to train on. Will determine the number of heads in the model
-  pretrained_model_name: 'local/food_101_47.ckpt'  # (`str`) the url to the pretrained model in huggingface.co
+  pretrained_model_name: 'local/the_best.ckpt'  # (`str`) the url to the pretrained model in huggingface.co
 
 
 # Some other model params are initialized in the function `init_model_options` under `v26.functions.inits.py`
@@ -79,13 +79,12 @@ Models:
 
 
 Training:
-  task: guided
-  # one of the choices "right_all | multi_label_classification"
+  task: guided #multi_label_classification , vanilla_training, guided
   batch_size: 64 # batch size (int)
   num_workers: 48
   epochs: 200
   momentum: 0.9 # (`float`) Momentum of the Adam optimizer
-  wd: 0.00001 #(`float`) The weight decay of the Adam optimizer
+  wd: 0.0001 #(`float`) The weight decay of the Adam optimizer
   lr: 1e-4 # (`float`)the initial learning rate # TODO support in also multiplication
   max_lr: 4e-3  # (`float`) the maximum learning rate
   distributed: False # whether to use distributed data within training - accross some GPUs using DistributedSampler of torch

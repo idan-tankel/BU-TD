@@ -48,7 +48,7 @@ class ModelWrapper(
         if self.task == "multi_label_classification":
             x, y = batch['img'], batch['label_all']
             batch_size = y.shape[0]
-            y = y.reshape(batch_size,1) 
+            y = y.reshape(batch_size,-1) 
             # for CE loss, we will fold up the other dimention if the examples are grid
         elif self.task == "vanilla_training":
             x,y = batch
@@ -68,7 +68,7 @@ class ModelWrapper(
             x, y = batch['img'], batch['label_task'].gather(index=batch['label_all'].squeeze(1),dim=1)
             y.squeeze_()
         if self.task == "guided":
-            x_hat = self.model(SimpleNamespace(**{"task":task_encoding,"image":x}))
+            x_hat = self.model(SimpleNamespace(**{"task":task_encoding,"image":x,"argument":argument_encoding}))
         else:
             x_hat = self.model(x)
         y.to(device("cuda") if cuda.is_available() else device("cpu"))
@@ -99,7 +99,7 @@ class ModelWrapper(
             if self.task == "multi_label_classification":
                 x, y = batch['img'], batch['label_all']
                 batch_size = y.shape[0]
-                y = y.reshape(batch_size,1) 
+                y = y.reshape(batch_size,-1) 
                 # for CE loss, we will fold up the other dimention if the examples are grid
             elif self.task == "vanilla_training":
                 x,y = batch
@@ -121,7 +121,7 @@ class ModelWrapper(
                 x, y = batch['img'], batch['label_task'].gather(index=batch['label_all'].squeeze(1),dim=1)
                 y.squeeze_()
             if self.task == "guided":
-                x_hat = self.model(SimpleNamespace(**{"task":task_encoding,"image":x}))
+                x_hat = self.model(SimpleNamespace(**{"task":task_encoding,"image":x,"argument":argument_encoding}))
             else:
                 x_hat = self.model(x)
             y.to(device("cuda") if cuda.is_available() else device("cpu"))
