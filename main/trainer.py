@@ -2,17 +2,16 @@ import sys
 sys.path.append(r'/home/idanta/BU-TD/yonathan/Recognicion/code/')
 
 import pytorch_lightning as pl
-from supp.Parser import GetParser
-from supp.get_dataset import get_dataset_for_spatial_realtions
+from supplmentery.Parser import GetParser
+from supplmentery.get_dataset import get_dataset_for_spatial_realtions
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 import os
 from pathlib import Path
-from Checkpoint_model_definition import CheckpointSaver, ModelWrapped
+from lightning.Checkpoint_model_definition import CheckpointSaver, ModelWrapped
 import torch.nn as nn
-from supp.Dataset_and_model_type_specification import Flag
 from Configs.Config import Config
-from supp.create_model import create_model
+from supplmentery.create_model import create_model
 import git
 import sys
 from types import NoneType

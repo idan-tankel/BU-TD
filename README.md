@@ -79,6 +79,12 @@ In the `alpha` version, the most important things have being moved to the `main`
 - *other files* (like `emnist_spatial.py`) are the "trainers" - contains the actual training and evaluation code
 
 
+## Pytorch lightning trainer
+
+The usual training process has a trining loop and test loop under `training_functions`.
+There is a newer option of pytorch lightning version, although it's had a few things to customize (the wandb root for instance)
+
+
 ### The structure of a single example from the dataset
 *In this version, any data point is being coverted from a tuple to SimpleNamespace and the opposite*
 ```python
@@ -100,6 +106,7 @@ The attributes of a "datapoint"
  - Follow the structure inputs constructions of the EMNIST dataset with relations
  - Create a custom loader of your own dataset using the `inputs_to_structs` and the `structs_to_inputs` functions
  - There are a few specifications of `DsType` (supported datasets). You may see this as a depracated. The only thing you need to follow is adding a sturctured dataloader for the forward of the model
+ - If there is any other issues, please open them up within the repository :-) 
 
 
 
@@ -128,9 +135,9 @@ The attributes of a "datapoint"
     
 
 - Long Time forward
-    - Create a workflow and a proper GitHUB action to invoke training / debugging / simple auto tests
-    - Transfer the use case of some np.array to torch framework
-    - https://pytorch-lightning.readthedocs.io/en/stable/clouds/cluster_advanced.html
+    - [ ] Create a workflow and a proper GitHUB action to invoke training / debugging / simple auto tests
+    - [ ] Transfer the use case of some np.array to torch framework
+    - [ ] Slurm integration https://pytorch-lightning.readthedocs.io/en/stable/clouds/cluster_advanced.html
 
 
 ## Contribute
