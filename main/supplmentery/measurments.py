@@ -167,9 +167,9 @@ class Measurements(MeasurementsBase):
 
 
 def set_datasets_measurements(datasets: object,model_opts: argparse, model: nn.Module,measurements_class=Measurements):
-    """
+    r"""
     set_datasets_measurements Initialize the Measurements class for each dataset and create a Measurements object
-    # TODO get rid of that function it's just a wrapper
+    ### TODO get rid of that function it's just a wrapper
 
     Args:
         datasets (List[Dataset]): The list of datasets to initize the Measurements class for. Default = [train,test,valid]

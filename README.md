@@ -68,6 +68,42 @@ If you find our work useful in your research or publication, please cite our wor
 Shimon Ullman, Liav Assif, Alona Strugatski, Ben-Zion Vatashsky, Hila Levi, Aviv Netanyahu, Adam Yaari
 
 
+## New version specifics - locations and instructions
+
+In the `alpha` version, the most important things have being moved to the `main` folder
+
+
+-  *Configs* contain the running configuration. this is a good place to start explore the model parameters and specifications
+- *create* is used to create the dataset and the data loader. Since we have used before a custom dataset of EMNIST + relations, we have used a wrapper for the "right / left / up /down" and creating a good descriptors for this in our data
+- *supplmentery* contains the main code. These are things like model and block definitions, losses, norms, visualization utilities,...
+- *other files* (like `emnist_spatial.py`) are the "trainers" - contains the actual training and evaluation code
+
+
+### The structure of a single example from the dataset
+*In this version, any data point is being coverted from a tuple to SimpleNamespace and the opposite*
+```python
+image = inputs[0], label_existence = inputs[1], label_all = inputs[2], label_task = inputs[3], id = inputs[4], flag = inputs[5]
+```
+The attributes of a "datapoint"
+- `image`: The image followed by transforms and tensored. This can be the image your currnt dataloader loads.
+- `label_existance (batch,number_of_classes)`: one hot encoding of which objects are available in the image. Ex: which characters are in EMNIST image. Usually batched
+- `label_all (batch,no_of_objects_height,no_of_objects_width)`: A map of the labeled sequence of the image. Usually has shape (6,1)
+6 4 8 4 5 8
+1 2 3 17 42 
+- `label_task (batch,number_of_tasks)`: One hot encoding of the task for each example (batched). usually there are 4 tasks (right,left,up,down)
+- `id`: The example ID
+- `flag (batch,number_of_tasks + number_of_classes)`: concatenated version of task label_task and argument. The concatination is by design for the instructions embedding of the task and it's argument. There is 1 for the task and 1 for the relevant labeled argument, and all the rest are zeros (for each row).
+
+
+### Things to consider / Issues
+- You may use your own dataset within the trainer, but it must contain some attributes in this version. There are 2 functions [inputs_to_struct](https://github.com/idan-tankel/BU-TD/blob/50fc829b9128e0a62991c595f3f8c628c2302293/main/supplmentery/emnist_dataset.py#L94) and the opposite `structs_to_input` who would decompose this. The above is true also when using the raw cnn model - since the flags must by design follow some rules. A suggestion
+ - Follow the structure inputs constructions of the EMNIST dataset with relations
+ - Create a custom loader of your own dataset using the `inputs_to_structs` and the `structs_to_inputs` functions
+ - There are a few specifications of `DsType` (supported datasets). You may see this as a depracated. The only thing you need to follow is adding a sturctured dataloader for the forward of the model
+
+
+
+
 
 
 ## TODO 

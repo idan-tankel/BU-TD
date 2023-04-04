@@ -1,9 +1,7 @@
 import os
 import pickle
-import random  # torch random transforms uses random
 from types import SimpleNamespace
 
-import numpy as np
 import torch
 import torch.utils.data as data
 import torchvision.transforms as transforms

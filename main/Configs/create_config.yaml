@@ -1,0 +1,44 @@
+---
+# the default values are stored within the config.yaml file
+dataset: emnist # name of the dataset to work on (deafult: emnist)
+ntasks: 4  # (`int`) one task for each direction
+nclasses: 47 # (`int`) number of classes within the dataset
+
+
+# storing options
+path_data_raw: ../data # the path to the dataaset to be stored in, relative to the working dir (default='../data')
+store_folder: ../data # similar
+job_chunk_size: 1000 # (`int`) The number of samples each jobs processes
+folder_split: True   # (`bool`). If set to true, split the content of the raw data into folders of size `folder_size`
+folder_size: 1000  # (`int`) The size of the folder to split the data into
+nthreads: 10 # (`int`) The number of threads to use for the data processing
+
+# preprocessing options
+augment_sample: True # (`bool`) If set to true, augment the data with random rotations, flips, and translations
+letter_size: 28 # (`int`) The size of the letters to be used for the preprocessing (default=28)
+nchars_per_row: 6 # (`int`) The number of characters per row to be used in the image (default=5)
+image_size: [112,224] # (`list` of length 2) The size of the image to use for the preprocessing (default=[112,224]). The image will be resized to this size
+sample_nchars:  # default=nchars_per_row * num_rows_in_the_image help='The number of characters in each image (`int`)
+num_rows_in_the_image: 1 # (`int`) The number of rows in the image 
+# scale parameters of the preprocessing
+minscale: 0.8 # (`float`) The minimum scale of the preprocessing ratio (default=0.8)
+maxscale: 1.1 # (`float`) The maximum scale of the preprocessing ratio (default=1.1)
+minshift: 0 # (`float`) The minimum shift in the image augmentation
+maxshift: 0 # (`float`) The maximum shift in the image augmentation
+
+
+# building traininga and validation set options
+# recall this is the number of images - the total number of samples by each dataset is dubled due to the `ngenerate` option
+nsamples_train: 10000 # (`int`) The number of samples to use for training (default=10000)
+nsamples_test: 2000 # (`int`) The number of samples to use for testing 
+nsamples_val: 2000 # (`int`) The number of samples to use for validation (default=2000)
+
+
+# another options
+use_only_valid_classes: True # (`bool`) If set to true, use only specific classes for the training and testing. it talks generally about simliar classes ('C','c','l','I'...) (default=true)
+generalize: True # (`bool`) If set to true, use some samples for generalization (default=true)
+ndirections: 2 # (`int`) The number of directions to use for the training (default=2)
+create_all_directions: True # (`bool`) If set to true, create all the directions for the training (default=false)
+ngenerate: 5 # (`int`) The number of samples to create for the same image (default=5) which would lead to the same number of queries later
+single_feat_to_generate: False # (`bool`) If set to true, create multiple queries on the same image (default=false)
+ntest_strings: 1 # (default=1) (`int`) The number of samples strings for the combinatorial test

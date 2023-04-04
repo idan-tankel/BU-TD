@@ -16,7 +16,7 @@ from Configs.Config import Config
 # from v26.funcs import logger
 from supp.Dataset_and_model_type_specification import Flag
 # from supp.models import BUTDModelShared,BUTDModel,BUModel,BUStream,BUStreamShared
-from models.BU_TD_Models import BUTDModelShared, BUModelSimple
+from models import BUTDModelShared, BUModelSimple
 logger = logging.getLogger(__name__)
 
 
