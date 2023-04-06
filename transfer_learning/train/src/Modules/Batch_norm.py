@@ -45,7 +45,7 @@ class BatchNorm(nn.Module):
 
     def forward(self, inputs: Tensor, flags: Tensor) -> Tensor:
         """
-        # Applying the norm function on the input.
+        # Applying the norm function on the x.
         Args:
             inputs: Tensor of dim [B,C,H,W].
             flags: The flag, needed for evaluation on different tasks, having each its own running statistics.
@@ -71,7 +71,7 @@ class BatchNorm(nn.Module):
         """
         Apply batch norm with statistics per sample.
         Args:
-            inputs: The input tensor.
+            inputs: The x tensor.
             running_mean: The running mean.
             running_var: The running variance.
 

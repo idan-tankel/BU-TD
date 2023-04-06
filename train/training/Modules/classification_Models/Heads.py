@@ -15,7 +15,7 @@ class Head(nn.Module):
     """
 
     def __init__(self, in_channels: int, heads: List[int], modulation: List[List[nn.Parameter]],
-                 mask: list, block_expansion: int = 1):
+                 mask, block_expansion: int):
         """
         Compute class probabilities.
         Args:
@@ -38,11 +38,12 @@ class Head(nn.Module):
         """
         Compute the class probabilities.
         Args:
-            inputs: The model x.
+            inputs: The model input.
             task_flag: The task flag.
 
         Returns:
 
         """
         task_flag = int(task_flag[0].argmax())
-        return self.Head[task_flag](inputs)
+        task_flag = 0
+        return None, None, inputs, self.Head[task_flag](inputs)

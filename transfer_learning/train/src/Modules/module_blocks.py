@@ -14,15 +14,15 @@ from torchvision.models.resnet import conv1x1
 
 import torch.nn.functional as F
 
-from src.Utils import Expand
-from src.Modules.Batch_norm import BatchNorm
+from ..Utils import Expand
+from .Batch_norm import BatchNorm
 
 from torch.nn.parameter import Parameter
 
 
 class DownSample(nn.Module):
     """
-    Downsample the input for residual connection.
+    Downsample the x for residual connection.
     """
 
     def __init__(self, norm_layer: Type[BatchNorm], inplanes: int, planes: int, expansion: int, stride: int,
@@ -45,10 +45,10 @@ class DownSample(nn.Module):
         """
 
         Args:
-           x: The input.
+           x: The x.
            flags: The task flag.
 
-        Returns: The down-sampled input.
+        Returns: The down-sampled x.
 
         """
         out = self.conv1x1(x)
@@ -63,7 +63,7 @@ class WeightModulation(nn.Module):
     The main idea of the paper allowing continual learning without forgetting.
     """
 
-    def __init__(self, opts: argparse, layer: nn.Conv2d, modulations: Optional[List]):
+    def __init__(self, opts: argparse, layer: nn.Module, modulations: Optional[List], linear: bool):
         """
 
         Args:
@@ -71,16 +71,38 @@ class WeightModulation(nn.Module):
             layer: The current later to modulate its weight.
         """
         super(WeightModulation, self).__init__()
-        self.ntasks = opts.data_set_obj.ntasks
+        self.opts = opts
+        self.ntasks = opts.data_set_obj['ntasks']
         self.layer = layer
-        self.modulation_factor = opts.data_set_obj.weight_modulation_factor
-        (c_in, c_out, k1, k2) = layer.weight.shape
-        (mod1, mod2, mod3, mod4) = self.modulation_factor
-        size = (c_in // mod1, c_out // mod2, k1 // mod3, k2 // mod4)
-        self.modulation = nn.ParameterList([nn.Parameter(torch.Tensor(*size), requires_grad=True) for _ in range(
-            self.ntasks)])
-        for index in range(self.ntasks):
-            modulations[index].append(self.modulation[index])
+        self.modulation_factor = opts.data_set_obj['weight_modulation_factor']
+        if linear:
+            (c_in, c_out) = layer.weight.shape
+            (mod1, mod2) = self.modulation_factor
+            size = (c_in // mod1, c_out // mod2)
+            self.modulation = nn.ParameterList([nn.Parameter(torch.Tensor(*size), requires_grad=True) for _ in range(
+                self.ntasks)])
+        else:
+            (c_in, c_out, k1, k2) = layer.weight.shape
+            (mod1, mod2, mod3, mod4) = self.modulation_factor
+            if c_in < mod1:
+                if c_out // (mod1 * mod2) == 0:
+                    size = None
+                else:
+                    size = (c_in, c_out // (mod1 * mod2), k1, k2)
+            elif c_out < mod2:
+                if c_in // (mod1 * mod2) == 0:
+                    size = None
+                else:
+                    size = (c_in // (mod1 * mod2), c_out, k1, k2)
+            else:
+                size = (c_in // mod1, c_out // mod2, k1 // mod3, k2 // mod4)
+            if size is not None:
+                self.modulation = nn.ParameterList(
+                    [nn.Parameter(torch.Tensor(*size), requires_grad=True) for _ in range(self.ntasks)])
+                for index in range(self.ntasks):
+                    modulations[index].append(self.modulation[index])
+            else:
+                self.modulation = None
 
     def forward(self, flags: Tensor) -> Tensor:
         """
@@ -91,10 +113,15 @@ class WeightModulation(nn.Module):
         Returns: Torch of shape [B,C,H,W], the modulated tensor.
 
         """
+        weight = self.layer.weight
         task_id = flags[0].argmax().item()
-        task_emb = self.modulation[task_id]  # compute the task embedding according to the direction_idx.
-        task_emb = Expand(task_emb, shapes=self.modulation_factor)
-        weight = self.layer.weight * (1 - task_emb)
+        if self.modulation is not None:
+            task_emb = self.modulation[task_id]  # compute the task embedding according to the direction_idx.
+
+            task_emb = Expand(self.opts, task_emb, shapes=self.modulation_factor, shape=self.layer.weight.shape)
+            weight = weight * (1 - task_emb)
+        else:
+            pass
         return weight
 
 
@@ -111,7 +138,7 @@ class LambdaLayer(nn.Module):
         """
 
         Args:
-            x: The input.
+            x: The x.
             flags: The task flag, not really used.
 
         Returns:
@@ -120,20 +147,18 @@ class LambdaLayer(nn.Module):
         return self.lamda(x)
 
 
-# DEFAULT_THRESHOLD = 5e-3
-
 class Binary_masking(torch.autograd.Function):
     """
     Binary masking object.
     """
 
     @staticmethod
-    def forward(ctx, inputs, DEFAULT_THRESHOLD):
+    def forward(ctx, inputs, DEFAULT_THRESHOLD, **kwargs):
         """
 
         Args:
             ctx: The ctx.
-            inputs: The inputs.
+            inputs: The weight and the threshold.
             DEFAULT_THRESHOLD: The threshold.
 
         Returns:
@@ -164,23 +189,22 @@ class MaskWeight(nn.Module):
     Mask weight.
     """
 
-    def __init__(self, opts: argparse, layer: nn.Conv2d, mask: list):
+    def __init__(self, opts: argparse, layer: nn.Module, mask: list):
         super(MaskWeight, self).__init__()
         self.weight = layer.weight
         self.mask_scale = 1e-2
-        self.stride = layer.stride
-        self.padding = layer.padding
-        self.dilation = layer.dilation
-        self.groups = layer.groups
         self.opts = opts
-        self.ntasks = self.opts.data_set_obj.ntasks
-        self.mask_real = self.weight.data.new(self.weight.size())
-        self.mask_real.fill_(self.mask_scale)
-        # mask_real is now a trainable parameter.
-        self.mask_real = Parameter(self.mask_real)
+        self.ntasks = self.opts.data_set_obj['ntasks']
         self.masks = nn.ParameterList()
+        self.default_threshold = opts.data_set_obj['threshold']
+        C1, C2, K1, K2 = layer.weight.shape
+        m1, m2 = opts.data_set_obj['mask_modulation_factor']
+        new_shape = (K2, K1, C2 // m1, C1 // m2)
+        self.channels = (C2, C1)
         for i in range(self.ntasks):
-            layer = Parameter(self.weight.data.new(self.weight.size()))
+            layer = torch.zeros(new_shape)
+            layer.fill_(self.mask_scale)
+            layer = Parameter(layer)
             mask[i].append(layer)
             self.masks.append(layer)
 
@@ -188,46 +212,49 @@ class MaskWeight(nn.Module):
         """
         Forward the mask.
         Args:
-            flags: The input.
+            flags: The x.
 
         Returns: The masked conv.
 
         """
-        task_id = flags[0]
-        Mask = Binary_masking.apply(self.mask_real[task_id], self.opts.data_set_obj.threshold)
+        task_id = flags[0].argmax().item()
+        mask = self.masks[task_id]
+        Mask = Binary_masking.apply(mask, self.default_threshold)
+        Mask = nn.Upsample(mode='bicubic', size=self.channels)(Mask)
+        Mask = Mask.view(self.weight.shape)
         new_weight = Mask * self.weight
         return new_weight
 
 
-class conv_with_modulation_and_masking(nn.Module):
+class layer_with_modulation_and_masking(nn.Module):
     """
     Conv with modulation and masking.
     """
 
-    def __init__(self, opts: argparse, conv_layer: nn.Module, task_embedding: list, create_modulation: bool,
-                 create_masks: bool, masks: list):
+    def __init__(self, opts: argparse, layer: nn.Module, task_embedding: list, create_modulation: bool,
+                 create_masks: bool, masks: list, linear: bool):
         """
 
         Args:
             opts: The model opts.
-            conv_layer: The conv layer.
+            layer: The layer.
             task_embedding: The task embedding.
             create_modulation: Whether to create modulation.
             create_masks: Whether to create masks.
         """
-        super(conv_with_modulation_and_masking, self).__init__()
+        super(layer_with_modulation_and_masking, self).__init__()
+        self.linear = linear
         self.opts = opts
         self.create_modulation = create_modulation
         self.create_masks = create_masks
-        self.ntasks = opts.data_set_obj.ntasks
         self.modulate_weights = opts.weight_modulation
         self.mask_weights = opts.mask_weights
-        self.layer: nn.Conv2d = conv_layer
+        self.layer = layer
         if create_modulation:
-            self.modulation = WeightModulation(opts=opts, layer=conv_layer, modulations=task_embedding)
-
+            self.modulation: nn.Module = WeightModulation(opts=opts, layer=layer, modulations=task_embedding,
+                                                          linear=linear)
         if create_masks:
-            self.masks = MaskWeight(opts=opts, layer=conv_layer, mask=masks)
+            self.masks: nn.Module = MaskWeight(opts=opts, layer=layer, mask=masks)
 
     def forward(self, x: Tensor, flags: Tensor) -> Tensor:
         """
@@ -244,6 +271,11 @@ class conv_with_modulation_and_masking(nn.Module):
             weights = self.modulation(flags=flags)
         if self.create_masks and self.mask_weights:
             weights = self.masks(flags=flags)
-        output = F.conv2d(input=x, weight=weights, stride=self.layer.stride,
-                          padding=self.layer.padding, dilation=self.layer.dilation, groups=self.layer.groups)
+        if self.linear:
+            output = F.linear(input=x, weight=weights)
+        else:
+
+            output = F.conv2d(input=x, weight=weights, stride=self.layer.stride,
+                              padding=self.layer.padding, dilation=self.layer.dilation, groups=self.layer.groups,
+                              bias=self.layer.bias)
         return output

@@ -4,7 +4,7 @@ Here we define the model wrapper to support training, validation.
 import argparse
 import os
 import os.path
-from typing import Callable, List
+from typing import Callable, List, Union
 from pathlib import Path
 import torch
 import torch.nn as nn
@@ -14,6 +14,8 @@ from ..Utils import create_optimizer_and_scheduler
 from ..Modules.Batch_norm import store_running_stats
 import torchmetrics
 import shutil
+from ..Data.Enums import DsType
+from ..Data.Structs import Spatial_Relations_inputs_to_struct, outs_to_struct, Input_to_struct
 
 
 # Define the model wrapper class.
@@ -42,10 +44,11 @@ class ModelWrapped(LightningModule):
         self.loss_fun: Callable = opts.criterion  # The loss criterion.
         self.dev: str = opts.device  # The device.
         self.opts: argparse = opts  # The model options.
-        self.task_id: int = task_id  # The task id.
+        self.task_id: int = task_id # The task id.
+        self.accuracy = opts.task_accuracy
+        self.inputs_to_struct = opts.inputs_to_struct
         # Define the optimizer, scheduler.
         self.just_initialized = True
-        self.val_acc = torchmetrics.Accuracy(task='multiclass', num_classes=100)
         if not os.path.exists(os.path.join(str(Path(__file__).parents[3]), 'data/models', name, 'code')):
             shutil.copytree(str(Path(__file__).parents[2]), os.path.join(str(Path(__file__).parents[3]), 'data/models',
                                                                          name, 'code'))
@@ -76,42 +79,42 @@ class ModelWrapped(LightningModule):
         """
         model = self.model
         model.train()  # Move the model into the evaluation mode.
-        images, label, task_id = batch
-        outs = model(images, task_id)  # Forward and make a struct.
-        loss = self.loss_fun(outs, label)  # Compute the loss.
-        class_prob = torch.argmax(outs, dim=1)
-        acc = torch.eq(class_prob, label).float()  # Compute the Accuracy.
-        acc = acc.mean()
-        self.log('train_loss', loss, on_step=True, on_epoch=True, sync_dist=True)  # Update the loss.
-        self.log('train_acc', acc, on_step=True, on_epoch=True, sync_dist=True)  # Update the acc.
-        if batch_idx == len(self.trainer._data_connector._train_dataloader_source.dataloader()) - 1:
-            store_running_stats(model=self.model, task_id=self.task_id)
+        samples = self.inputs_to_struct(batch)
+        outs = outs_to_struct(model(samples))  # Forward and make a struct.
+        loss = self.loss_fun(self.opts, samples, outs)  # Compute the loss.
+        task_accuracy = self.accuracy(samples, outs)
+        acc = task_accuracy.mean()
+        self.log('train_loss', loss, on_step=True, on_epoch=True, sync_dist=True, prog_bar=True)  # Update the loss.
+        self.log('train_acc', acc, on_step=True, on_epoch=True, sync_dist=True, prog_bar=True)  # Update the acc.
+        if batch_idx == len(self.trainer._data_connector._train_dataloader_source.dataloader()) - 1 and False:
+            store_running_stats(model=self.model, task_id=self.task_id[0],direction_id=self.task_id[1])
             print('Done storing running statistics for BN layers')
         return loss  # Return the loss.
-
-    def test_model(self, batch: List[Tensor], mode: str) -> torch.float:
+               
+    def validation_step(self, batch: List[Tensor], batch_idx: int) -> Tensor:
         """
-        Test model.
+        Make the validation step.
         Args:
-            batch: The batch.
-            mode: The mode.
+            batch: The inputs.
+            batch_idx: The batch id.
 
-        Returns: The acc
+        Returns: The task Accuracy on the batch.
 
         """
+        return self.test_model(batch=batch, batch_id=batch_idx, mode='val')
+
+    def test_model(self, batch, batch_id, mode):
         assert mode in ['test', 'val']
         model = self.model
         model.eval()  # Move the model into the evaluation mode.
-        images, label, task_id = batch
+        samples = self.inputs_to_struct(batch)
         with torch.no_grad():  # Without grad.
-            outs = model(images, task_id)  # Forward and make a struct.
-            loss = self.loss_fun(outs, label)  # Compute the loss.
-            class_prob = torch.argmax(outs, dim=1)
-            acc = torch.eq(class_prob, label).float()  # Compute the Accuracy.
-            self.val_acc.update(class_prob, label)
-            acc = acc.mean()
-            self.log(f'{mode}_loss', loss, on_step=True, on_epoch=True)  # Update the loss.
-            self.log(f'{mode}_acc', acc, on_step=True, on_epoch=True)  # Update the acc.
+            outs = outs_to_struct(model(samples))  # Forward and make a struct.
+            loss = self.loss_fun(self.opts, samples, outs)  # Compute the loss.
+            task_accuracy = self.accuracy(samples, outs)
+            acc = task_accuracy.mean()
+            self.log(f'{mode}_loss', loss, on_step=True, on_epoch=True, prog_bar=True)  # Update the loss.
+            self.log(f'{mode}_acc', acc, on_step=True, on_epoch=True, prog_bar=True)  # Update the acc.
         return acc  # Return the Accuracy and number of inputs in the batch.
 
     def test_step(self, batch: List[Tensor], batch_idx: int) -> Tensor:
@@ -125,26 +128,23 @@ class ModelWrapped(LightningModule):
 
         """
 
-        return self.test_model(batch=batch, mode='test')
+        return self.test_model(batch=batch, batch_id=batch_idx, mode='test')
 
-    def validation_step(self, batch: List[Tensor], batch_idx: int) -> Tensor:
+    def load_model(self, model_path: str, load_opt_and_sche: bool = False) -> dict:
         """
-        Make the validation step.
+        Loads and returns the model checkpoint as a dictionary.
         Args:
-            batch: The inputs.
-            batch_idx: The batch id.
+            model_path: The path to the model.
+            load_opt_and_sche: Whether to load also the optimizer, scheduler state.
 
-        Returns: The task Accuracy on the batch.
-
-        """
-        return self.test_model(batch=batch, mode='val')
-
-    def validation_epoch_end(self, outputs: List) -> None:
-        """
-        The validation epoch end.
-        Args:
-            outputs: The outputs.
+        Returns: The loaded checkpoint.
 
         """
-        print(self.val_acc.compute() * 100)
-        self.val_acc.reset()
+        results_path = self.opts.results_dir  # Getting the result dir.
+        model_path = os.path.join(results_path, model_path)  # The path to the model.
+        checkpoint = torch.load(model_path)  # Loading the saved data.
+        self.load_state_dict(checkpoint['state_dict'])  # Loading the saved weights.
+        if load_opt_and_sche:
+            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+        return checkpoint

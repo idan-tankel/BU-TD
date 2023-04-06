@@ -1,13 +1,18 @@
 """
 Creating the desired model according to the model type
 """
-from src.data.Enums import Model_type
-from src.Modules.models import *
-from typing import Union
+from ..data.Enums import Model_type
+from ..Modules.ResNet.ResNet import *
+
 import argparse
+from torchvision.models.vision_transformer import vit_b_16, ViT_B_16_Weights
+from torchvision.models.efficientnet import EfficientNet_B0_Weights, efficientnet_b0 as efficient
+
+from ..Modules.EfficientNet.EfficientNet import efficientnet_b0
+from ..Modules.MobileNet.MobileNet import MobileNetV2
 
 
-def create_model(opts: argparse, model_type: Model_type) -> Union[ResNet, SimpleMLP]:
+def create_model(opts: argparse, model_type: Model_type) -> nn.Module:
     """
     Creating model.
     Args:
@@ -40,3 +45,15 @@ def create_model(opts: argparse, model_type: Model_type) -> Union[ResNet, Simple
 
     elif model_type is Model_type.MLP:
         return SimpleMLP(opts=opts)
+
+    elif model_type is Model_type.VIT:
+        return vit_b_16(ViT_B_16_Weights)
+
+    elif model_type is Model_type.EfficientNet:
+        return efficientnet_b0(opts=opts)
+
+    elif model_type is Model_type.EfficientNetOriginal:
+        return efficient(EfficientNet_B0_Weights)
+
+    elif model_type is Model_type.MobileNet:
+        return MobileNetV2(opts=opts)
