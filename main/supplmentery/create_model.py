@@ -41,7 +41,7 @@ def create_model(model_opts: Config) -> nn.Module:
     if model_opts.RunningSpecs.Flag is Flag.BU1_SIMPLE:
         model = BUModelSimple(opts=model_opts)
     else:
-        model = BUTDModelShared(opts=model_opts)
+        model = BUTDModelShared(config=model_opts)
 
     return model
     # since the pytorch lightning trainer is used, the model is created here and the dev is controlled by the trainer

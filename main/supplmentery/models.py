@@ -1,6 +1,7 @@
 import torch.nn as nn
 from .heads import *
-from .blocks import BasicBlockBUShared,SideAndCombSharedBase,BUInitialBlock
+from .blocks import BasicBlockBU,BasicBlockBUShared,SideAndComb,SideAndCombShared,SideAndCombSharedBase,BUInitialBlock,init_module_weights
+from .blocks import BasicBlockTD,InitialTaskEmbedding
 from .batch_norm import BatchNorm
 from types import SimpleNamespace
 import numpy as np
@@ -12,14 +13,14 @@ class TDModel(nn.Module):
         :param opts: The options to create the model according to.
         """
         super(TDModel, self).__init__()
-        self.block = opts.td_block_type
+        self.block = BasicBlockTD
         self.use_lateral = opts.use_lateral_butd
         self.activation_fun = opts.activation_fun
         self.use_td_flag = opts.use_td_flag
         self.model_flag = opts.model_flag
         self.use_SF = opts.use_SF
         self.orig_relus = opts.orig_relus
-        self.norm_layer = opts.norm_fun
+        self.norm_layer = BatchNorm
         self.top_filters = opts.nfilters[-1]
         self.inplanes = opts.nfilters[-1]
         self.ntasks = opts.ntasks
@@ -122,7 +123,7 @@ class TDModel(nn.Module):
 class BUStream(nn.Module):
     def __init__(self, opts: argparse, shared: nn.Module, is_bu2: bool) -> None:
         super(BUStream, self).__init__()
-        self.block = BasicBlockBUShared
+        self.block = BasicBlockBU
         self.inshapes = opts.bu_inshapes
         self.ntasks = opts.ntasks
         self.task_embedding = [[] for _ in range(self.ntasks)]
@@ -369,7 +370,7 @@ class BUTDModelShared(BUTDModel):
         # losses options
         
         self.use_bu1_loss = config.Losses.use_bu1_loss# Whether to use the Occurrence loss.
-        self.use_td_flag = config.use_td_flag
+        self.use_td_flag = config.Models.use_td_flag
         if self.use_bu1_loss:
             self.occhead = OccurrenceHead(opts)
         bu_shared = BUStreamShared(opts)  # The shared part between BU1, BU2.
@@ -378,7 +379,7 @@ class BUTDModelShared(BUTDModel):
         opts.bu_inshapes = bu_shared.inshapes
         self.bumodel1 = BUStream(opts, bu_shared, is_bu2=False)  # The BU1 stream.
         self.tdmodel = TDModel(opts)  # The TD stream.
-        self.use_td_loss = opts.use_td_loss  # Whether to use the TD segmentation loss..
+        self.use_td_loss = config.Losses.use_td_loss  # Whether to use the TD segmentation loss..
         if self.use_td_loss:
             self.imagehead = ImageHead(opts)
         self.bumodel2 = BUStream(opts, bu_shared, is_bu2=True)  # The BU2 stream.

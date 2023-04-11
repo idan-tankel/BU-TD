@@ -12,9 +12,8 @@ from supplmentery.batch_norm import BatchNorm
 from supplmentery.loss_and_accuracy import multi_label_loss, multi_label_accuracy_base
 # from supplmentery.emnist_dataset import inputs_to_struct
 
-# from supplmentery.training_functions import create_optimizer_and_sched
-# configuration class
-# from v26.models.flag_at import FlagAt
+from yacs.config import CfgNode as CN
+# TODO use CFGNode instead of Config class
 
 
 class Config:
@@ -82,9 +81,9 @@ class Config:
         elif model_flag is Flag.TD:
             self.use_bu1_flag = False
             self.Models.use_bu1_flag = False
-            self.use_td_flag = True
-            self.use_bu2_flag = False
-            self.use_SF = False
+            self.Models.use_td_flag = True
+            self.Models.use_bu2_flag = False
+            self.Models.use_SF = False
         elif model_flag is Flag.SF:
             self.use_bu1_flag = False
             self.use_td_flag = True

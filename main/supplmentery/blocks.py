@@ -179,7 +179,7 @@ class BasicBlockBUShared(nn.Module):
             use_lateral (bool): use lateral connections between BU1 to BU2
             idx (int, optional): _description_. Defaults to 0.
         """
-        super(BasicBlockBUShared, self).__init__()
+        super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels  # storing variables.
         self.stride = stride
@@ -380,7 +380,7 @@ class InitialTaskEmbedding(nn.Module):
         self.model_flag = opts.model_flag
         self.use_td_flag = opts.use_td_flag
         self.task_embedding = [[] for _ in range(self.ntasks)]
-        self.norm_layer = opts.norm_fun
+        self.norm_layer = BatchNorm
         self.activation_fun = opts.activation_fun
         self.use_SF = opts.use_SF
         self.nclasses = opts.nclasses
