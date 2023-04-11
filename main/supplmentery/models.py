@@ -1,6 +1,7 @@
 import torch.nn as nn
 from .heads import *
-
+from .blocks import BasicBlockBUShared,SideAndCombSharedBase,BUInitialBlock
+from .batch_norm import BatchNorm
 from types import SimpleNamespace
 import numpy as np
 
@@ -121,11 +122,11 @@ class TDModel(nn.Module):
 class BUStream(nn.Module):
     def __init__(self, opts: argparse, shared: nn.Module, is_bu2: bool) -> None:
         super(BUStream, self).__init__()
-        self.block = opts.bu_block_type
+        self.block = BasicBlockBUShared
         self.inshapes = opts.bu_inshapes
         self.ntasks = opts.ntasks
         self.task_embedding = [[] for _ in range(self.ntasks)]
-        self.norm_layer = opts.norm_fun
+        self.norm_layer = BatchNorm
         self.activation_fun = opts.activation_fun
         self.model_flag = opts.model_flag
         self.inshapes = shared.inshapes_one_list
@@ -198,7 +199,7 @@ class BUStreamShared(nn.Module):
         self.activation_fun = opts.activation_fun
         self.use_lateral = opts.use_lateral_tdbu
         self.use_bu1_flag = opts.use_bu1_flag
-        self.block = opts.bu_shared_block_type
+        self.block = BasicBlockBUShared
         stride = opts.strides[0]
         filters = opts.nfilters[0]
         inplanes = opts.inshape[0]
@@ -349,20 +350,26 @@ class BUTDModel(nn.Module):
 
 
 class BUTDModelShared(BUTDModel):
-    def __init__(self, opts: argparse) -> None:
+    def __init__(self, config,**kwargs) -> None:
         """
-        :param opts: opts to create the model according to.
+        :param opts: opts to create the model according to. Loaded from the yaml config in the new version
         """
-        super(BUTDModelShared, self).__init__()
+        super(BUTDModelShared, self).__init__(**kwargs)
+        try:
+            opts = config.Models
+        except AttributeError:
+            opts = config
         self.ntasks = opts.ntasks
         self.use_lateral_butd = opts.use_lateral_butd
         self.use_lateral_tdbu = opts.use_lateral_tdbu
-        self.inputs_to_struct = opts.inputs_to_struct
+        # self.inputs_to_struct = opts.inputs_to_struct
         self.task_embedding = [[] for _ in range(self.ntasks)]  # Container to store the task embedding.
         self.transfer_learning = [[] for _ in range(self.ntasks)]
-        self.model_flag = opts.model_flag  # The model type
-        self.use_bu1_loss = opts.use_bu1_loss  # Whether to use the Occurrence loss.
-        self.use_td_flag = opts.use_td_flag
+        self.model_flag = config.RunningSpecs.Flag  # The model type
+        # losses options
+        
+        self.use_bu1_loss = config.Losses.use_bu1_loss# Whether to use the Occurrence loss.
+        self.use_td_flag = config.use_td_flag
         if self.use_bu1_loss:
             self.occhead = OccurrenceHead(opts)
         bu_shared = BUStreamShared(opts)  # The shared part between BU1, BU2.

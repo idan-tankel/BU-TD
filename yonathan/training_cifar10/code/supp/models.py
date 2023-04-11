@@ -200,7 +200,7 @@ class BUStreamShared(nn.Module):
         self.activation_fun = opts.activation_fun
         self.use_lateral = opts.use_lateral_tdbu
         self.use_bu1_flag = opts.use_bu1_flag
-        self.block = opts.bu_shared_block_type
+        self.block = BasicBlockBUShared
         stride = opts.strides[0]
         filters = opts.nfilters[0]
         inplanes = opts.inshape[0]

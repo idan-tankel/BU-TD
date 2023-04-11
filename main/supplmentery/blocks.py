@@ -4,6 +4,7 @@ import torch._C
 import numpy as np
 from supplmentery.general_functions import flag_to_task, conv3x3, conv1x1, get_laterals, conv3x3up
 from supplmentery.FlagAt import FlagAt
+from .batch_norm import BatchNorm
 import argparse
 
 
@@ -219,11 +220,11 @@ class BUInitialBlock(nn.Module):
         """
         super(BUInitialBlock, self).__init__()
         self.filters = opts.nfilters[0]
-        self.norm_layer = opts.norm_fun
+        self.norm_layer = BatchNorm
         self.activation_func = opts.activation_fun
         self.orig_relus = opts.orig_relus
         self.ntasks = opts.ntasks
-        self.conv1 = nn.Sequential(shared.conv1, opts.norm_fun(self.filters, opts.ntasks),
+        self.conv1 = nn.Sequential(shared.conv1, self.norm_layer(self.filters, opts.ntasks),
                                    self.activation_func())  # The initial block downsampling from RGB.
         self.bot_lat = SideAndCombShared(shared.bot_lat, self.norm_layer, self.activation_func, self.orig_relus,
                                          self.ntasks)  # Skip connection from the TD initial embedding.

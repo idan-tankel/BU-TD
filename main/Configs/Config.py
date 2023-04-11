@@ -58,6 +58,7 @@ class Config:
         self.model_dir = os.path.join(self.results_dir, self.model_path)
         self.setup_flag()
         self.Data_obj = AllOptions(ds_type=DsType(self.Datasets.dataset), flag_at=Flag(self.RunningSpecs.Flag), ndirections=4)
+        self.Models.model_flag = self.RunningSpecs.Flag
         # self.task_accuracy = self.Data_obj.data_obj.task_accuracy
 
 
@@ -80,6 +81,7 @@ class Config:
             self.use_bu2_flag = False
         elif model_flag is Flag.TD:
             self.use_bu1_flag = False
+            self.Models.use_bu1_flag = False
             self.use_td_flag = True
             self.use_bu2_flag = False
             self.use_SF = False

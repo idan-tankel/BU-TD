@@ -142,7 +142,7 @@ def main() -> None:
     raw_data_set = DataSet(data_dir='../data', dataset='emnist',
                            raw_data_source=parser.path_data_raw, language_list=[49])
     parser.image_size = (raw_data_set.nchannels, *parser.image_size)
-    njobs = parser.threads  # The number of threads.
+    njobs = parser.nthreads  # The number of threads.
     # The number of rows in the image.
     num_rows_in_the_image = parser.num_rows_in_the_image
     # The number of characters in the row.
@@ -171,7 +171,7 @@ def main() -> None:
     generalize = parser.generalize
     # The number of samples each job should handle.
     job_chunk_size = parser.job_chunk_size
-    augment_data = parser.augment_data
+    augment_data = parser.augment_sample
     # Use multiprocessing on this machine
     local_multiprocess = njobs > 1
     image_ids = set()

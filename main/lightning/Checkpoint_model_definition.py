@@ -3,10 +3,9 @@ import argparse
 import logging
 import os
 import numpy as np
-from supplmentery.general_functions import preprocess
 import torch.optim as optim
 import torch
-from supplmentery.general_functions import create_optimizer_and_sched
+from supplmentery.training_functions import create_optimizer_and_sched
 from pytorch_lightning import LightningModule
 import os.path
 import sys
@@ -154,7 +153,9 @@ class ModelWrapped(LightningModule):
     def accuracy_dl(self, dl):
         acc = 0.0
         for inputs in dl:
-            inputs = preprocess(inputs)
+            dev = torch.device(
+    "cuda") if torch.cuda.is_available() else torch.device("cpu")
+            inputs = [item.to(dev) for item in inputs]
             outs = self.model(inputs)
             samples = self.opts.inputs_to_struct(inputs)
             outs = self.model.outs_to_struct(outs)

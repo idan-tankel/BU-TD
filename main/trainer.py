@@ -3,7 +3,7 @@ sys.path.append(r'/home/idanta/BU-TD/yonathan/Recognicion/code/')
 
 import pytorch_lightning as pl
 from supplmentery.Parser import GetParser
-from supplmentery.get_dataset import get_dataset_for_spatial_realtions
+from supplmentery.get_dataset_v2 import get_dataset_for_spatial_realtions
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 import os
@@ -69,8 +69,9 @@ def main(train_right=True, train_left=False):
     # TODO change these hard coded paths!
     tmpdir = os.path.join(project_path, 'data/emnist/results/')
     checkpoint_path = os.path.join(tmpdir, 'MyFirstCkt.ckpt')
-    parser = GetParser(task_idx=0, direction_idx='right', flag=Flag.TD)
-    parser = Config()
+    config = Config()
+    config.Models.init_model_options()
+    
     ModelCkpt = ModelCheckpoint(
         dirpath=tmpdir, monitor="train_loss_epoch", mode="min")
     Checkpoint_saver = CheckpointSaver(
@@ -87,19 +88,19 @@ def main(train_right=True, train_left=False):
                          logger=wandb_logger, callbacks=[ModelCkpt])
     training_flag = Training_flag(
         train_all_model=True, train_arg=False, train_task_embedding=False, train_head=False)
-    model = create_model(model_opts=parser)
+    model = create_model(model_opts=config)
     learned_params = training_flag.Get_learned_params(
         model, lang_idx=0, direction=0)
     if train_right:
         train_dl, test_dl, val_dl, *the_datasets = get_dataset_for_spatial_realtions(
-            parser, data_path, lang_idx=0, direction=0)
+            config, data_path, lang_idx=0, direction=0)
         # train_dl, test_dl, val_dl, train_ds, test_ds, val_ds
         # TODO: why return a tuple? turn this into a dict
     if train_left:
         train_dl, test_dl, val_dl, *the_datasets = get_dataset_for_spatial_realtions(
-            parser, data_path,  lang_idx=0,    direction=1)
+            config, data_path,  lang_idx=0,    direction=1)
     model_wrapped = ModelWrapped(
-        parser, learned_params, ckpt=Checkpoint_saver, model=model, nbatches_train=len(train_dl))
+        config, learned_params, ckpt=Checkpoint_saver, model=model, nbatches_train=len(train_dl))
     wandb_logger.watch(model=model_wrapped,log='all')
     # log all model topology and grads tp the website
     trainer.fit(model_wrapped, train_dataloaders=train_dl,
