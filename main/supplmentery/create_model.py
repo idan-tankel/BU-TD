@@ -23,6 +23,8 @@ logger = logging.getLogger(__name__)
 def create_model(model_opts: Config) -> nn.Module:
     """
     Creating a model and make it parallel and move it to the cuda.
+    ### note
+    This is an interface to a few options of models, determined by the flag in the model_opts.
     :param args: arguments to create the model according to.
     :return: The desired model.
     """
