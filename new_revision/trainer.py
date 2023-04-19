@@ -10,7 +10,7 @@ from torchvision import datasets, transforms
 from models.create_model import ModelWrapper
 from torch.utils.data import DataLoader
 from torch import cuda, device
-from Configs.Config import Configk
+from Configs.Config import Config
 from types import SimpleNamespace
 from create_dataset.datasets import DatasetAllDataSetTypesAll
 import git
@@ -31,6 +31,9 @@ try:
     file = args.file
 except AttributeError:
     file =  "small_vit.yaml"
+
+if args.file is None:
+    file = "small_vit.yaml"
 
 ####################### get global config ######################
 global_config = Config(experiment_filename=file)
