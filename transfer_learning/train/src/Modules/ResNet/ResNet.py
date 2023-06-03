@@ -8,7 +8,7 @@ from typing import Type, Union, Iterator
 import torch
 from torch import Tensor
 
-from ..module_blocks import LambdaLayer, DownSample, WeightModulation, layer_with_modulation_and_masking
+from ..module_blocks import WeightModulation, layer_with_modulation_and_masking
 from .blocks import BasicBlock, Bottleneck
 from ..Batch_norm import BatchNorm as Batch_Norm_ours_with_saving_stats
 from ..Heads import Head
@@ -54,13 +54,14 @@ class ResNet(nn.Module):
         self.conv1 = nn.Conv2d(3, self.channels[0], kernel_size=self.kernel_size, stride=self.strides[0],
                                padding=pad, bias=False)
         self.bn1 = self._norm_layer(self.channels[0], ntasks=self.ntasks)
+        self.groups = opts.data_set_obj['groups']
         self.use_max_pool = use_max_pool
         if self.use_max_pool:
             self.max_pool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layers = nn.ModuleList()
         for layer_id, num_layers in enumerate(self.num_blocks):
             layer = self._make_layer(block, self.channels[layer_id + 1], blocks=self.num_blocks[layer_id],
-                                     stride=self.strides[layer_id + 1],
+                                     stride=self.strides[layer_id + 1], groups=self.groups[layer_id],
                                      modulation=self.modulations)
             self.layers.append(layer)
 
@@ -71,21 +72,17 @@ class ResNet(nn.Module):
         init_module_weights(self.modules())
 
     def _make_layer(self, block: Type[Union[BasicBlock, Bottleneck]], planes: int, blocks: int, stride: int = 1,
+                    groups=1,
                     modulation=None) -> nn.Sequential:
         norm_layer = self._norm_layer
         downsample = None
         if stride != 1:
-            if self.learnable_downsample:
-                downsample = DownSample(self._norm_layer, self.inplanes, planes, block.expansion, stride, self.ntasks)
-            else:
-                downsample = LambdaLayer(
-                    lambda x: nn.functional.pad(x[:, :, ::2, ::2], [0, 0, 0, 0, planes // 4, planes // 4]),
-                )
+            downsample = DownSample(self._norm_layer, self.inplanes, planes, block.expansion, stride, self.ntasks)
         elif self.inplanes != planes * block.expansion:
             downsample = DownSample(self._norm_layer, self.inplanes, planes, block.expansion, stride, self.ntasks)
 
         layers = [block(self.opts,
-                        inplanes=self.inplanes, planes=planes, stride=stride, downsample=downsample,
+                        inplanes=self.inplanes, planes=planes, stride=stride, groups=groups, downsample=downsample,
                         norm_layer=norm_layer,
                         modulations=modulation,
                         masks=self.masks
@@ -145,6 +142,9 @@ class ResNet(nn.Module):
         return inputs, task_id
 
 
+import math
+
+
 def init_module_weights(modules: Iterator[nn.Module]) -> None:
     """
     Initialize the modules.
@@ -163,6 +163,8 @@ def init_module_weights(modules: Iterator[nn.Module]) -> None:
 
         if isinstance(m, WeightModulation):
             for param in m.modulation:
+                # nn.init.kaiming_uniform_(param, a=math.sqrt(5))
+                nn.init.kaiming_normal_(param, mode='fan_out')
                 nn.init.kaiming_normal_(param, mode="fan_out", nonlinearity="relu")
 
 
@@ -173,9 +175,9 @@ class SimpleMLP(nn.Module):
 
     def __init__(self, opts):
         super(SimpleMLP, self).__init__()
-        self.shapes = opts.data_set_obj.shapes
+        self.shapes = opts.data_set_obj['shapes']
         self.layers = nn.ModuleList()
-        self.ntasks = opts.data_set_obj.ntasks
+        self.ntasks = opts.data_set_obj['ntasks']
         self.modulations = [[] for _ in range(self.ntasks)]
         self.masks = [[] for _ in range(self.ntasks)]
         self.relu = nn.ReLU(inplace=True)
@@ -184,7 +186,7 @@ class SimpleMLP(nn.Module):
             layer = layer_with_modulation_and_masking(opts, layer, self.modulations, create_modulation=True,
                                                       create_masks=True, masks=self.masks, linear=True)
             self.layers.append(layer)
-        self.head = nn.Linear(self.shapes[-2], self.shapes[-1])
+        self.classifier = nn.Linear(self.shapes[-2], self.shapes[-1])
 
     def forward(self, x: Tensor, task_id: int):
         """
@@ -201,7 +203,7 @@ class SimpleMLP(nn.Module):
         for layer in self.layers:
             out = layer(out, task_id)
             out = self.relu(out)
-        out = self.head(out)
+        # out = self.classifier(out)
         return out
 
 
@@ -214,7 +216,7 @@ def ResNet14(opts):
     Returns: ResNet32 model.
 
     """
-    return ResNet(opts=opts, block=BasicBlock, num_blocks=[2, 2, 2])
+    return ResNet(opts=opts, block=BasicBlock, num_blocks=[2, 2, 2], channels=[16, 16, 32, 64])
 
 
 def ResNet18(opts):
@@ -238,8 +240,9 @@ def ResNet20(opts):
     Returns: ResNet32 model.
 
     """
-    return ResNet(opts=opts, block=BasicBlock, num_blocks=[3, 3, 3], channels=[16, 16, 32, 64], strides=[1, 1, 2, 2],
-                  pad=1, )
+    return ResNet(opts=opts, block=BasicBlock, num_blocks=opts.data_set_obj['num_blocks'], channels=[16, 16, 32, 64],
+                  strides=[1, 1, 2, 2],
+                  pad=1, use_max_pool=False)
 
 
 def ResNet32(opts):

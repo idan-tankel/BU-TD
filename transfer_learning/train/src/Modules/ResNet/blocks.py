@@ -25,6 +25,7 @@ class BasicBlock(nn.Module):
             inplanes: int,
             planes: int,
             stride: int = 1,
+            groups:int = 1,
             downsample: Optional[nn.Module] = None,
             inshapes: List = None,
             norm_layer: Optional[Callable[..., nn.Module]] = None,
@@ -47,30 +48,29 @@ class BasicBlock(nn.Module):
         super(BasicBlock, self).__init__()
         self.shape = inshapes
         self.idx = index
-        self.ntasks = opts.data_set_obj.ntasks
+        self.ntasks = opts.data_set_obj['ntasks']
         self.stride = stride
-        self.weight_modulation = opts.data_set_obj.weight_modulation
-        self.conv1 = conv3x3(inplanes, planes, stride)
+        self.conv1 = conv3x3(inplanes, planes, stride = stride,groups=groups)
         self.modulated_conv1 = layer_with_modulation_and_masking(opts=opts, layer=self.conv1,
                                                                  task_embedding=modulations, create_modulation=True,
                                                                  create_masks=True, masks=masks, linear=False)
 
         self.bn1 = norm_layer(planes, ntasks=self.ntasks)
         self.relu = nn.ReLU(inplace=True)
-        self.conv2 = conv3x3(planes, planes)
+        self.conv2 = conv3x3(planes, planes,groups=groups)
         self.modulated_conv2 = layer_with_modulation_and_masking(opts=opts, layer=self.conv2,
                                                                  task_embedding=modulations, create_modulation=True,
                                                                  create_masks=True, masks=masks, linear=False)
         self.bn2 = norm_layer(planes, ntasks=self.ntasks)
 
         self.downsample = downsample
-        self.option_B = opts.data_set_obj.option_B
-        if self.downsample is not None and opts.data_set_obj.option_B:
+        self.learnable_downsample = opts.data_set_obj['learnable_downsample']
+        if self.downsample is not None and self.learnable_downsample:
             self.modulated_conv3 = layer_with_modulation_and_masking(opts=opts, layer=self.downsample.conv1x1,
                                                                      task_embedding=modulations, create_modulation=True,
                                                                      create_masks=True, masks=masks, linear=False)
 
-        self.modulate_downsample = opts.data_set_obj.option_B and self.downsample is not None
+        self.modulate_downsample = self.learnable_downsample and self.downsample is not None
 
     def forward(self, inputs: Tuple[Tensor, Tensor]) -> Tuple[Tensor, Tensor]:
         """

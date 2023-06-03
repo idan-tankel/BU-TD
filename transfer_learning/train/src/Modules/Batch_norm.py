@@ -59,8 +59,9 @@ class BatchNorm(nn.Module):
             device = inputs.device
             self.running_mean_list = self.running_mean_list.to(device)
             self.running_var_list = self.running_var_list.to(device)
-            running_mean = (flags @ self.running_mean_list).unsqueeze(dim=2).unsqueeze(dim=2)
-            running_var = (flags @ self.running_var_list).unsqueeze(dim=2).unsqueeze(dim=2)
+            task_id = flags[0]
+            running_mean = (self.running_mean_list[task_id]).unsqueeze(dim=2).unsqueeze(dim=2)
+            running_var = (self.running_var_list[task_id]).unsqueeze(dim=2).unsqueeze(dim=2)
             running_var = running_var if not self.training or self.track_running_stats else None
             running_mean = running_mean if not self.training or self.track_running_stats else None
             return self.batch_norm_with_statistics_per_sample(inputs=inputs, running_mean=running_mean,

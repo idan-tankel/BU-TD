@@ -2,365 +2,389 @@ data:
   StanfordCars:
     Masks:
       initial_lr: 0.0001
-      wd: 0.00001
-      milestones: [ 15 ]
-      drop_out_rate: .2
-      factor: .1
+      milestones: [ 15, 30 ]
       optimizer: Adam
-      heads: [ 1000, 196, 200, 102, 101, 250 ]
-      ntasks: 6
-      learnable_downsample: True
       threshold: 0.005
       bs: 32
       epochs: 30
-      weight_modulation_factor: [ 4, 4, 1,1 ]
-      mask_modulation_factor: [ 1, 1 ]
+      weight_modulation_factor: [ 4, 4 ]
+      wd: 0.00001
+      reg: .0
     Modulation:
       initial_lr: 0.01
-      wd: 0.00001
       milestones: [ 15, 30 ]
-      drop_out_rate: 0.2
-      factor: 0.1
       optimizer: Adam
-      heads: [ 1000, 196, 200, 102, 101,250 ]
-      ntasks: 6
-      learnable_downsample: True
-      weight_modulation_factor: [ 4, 4, 1, 1 ]
-      mask_modulation_factor: [ 1, 1 ]
+      weight_modulation_factor: [ 1, 1 ]
       threshold: 0.005
       bs: 32
       epochs: 30
       interpolation: bicubic
+      reg: 0.0000
+      wd: .0
     Full:
-      initial_lr: 0.001
-      wd: 0.00000
+      initial_lr: 0.0001
       milestones: [ 15, 30 ]
-      drop_out_rate: .2
-      factor: .2
       optimizer: Adam
-      heads: [ 1000, 196, 200, 102, 101, 250 ]
-      ntasks: 6
-      learnable_downsample: True
       threshold: 0.005
       bs: 32
       epochs: 30
-      weight_modulation_factor: [ 4,4,1,1 ]
-      mask_modulation_factor: [ 1, 1 ]
+      weight_modulation_factor: [ 1,1 ]
+      reg: .0
+      wd: .0
+    Classifier_Only:
+      initial_lr: 0.001
+      milestones: [ 15, 30 ]
+      optimizer: Adam
+      weight_modulation_factor: [ 5,5 ]
+      threshold: 0.005
+      bs: 32
+      epochs: 30
+      interpolation: bicubic
+      reg: .0
+      wd: .0
+    LWF:
+      initial_lr: 0.0001
+      milestones: [ 15, 30 ]
+      optimizer: Adam
+      weight_modulation_factor: [ 6,6 ]
+      threshold: 0.005
+      bs: 32
+      epochs: 30
+      wd: 0.0
+      interpolation: bicubic
+      reg: 5000
   Flowers:
     Masks:
-      initial_lr: 0.01
-      wd: 0.00001
-      milestones: [ 15, 30 ]
-      drop_out_rate: .2
-      factor: .1
-      optimizer: Adam
-      heads: [ 1000, 196, 200, 102, 101, 250 ]
-      ntasks: 6
-      learnable_downsample: True
-      threshold: 0.005
-      bs: 32
-      epochs: 30
-      weight_modulation_factor: [ 4,4,1,1 ]
-      mask_modulation_factor: [ 1, 1 ]
-      interpolation: bicubic
-    MaskAndMod:
       initial_lr: 0.0001
-      wd: 0.0
       milestones: [ 15, 30 ]
-      drop_out_rate: .2
-      factor: .2
       optimizer: Adam
-      heads: [ 1000, 196, 200, 102, 101, 250 ]
-      ntasks: 6
-      learnable_downsample: True
       threshold: 0.005
       bs: 32
       epochs: 30
-      weight_modulation_factor: [ 4,4,1,1 ]
-      mask_modulation_factor: [ 1, 1 ]
-      interpolation: bicubic
-    Modulation:
-      initial_lr: 0.01
-      wd: 0.0
-      milestones: [ 15, 30 ]
-      drop_out_rate: 0.1
-      factor: 0.2
-      optimizer: Adam
-      heads: [ 1000, 196, 200, 102, 101, 250 ]
-      ntasks: 6
-      learnable_downsample: True
-      weight_modulation_factor: [ 4, 4, 1, 1 ]
-      mask_modulation_factor: [ 1, 1 ]
-      threshold: 0.005
-      bs: 32
-      epochs: 45
-      interpolation: bicubic
-    Classifier_Only:
-      initial_lr: 0.0001
-      wd: 0.0
-      milestones: [ 15, 30 ]
-      drop_out_rate: .2
-      factor: .2
-      optimizer: Adam
-      heads: [ 1000, 196, 200, 102, 101, 250 ]
-      ntasks: 6
-      learnable_downsample: True
-      threshold: 0.005
-      bs: 32
-      epochs: 30
-      weight_modulation_factor: [ 2,4,1,1 ]
-      mask_modulation_factor: [ 1, 1 ]
+      weight_modulation_factor: [ 4, 4 ]
+      wd: .00001
+      reg: .0
     Full:
       initial_lr: 0.0001
-      wd: 0.0
       milestones: [ 15, 30 ]
-      drop_out_rate: .2
-      factor: .2
       optimizer: Adam
-      heads: [ 1000, 196, 200, 102, 101, 250 ]
-      ntasks: 6
-      learnable_downsample: True
       threshold: 0.005
       bs: 32
       epochs: 30
-      weight_modulation_factor: [ 2,4,1,1 ]
-      mask_modulation_factor: [ 1, 1 ]
+      weight_modulation_factor: [ 4,4 ]
+      wd: .0
+    LWF:
+      initial_lr: 0.001
+      milestones: [ 15, 30 ]
+      optimizer: Adam
+      weight_modulation_factor: [ 6,6 ]
+      threshold: 0.005
+      bs: 32
+      epochs: 30
+      wd: 0.0
+      interpolation: bicubic
+      reg: 70000
+    Modulation:
+      initial_lr: 0.01
+      reg: .00001
+      milestones: [ 15, 30 ]
+      optimizer: Adam
+      weight_modulation_factor: [ 6,6 ]
+      threshold: 0.005
+      bs: 32
+      epochs: 30
+      wd: 0.0
+      interpolation: bicubic
+      factor: .1
+    Classifier_Only:
+      initial_lr: 0.0001
+      milestones: [ 15, 30 ]
+      optimizer: Adam
+      learnable_downsample: True
+      weight_modulation_factor: [ 5,5 ]
+      threshold: 0.005
+      bs: 32
+      epochs: 30
+      interpolation: bicubic
+      num_blocks: [ ]
+      groups: [ ]
+      wd: .0
+      reg: 0.0001
   CUBS:
     Masks:
       initial_lr: 0.0001
-      wd: 0.00001
       milestones: [ 15 ]
-      drop_out_rate: .2
-      factor: .1
       optimizer: Adam
-      heads: [ 1000, 196, 200, 102, 101, 250 ]
-      ntasks: 6
       learnable_downsample: True
       threshold: 0.005
       bs: 32
       epochs: 30
-      weight_modulation_factor: [ 4, 4, 1,1 ]
+      weight_modulation_factor: [ 4,4 ]
       mask_modulation_factor: [ 1, 1 ]
+      wd: 0.00001
+      reg: .0
     Full:
       initial_lr: 0.001
-      wd: 0.00000
       milestones: [ 15, 30 ]
-      drop_out_rate: .2
-      factor: .2
       optimizer: Adam
-      heads: [ 1000, 196, 200, 102, 101, 250 ]
-      ntasks: 6
       learnable_downsample: True
       threshold: 0.005
       bs: 32
       epochs: 30
       weight_modulation_factor: [ 4,4,1,1 ]
-      mask_modulation_factor: [ 1, 1 ]
-
     Modulation:
-      initial_lr: 0.01
-      wd: 0.00001
+      initial_lr: 0.001
       milestones: [ 15, 30 ]
-      drop_out_rate: 0.2
-      factor: 0.1
       optimizer: Adam
-      heads: [ 1000, 196, 200, 102, 101,250 ]
-      ntasks: 6
       learnable_downsample: True
-      weight_modulation_factor: [ 4, 4, 1, 1 ]
+      weight_modulation_factor: [ 5,5 ]
       mask_modulation_factor: [ 1, 1 ]
       threshold: 0.005
       bs: 32
       epochs: 30
       interpolation: bicubic
+      num_blocks: [ ]
+      groups: [ ]
+      wd: .0
+      reg: 0.0000
+      factor: .1
+    Classifier_Only:
+      initial_lr: 0.001
+      reg: .0
+      factor: .1
+      milestones: [ 15 ]
+      optimizer: Adam
+      learnable_downsample: True
+      weight_modulation_factor: [ 5,5 ]
+      weight_modulation_factors: [ [ 4,4 ],[ 9,9 ] ]
+      mask_modulation_factor: [ 1, 1 ]
+      threshold: 0.005
+      bs: 32
+      epochs: 30
+      interpolation: bicubic
+      num_blocks: [ ]
+      groups: [ ]
+      wd: .0
+    LWF:
+      initial_lr: 0.001
+      milestones: [ 15, 30 ]
+      optimizer: Adam
+      learnable_downsample: True
+      weight_modulation_factor: [ 6,6 ]
+      weight_modulation_factors: [ [ 4,4 ] ]
+      groups: [ ]
+      num_blocks: [ ]
+      mask_modulation_factor: [ 1, 1 ]
+      threshold: 0.005
+      bs: 32
+      epochs: 30
+      wd: 0.0
+      interpolation: bicubic
+      reg: 400000
+      factor: .1
   Food:
     Masks:
       initial_lr: 0.0001
-      wd: 0.00001
       milestones: [ 15 ]
-      drop_out_rate: .2
-      factor: .1
       optimizer: Adam
-      heads: [ 1000, 196, 200, 102, 101, 250 ]
-      ntasks: 6
       learnable_downsample: True
       threshold: 0.005
       bs: 96
       epochs: 30
-      weight_modulation_factor: [ 4, 4, 1,1 ]
+      weight_modulation_factor: [ 4, 4 ]
       mask_modulation_factor: [ 1, 1 ]
+      weight_modulation_factors: [ [ 4, 4 ] ]
+      wd: 0.00001
     Full:
       initial_lr: 0.001
-      wd: 0.00000
-      milestones: [ 15, 30 ]
-      drop_out_rate: .2
-      factor: .2
+      milestones: [ 15 ]
       optimizer: Adam
-      heads: [ 1000, 196, 200, 102, 101, 250 ]
-      ntasks: 6
       learnable_downsample: True
       threshold: 0.005
       bs: 96
       epochs: 30
-      weight_modulation_factor: [ 4,4,1,1 ]
+      weight_modulation_factor: [ 4,4 ]
       mask_modulation_factor: [ 1, 1 ]
-
+      weight_modulation_factors: [ [ 4, 4 ] ]
+      wd: .0
     Modulation:
       initial_lr: 0.01
-      wd: 0.00001
       milestones: [ 15, 30 ]
-      drop_out_rate: 0.0
-      factor: 0.1
       optimizer: Adam
-      heads: [ 1000, 196, 200, 102, 101,250 ]
-      ntasks: 6
       learnable_downsample: True
-      weight_modulation_factor: [ 4, 4, 1, 1 ]
+      weight_modulation_factor: [ 5,5 ]
       mask_modulation_factor: [ 1, 1 ]
+
       threshold: 0.005
       bs: 96
       epochs: 30
       interpolation: bicubic
-  CIFAR10:
-    Full:
-      learnable_downsample: False
-      milestones: [ 100, 150 ]
-      bs: 128
-      epochs: 200
-      wd: 1e-4
-      ntasks: 6
-      factor: 0.1
-      initial_lr: 1e-1
-      # heads: [100 // (ntasks - 1) for _ in range(self.ntasks)]
-      drop_out_rate: 0.2
-      use_max_pool: False
-      optimizer: SGD
-  CIFAR100:
-    Modulation:
-      milestones: [ 50, 100 ]
-      bs: 96
-      epochs: 150
-      ntasks: 6
-      factor: 0.2
-      wd: .0
-      initial_lr: 1e-1
-      weight_modulation_factor: [ 4, 4, 1, 1 ]
-      drop_out_rate: 0.2
-      use_max_pool: False
+    Classifier_Only:
+      initial_lr: 0.0001
+      milestones: [ 15, 30 ]
       optimizer: Adam
+      learnable_downsample: True
+      weight_modulation_factor: [ 5,5 ]
+      weight_modulation_factors: [ [ 4,4 ],[ 9,9 ] ]
+      mask_modulation_factor: [ 1, 1 ]
+      threshold: 0.005
+      bs: 32
+      epochs: 30
+      interpolation: bicubic
+      num_blocks: [ ]
+      groups: [ ]
+      wd: .0
   WikiArt:
-
+    Masks:
+      initial_lr: 0.0001
+      milestones: [ 15 ]
+      optimizer: Adam
+      learnable_downsample: True
+      threshold: 0.005
+      bs: 32
+      epochs: 30
+      weight_modulation_factor: [ 4, 4 ]
+      weight_modulation_factors: [ [ 4, 4 ] ]
+      mask_modulation_factor: [ 1, 1 ]
+      groups: [ ]
+      num_blocks: [ ]
+      wd: .0
+    Full:
+      initial_lr: 0.001
+      milestones: [ 15, 30 ]
+      optimizer: Adam
+      learnable_downsample: True
+      threshold: 0.005
+      bs: 32
+      epochs: 30
+      weight_modulation_factor: [ 4, 4 ]
+      weight_modulation_factors: [ [ 4, 4 ] ]
+      mask_modulation_factor: [ 1, 1 ]
+      wd: .0
+    Modulation:
+      initial_lr: 0.01
+      milestones: [ 15, 30 ]
+      optimizer: Adam
+      learnable_downsample: True
+      weight_modulation_factor: [ 5,5 ]
+      mask_modulation_factor: [ 1, 1 ]
+      threshold: 0.005
+      bs: 32
+      epochs: 30
+      interpolation: bicubic
+      groups: [ ]
+      num_blocks: [ ]
+    Classifier_Only:
+      initial_lr: 0.001
+      milestones: [ 15, 30 ]
+      optimizer: Adam
+      learnable_downsample: True
+      weight_modulation_factor: [ 5,5 ]
+      weight_modulation_factors: [ [ 4,4 ],[ 9,9 ] ]
+      mask_modulation_factor: [ 1, 1 ]
+      threshold: 0.005
+      bs: 32
+      epochs: 30
+      interpolation: bicubic
+      num_blocks: [ ]
+      groups: [ ]
+      wd: .0
+    LWF:
+      initial_lr: 0.001
+      milestones: [ 15, 30 ]
+      optimizer: Adam
+      learnable_downsample: True
+      weight_modulation_factor: [ 6,6 ]
+      weight_modulation_factors: [ [ 4,4 ] ]
+      groups: [ ]
+      num_blocks: [ ]
+      mask_modulation_factor: [ 1, 1 ]
+      threshold: 0.005
+      bs: 32
+      epochs: 30
+      wd: 0.0
+      interpolation: bicubic
+      reg: 70000
+      factor: .1
   Sketches:
     Masks:
       initial_lr: 0.0001
-      wd: 0.00001
       milestones: [ 15 ]
-      drop_out_rate: .0
-      factor: .1
       optimizer: Adam
-      heads: [ 1000, 196, 200, 102, 101, 250 ]
-      ntasks: 6
       learnable_downsample: True
       threshold: 0.005
       bs: 32
       epochs: 30
-      weight_modulation_factor: [ 4, 4, 1,1 ]
+      weight_modulation_factor: [ 4, 4 ]
       mask_modulation_factor: [ 1, 1 ]
+      weight_modulation_factors: [ [ 4, 4 ] ]
+      wd: 0.00001
     Full:
       initial_lr: 0.001
-      wd: 0.00000
       milestones: [ 15, 30 ]
-      drop_out_rate: .2
-      factor: .2
       optimizer: Adam
-      heads: [ 1000, 196, 200, 102, 101, 250 ]
-      ntasks: 6
       learnable_downsample: True
       threshold: 0.005
       bs: 32
       epochs: 30
-      weight_modulation_factor: [ 4,4,1,1 ]
+      weight_modulation_factor: [ 4, 4 ]
       mask_modulation_factor: [ 1, 1 ]
-
+      weight_modulation_factors: [ [ 4, 4 ] ]
+      wd: .0
     Modulation:
       initial_lr: 0.01
-      wd: 0.00001
       milestones: [ 15, 30 ]
-      drop_out_rate: 0.2
-      factor: 0.1
       optimizer: Adam
-      heads: [ 1000, 196, 200, 102, 101,250 ]
-      ntasks: 6
       learnable_downsample: True
-      weight_modulation_factor: [ 4, 4, 1, 1 ]
+      weight_modulation_factor: [ 5,5 ]
+      weight_modulation_factors: [ [ 4,4 ] ]
       mask_modulation_factor: [ 1, 1 ]
       threshold: 0.005
       bs: 32
       epochs: 30
       interpolation: bicubic
-
+      factor: .1
+      wd: .0
+      reg: 0.00001
+    Classifier_Only:
+      initial_lr: 0.001
+      milestones: [ 15, 30 ]
+      optimizer: Adam
+      learnable_downsample: True
+      weight_modulation_factor: [ 5,5 ]
+      weight_modulation_factors: [ [ 4,4 ],[ 9,9 ] ]
+      mask_modulation_factor: [ 1, 1 ]
+      threshold: 0.005
+      bs: 32
+      epochs: 30
+      interpolation: bicubic
+      num_blocks: [ ]
+      groups: [ ]
+      wd: .0
+    LWF:
+      initial_lr: 0.0001
+      milestones: [ 15, 30 ]
+      optimizer: Adam
+      weight_modulation_factor: [ 6,6 ]
+      threshold: 0.005
+      bs: 32
+      epochs: 30
+      wd: 0.0
+      interpolation: bicubic
+      reg: 30000
   ImageNet:
     Full:
       initial_lr: 0.0001
-      wd: 0.00001
       milestones: [ 15, 30 ]
-      drop_out_rate: .2
-      factor: .1
       optimizer: Adam
-      heads: [ 1000, 196, 200, 102, 101, 250 ]
-      ntasks: 6
       learnable_downsample: True
       weight_modulation_factor: [ 4,4,1,1 ]
+      weight_modulation_factors: [ [ 4,4 ] ]
       mask_modulation_factor: [ 1,1 ]
       threshold: 0.005
-      bs: 64
-      epochs: 30
-      interpolation: bicubic
-  SUN:
-    Masks:
-      initial_lr: 0.0001
-      wd: 0.00001
-      milestones: [ 15 ]
-      drop_out_rate: .2
+      reg: .0
+      wd: .0
       factor: .1
-      optimizer: Adam
-      heads: [ 1000, 196, 200, 102, 101, 250 ]
-      ntasks: 6
-      learnable_downsample: True
-      threshold: 0.005
       bs: 32
-      epochs: 30
-      weight_modulation_factor: [ 4, 4, 1,1 ]
-      mask_modulation_factor: [ 1, 1 ]
-    Full:
-      initial_lr: 0.001
-      wd: 0.00000
-      milestones: [ 15, 30 ]
-      drop_out_rate: .2
-      factor: .2
-      optimizer: Adam
-      heads: [ 1000, 196, 200, 102, 101, 250 ]
-      ntasks: 6
-      learnable_downsample: True
-      threshold: 0.005
-      bs: 32
-      epochs: 30
-      weight_modulation_factor: [ 4,4,1,1 ]
-      mask_modulation_factor: [ 1, 1 ]
-
-    Modulation:
-      initial_lr: 0.0001
-      wd: 0.00001
-      milestones: [ 15, 30 ]
-      drop_out_rate: 0.2
-      factor: 0.1
-      optimizer: Adam
-      heads: [ 1000, 196, 200, 102, 101,250 ]
-      ntasks: 6
-      learnable_downsample: True
-      weight_modulation_factor: [ 4, 4, 1, 1 ]
-      mask_modulation_factor: [ 1, 1 ]
-      threshold: 0.005
-      bs: 16
       epochs: 30
       interpolation: bicubic

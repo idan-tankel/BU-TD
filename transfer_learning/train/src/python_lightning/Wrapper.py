@@ -14,6 +14,7 @@ from ..Utils import create_optimizer_and_scheduler
 from ..Modules.Batch_norm import store_running_stats
 import torchmetrics
 import shutil
+from ..data.Enums import TrainingFlag
 
 
 # Define the model wrapper class.
@@ -25,7 +26,7 @@ class ModelWrapped(LightningModule):
     """
 
     def __init__(self, opts: argparse, model: nn.Module, learned_params: list,
-                 task_id: int, name: str):
+                 task_id: int, name: str, loss_fun: Callable, training_flag: TrainingFlag):
         """
         This is the model wrapper for pytorch lightning training.
         Args:
@@ -39,13 +40,14 @@ class ModelWrapped(LightningModule):
         self.need_to_update_running_stats: bool = True
         self.model: nn.Module = model  # The model.
         self.learned_params: list = learned_params  # The learned parameters.
-        self.loss_fun: Callable = opts.criterion  # The loss criterion.
-        self.dev: str = opts.device  # The device.
+        self.loss_fun: Callable = loss_fun  # The loss criterion.
+        # self.dev: str = opts.device  # The device.
         self.opts: argparse = opts  # The model options.
         self.task_id: int = task_id  # The task id.
+        self.training_flag = training_flag
         # Define the optimizer, scheduler.
         self.just_initialized = True
-        self.val_acc = torchmetrics.Accuracy(task='multiclass', num_classes=100)
+        self.val_acc = torchmetrics.Accuracy(task='multiclass', num_classes=1000)
         if not os.path.exists(os.path.join(str(Path(__file__).parents[3]), 'data/models', name, 'code')):
             shutil.copytree(str(Path(__file__).parents[2]), os.path.join(str(Path(__file__).parents[3]), 'data/models',
                                                                          name, 'code'))
@@ -55,9 +57,8 @@ class ModelWrapped(LightningModule):
         """
         Returns the optimizer, scheduler.
         """
-        nbatches_train = len(self.trainer._data_connector._train_dataloader_source.dataloader())
         optimizer, raw_scheduler = create_optimizer_and_scheduler(opts=self.opts, learned_params=self.learned_params,
-                                                                  nbatches=nbatches_train)
+                                                                  )
         scheduler = {'scheduler': raw_scheduler, "interval": "epoch"}  # Update the scheduler each step.
         if raw_scheduler is not None:
             return [optimizer], [scheduler]
@@ -75,17 +76,19 @@ class ModelWrapped(LightningModule):
 
         """
         model = self.model
-        model.train()  # Move the model into the evaluation mode.
-        images, label, task_id = batch
-        outs = model(images, task_id)  # Forward and make a struct.
-        loss = self.loss_fun(outs, label)  # Compute the loss.
+        if self.training_flag is TrainingFlag.LWF:
+            model.eval()  # Move the model into the evaluation mode.
+        else:
+            model.train()
+        _, label, _ = batch
+        outs, loss = self.loss_fun(batch, model, 'train')  # Compute the loss.
         class_prob = torch.argmax(outs, dim=1)
         acc = torch.eq(class_prob, label).float()  # Compute the Accuracy.
         acc = acc.mean()
         self.log('train_loss', loss, on_step=True, on_epoch=True, sync_dist=True)  # Update the loss.
         self.log('train_acc', acc, on_step=True, on_epoch=True, sync_dist=True)  # Update the acc.
         if batch_idx == len(self.trainer._data_connector._train_dataloader_source.dataloader()) - 1:
-            store_running_stats(model=self.model, task_id=self.task_id)
+            # store_running_stats(model=self.model, task_id=self.task_id)
             print('Done storing running statistics for BN layers')
         return loss  # Return the loss.
 
@@ -102,10 +105,10 @@ class ModelWrapped(LightningModule):
         assert mode in ['test', 'val']
         model = self.model
         model.eval()  # Move the model into the evaluation mode.
-        images, label, task_id = batch
+        _, label, _ = batch
         with torch.no_grad():  # Without grad.
-            outs = model(images, task_id)  # Forward and make a struct.
-            loss = self.loss_fun(outs, label)  # Compute the loss.
+            # outs = model(images, task_id)  # Forward and make a struct.
+            outs, loss = self.loss_fun(batch, model, 'test')  # Compute the loss.
             class_prob = torch.argmax(outs, dim=1)
             acc = torch.eq(class_prob, label).float()  # Compute the Accuracy.
             self.val_acc.update(class_prob, label)

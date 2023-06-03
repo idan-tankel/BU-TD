@@ -14,23 +14,26 @@ class Head(nn.Module):
     Supports head per task.
     """
 
-    def __init__(self, in_channels: int, heads: List[int], modulation: List[List[nn.Parameter]],
-                 mask: list, block_expansion: int = 1):
+    def __init__(self, opts, in_channels: int, modulation: List[List[nn.Parameter]],
+                 mask: list):
         """
         Compute class probabilities.
         Args:
+            opts: The argument parser.
             in_channels: The in channels.
-            heads: The number of heads per task.
             modulation: The modulations list.
+            mask: The mask weights.
+
         """
         super(Head, self).__init__()
-        self.head = heads
+        self.heads = opts.heads
         Heads = []
-        for index, head in enumerate(heads):
-            layer = nn.Linear(in_channels * block_expansion, head)
+        for index, head in enumerate(self.heads):
+            layer = nn.Linear(in_channels, head)
             Heads.append(layer)
-            modulation[index].extend(layer.parameters())
-            mask[index].extend(layer.parameters())
+            if modulation is not None:
+                modulation[index].extend(layer.parameters())
+                mask[index].extend(layer.parameters())
         Heads = nn.ModuleList(Heads)
         self.Head = Heads
 
@@ -44,5 +47,5 @@ class Head(nn.Module):
         Returns:
 
         """
-        task_flag = int(task_flag[0].argmax())
+        task_flag = task_flag[0]
         return self.Head[task_flag](inputs)
