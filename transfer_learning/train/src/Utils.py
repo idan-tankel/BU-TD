@@ -2,7 +2,7 @@
 Here we define the function utils.
 """
 import argparse
-from typing import Iterator, Type, Tuple, List
+from typing import Iterator, List
 
 import torch
 
@@ -33,7 +33,7 @@ def num_params(params: Iterator) -> int:
     """
     num_param = 0
     for param in params:
-        # For each parameter in the model we multiply all its shape dimensions.
+        # For each parameter in the Model we multiply all its shape dimensions.
         shape = torch.tensor(param.shape)  # Make a tensor.
         num_param += torch.prod(shape)  # Add to the sum.
     return num_param
@@ -44,7 +44,7 @@ def create_optimizer_and_scheduler(opts: argparse, learned_params: list) -> \
     """
     Create optimizer and a scheduler according to opts.
     Args:
-        opts: The model options.
+        opts: The Model options.
         learned_params: The learned parameters.
 
     Returns: Optimizer, scheduler.
@@ -59,7 +59,7 @@ def create_optimizer_and_scheduler(opts: argparse, learned_params: list) -> \
         optimizer = optim.Adam(params=learned_params,
                                lr=opts.data_set_obj['initial_lr'], weight_decay=opts.data_set_obj['wd'])
 
-    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=opts.data_set_obj['milestones'] )
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=opts.data_set_obj['milestones'])
 
     return optimizer, scheduler
 
@@ -68,7 +68,7 @@ def Expand(opts: argparse, mod: Tensor, shape: list) -> Tensor:
     """
     Expand the tensor in interleaved manner to match the neuron's shape.
     Args:
-        opts: The model opts.
+        opts: The Model opts.
         mod: The modulations.
         shape: The desired.
 
@@ -109,7 +109,7 @@ def Get_dataloaders(opts: argparse, task_id: int):
     """
     Get the data-set object.
     Args:
-        opts: The model opts.
+        opts: The Model opts.
         task_id: The task id.
 
     Returns: train, test data-sets.
@@ -117,67 +117,69 @@ def Get_dataloaders(opts: argparse, task_id: int):
     """
     ds_type = opts.ds_type
     project_path = opts.project_path
-    ntasks = opts.ntasks
     dataset_obj = from_from_data_set_type_to_object(ds_type=opts.ds_type)
     train_ds = dataset_obj(root=os.path.join(project_path, f'data/RAW/{str(ds_type)}'),
                            is_train=True,
-                           task=task_id, ntasks=ntasks)
+                           task=task_id, ntasks=opts.ntasks)
     test_ds = dataset_obj(root=os.path.join(project_path, f'data/RAW/{str(ds_type)}'),
                           is_train=False,
-                          task=task_id, ntasks=ntasks)
+                          task=task_id, ntasks=opts.ntasks)
 
-    train_dl = DataLoader(dataset=train_ds, batch_size=opts.data_set_obj['bs'], shuffle=True, pin_memory=True,
+    train_dl = DataLoader(dataset=train_ds, batch_size=opts.train_bs, shuffle=True, pin_memory=True,
                           num_workers=2)
 
-    test_dl = DataLoader(dataset=test_ds, batch_size=opts.data_set_obj['bs'] * 2, shuffle=False, pin_memory=True,
+    test_dl = DataLoader(dataset=test_ds, batch_size=opts.test_bs, shuffle=False, pin_memory=True,
                          num_workers=2)
 
     return train_dl, test_dl
 
 
 def Get_Model_path(opts: argparse, ds_type: data_set_types, training_flag: TrainingFlag,
-                   model_type: Model_type, task_id: int) -> Tuple[str, str]:
+                   model_type: Model_type, task_id: int) -> str:
     """
-    Getting the path we store the model into.
+    Getting the path we store the Model into.
     Args:
-        opts: The model opts.
+        opts: The Model opts.
         ds_type: The data-set layer_type.
         training_flag: The training flag.
-        model_type: The model layer_type.
+        model_type: The Model layer_type.
         task_id: The task id.
 
-    Returns: The path to store the model into.
+    Returns: The path to store the Model into.
 
     """
-    opti_type = opts.data_set_obj['optimizer']
-    threshold = opts.data_set_obj['threshold']
-    bs = opts.data_set_obj['bs']
-    milestones = opts.data_set_obj['milestones']
-    initial_lr = opts.data_set_obj['initial_lr']
-    weight_modulation = opts.data_set_obj['weight_modulation_factor']
-    reg = opts.data_set_obj['reg']
-    wd = opts.data_set_obj['wd']
     try:
-        inter = opts.data_set_obj['interpolation']
-    except KeyError:
-        inter = ''
-    name1 = f'{str(ds_type)}/{str(training_flag)}/{str(model_type)}/' \
-            f'{opti_type}/{weight_modulation}/'
-    name = name1 + f'Task_{task_id}_threshold_{threshold}_bs_' \
-                   f'{bs}_lr=' \
-                   f'_{initial_lr}_milestones_' \
-                   f'{milestones}_modulation_factor_' \
-                   f'{weight_modulation}_interpolation_{inter}_' \
-                   f'lambda_{reg}_wd_{wd}'
+        opti_type = opts.data_set_obj['optimizer']
+        threshold = opts.data_set_obj['threshold']
+        bs = opts.data_set_obj['bs']
+        milestones = opts.data_set_obj['milestones']
+        initial_lr = opts.data_set_obj['initial_lr']
+        weight_modulation = opts.data_set_obj['weight_modulation_factor']
+        reg = opts.data_set_obj['reg']
+        wd = opts.data_set_obj['wd']
+        try:
+            inter = opts.data_set_obj['interpolation']
+        except KeyError:
+            inter = ''
+        name = f'{str(ds_type)}/{str(training_flag)}/{str(model_type)}/' \
+               f'{opti_type}/{weight_modulation}/'
+        name += f'Task_{task_id}_threshold_{threshold}_bs_' \
+                f'{bs}_lr=' \
+                f'_{initial_lr}_milestones_' \
+                f'{milestones}_modulation_factor_' \
+                f'{weight_modulation}_interpolation_{inter}_' \
+                f'lambda_{reg}_wd_{wd}'
+    except AttributeError:
+        return "ImageNet"
 
-    return name1, name
+    return name
 
 
 def Get_Learned_Params(model: nn.Module, training_flag: TrainingFlag, task_id: int) -> List[nn.Parameter]:
     """
     Get the learned parameters.
     Args:
-        model: The model.
+        model: The Model.
         training_flag: The training flag.
         task_id: The task id.
 
@@ -201,8 +203,8 @@ def Define_Trainer(opts: argparse, name: str) -> pl.Trainer:
     """
     Define the trainer.
     Args:
-        opts: The model opts.
-        name: The model name.
+        opts: The Model opts.
+        name: The Model name.
 
     Returns: pytorch lightning trainer.
 
@@ -213,26 +215,9 @@ def Define_Trainer(opts: argparse, name: str) -> pl.Trainer:
                                                      mode='max', monitor='val_acc',
                                                      filename='{val_acc:.3f}')
 
-    trainer = pl.Trainer(max_epochs=opts.data_set_obj['epochs'], accelerator='gpu',
+    trainer = pl.Trainer(max_epochs=opts.epochs, accelerator='gpu',
                          logger=wandbLogger, callbacks=[checkpoint_second], precision=16)
     return trainer
-
-
-def num_params_of_module(model: nn.Module, layer_type: Type[nn.Module]) -> list[nn.Parameter]:
-    """
-    Computes the parameters of given module type.
-    Args:
-        model: The model
-        layer_type: The mode type.
-
-    Returns: All parameters of given type.
-
-    """
-    params = []
-    for m in model.modules():
-        if isinstance(m, layer_type):
-            params.extend(m.parameters())
-    return params
 
 
 def compute_size(size: list, factor: list) -> list:

@@ -8,27 +8,29 @@ import torch.nn as nn
 import os
 import torch
 
+from ..Modules.continual_learning_layers.Batch_norm import BatchNorm
+
 
 def load_model(results_dir: str, model_path: str):
     """
-    Loads and returns the model checkpoint as a dictionary.
+    Loads and returns the Model checkpoint as a dictionary.
     Args:
-        model_path: The path to the model.
-        results_dir: Trained model dir.
+        model_path: The path to the Model.
+        results_dir: Trained Model dir.
 
     Returns: The loaded checkpoint.
 
     """
-    model_path = os.path.join(results_dir, model_path)  # The path to the model.
+    model_path = os.path.join(results_dir, model_path)  # The path to the Model.
     checkpoint = torch.load(model_path)  # Loading the saved data.
     return checkpoint['state_dict']
 
 
 def Load_pretrained_resnet(model: nn.Module) -> None:
     """
-    Load pretrained model.
+    Load pretrained Model.
     Args:
-        model: The model.
+        model: The Model.
 
     """
     checkpoint = {}
@@ -46,7 +48,7 @@ def Load_pretrained_resnet(model: nn.Module) -> None:
                             checkpoint[new_key] = state_dict[old_key]
                     except KeyError:
                         pass
-            for layer_type in ['bn1', 'bn2', 'bn3']:
+            for layer_type in ['first_bn', 'bn2', 'bn3']:
                 for param_type in ['weight', 'bias']:
                     new_key = f'layers.{layer_id}.{block_id}.{layer_type}.norm.{param_type}'
                     old_key = f'{prefix}layer{layer_id + 1}.{block_id}.{layer_type}.{param_type}'
@@ -82,8 +84,8 @@ def Load_pretrained_resnet(model: nn.Module) -> None:
                         checkpoint[new_key] = state_dict[old_key]
 
             checkpoint['conv1.weight'] = state_dict[f'{prefix}conv1.weight']
-            checkpoint['bn1.norm.weight'] = state_dict[f'{prefix}bn1.weight']
-            checkpoint['bn1.norm.bias'] = state_dict[f'{prefix}bn1.bias']
+            checkpoint['first_bn.norm.weight'] = state_dict[f'{prefix}first_bn.weight']
+            checkpoint['first_bn.norm.bias'] = state_dict[f'{prefix}first_bn.bias']
 
     for key, val in model.state_dict().items():
         if "running_mean" in key or 'running_var' in key or 'linear' in key or 'modulation' in key or 'mask' in key:
@@ -96,8 +98,8 @@ def Load_Pretrained_EfficientNet(model: nn.Module, model_type: Model_type) -> No
     """
     Load EfficientNet.
     Args:
-        model: The model.
-        model_type: The model layer_type.
+        model: The Model.
+        model_type: The Model layer_type.
 
     Returns: None
 
@@ -201,12 +203,12 @@ def Load_Pretrained_EfficientNet(model: nn.Module, model_type: Model_type) -> No
     model.load_state_dict(current_state_dict)
 
 
-def Load_Pretrained_MobileNetV2(model, model_type: Model_type) -> None:
+def Load_Pretrained_MobileNetV2(model:nn.Module, model_type: Model_type) -> None:
     """
     Load MobileNet.
     Args:
-        model: The model.
-        model_type: The model layer_type.
+        model: The Model.
+        model_type: The Model layer_type.
 
     Returns: None
 
@@ -221,15 +223,22 @@ def Load_Pretrained_MobileNetV2(model, model_type: Model_type) -> None:
         if name not in new_check.keys():
             new_check[name] = param
 
-    model.load_state_dict(new_check)  # Loading the saved weights.
+    model.load_state_dict(new_check)
+
+    # Store Batch Norm stats.
+
+    for layer in model.modules():
+        if isinstance(layer, BatchNorm):
+            layer.all_means[0] = layer.running_mean
+            layer.all_vars[0] = layer.running_var
 
 
 def Load_Pretrained_MobileNetV3(model, model_type: Model_type) -> None:
     """
     Load MobileNet.
     Args:
-        model: The model.
-        model_type: The model layer_type.
+        model: The Model.
+        model_type: The Model layer_type.
 
     Returns: None
 
@@ -255,13 +264,13 @@ def Load_Pretrained_model(model: nn.Module, model_type: Optional[Model_type]) ->
     """
 
     Args:
-        model: The model.
-        model_type: The model layer_type.
+        model: The Model.
+        model_type: The Model layer_type.
 
     Returns:
 
     """
-    if model_type in [Model_type.MobileNetV2]:
+    if model_type is Model_type.MobileNetV2:
         Load_Pretrained_MobileNetV2(model=model, model_type=model_type)
     if model_type is Model_type.MobileNetV3:
         Load_Pretrained_MobileNetV3(model, model_type)

@@ -1,9 +1,14 @@
-from torchvision.models.mobilenetv3 import InvertedResidual, InvertedResidualConfig, _mobilenet_v3_conf, Conv2dNormActivation
+"""
+Just for LwF baseline.
+"""
+
+from torchvision.models.mobilenetv3 import InvertedResidual, InvertedResidualConfig, _mobilenet_v3_conf, \
+    Conv2dNormActivation
 import torch.nn as nn
 from typing import List, Optional, Callable, Any, Sequence
 from torch import Tensor
 from functools import partial
-from ..Heads import Head
+from ...continual_learning_layers.Heads import Multi_task_head
 import torch
 
 __all__ = [
@@ -15,17 +20,19 @@ __all__ = [
 ]
 
 
+
+
 class MobileNetV3(nn.Module):
     def __init__(
-        self,
-        opts,
-        inverted_residual_setting: List[InvertedResidualConfig],
-        last_channel: int,
-        num_classes: int = 1000,
-        block: Optional[Callable[..., nn.Module]] = None,
-        norm_layer: Optional[Callable[..., nn.Module]] = None,
-        dropout: float = 0.2,
-        **kwargs: Any,
+            self,
+            opts,
+            inverted_residual_setting: List[InvertedResidualConfig],
+            last_channel: int,
+            num_classes: int = 1000,
+            block: Optional[Callable[..., nn.Module]] = None,
+            norm_layer: Optional[Callable[..., nn.Module]] = None,
+            dropout: float = 0.2,
+            **kwargs: Any,
     ) -> None:
         """
         MobileNet V3 main class
@@ -43,8 +50,8 @@ class MobileNetV3(nn.Module):
         if not inverted_residual_setting:
             raise ValueError("The inverted_residual_setting should not be empty")
         elif not (
-            isinstance(inverted_residual_setting, Sequence)
-            and all([isinstance(s, InvertedResidualConfig) for s in inverted_residual_setting])
+                isinstance(inverted_residual_setting, Sequence)
+                and all([isinstance(s, InvertedResidualConfig) for s in inverted_residual_setting])
         ):
             raise TypeError("The inverted_residual_setting should be List[InvertedResidualConfig]")
 
@@ -93,7 +100,7 @@ class MobileNetV3(nn.Module):
             nn.Hardswish(inplace=True),
             nn.Dropout(p=dropout, inplace=True),
         )
-        self.classifier= Head(opts=opts, modulation=None, mask=None,
+        self.classifier = Multi_task_head(opts=opts, modulation=None, mask=None,
                                in_channels=last_channel)
 
         for m in self.modules():
@@ -117,24 +124,24 @@ class MobileNetV3(nn.Module):
 
         return x
 
-    def forward(self, x: Tensor,flags) -> Tensor:
+    def forward(self, x: Tensor, flags) -> Tensor:
         return self._forward_impl(x)
 
 
 def _mobilenet_v3(
         opts,
-    inverted_residual_setting: List[InvertedResidualConfig],
-    last_channel: int,
-    **kwargs: Any,
+        inverted_residual_setting: List[InvertedResidualConfig],
+        last_channel: int,
+        **kwargs: Any,
 ) -> MobileNetV3:
-
-    model = MobileNetV3(opts,inverted_residual_setting, last_channel, **kwargs)
+    model = MobileNetV3(opts, inverted_residual_setting, last_channel, **kwargs)
 
     return model
 
+
 def mobilenet_v3_large(
         opts,
-    *, progress: bool = True, **kwargs: Any
+        *, progress: bool = True, **kwargs: Any
 ) -> MobileNetV3:
     """
     Constructs a large MobileNetV3 architecture from
@@ -158,7 +165,4 @@ def mobilenet_v3_large(
     """
 
     inverted_residual_setting, last_channel = _mobilenet_v3_conf("mobilenet_v3_large", **kwargs)
-    return _mobilenet_v3(opts,inverted_residual_setting, last_channel, **kwargs)
-
-
-
+    return _mobilenet_v3(opts, inverted_residual_setting, last_channel, **kwargs)

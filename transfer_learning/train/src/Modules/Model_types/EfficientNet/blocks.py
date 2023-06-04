@@ -9,7 +9,7 @@ from torch import nn, Tensor
 from torchvision.ops import StochasticDepth
 from torchvision.models.efficientnet import math, _MBConvConfig
 
-from ..module_blocks import layer_with_modulation_and_masking
+from ...continual_learning_layers.module_blocks import Modulated_layer
 
 
 class MBConvConfigOurs(_MBConvConfig):
@@ -70,9 +70,9 @@ class Conv2dNormActivationOurs(nn.Module):
         padding = (kernel_size - 1) // 2 * dilation
         self.conv = nn.Conv2d(in_channels=input_channels, out_channels=expanded_channels, kernel_size=kernel_size,
                               stride=stride, groups=groups, padding=padding, bias=False)
-        self.mask_layer = layer_with_modulation_and_masking(opts=opts, layer=self.conv, masks=masks,
-                                                            task_embedding=modulation, create_modulation=True,
-                                                            create_masks=True, linear=False)
+        self.mask_layer = Modulated_layer(opts=opts, layer=self.conv, masks=masks,
+                                          task_embedding=modulation, create_modulation=True,
+                                          create_masks=True, linear=False)
         self.bn = norm_layer(expanded_channels)
         self.relu = activation_layer
 
@@ -118,13 +118,13 @@ class SqueezeExcitationOurs(torch.nn.Module):
         super().__init__()
         self.avgpool = torch.nn.AdaptiveAvgPool2d(1)
         self.fc1 = torch.nn.Conv2d(in_channels=input_channels, out_channels=squeeze_channels, kernel_size=1)
-        self.mask_layer1 = layer_with_modulation_and_masking(opts=opts, layer=self.fc1, masks=masking,
-                                                             task_embedding=modulation, create_masks=True,
-                                                             create_modulation=True, linear=False)
+        self.mask_layer1 = Modulated_layer(opts=opts, layer=self.fc1, masks=masking,
+                                           task_embedding=modulation, create_masks=True,
+                                           create_modulation=True, linear=False)
         self.fc2 = torch.nn.Conv2d(squeeze_channels, input_channels, 1)
-        self.mask_layer2 = layer_with_modulation_and_masking(opts=opts, layer=self.fc2, masks=masking,
-                                                             task_embedding=modulation, create_masks=True,
-                                                             create_modulation=True, linear=False)
+        self.mask_layer2 = Modulated_layer(opts=opts, layer=self.fc2, masks=masking,
+                                           task_embedding=modulation, create_masks=True,
+                                           create_modulation=True, linear=False)
         self.activation = activation()
         self.scale_activation = scale_activation()
 

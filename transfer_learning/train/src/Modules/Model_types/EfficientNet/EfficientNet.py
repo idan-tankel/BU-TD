@@ -7,10 +7,10 @@ from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 import torch
 from torch import nn, Tensor
 
-from ..Heads import Head
+from ...continual_learning_layers.Heads import Multi_task_head
 
 from .blocks import Conv2dNormActivationOurs, MBConvConfigOurs
-from ..module_blocks import WeightModulation
+from ...continual_learning_layers.module_blocks import WeightModulation, Modulated_layer
 
 
 def _efficientnet_conf(
@@ -113,7 +113,7 @@ class EfficientNet(nn.Module):
         self.avgpool = nn.AdaptiveAvgPool2d(1)
         self.drop_out = nn.Dropout(opts.data_set_obj['drop_out_rate'])
         num_classes = opts.data_set_obj['heads']
-        self.classifier = Head(in_channels=last_conv_output_channels, heads=num_classes, modulation=self.modulations,
+        self.classifier = Multi_task_head(in_channels=last_conv_output_channels, heads=num_classes, modulation=self.modulations,
                                mask=self.masks)
 
         for m in self.modules():

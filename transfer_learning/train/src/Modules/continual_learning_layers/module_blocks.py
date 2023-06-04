@@ -12,7 +12,7 @@ import torch
 
 import torch.nn.functional as F
 
-from ..Utils import Expand, compute_size
+from ...Utils import Expand, compute_size
 
 from torch.nn.parameter import Parameter
 
@@ -29,7 +29,7 @@ class WeightModulation(nn.Module):
         """
 
         Args:
-            opts: The model options.
+            opts: The Model options.
             layer: The current later to modulate its weight.
         """
         super(WeightModulation, self).__init__()
@@ -76,7 +76,7 @@ class Binary_masking(torch.autograd.Function):
     """
 
     @staticmethod
-    def forward(ctx, inputs, DEFAULT_THRESHOLD, **kwargs):
+    def forward(ctx, inputs: Tensor, DEFAULT_THRESHOLD: float, **kwargs):
         """
 
         Args:
@@ -154,7 +154,7 @@ class MaskWeight(nn.Module):
         return new_weight
 
 
-class layer_with_modulation_and_masking(nn.Module):
+class Modulated_layer(nn.Module):
     """
     Conv with modulation and masking.
     """
@@ -164,13 +164,13 @@ class layer_with_modulation_and_masking(nn.Module):
         """
 
         Args:
-            opts: The model opts.
+            opts: The Model opts.
             layer: The layer.
             task_embedding: The task embedding.
             create_modulation: Whether to create modulation.
             create_masks: Whether to create masks.
         """
-        super(layer_with_modulation_and_masking, self).__init__()
+        super(Modulated_layer, self).__init__()
         self.linear = linear
         self.opts = opts
         self.create_modulation = create_modulation

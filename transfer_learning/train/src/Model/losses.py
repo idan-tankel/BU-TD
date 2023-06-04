@@ -19,12 +19,13 @@ class LwFLoss(nn.Module):
         self.old_model = copy.deepcopy(old_model)
         self.reg_factor = reg_factor
 
-    def forward(self, inputs: list, model: nn.Module,mode):
+    def forward(self, inputs: list, model: nn.Module, mode: str):
         """
         Compute forward pass.
         Args:
+            mode: The pass mode.
             inputs: The inputs.
-            model: The model.
+            model: The Model.
 
         Returns: The outs, loss
 
@@ -72,7 +73,7 @@ class RegLoss(nn.Module):
         Forward of regularization loss.
         Args:
             inputs: The inputs.
-            model: The model.
+            model: The Model.
             mode: The mode.
 
         Returns: The outs, loss
@@ -93,15 +94,19 @@ def Get_loss_fun(training_flag: TrainingFlag, opts: argparse, model: nn.Module, 
     Get the loss function.
     Args:
         training_flag: The training flag.
-        opts: The model opts.
-        model: The model.
+        opts: The Model opts.
+        model: The Model.
         learned_params: The learned params.
 
     Returns: The desired loss function.
 
     """
     if training_flag is TrainingFlag.LWF:
-        loss_fun = LwFLoss(reg_factor=opts.data_set_obj['reg'], old_model=model)
+        try:
+            reg_fac = opts.data_set_obj['reg']
+        except AttributeError:
+            reg_fac = .0
+        loss_fun = LwFLoss(reg_factor=reg_fac, old_model=model)
     else:
         loss_fun = RegLoss(opts.data_set_obj['reg'], learned_params)
 

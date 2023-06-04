@@ -8,26 +8,27 @@ from typing import List
 from torch import Tensor
 
 
-class Head(nn.Module):
+class Multi_task_head(nn.Module):
     """
     Head class.
     Supports head per task.
     """
 
-    def __init__(self, in_channels: int, heads: List[int], modulation: List[List[nn.Parameter]],
-                 mask, block_expansion: int):
+    def __init__(self, opts, in_channels: int, modulation: List[List[nn.Parameter]],
+                 mask: list):
         """
         Compute class probabilities.
         Args:
+            opts: The argument parser.
             in_channels: The in channels.
-            heads: The number of heads per task.
             modulation: The modulations list.
+            mask: The mask weights.
+
         """
-        super(Head, self).__init__()
-        self.head = heads
+        super(Multi_task_head, self).__init__()
         Heads = []
-        for index, head in enumerate(heads):
-            layer = nn.Linear(in_channels * block_expansion, head)
+        for index, head in enumerate(opts.heads):
+            layer = nn.Linear(in_channels, head)
             Heads.append(layer)
             modulation[index].extend(layer.parameters())
             mask[index].extend(layer.parameters())
@@ -38,12 +39,11 @@ class Head(nn.Module):
         """
         Compute the class probabilities.
         Args:
-            inputs: The model input.
+            inputs: The Model x.
             task_flag: The task flag.
 
         Returns:
 
         """
-        task_flag = int(task_flag[0].argmax())
-        task_flag = 0
-        return None, None, inputs, self.Head[task_flag](inputs)
+        task_flag = task_flag[0]
+        return self.Head[task_flag](inputs)

@@ -1,5 +1,5 @@
 """
-Here we create the basic blocks, for creation of the model.
+Here we create the basic blocks, for creation of the Model.
 """
 import torch.nn as nn
 
@@ -10,12 +10,12 @@ from torch import Tensor
 
 from torchvision.models.resnet import conv3x3, conv1x1
 
-from ..Module_Blocks import layer_with_modulation_and_masking
+from ...continual_learning_layers.module_blocks import Modulated_layer
 
 
 class BasicBlock(nn.Module):
     """
-    The basic block for the ResNet model.
+    The basic block for the ResNet Model.
     """
     expansion: int = 1
 
@@ -25,6 +25,7 @@ class BasicBlock(nn.Module):
             inplanes: int,
             planes: int,
             stride: int = 1,
+            groups:int = 1,
             downsample: Optional[nn.Module] = None,
             inshapes: List = None,
             norm_layer: Optional[Callable[..., nn.Module]] = None,
@@ -35,7 +36,7 @@ class BasicBlock(nn.Module):
         """
          Create basic block with optional modulations.
         Args:
-            opts: The model options.
+            opts: The Model options.
             inplanes: The inplanes.
             planes: The outplanes.
             stride: The stride.
@@ -47,27 +48,27 @@ class BasicBlock(nn.Module):
         super(BasicBlock, self).__init__()
         self.shape = inshapes
         self.idx = index
-        self.ntasks = opts.data_obj['ntasks']
+        self.ntasks = opts.data_set_obj['ntasks']
         self.stride = stride
-        self.conv1 = conv3x3(inplanes, planes, stride)
-        self.modulated_conv1 = layer_with_modulation_and_masking(opts=opts, layer=self.conv1,
-                                                                 task_embedding=modulations, create_modulation=True,
-                                                                 create_masks=True, masks=masks, linear=False)
+        self.conv1 = conv3x3(inplanes, planes, stride = stride,groups=groups)
+        self.modulated_conv1 = Modulated_layer(opts=opts, layer=self.conv1,
+                                               task_embedding=modulations, create_modulation=True,
+                                               create_masks=True, masks=masks, linear=False)
 
-        self.bn1 = norm_layer(opts, planes)
+        self.bn1 = norm_layer(planes, ntasks=self.ntasks)
         self.relu = nn.ReLU(inplace=True)
-        self.conv2 = conv3x3(planes, planes)
-        self.modulated_conv2 = layer_with_modulation_and_masking(opts=opts, layer=self.conv2,
-                                                                 task_embedding=modulations, create_modulation=True,
-                                                                 create_masks=True, masks=masks, linear=False)
-        self.bn2 = norm_layer(opts, planes)
+        self.conv2 = conv3x3(planes, planes,groups=groups)
+        self.modulated_conv2 = Modulated_layer(opts=opts, layer=self.conv2,
+                                               task_embedding=modulations, create_modulation=True,
+                                               create_masks=True, masks=masks, linear=False)
+        self.bn2 = norm_layer(planes, ntasks=self.ntasks)
 
         self.downsample = downsample
-        self.learnable_downsample = opts.data_obj['learnable_downsample']
-        if self.downsample is not None and opts.data_obj['learnable_downsample']:
-            self.modulated_conv3 = layer_with_modulation_and_masking(opts=opts, layer=self.downsample.conv1x1,
-                                                                     task_embedding=modulations, create_modulation=True,
-                                                                     create_masks=True, masks=masks, linear=False)
+        self.learnable_downsample = opts.data_set_obj['learnable_downsample']
+        if self.downsample is not None and self.learnable_downsample:
+            self.modulated_conv3 = Modulated_layer(opts=opts, layer=self.downsample.conv1x1,
+                                                   task_embedding=modulations, create_modulation=True,
+                                                   create_masks=True, masks=masks, linear=False)
 
         self.modulate_downsample = self.learnable_downsample and self.downsample is not None
 
@@ -75,7 +76,7 @@ class BasicBlock(nn.Module):
         """
         Forward the block.
         Args:
-            inputs: The block input.
+            inputs: The block x.
 
         Returns: The block output.
 
@@ -129,7 +130,7 @@ class Bottleneck(nn.Module):
         """
         Create basic block with optional modulations.
         Args:
-            opts: The model opts.
+            opts: The Model opts.
             inplanes: The block inplanes.
             planes: The block outplanes.
             stride: The stride for first block.
@@ -138,12 +139,12 @@ class Bottleneck(nn.Module):
             base_width: The base width.
             dilation: The dilation
             norm_layer: The batch norm layer.
-            inshapes: The block input shape.
+            inshapes: The block x shape.
             index: The block index.
         """
         super(Bottleneck, self).__init__()
         self.opts = opts
-        self.ntasks = opts.data_obj['ntasks']
+        self.ntasks = opts.data_set_obj['ntasks']
         self.modulations = []
         self.idx = index
         self.stride = stride
@@ -152,39 +153,39 @@ class Bottleneck(nn.Module):
         # Both self.conv2 and self.downsample num_blocks downsample the inputs when stride != 1
         self.use_mod1, self.use_mod2, self.use_mod3 = True, True, True
         self.conv1 = conv1x1(inplanes, width)
-        self.modulated_conv1 = layer_with_modulation_and_masking(opts=opts, layer=self.conv1,
-                                                                 task_embedding=modulations, create_modulation=True,
-                                                                 create_masks=True, masks=masks,
-                                                                 linear=False)
-        self.bn1 = norm_layer(opts, width)
+        self.modulated_conv1 = Modulated_layer(opts=opts, layer=self.conv1,
+                                               task_embedding=modulations, create_modulation=True,
+                                               create_masks=True, masks=masks,
+                                               linear=False)
+        self.bn1 = norm_layer(width, self.ntasks)
         self.conv2 = conv3x3(width, width, stride, groups, dilation)
-        self.bn2 = norm_layer(opts, width)
-        self.modulated_conv2 = layer_with_modulation_and_masking(opts=opts, layer=self.conv2,
-                                                                 task_embedding=modulations, create_modulation=True,
-                                                                 create_masks=True, masks=masks,
-                                                                 linear=False)
+        self.bn2 = norm_layer(width, self.ntasks)
+        self.modulated_conv2 = Modulated_layer(opts=opts, layer=self.conv2,
+                                               task_embedding=modulations, create_modulation=True,
+                                               create_masks=True, masks=masks,
+                                               linear=False)
 
         self.conv3 = conv1x1(width, planes * self.expansion)
-        self.modulated_conv3 = layer_with_modulation_and_masking(opts=opts, layer=self.conv3,
-                                                                 task_embedding=modulations, create_modulation=True,
-                                                                 create_masks=True, masks=masks,
-                                                                 linear=False)
-        self.bn3 = norm_layer(opts, planes * self.expansion)
+        self.modulated_conv3 = Modulated_layer(opts=opts, layer=self.conv3,
+                                               task_embedding=modulations, create_modulation=True,
+                                               create_masks=True, masks=masks,
+                                               linear=False)
+        self.bn3 = norm_layer(planes * self.expansion, self.ntasks)
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
         if self.downsample is not None:
-            self.modulated_conv4 = layer_with_modulation_and_masking(opts=opts, layer=self.downsample.conv1x1,
-                                                                     task_embedding=modulations, create_modulation=True,
-                                                                     create_masks=True, masks=masks,
-                                                                     linear=False)
+            self.modulated_conv4 = Modulated_layer(opts=opts, layer=self.downsample.conv1x1,
+                                                   task_embedding=modulations, create_modulation=True,
+                                                   create_masks=True, masks=masks,
+                                                   linear=False)
 
     def forward(self, inputs: Tensor) -> Tuple[Tensor, Tensor]:
         """
-        Forward the model.
+        Forward the Model.
         Args:
-            inputs: The input.
+            inputs: The x.
 
-        Returns: The model output.
+        Returns: The Model output.
 
         """
         identity, flags = inputs
