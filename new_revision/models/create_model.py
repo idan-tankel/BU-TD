@@ -45,7 +45,7 @@ class ModelWrapper(
 
     def training_step(self, batch, batch_index):
         # self.model.train()
-        if self.task == "multi_label_classification":
+        if self.task == "multi_label_classification" or self.task == "action_classification":
             x, y = batch['img'], batch['label_all']
             batch_size = y.shape[0]
             y = y.reshape(batch_size,-1) 
@@ -74,6 +74,7 @@ class ModelWrapper(
         y.to(device("cuda") if cuda.is_available() else device("cpu"))
         x_hat.logits.squeeze_()
         y.squeeze_()
+        y = y.to(torch.int64)
         loss = nn.CrossEntropyLoss(reduction='mean')(x_hat.logits, y)
         acc = 1 - (x_hat.logits.argmax(dim=1) - y).count_nonzero() / y.numel()
         pred = x_hat.logits.argmax(dim=1)
@@ -96,7 +97,7 @@ class ModelWrapper(
         """
         self.model.eval()
         with no_grad():
-            if self.task == "multi_label_classification":
+            if self.task == "multi_label_classification" or self.task == "action_classification":
                 x, y = batch['img'], batch['label_all']
                 batch_size = y.shape[0]
                 y = y.reshape(batch_size,-1) 
@@ -125,8 +126,9 @@ class ModelWrapper(
             else:
                 x_hat = self.model(x)
             y.to(device("cuda") if cuda.is_available() else device("cpu"))
-
-            loss = nn.CrossEntropyLoss(reduction='mean')(x_hat.logits.squeeze(), y.squeeze())
+            y = y.to(torch.int64)
+            y.squeeze_() # in order to not get a bad accuracy
+            loss = nn.CrossEntropyLoss(reduction='mean')(x_hat.logits.squeeze(), y)
             pred = x_hat.logits.argmax(dim=1).squeeze()
             acc = 1 - (pred -
                        y).count_nonzero() / y.numel()
@@ -138,6 +140,73 @@ class ModelWrapper(
             self.log('val_acc', acc, on_step=True, on_epoch=True, logger=True)
             self.log(name='non_naive_ratio',value=non_naive_ratio, on_step=True, on_epoch=True, logger=True)
         return loss
+    
+
+
+    def test_step(self, batch, batch_index):
+        """
+        test_step This is implementation for the SWIG dataset and another relational datasets
+
+        Args:
+            batch (Torch.Tensor): The batch of the data
+            batch_index (`int`):  The index of the batch
+
+        Returns:
+            float: The loss of the batch
+        """
+        self.model.eval()
+        with no_grad():
+            if self.task == "action_classification":
+                x,y = batch['img'], batch["label_all"]
+
+            elif self.task == "multi_label_classification":
+                x, y = batch['img'], batch['label_all']
+                batch_size = y.shape[0]
+                y = y.reshape(batch_size,-1) 
+                # for CE loss, we will fold up the other dimention if the examples are grid
+            elif self.task == "vanilla_training":
+                x,y = batch
+
+
+            elif self.task == "guided":
+                x, y,flag = batch['img'], batch['label_task'].gather(index=batch['label_all'].squeeze(1),dim=1),batch['flag']
+                # task_encoding = flag[:,0:self.num_tasks]
+                argument_encoding = flag[:,self.num_tasks:]
+                task_encoding = flag[:,0:self.num_tasks]
+                # calculate the right arguments in order to apply answer (singe direction)
+                # create a mask for directions
+                # a = batch["label_task"]*argument_encoding
+                        
+                y = batch["label_task"][argument_encoding.nonzero(as_tuple=True)]
+                #  see https://discuss.pytorch.org/t/use-torch-nonzero-as-index/33218/2
+                y.squeeze_()
+            else:
+                x, y = batch['img'], batch['label_task'].gather(index=batch['label_all'].squeeze(1),dim=1)
+                y.squeeze_()
+            
+            
+            
+            
+            
+            if self.task == "guided":
+                x_hat = self.model(SimpleNamespace(**{"task":task_encoding,"image":x,"argument":argument_encoding}))
+            else:
+                x_hat = self.model(x)
+            y = y.to(torch.int64)
+            y.to(device("cuda") if cuda.is_available() else device("cpu"))
+            assert y.max() <= 550
+            loss = nn.CrossEntropyLoss(reduction='mean')(x_hat.logits.squeeze(), y.squeeze())
+            pred = x_hat.logits.argmax(dim=1).squeeze()
+            acc = 1 - (pred -
+                       y.squeeze()).count_nonzero() / y.numel()
+            # this is the distance from the naive classifier - classifing all to the most common class - edge case
+            # 47 is the enumeration of the N.A class
+            non_naive_ratio = (pred != 47).sum() / pred.numel()
+            self.log('test_loss', loss, on_step=True,
+                     on_epoch=True, logger=True)
+            self.log('test_acc', acc, on_step=True, on_epoch=True, logger=True)
+            self.log(name='non_naive_ratio',value=non_naive_ratio, on_step=True, on_epoch=True, logger=True)
+
 
     def configure_optimizers(self):
         batch_size = 10

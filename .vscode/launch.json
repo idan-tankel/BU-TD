@@ -17,6 +17,18 @@
             ]
         },
         {
+            "name": "YAML: Run SWIG inference",
+            "type": "python",
+            "request": "launch",
+            "program": "BUTD_inference.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--file",
+                "${file}"
+            ]
+        },
+        {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",

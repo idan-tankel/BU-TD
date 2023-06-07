@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 from torch import cuda, device
 from Configs.Config import Config
 from types import SimpleNamespace
-from create_dataset.datasets import DatasetAllDataSetTypesAll
+from datasets.datasets import DatasetAllDataSetTypesAll
 import git
 import argparse
 import os
