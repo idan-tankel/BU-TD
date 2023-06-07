@@ -1,0 +1,11 @@
+# This workflow builds up the sphinx documentation for this repository
+name: Sphinx build
+
+on: push
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Build sphinx docs
+      uses: cascode-labs/build-sphinx-action@v0.2.3
