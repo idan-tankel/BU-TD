@@ -1,0 +1,106 @@
+# The scheme of this object is important - don't change it, change only the values
+Visibility:
+  interactiveSession: True
+
+RunningSpecs:
+  distributed: False
+  Flag: Attention # the model specification to run. Defined as (`supp.Dataset_and_model_type_specifications.Flag`)
+  backbone: CCT # (currently Supported BU_Attention, CCT) the backbone to use. Defined as (`supp.Dataset_and_model_type_specifications.backbone`)
+  flag_size:
+  isFit: True
+  processed_data: '6_extended_testing' # The name of the model result directory
+  
+
+Datasets:
+  dataset: Emnist # (supp.Dataset_and_model_type_specifications.DsType) the name of the dataset to use. Supported: 'Emnist,FashionMnist,Omniglot,Cifar10,Cifar100'
+  dummyds: False
+  dataset_local_folder_name: '6_extended_testing'
+  obj_per_row: 6
+  obj_per_column: 1
+  download: False
+
+Logging:
+  ENABLE_LOGGING: True
+  log_fname: 'log.txt'
+
+Folders:
+  data_dir: "../data" # relative to (?)
+  avatars: "avatars" # what is this?
+  samples: "samples"
+  conf: "conf"
+  results: "results"
+
+strings:
+  features_strings:
+    - "Avatar"
+    - "Tilt"
+    - "Background type"
+    - "Clothes type"
+    - "Glasses type"
+    - "Hair type"
+    - "Mustache type"
+
+Losses:
+  use_td_loss: False
+  use_bu1_loss: True # This should be false in the BU architectures - like the Attention, since the occurence loss would not be there
+  use_bu2_loss: False
+  activation_fun: 'ReLU' # moved to the Models section
+  # the name here must be the same as the name of the activation function under `torch.nn`
+  # there are some extra params set up in the `Config.py` file
+
+Models:
+  features: "all"
+  num_heads: "only_features"
+  inshape: [3, 32, 32] # `[int,int,int]` the spahe of the incoming data. The inshape being a list rather than a tuple is simpler, since a YAML formatter would treat the tuple as a string, and accessing the elements of the tuple would just concat the string '('.
+  image_size: [112,224] # int, the size of the image to be used in the model
+  num_channels: 3
+  num_classes: 48 # the number of classes within the dataset TOOD
+  number_of_linear_heads: 6 # each linear head correspond to a class in the MultiHeadAttention
+  depth: 3
+  strides: [2, 2, 1, 2] #
+  nfilters: [128,1000] # For CCT
+  ns: [0, 1, 1, 1] # the number of blocks in 
+  ks: [7, 3, 3, 3] # kernel size 
+  num_attention_heads: 2 # (`int`) the number of attention heads in the MultiHeadAttention
+  ntaskhead_fc: 1 # get out only 1 task!
+  use_lateral_tdbu: True  # ('bool') use lateral connections in the TDBU
+  use_lateral_butd: True # ('bool') use lateral connections in the TDBU
+  # these 2 booleans are connected to the Losses section
+  use_final_conv: False
+  orig_relus: False # ('bool') use the original relu activation function in certain places
+  norm_layer: BatchNorm # (`nn.Module`) one of the supported normalization layers
+  # Notice! this option affected also from training / dataset requirements
+  ntasks: 6 # (`int`) the number of tasks to train on. Will determine the number of heads in the model
+  pretrained_model_name: 'local/food_101_47.ckpt'  # (`str`) the url to the pretrained model in huggingface.co
+
+
+# Some other model params are initialized in the function `init_model_options` under `v26.functions.inits.py`
+# TODO: change this to 2 config files - one for the frequent params and one for the `defaults.yaml` file
+
+
+Training:
+  task: right_of_all
+  # one of the choices "right_all | multi_label_classification"
+  batch_size: 64 # batch size (int)
+  num_workers: 48
+  epochs: 200
+  momentum: 0.9 # (`float`) Momentum of the Adam optimizer
+  wd: 0.00001 #(`float`) The weight decay of the Adam optimizer
+  lr: 1e-4 # (`float`)the initial learning rate # TODO support in also multiplication
+  max_lr: 0.002  # (`float`) the maximum learning rate
+  distributed: False # whether to use distributed data within training - accross some GPUs using DistributedSampler of torch
+  cycle_lr: True # (`bool`) whether to cycle the learning rate
+  base_lr: 0.0001 # (`float`) the base learning rate for the cyclic_adam_optimizer, if used
+  optimizer: Adam  # (`str`) the optimizer to use. ['Adam','SGD']
+  # checkpoints and saving options
+  load_existing_path: False # (`bool`) whether to load an existing model from the path specified in `path_loading`. Default to false
+  path_loading: "/home/idanta/data/emnist/checkpoints/epoch=192-step=1930000.ckpt" # (`str`) the path to load an existing model, pretrained (should be a .pt file)
+  # furthermore, the path should contain model with the same structure, since this is a checkpoint
+  save_model: True # (`bool`) whether to save the model
+  epoch_save_idx: accuracy # (`str`) the metric to use for saving the model
+  checkpoints_per_epoch: 1 # number of checkpoints of the model weights to save per epoch
+  dataset_to_save: 'val' # ['train','test','val'] the dataset to save the model weights to 
+  # other options
+  multiprocessing_distributed: False #Whether to use multiprocessing_distributed data
+  load_model_if_exists: True # whether to load (from checkpoint) the model from an old training. Useful since some of the envs collapse during training....a
+

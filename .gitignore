@@ -24,7 +24,7 @@ emnist/data/emnist/emnist_raw/
 emnist/data/emnist/samples/
 emnist/data/results/
 *.pkl
-data*
+data/*
 *ubyte
 *zip
 *data_dir
@@ -41,3 +41,14 @@ data*
 # wandb
 wandb/*
 transfer_learning/lightning_logs*
+wandb*
+lightning_logs*
+.vscode/launch.json
+.vscode/launch.json
+
+# swig project specifics
+#
+swig/SWiG_jsons/*
+swig/runs*
+*.pth
+

@@ -2,6 +2,7 @@
 ## Official code for the paper [Image interpretation by iterative bottom-up top-down processing](https://arxiv.org/abs/2105.05592)
 [![arXiv](https://img.shields.io/badge/arXiv-2108.00946-b31b1b.svg)](https://arxiv.org/abs/2105.05592)
 
+
 Scene understanding requires the extraction and representation of scene components, such as objects and their parts, people, and places, together with their individual properties, as well as relations and interactions between them. We describe a model in which meaningful scene structures are extracted from the image by an iterative process, combining bottom-up (BU) and top-down (TD) networks, interacting through a symmetric bi-directional communication between them (‘counter-streams’ structure). The BU-TD model extracts and recognizes scene constituents with their selected properties and relations, and uses them to describe and understand the image.
 ![Counter stream](/figures/Counter-stream.png)
 
@@ -18,6 +19,12 @@ Requirements are in requirements.txt and can also be installed by:
 For image augmentation also install:
 
 `conda install imgaug py-opencv`
+
+you can also use the environment available here
+
+`conda install -f environment.yml`
+
+on the project root dir
 
 ## Persons details
 ![persons](/figures/persons.png)
@@ -60,6 +67,18 @@ A folder with all the learned models and a log file will be created under the `d
 ## Extracting scene structures
 Code will be added soon.
 
+## Training with pytorch lightning trainer
+
+*see also *
+
+we have added this trainer here
+
+`python new_revision/trainer.py`
+
+## Config files for experiments
+
+In order to keep all your experiments centered, there is an option to load custom config file 
+
 ## Paper
 If you find our work useful in your research or publication, please cite our work:
 
@@ -68,7 +87,12 @@ If you find our work useful in your research or publication, please cite our wor
 Shimon Ullman, Liav Assif, Alona Strugatski, Ben-Zion Vatashsky, Hila Levi, Aviv Netanyahu, Adam Yaari
 
 
+## Notes about this branch
 
+This branch (one-zero) containing training for vision transformers as a backbone.
+Technical new implementations - 
+- using a models from huggingfacehub and other pretrained model
+- using the `transformers` package from huggingface as a standard to the 
 
 ## TODO 
 - change the design of `create_dataset` to be one big file with plugins to each dataset 
@@ -78,6 +102,8 @@ Shimon Ullman, Liav Assif, Alona Strugatski, Ben-Zion Vatashsky, Hila Levi, Aviv
     - omniglot
 - change the `create_dataset` file to be idempotent - namely, when running the file after the dataset is cretaed it won't be downloaded again 
 - change the behaviour of the download function path to not be relative
+
+- using the AllOptions under `Dataset_and_model_type_specifications`, create a few "training profiles" for a several supported datasets, with a defined options. As a result, by specifiying only the dataset name, you will get a set of default options initialized
 
 
  - PLAN
@@ -92,8 +118,9 @@ Shimon Ullman, Liav Assif, Alona Strugatski, Ben-Zion Vatashsky, Hila Levi, Aviv
 - Long Time forward
     - Create a workflow and a proper GitHUB action to invoke training / debugging / simple auto tests
     - Transfer the use case of some np.array to torch framework
+    - https://pytorch-lightning.readthedocs.io/en/stable/clouds/cluster_advanced.html
 
 
 ## Contribute
 
-@yonatansverdlov @idan-tankel 
+@yonatansverdlov @idan-tankel @liavassif @itsik-shapira

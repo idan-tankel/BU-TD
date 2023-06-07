@@ -4,14 +4,37 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-    
+        {
+            "name": "YAML: Run trainer",
+            "type": "python",
+            "request": "launch",
+            "program": "new_revision/trainer.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--file",
+                "${file}"
+            ]
+        },
+        {
+            "name": "YAML: Run SWIG inference",
+            "type": "python",
+            "request": "launch",
+            "program": "BUTD_inference.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--file",
+                "${file}"
+            ]
+        },
         {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "justMyCode": true,
+            "justMyCode": false,
             "env": {
                 "LD_LIBRARY_PATH": "/home/idanta/anaconda3/envs/tankel/lib",
                 "DISPLAY": "localhost:16.0"
@@ -24,7 +47,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "justMyCode": true,
+            "justMyCode": false,
             //"cwd": "${fileDirname}"
         }
     ]
