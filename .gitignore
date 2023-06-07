@@ -42,3 +42,10 @@ wandb*
 lightning_logs*
 .vscode/launch.json
 .vscode/launch.json
+
+# swig project specifics
+#
+swig/SWiG_jsons/*
+swig/runs*
+*.pth
+
