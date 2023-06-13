@@ -1,8 +1,8 @@
 import os
 import sys
 sys.path.append(os.path.abspath(".."))
-from new_revision.Configs.Config import Config
-from new_revision.models.create_model import ModelWrapper
+from src.Configs.Config import Config
+from src.models.create_model import ModelWrapper
 from torch.utils.data import DataLoader
 from transformers import ViTForImageClassification, ViTConfig, TrainingArguments
 from pytorch_lightning.callbacks import ModelCheckpoint
