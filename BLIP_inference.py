@@ -1,21 +1,23 @@
+from transformers import Blip2Config, BlipConfig, BlipForConditionalGeneration, BlipForImageTextRetrieval, AutoProcessor
+from pathlib import Path
+import git
+from swig.JSL.verb.imsituDatasetGood import imSituDatasetGood
+from swig.global_utils.mapping import get_mapping
+import argparse
+import torch
+import pytorch_lightning as pl
+from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.callbacks import ModelCheckpoint
+from transformers import ViTForImageClassification, ViTConfig, TrainingArguments
+from torch.utils.data import DataLoader
+from src.models.create_model import ModelWrapper
+from src.models.BLIP_model import BLIPWrapper
+from src.Configs.Config import Config
 import os
 import sys
 sys.path.append(os.path.abspath(".."))
-from src.Configs.Config import Config
-from src.models.create_model import ModelWrapper
-from torch.utils.data import DataLoader
-from transformers import ViTForImageClassification, ViTConfig, TrainingArguments
-from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning.loggers import WandbLogger
-import pytorch_lightning as pl
-import torch
-from transformers import Blip2Config,BlipConfig,BlipForConditionalGeneration,BlipForImageTextRetrieval,AutoProcessor
-import argparse
-from swig.JSL.verb.imsituDatasetGood import imSituDatasetGood
-import git
-from pathlib import Path
 
-
+# configure directorites relative to the git root
 git_repo = git.Repo(__file__, search_parent_directories=True)
 git_root = Path(git_repo.working_dir)
 results_dir = rf"{git_root.parent}/data/emnist/results"
@@ -24,28 +26,6 @@ data_dir = Path(rf"{git_root.parent}/data")
 os.makedirs(data_dir, exist_ok=True)
 checkpoints_dir = rf"{git_root.parent}/data/checkpoints"
 os.makedirs(results_dir, exist_ok=True)
-
-
-def get_mapping(word_file):
-    """
-    get_mapping is a function that returns a dictionary mapping words to indices and a list of words
-
-    Args:
-        word_file (_type_): _description_
-
-    Returns:
-        _type_: _description_
-    """    
-    dict = {}
-    word_list = []
-    with open(word_file) as f:
-        k = 0
-        for line in f:
-            word = line.split('\n')[0]
-            dict[word] = k
-            word_list.append(word)
-            k += 1
-    return dict, word_list
 
 
 parser = argparse.ArgumentParser()
@@ -109,50 +89,51 @@ else:
             num_attention_heads=configuration.Models.num_attention_heads
         )
     )
-# model = ModelWrapper(model=model, config=configuration)
+model = BLIPWrapper(model=model, config=configuration)
 # BLIP preprocessor
 preprocessor = AutoProcessor.from_pretrained(configuration.Models.pretrained_model_name)
 
+# wrapper for huggingface - in order to the dataloader would not have to deal with the extra keys
+# while loading
 
-################################################### Data
+
+# Data - define the dataset after the model since the preprocessing is model dependent
+def transform(x): return preprocessor(x)["pixel_values"]
+
 
 test_dataset = imSituDatasetGood(verb_to_idx, json_file=args.image_file,
-                                 image_store_location=rf"swig/images_512", inference=False, is_train=True)
-test_dataloader = DataLoader(
+                                 image_store_location=rf"swig/images_512", inference=False, is_train=True, transformation=transform)
+swig_dataloader = DataLoader(
     test_dataset, batch_size=args.batch_size, **kwargs)
-iterator = iter(test_dataloader)
-print("initializing jsl model")
-example = next(iterator)
-print(example)
+print(test_dataset[0])
+iterator = iter(swig_dataloader)
+print("initializing model")
 
 # get the literal labels in order to pass them to blip
-[idx_to_verb[int(x)] for x in example["label_all"].flatten().tolist()]
+
 # preprocess the text of the lateral labels
 # preprocessor(example["label_all_revert"], truncation=True, padding=True)
 # the preprocessor should be before normalization and stuff
-################################################### Logging
+# the preprocessing should be within the model forward pass or within the dataset itself
+# Logging
 # wandb integration
 wandb_logger = WandbLogger(project="BU_TD",
                            job_type='train', log_model=True, save_dir=results_dir)
 wandb_checkpoints = ModelCheckpoint(
     dirpath=checkpoints_dir, monitor="train_loss_epoch", mode="min")
 
-################################################### Training
+# Training
 trainer = pl.Trainer(accelerator='gpu', max_epochs=configuration.Training.epochs,
                      logger=wandb_logger, callbacks=[wandb_checkpoints])
 
 
-
 # load pretrained from some layer of the model
-trainer_ckpt = configuration.Training.path_loading if configuration.Training.load_existing_path  else None
+trainer_ckpt = configuration.Training.path_loading if configuration.Training.load_existing_path else None
 if configuration.Training.load_existing_path:
     model.load_state_dict(torch.load(configuration.Training.path_loading)["state_dict"])
 
 # keep training - overfitting
-trainer.fit(model=model, train_dataloaders=test_dataloader,val_dataloaders=test_dataloader,ckpt_path=None)
+trainer.fit(model=model, train_dataloaders=swig_dataloader, val_dataloaders=swig_dataloader, ckpt_path=None)
 
-#### define the evaluation loop
-trainer.test(model, test_dataloader)
-
-
-
+# define the evaluation loop
+trainer.test(model, swig_dataloader)

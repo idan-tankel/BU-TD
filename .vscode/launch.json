@@ -29,6 +29,20 @@
             ]
         },
         {
+            "name": "YAML: Run BLIP inference",
+            "type": "python",
+            "request": "launch",
+            "program": "BLIP_inference.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--file",
+                "${file}",
+                "--workers",
+                "0"
+            ]
+        },
+        {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
