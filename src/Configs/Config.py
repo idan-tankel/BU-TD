@@ -103,6 +103,15 @@ class Config:
     
     def get_models(self):
         return self.Models
+    
+    def merge2huggingface(self,huggingface_config):
+        """
+        merge2huggingface Merge some of the values from the globalconfig to huggingface
+
+        Args:
+            huggingface_config (_type_): _description_
+        """        
+        pass
 
 
 class Strings:

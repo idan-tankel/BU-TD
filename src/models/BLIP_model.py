@@ -21,17 +21,21 @@ class BLIPWrapper(pl.LightningModule):
         super().__init__()  # without any arguments in order not to pass something unexpected
         if config.Models.pretrained_model_name is not None:
             model_url_or_path = config.Models.pretrained_model_name
-        self.model = BlipForImageTextRetrieval.from_pretrained(pretrained_model_name_or_path=model_url_or_path).to("cuda")
+        model = BlipForImageTextRetrieval.from_pretrained(pretrained_model_name_or_path=model_url_or_path)
+        model.to(device("cuda") if cuda.is_available() else device("cpu"))
+        self.model = model
         self.model_config = config
         self.huggingface_config = BlipConfig.from_pretrained(model_url_or_path)
-        self.preprocessor = AutoProcessor.from_pretrained(pretrained_model_name_or_path=model_url_or_path).to("cuda")
+        self.preprocessor = AutoProcessor.from_pretrained(pretrained_model_name_or_path=model_url_or_path)
+        
 
     def training_step(self, batch, batch_index, *args, **kwargs) -> STEP_OUTPUT:
         image, text, y = batch["img"], batch["text"], batch["label_all"]
         # preprocessing the example
         # shold be done in the dataset
-        inputs = self.preprocessor(image, text, return_tensors="pt")
-        inputs.to(device("cuda") if cuda.is_available() else device("cpu"))
+        # image.to(device("cuda") if cuda.is_available() else device("cpu"))
+        # the devices are handled via pytorch lightning accelerator arguemnt
+        inputs = {"pixel_values": image, "input_ids": y.to(torch.int64)}
         predictions = self.model(**inputs)
         return super().training_step(*args, **kwargs)
 

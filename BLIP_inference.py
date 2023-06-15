@@ -72,24 +72,15 @@ if args.file is None:
 
 
 configuration = Config(experiment_filename=file)
+huggingface_config =BlipConfig.from_pretrained(configuration.Models.pretrained_model_name)
+# update huggingface_config.text_config.vocab_size
+huggingface_config = configuration.merge2huggingface(huggingface_config=huggingface_config)
+# instead of merge2huggingface, you may add kwargs to the from_pretrained method
+# edit the huggingface config with the current configuration
 
 # load the BLIP model
 
-if configuration.Models.pretrained_model_name is not None and "local" not in str(configuration.Models.pretrained_model_name):
-    model = BlipForImageTextRetrieval.from_pretrained(
-        configuration.Models.pretrained_model_name)
-else:
-    model = ViTForImageClassification(
-        ViTConfig(
-            image_size=configuration.Models.image_size,
-            hidden_size=768,
-            num_hidden_layers=configuration.Models.depth,
-            num_classes=configuration.Models.num_classes,
-            qkv_bias=False,
-            num_attention_heads=configuration.Models.num_attention_heads
-        )
-    )
-model = BLIPWrapper(model=model, config=configuration)
+model = BLIPWrapper(config=configuration,huggingface_config=huggingface_config)
 # BLIP preprocessor
 preprocessor = AutoProcessor.from_pretrained(configuration.Models.pretrained_model_name)
 
@@ -98,7 +89,7 @@ preprocessor = AutoProcessor.from_pretrained(configuration.Models.pretrained_mod
 
 
 # Data - define the dataset after the model since the preprocessing is model dependent
-def transform(x): return preprocessor(x)["pixel_values"]
+def transform(x): return preprocessor(x)["pixel_values"][0]
 
 
 test_dataset = imSituDatasetGood(verb_to_idx, json_file=args.image_file,
