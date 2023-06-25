@@ -13,7 +13,7 @@ from collections import defaultdict
 
 
 class imSituDatasetGood(Dataset):
-    def __init__(self, verb_dict, json_file, is_train,transformation=None, image_store_location='./images_512/', inference=False):
+    def __init__(self, verb_dict, json_file, is_train: bool, transformation=None, preprocessor=None, image_store_location='./images_512/', inference=False):
         """
         __init__ The basic dataset class for SWiG Dataset
 
@@ -45,6 +45,7 @@ class imSituDatasetGood(Dataset):
         # not the most efficient solution - irrelevant definition of transformation
         if transformation is not None:
             self.transformation = transformation
+        self.preprocessor = preprocessor
 
     def load_inference(self):
         with open(self.json_file) as f:
@@ -116,9 +117,19 @@ class imSituDatasetGood(Dataset):
             return {'image': im_tensor, 'im_name': data}
 
         im_tensor = self.get_im_tensor(os.path.join(self.image_store_location, fr"{data['image_features']}.jpg"))
+        # text_embedding = self.preprocessor(text=data['named_verb'], padding='max_length', truncation=True, max_length=16, return_tensors='pt')["input_ids"].squeeze(0)
+        text_embedding = []
+        for verb in data["named_verb"].split():
+            prompt = f"Is there a {verb} in the image?"
+            prompt_embedding = self.preprocessor(text=prompt, padding='max_length', truncation=True, max_length=16, return_tensors='pt')["input_ids"].squeeze(0)
+            # stack it to the current tensor
+            text_embedding.append(prompt_embedding)
+        text_embedding = torch.stack(text_embedding, dim=0)
+
+        # since the model process one text word at a time!
         # preprocess the image and the text
         # return {'roles': data['roles'], 'nouns': data['nouns'], 'verb': data['verb'], 'image_features': torch.Tensor(image_features), 'image': im_tensor, 'all': data['all']}
-        return {'label_all': data['verb'], 'img': im_tensor, 'text': data['named_verb'], 'frame_length': data['frame_length'], 'roles': data['roles'], 'im_name':  data['image_features'] + '.jpg'}
+        return {'label_all': data['verb'], 'img': im_tensor, 'text': data['named_verb'], 'frame_length': data['frame_length'], 'roles': data['roles'], 'im_name':  data['image_features'] + '.jpg', 'text_embedding': text_embedding}
         # image --> img
         # frame_lenght
         # verb --> relation --> label_all (fixed length of 16)

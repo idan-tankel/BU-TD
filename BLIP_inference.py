@@ -36,7 +36,7 @@ parser.add_argument("--lr", type=float, default=0.001)
 parser.add_argument("--detach_epoch", type=int, default=12)
 parser.add_argument("--gt_noun_epoch", type=int, default=5)
 parser.add_argument("--hidden-size", type=int, default=1024)
-parser.add_argument("--batch-size", type=int, default=16)
+parser.add_argument("--batch-size", type=int, default=8)
 parser.add_argument("--verb-path", type=str, default=None)
 parser.add_argument("--jsl-path", type=str, default=None)
 parser.add_argument("--image-file", type=str,
@@ -72,7 +72,7 @@ if args.file is None:
 
 
 configuration = Config(experiment_filename=file)
-huggingface_config =BlipConfig.from_pretrained(configuration.Models.pretrained_model_name)
+huggingface_config = BlipConfig.from_pretrained(configuration.Models.pretrained_model_name)
 # update huggingface_config.text_config.vocab_size
 huggingface_config = configuration.merge2huggingface(huggingface_config=huggingface_config)
 # instead of merge2huggingface, you may add kwargs to the from_pretrained method
@@ -80,7 +80,7 @@ huggingface_config = configuration.merge2huggingface(huggingface_config=huggingf
 
 # load the BLIP model
 
-model = BLIPWrapper(config=configuration,huggingface_config=huggingface_config)
+model = BLIPWrapper(config=configuration, huggingface_config=huggingface_config)
 # BLIP preprocessor
 preprocessor = AutoProcessor.from_pretrained(configuration.Models.pretrained_model_name)
 
@@ -93,7 +93,8 @@ def transform(x): return preprocessor(x)["pixel_values"][0]
 
 
 test_dataset = imSituDatasetGood(verb_to_idx, json_file=args.image_file,
-                                 image_store_location=rf"swig/images_512", inference=False, is_train=True, transformation=transform)
+                                 image_store_location=r"swig/images_512", inference=False, is_train=True, transformation=transform,
+                                 preprocessor=preprocessor)
 swig_dataloader = DataLoader(
     test_dataset, batch_size=args.batch_size, **kwargs)
 print(test_dataset[0])
