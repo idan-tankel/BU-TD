@@ -1,0 +1,28 @@
+data:
+  General:
+    heads: [1000, 196, 200, 102, 101, 250, 195]
+    milestones: [ 15]
+    epochs: 30
+    num_tasks: 6
+    bs: 32
+  Specific:
+    Modulation:
+      lr: 0.01
+      wd: 0.0
+      interpolation: bicubic
+      weight_modulation_factor: [4, 4]
+    Masks:
+      lr: 0.0001
+      wd: .00001
+      threshold: 0.005
+    Classifier_Only:
+      lr: 0.0001
+      wd: .0
+    Full:
+      lr: 0.001
+      wd: .0
+    LWF:
+      lr: .0001
+      wd: .0
+
+
